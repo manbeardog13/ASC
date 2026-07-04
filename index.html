@@ -2,41 +2,38 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
   <title>ASC Tire Hotel</title>
-  <meta name="description" content="Seasonal tire storage manager for ASC — index, scan and track customers' tires.">
+  <meta name="description" content="ASC Tire Hotel — seasonal tire storage. Check in, locate, move and retrieve customer tire sets.">
 
-  <!-- PWA / installable on phone -->
   <link rel="manifest" href="manifest.webmanifest">
-  <meta name="theme-color" content="#111418">
+  <meta name="theme-color" content="#f6f7f9">
   <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="assets/icon.svg">
   <meta name="apple-mobile-web-app-title" content="ASC Tires">
-  <!-- Deliberately NOT setting apple-mobile-web-app-capable: on iOS the
-       "standalone" home-screen mode has long-standing WebKit camera bugs
-       (getUserMedia fails / repeated permission prompts on hash change).
-       Leaving it off makes the iOS home-screen icon open in Safari, where
-       the QR camera scanner works reliably. Android still installs standalone
-       via the web manifest, and camera works fine there. -->
+  <!-- Intentionally NOT apple-mobile-web-app-capable: iOS standalone mode has
+       WebKit camera bugs. The home-screen icon opens in Safari, where the QR
+       scanner is reliable. Android still installs standalone via the manifest. -->
   <meta name="mobile-web-app-capable" content="yes">
 
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;650;700;800;900&display=swap">
   <link rel="stylesheet" href="css/styles.css">
 
-  <!-- Third-party libs as globals: qrcode-generator (labels) + html5-qrcode (scan) -->
+  <!-- Third-party globals: QR generation + camera scanning -->
   <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 </head>
 <body>
-  <nav id="nav" hidden></nav>
-  <main id="app"><p class="muted center">Loading…</p></main>
+  <div id="app-root">
+    <noscript><div style="padding:24px;font-family:sans-serif">ASC Tire Hotel needs JavaScript enabled.</div></noscript>
+  </div>
 
   <script type="module" src="js/app.js"></script>
   <script>
-    // Register the service worker for install/offline shell (ignore failures).
     if ("serviceWorker" in navigator) {
-      window.addEventListener("load", () =>
-        navigator.serviceWorker.register("service-worker.js").catch(() => {})
-      );
+      window.addEventListener("load", () => navigator.serviceWorker.register("service-worker.js").catch(() => {}));
     }
   </script>
 </body>

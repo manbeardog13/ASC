@@ -78,6 +78,23 @@ export function sameLocation(a, b) {
   );
 }
 
+// ---- Progressive search (one bar, everything) --------------------------------
+// Matches across customer / phone / email / plate / size / DOT / location /
+// code / notes. Every whitespace-separated term must appear (AND).
+export function matchesQuery(set, query) {
+  if (!query) return true;
+  const vehicle = set.vehicle || {};
+  const customer = vehicle.customer || {};
+  const haystack = [
+    set.public_code, set.zone, set.rack, set.shelf, set.slot, set.notes,
+    customer.name, customer.phone, customer.email,
+    vehicle.plate, vehicle.make, vehicle.model, vehicle.year,
+    locationLine(set),
+    ...(set.tires || []).flatMap((tire) => [tire.size, tire.brand, tire.model, tire.dot_code]),
+  ].filter(Boolean).join(" ").toLowerCase();
+  return query.toLowerCase().split(/\s+/).filter(Boolean).every((term) => haystack.includes(term));
+}
+
 // Locations must be unique among sets physically in the warehouse.
 // `occupant` is the conflicting set (if any) found by db.findSetAtLocation.
 export function locationConflictMessage(occupant) {
