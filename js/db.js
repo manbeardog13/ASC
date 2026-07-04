@@ -50,7 +50,8 @@ export async function getSetByCode(code) {
     .select(`
       *,
       vehicle:vehicles ( *, customer:customers ( * ) ),
-      tires ( * )
+      tires ( * ),
+      photos ( id, path, caption, created_at )
     `)
     .eq("public_code", code)
     .single();
@@ -183,6 +184,52 @@ export async function replaceTires(setId, tires) {
 export async function deleteSet(id) {
   const { error } = await supabase.from("storage_sets").delete().eq("id", id);
   if (error) throw error;
+}
+
+// ---- Photos (Supabase Storage, private 'tire-photos' bucket) ---------------
+const PHOTO_BUCKET = "tire-photos";
+
+export async function addPhoto(setId, file) {
+  const safe = (file.name || "photo.jpg").replace(/[^a-zA-Z0-9._-]/g, "_");
+  const path = `${setId}/${Date.now()}-${safe}`;
+  const { error: upErr } = await supabase.storage
+    .from(PHOTO_BUCKET)
+    .upload(path, file, { cacheControl: "3600", upsert: false, contentType: file.type || "image/jpeg" });
+  if (upErr) throw upErr;
+  const { error } = await supabase.from("photos").insert({ set_id: setId, path });
+  if (error) throw error;
+  return path;
+}
+
+export async function deletePhoto(photo) {
+  const { error } = await supabase.from("photos").delete().eq("id", photo.id);
+  if (error) throw error;
+  await supabase.storage.from(PHOTO_BUCKET).remove([photo.path]);
+}
+
+// Turn stored object paths into temporary viewable URLs. Returns { path: url }.
+export async function signedUrls(paths, expiresIn = 3600) {
+  if (!paths || !paths.length) return {};
+  const { data, error } = await supabase.storage.from(PHOTO_BUCKET).createSignedUrls(paths, expiresIn);
+  if (error) throw error;
+  const map = {};
+  for (const item of data) if (item.signedUrl) map[item.path] = item.signedUrl;
+  return map;
+}
+
+// ---- Full inventory for CSV export -----------------------------------------
+export async function listAllDetailed() {
+  const { data, error } = await supabase
+    .from("storage_sets")
+    .select(`
+      public_code, status, season, on_rims, rim_type, quantity,
+      zone, rack, shelf, slot, check_in_date, expected_out_date, fee, paid, notes,
+      vehicle:vehicles ( make, model, year, plate, customer:customers ( name, phone, email ) ),
+      tires ( position, size, brand, model, tread_mm, dot_code, studded )
+    `)
+    .order("public_code", { ascending: true });
+  if (error) throw error;
+  return data ?? [];
 }
 
 // ---- Realtime: run `onChange` whenever ANY of our tables change ------------

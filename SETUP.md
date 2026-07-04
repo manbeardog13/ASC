@@ -19,8 +19,12 @@ You'll do three things: **(A)** set up the database, **(B)** connect the app,
    - Open the file `supabase/schema.sql` from this project, copy **all** of it,
      paste it into the query box, and click **Run**.
    - You should see "Success". This created your tables, locked them down so only a
-     logged-in user can see the data, and switched on **live sync** so every device
-     updates in real time — no extra step needed.
+     logged-in user can see the data, switched on **live sync** so every device
+     updates in real time, and set up a private **`tire-photos`** storage bucket for
+     condition photos — no extra step needed.
+   - *If the very last part errored* (some projects restrict this): go to **Storage**
+     → **New bucket**, name it exactly `tire-photos`, leave **Public** off, and create
+     it. Everything else already ran.
 
 3. Create your shop login. Left menu → **Authentication** → **Users** → **Add user**
    → **Create new user**.
@@ -85,7 +89,12 @@ You'll do three things: **(A)** set up the database, **(B)** connect the app,
      camera won't start — it snaps a picture and reads the code from it.
    - Or just **search** by name, plate, code, size, brand or location.
 5. **Season swap / pickup:** open a set and **Mark checked out**; bring it back in
-   storage the same way next season.
+   storage the same way next season. For a seasonal rush, tap **🧾 Worklist** on the
+   Storage screen, pick the season, and **Print** a rack-by-rack pick list.
+6. **Condition photos:** open a set and tap **📷 Add photo** to attach proof-of-condition
+   pictures (handy if a customer later disputes a scratch or wear).
+7. **Export:** tap **⬇︎ Export CSV** on the Storage screen to download the whole
+   inventory as a spreadsheet (opens in Excel or Google Sheets).
 
 > **iPhone note:** open the app from Safari (the Home-Screen icon does this). Apple's
 > "full-screen app" mode has camera bugs, so the app intentionally stays in Safari on

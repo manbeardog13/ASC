@@ -83,6 +83,18 @@ create table if not exists tires (
 );
 
 -- ----------------------------------------------------------------------------
+-- Photos (proof-of-condition at check-in). The image bytes live in Supabase
+-- Storage; this table just records the path + an optional caption.
+-- ----------------------------------------------------------------------------
+create table if not exists photos (
+  id          uuid primary key default gen_random_uuid(),
+  set_id      uuid not null references storage_sets(id) on delete cascade,
+  path        text not null,          -- object path in the 'tire-photos' bucket
+  caption     text,
+  created_at  timestamptz not null default now()
+);
+
+-- ----------------------------------------------------------------------------
 -- Search indexes
 -- ----------------------------------------------------------------------------
 create index if not exists idx_sets_status   on storage_sets(status);
@@ -90,6 +102,7 @@ create index if not exists idx_sets_season   on storage_sets(season);
 create index if not exists idx_sets_code     on storage_sets(public_code);
 create index if not exists idx_vehicles_plate on vehicles(plate);
 create index if not exists idx_tires_set     on tires(set_id);
+create index if not exists idx_photos_set    on photos(set_id);
 
 -- ----------------------------------------------------------------------------
 -- Keep updated_at fresh on every change to a set
@@ -116,11 +129,13 @@ alter table customers    enable row level security;
 alter table vehicles     enable row level security;
 alter table storage_sets enable row level security;
 alter table tires        enable row level security;
+alter table photos       enable row level security;
 
 drop policy if exists "auth full access" on customers;
 drop policy if exists "auth full access" on vehicles;
 drop policy if exists "auth full access" on storage_sets;
 drop policy if exists "auth full access" on tires;
+drop policy if exists "auth full access" on photos;
 
 create policy "auth full access" on customers
   for all to authenticated using (true) with check (true);
@@ -129,6 +144,8 @@ create policy "auth full access" on vehicles
 create policy "auth full access" on storage_sets
   for all to authenticated using (true) with check (true);
 create policy "auth full access" on tires
+  for all to authenticated using (true) with check (true);
+create policy "auth full access" on photos
   for all to authenticated using (true) with check (true);
 
 -- ----------------------------------------------------------------------------
@@ -139,7 +156,7 @@ create policy "auth full access" on tires
 do $$
 declare t text;
 begin
-  foreach t in array array['customers','vehicles','storage_sets','tires'] loop
+  foreach t in array array['customers','vehicles','storage_sets','tires','photos'] loop
     if not exists (
       select 1 from pg_publication_tables
       where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = t
@@ -148,5 +165,26 @@ begin
     end if;
   end loop;
 end $$;
+
+-- ----------------------------------------------------------------------------
+-- Storage bucket for condition photos + access policies.
+-- Kept LAST so that if your project restricts storage DDL, everything above has
+-- already run. If this block errors, just create a PRIVATE bucket named
+-- 'tire-photos' in the dashboard (Storage -> New bucket) — the app will work.
+-- ----------------------------------------------------------------------------
+insert into storage.buckets (id, name, public)
+values ('tire-photos', 'tire-photos', false)
+on conflict (id) do nothing;
+
+drop policy if exists "tire-photos auth read"   on storage.objects;
+drop policy if exists "tire-photos auth write"  on storage.objects;
+drop policy if exists "tire-photos auth delete" on storage.objects;
+
+create policy "tire-photos auth read" on storage.objects
+  for select to authenticated using (bucket_id = 'tire-photos');
+create policy "tire-photos auth write" on storage.objects
+  for insert to authenticated with check (bucket_id = 'tire-photos');
+create policy "tire-photos auth delete" on storage.objects
+  for delete to authenticated using (bucket_id = 'tire-photos');
 
 -- Done. Next: create ONE user in Authentication -> Users (that's the shop login).

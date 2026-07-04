@@ -72,9 +72,16 @@ See **[SETUP.md](SETUP.md)** for the full walk-through. Short version:
 3. Put your Supabase URL + anon key + app URL into `js/config.js`.
 4. Turn on GitHub Pages for this repo. Open the page, sign in, start checking tires in.
 
+## Also included
+
+- **CSV export** — one click on the dashboard downloads the whole inventory
+  (one row per tire, with customer, vehicle, location and specs) for Excel/Sheets.
+- **Season-swap worklist** — pick a season and get every in-storage set of that
+  season ordered by warehouse location, with a printable rack-by-rack pick list.
+- **Condition photos** — attach proof-of-condition photos to any set (stored in a
+  private Supabase Storage bucket, shown as thumbnails on the set page).
+
 ## Roadmap ideas
 
 - Auto-read the tire sidewall (size + DOT) from a photo via on-device OCR.
-- CSV export of the whole inventory.
-- Season-change worklist (all winter sets due to swap out).
-- Photo attachments per set (proof of condition at check-in).
+- Email/SMS reminders when a set is due for pickup.

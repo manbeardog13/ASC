@@ -48,6 +48,61 @@ function fieldVal(id) {
   const el = document.getElementById(id);
   return el ? el.value.trim() : "";
 }
+function todayStr() {
+  return new Date().toISOString().slice(0, 10);
+}
+// Sort by warehouse location (Zone-Rack-Shelf-Slot), numbers ordered naturally.
+function byLocation(a, b) {
+  return locString(a).localeCompare(locString(b), undefined, { numeric: true, sensitivity: "base" });
+}
+
+// ---- CSV export ------------------------------------------------------------
+function csvEscape(v) {
+  const s = v == null ? "" : String(v);
+  return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+function buildInventoryCsv(sets) {
+  const header = [
+    "Set Code", "Status", "Season", "On Rims", "Rim Type", "Location", "Check-in",
+    "Expected Out", "Fee", "Paid", "Customer", "Phone", "Email", "Vehicle", "Plate",
+    "Position", "Size", "Brand", "Model", "Tread (mm)", "DOT", "Studded", "Set Notes",
+  ];
+  const lines = [header.map(csvEscape).join(",")];
+  for (const s of sets) {
+    const v = s.vehicle || {};
+    const c = v.customer || {};
+    const base = [
+      s.public_code, s.status, s.season, s.on_rims ? "yes" : "no", s.rim_type || "",
+      locString(s) === "—" ? "" : locString(s), s.check_in_date || "", s.expected_out_date || "",
+      s.fee == null ? "" : s.fee, s.paid ? "yes" : "no", c.name || "", c.phone || "", c.email || "",
+      [v.year, v.make, v.model].filter(Boolean).join(" "), v.plate || "",
+    ];
+    const tires = s.tires || [];
+    if (!tires.length) {
+      lines.push([...base, "", "", "", "", "", "", "", s.notes || ""].map(csvEscape).join(","));
+    } else {
+      for (const t of tires) {
+        lines.push(
+          [...base, t.position || "", t.size || "", t.brand || "", t.model || "",
+           t.tread_mm == null ? "" : t.tread_mm, t.dot_code || "", t.studded ? "yes" : "no",
+           s.notes || ""].map(csvEscape).join(",")
+        );
+      }
+    }
+  }
+  return lines.join("\r\n");
+}
+function downloadFile(filename, text, mime = "text/csv;charset=utf-8;") {
+  const blob = new Blob(["﻿" + text], { type: mime }); // BOM so Excel reads UTF-8
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
 
 // ---------------------------------------------------------------------------
 // Realtime: one shared subscription refreshes whatever screen is open, live,
@@ -192,6 +247,13 @@ let dashState = { q: "", status: "all", season: "all", rows: [] };
 
 async function viewDashboard() {
   app.innerHTML = `
+    <div class="pagehead">
+      <h2>Storage</h2>
+      <div class="pagehead-actions">
+        <a class="btn" href="#/worklist">🧾 Worklist</a>
+        <button id="exportCsv" class="btn">⬇︎ Export CSV</button>
+      </div>
+    </div>
     <div class="toolbar">
       <input id="q" class="search" placeholder="Search name, plate, code, size, brand, location…" value="${esc(dashState.q)}">
       <select id="fStatus">
@@ -222,6 +284,19 @@ async function viewDashboard() {
   $("#fSeason").onchange = (e) => {
     dashState.season = e.target.value;
     loadDashboard();
+  };
+  $("#exportCsv").onclick = async () => {
+    const btn = $("#exportCsv");
+    btn.disabled = true;
+    try {
+      const sets = await db.listAllDetailed();
+      downloadFile(`asc-inventory-${todayStr()}.csv`, buildInventoryCsv(sets));
+      toast(`Exported ${sets.length} set${sets.length === 1 ? "" : "s"}`);
+    } catch (e) {
+      toast(e.message || "Export failed", "err");
+    } finally {
+      btn.disabled = false;
+    }
   };
   currentRefresh = loadDashboard; // live-refresh the list on any device's change
   loadDashboard();
@@ -298,6 +373,117 @@ function rowCard(s) {
         <span class="locval">${esc(locString(s))}</span>
       </div>
     </a>`;
+}
+
+// ---------------------------------------------------------------------------
+// View: season-swap worklist (in-storage sets of a season, ordered by location)
+// ---------------------------------------------------------------------------
+let worklistSeason = "winter";
+let worklistRows = [];
+
+async function viewWorklist() {
+  app.innerHTML = `
+    <div class="card">
+      <div class="pagehead">
+        <h2>Season-swap worklist</h2>
+        <div class="pagehead-actions">
+          <select id="wlSeason">
+            <option value="winter">Winter</option>
+            <option value="summer">Summer</option>
+            <option value="all_season">All-season</option>
+          </select>
+          <button id="wlPrint" class="btn">🖨️ Print</button>
+          <a class="btn ghost" href="#/">Back</a>
+        </div>
+      </div>
+      <p class="muted">Every set currently <b>in storage</b> for the chosen season, ordered by
+        warehouse location so you can pull them rack by rack.</p>
+      <div id="wl"><p class="muted">Loading…</p></div>
+    </div>`;
+  $("#wlSeason").value = worklistSeason;
+  $("#wlSeason").onchange = (e) => {
+    worklistSeason = e.target.value;
+    loadWorklist();
+  };
+  $("#wlPrint").onclick = printWorklist;
+  currentRefresh = loadWorklist; // live-refresh as sets check in/out
+  loadWorklist();
+}
+
+async function loadWorklist() {
+  try {
+    const rows = await db.listSets({ status: "in_storage", season: worklistSeason });
+    rows.sort(byLocation);
+    worklistRows = rows;
+    $("#wl").innerHTML = rows.length
+      ? worklistTable(rows)
+      : `<p class="muted">No ${SEASON_LABEL[worklistSeason]} sets in storage.</p>`;
+  } catch (e) {
+    $("#wl").innerHTML = `<p class="error">${esc(e.message)}</p>`;
+  }
+}
+
+function worklistTable(rows) {
+  return `<div class="wltable">
+    <div class="wlh"><span>✓</span><span>Location</span><span>Code</span><span>Customer</span><span>Plate</span><span>Tires</span></div>
+    ${rows
+      .map((s) => {
+        const t0 = (s.tires || [])[0] || {};
+        const spec = [t0.size, t0.brand].filter(Boolean).join(" ");
+        return `<div class="wlr">
+          <span class="box">☐</span>
+          <span class="loc">${esc(locString(s))}</span>
+          <span><a href="#/set/${esc(s.public_code)}">${esc(s.public_code)}</a></span>
+          <span>${esc(s.vehicle?.customer?.name || "—")}</span>
+          <span>${esc(s.vehicle?.plate || "—")}</span>
+          <span class="muted">${esc(spec || "—")}</span>
+        </div>`;
+      })
+      .join("")}
+  </div>`;
+}
+
+function printWorklist() {
+  const rows = worklistRows;
+  const season = SEASON_LABEL[worklistSeason] || worklistSeason;
+  const body = rows
+    .map((s) => {
+      const t0 = (s.tires || [])[0] || {};
+      const spec = [t0.size, t0.brand].filter(Boolean).join(" ");
+      return `<tr>
+        <td class="b">☐</td>
+        <td class="loc">${esc(locString(s))}</td>
+        <td>${esc(s.public_code)}</td>
+        <td>${esc(s.vehicle?.customer?.name || "")}</td>
+        <td>${esc(s.vehicle?.plate || "")}</td>
+        <td>${esc(spec)}</td>
+      </tr>`;
+    })
+    .join("");
+  const win = window.open("", "_blank", "width=820,height=900");
+  win.document.write(`<!doctype html><html><head><meta charset="utf-8">
+    <title>Worklist ${season} ${todayStr()}</title>
+    <style>
+      body { font-family: Arial, Helvetica, sans-serif; margin: 24px; color:#111; }
+      h1 { margin: 0 0 2px; font-size: 20px; }
+      .sub { color:#555; margin: 0 0 16px; font-size: 13px; }
+      table { border-collapse: collapse; width: 100%; }
+      th, td { border-bottom: 1px solid #ccc; padding: 8px 10px; text-align: left; font-size: 13px; }
+      th { background:#f2f2f2; text-transform: uppercase; font-size: 11px; letter-spacing:.4px; }
+      .b { font-size: 18px; width: 28px; }
+      .loc { font-weight: 800; }
+      @media print { .noprint { display:none; } }
+    </style></head><body>
+    <h1>Season-swap worklist — ${season}</h1>
+    <p class="sub">In storage · ${rows.length} set${rows.length === 1 ? "" : "s"} · ${todayStr()} · ASC Tire Hotel</p>
+    <table>
+      <thead><tr><th>✓</th><th>Location</th><th>Code</th><th>Customer</th><th>Plate</th><th>Tires</th></tr></thead>
+      <tbody>${body || `<tr><td colspan="6">No sets.</td></tr>`}</tbody>
+    </table>
+    <p class="noprint" style="margin-top:16px"><button onclick="window.print()" style="padding:8px 16px">Print</button></p>
+    <script>window.onload=()=>setTimeout(()=>window.print(),300);<\/script>
+    </body></html>`);
+  win.document.close();
 }
 
 // ---------------------------------------------------------------------------
@@ -530,6 +716,13 @@ async function viewSet(code, silent = false) {
         }
       </div>
 
+      <h3>Condition photos</h3>
+      <div id="photos" class="photos"></div>
+      <div class="scanalt">
+        <label class="btn" for="addphoto">📷 Add photo</label>
+        <input id="addphoto" type="file" accept="image/*" capture="environment" hidden>
+      </div>
+
       <div class="actions wrap">
         <button id="print" class="primary">🏷️ Print label</button>
         <a class="btn" href="#/set/${esc(s.public_code)}/edit">Edit</a>
@@ -551,6 +744,62 @@ async function viewSet(code, silent = false) {
     toast("Deleted");
     go("/");
   };
+
+  renderPhotos(s);
+  $("#addphoto").onchange = async (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const label = document.querySelector('label[for="addphoto"]');
+    if (label) label.textContent = "⏳ Uploading…";
+    try {
+      await db.addPhoto(s.id, file);
+      toast("Photo added");
+      viewSet(code, true); // realtime will also refresh other devices
+    } catch (err) {
+      toast(err.message || "Upload failed", "err");
+      if (label) label.textContent = "📷 Add photo";
+    }
+  };
+}
+
+// Load + render the condition photos (signed URLs from private Storage bucket).
+async function renderPhotos(s) {
+  const box = document.getElementById("photos");
+  if (!box) return;
+  const photos = (s.photos || []).slice().sort((a, b) => (a.created_at < b.created_at ? -1 : 1));
+  if (!photos.length) {
+    box.innerHTML = `<p class="muted tiny">No photos yet — add one as proof of condition at check-in.</p>`;
+    return;
+  }
+  box.innerHTML = `<p class="muted tiny">Loading photos…</p>`;
+  let urls = {};
+  try {
+    urls = await db.signedUrls(photos.map((p) => p.path));
+  } catch (_) {
+    /* show broken thumbs rather than nothing */
+  }
+  box.innerHTML = photos
+    .map(
+      (p) => `<figure class="photo">
+        <a href="${urls[p.path] || "#"}" target="_blank" rel="noopener">
+          <img src="${urls[p.path] || ""}" alt="condition photo" loading="lazy">
+        </a>
+        <button class="delphoto" data-id="${esc(p.id)}" data-path="${esc(p.path)}" title="Delete photo">✕</button>
+      </figure>`
+    )
+    .join("");
+  box.querySelectorAll(".delphoto").forEach((btn) => {
+    btn.onclick = async () => {
+      if (!confirm("Delete this photo?")) return;
+      try {
+        await db.deletePhoto({ id: btn.dataset.id, path: btn.dataset.path });
+        toast("Photo deleted");
+        if (s.public_code) viewSet(s.public_code, true);
+      } catch (err) {
+        toast(err.message || "Delete failed", "err");
+      }
+    };
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -743,6 +992,7 @@ window.addEventListener("hashchange", () => {
 // ---------------------------------------------------------------------------
 route(/^\/$/, viewDashboard);
 route(/^\/checkin$/, viewCheckin);
+route(/^\/worklist$/, viewWorklist);
 route(/^\/scan$/, viewScan);
 route(/^\/set\/([^/]+)\/edit$/, viewEdit);
 route(/^\/set\/([^/]+)$/, viewSet);
