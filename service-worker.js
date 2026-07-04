@@ -2,7 +2,7 @@
    Goal: make the app installable on a phone and load the shell instantly.
    Strategy: network-first for same-origin files (so deploys show up right away),
    falling back to cache when offline. Live data always comes from Supabase online. */
-const CACHE = "asc-tirehotel-v1";
+const CACHE = "asc-tirehotel-v2";
 const SHELL = [
   "./",
   "./index.html",
@@ -13,6 +13,7 @@ const SHELL = [
   "./js/supabaseClient.js",
   "./js/scanner.js",
   "./js/qrlabel.js",
+  "./js/ocr.js",
   "./manifest.webmanifest",
   "./assets/icon.svg",
 ];

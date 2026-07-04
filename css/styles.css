@@ -149,6 +149,14 @@ code { background: #eef0f3; padding: 1px 6px; border-radius: 6px; font-size: 13p
   gap: 8px; margin-bottom: 8px; align-items: center;
 }
 .tirerow input, .tirerow select { padding: 8px 9px; font-size: 14px; }
+.tirerow.flash { animation: rowflash 1.3s ease; }
+@keyframes rowflash { 0% { background: #fff3c9; } 100% { background: transparent; } }
+
+/* ---- Sidewall OCR ---- */
+.ocrbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+.ocrstatus { font-size: 13px; background: #eef4ff; border: 1px solid #cfe0ff; color: #24467e;
+  padding: 8px 10px; border-radius: 8px; margin: 0 0 10px; }
+.ocrstatus.warnbox { background: #fff5e6; border-color: #f3d9a8; color: #8a5a11; }
 
 /* ---- Buttons ---- */
 button, .btn {

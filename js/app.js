@@ -4,6 +4,7 @@
 import { isConfigured } from "./supabaseClient.js";
 import * as db from "./db.js";
 import * as scanner from "./scanner.js";
+import * as ocr from "./ocr.js";
 import { printLabel } from "./qrlabel.js";
 
 const app = document.getElementById("app");
@@ -527,6 +528,63 @@ function collectTires(container) {
   });
 }
 
+// ---- Sidewall OCR: "Scan sidewall" control shared by check-in + edit --------
+const SIDEWALL_SCAN_BAR = `
+  <div class="ocrbar">
+    <label class="btn" for="ssphoto">📷 Scan sidewall</label>
+    <input id="ssphoto" type="file" accept="image/*" capture="environment" hidden>
+    <span class="muted tiny">Reads size &amp; DOT into the next empty row — always double-check.</span>
+  </div>
+  <p id="ocrStatus" class="ocrstatus" hidden></p>`;
+
+function fillNextTireRow(container, size, dot) {
+  const rows = [...container.querySelectorAll(".tirerow")];
+  if (!rows.length) return null;
+  const target =
+    rows.find((r) => !r.querySelector('[data-t="size"]').value.trim()) || rows[rows.length - 1];
+  if (size) target.querySelector('[data-t="size"]').value = size;
+  if (dot) target.querySelector('[data-t="dot_code"]').value = dot;
+  target.classList.add("flash");
+  setTimeout(() => target.classList.remove("flash"), 1300);
+  return rows.indexOf(target) + 1;
+}
+
+function wireSidewallScan(container) {
+  const input = document.getElementById("ssphoto");
+  const statusEl = document.getElementById("ocrStatus");
+  if (!input || !statusEl) return;
+  input.onchange = async (e) => {
+    const file = e.target.files && e.target.files[0];
+    e.target.value = ""; // let the user re-pick the same file
+    if (!file) return;
+    statusEl.hidden = false;
+    statusEl.className = "ocrstatus";
+    statusEl.textContent = "Loading OCR engine…";
+    try {
+      const res = await ocr.scanSidewall(file, (m) => {
+        if (m.status === "recognizing text")
+          statusEl.textContent = `Reading sidewall… ${Math.round((m.progress || 0) * 100)}%`;
+        else if (m.status)
+          statusEl.textContent = m.status.replace(/^\w/, (ch) => ch.toUpperCase()) + "…";
+      });
+      if (!res.size && !res.dot) {
+        statusEl.className = "ocrstatus warnbox";
+        statusEl.textContent =
+          "Couldn't read it clearly — type the size/DOT in, or retry with the sidewall filling the frame in good light.";
+        return;
+      }
+      const rowN = fillNextTireRow(container, res.size, res.dot);
+      const parts = [];
+      if (res.size) parts.push(`size ${res.size}`);
+      if (res.dot) parts.push(`DOT ${res.dot}`);
+      statusEl.textContent = `Detected ${parts.join(", ")} → filled tire ${rowN}. Please double-check.`;
+    } catch (err) {
+      statusEl.className = "ocrstatus warnbox";
+      statusEl.textContent = err.message || "OCR failed.";
+    }
+  };
+}
+
 // ---------------------------------------------------------------------------
 // View: check-in (create)
 // ---------------------------------------------------------------------------
@@ -585,6 +643,7 @@ function viewCheckin() {
         </fieldset>
 
         <fieldset><legend>Tires <span class="muted">(fill what you can — blank rows are ignored)</span></legend>
+          ${SIDEWALL_SCAN_BAR}
           <div id="tires">${tireRowsHtml(4)}</div>
         </fieldset>
 
@@ -603,6 +662,7 @@ function viewCheckin() {
   $("#s_qty").onchange = () => {
     $("#tires").innerHTML = tireRowsHtml($("#s_qty").value, collectTires($("#tires")));
   };
+  wireSidewallScan($("#tires"));
 
   $("#ci").onsubmit = async (e) => {
     e.preventDefault();
@@ -862,6 +922,7 @@ async function viewEdit(code) {
           <label>Notes<textarea id="s_notes" rows="2">${esc(s.notes)}</textarea></label>
         </fieldset>
         <fieldset><legend>Tires</legend>
+          ${SIDEWALL_SCAN_BAR}
           <div id="tires">${tireRowsHtml(s.quantity, s.tires)}</div>
         </fieldset>
         <div class="actions">
@@ -875,6 +936,7 @@ async function viewEdit(code) {
   $("#s_qty").onchange = () => {
     $("#tires").innerHTML = tireRowsHtml($("#s_qty").value, collectTires($("#tires")));
   };
+  wireSidewallScan($("#tires"));
 
   $("#ed").onsubmit = async (e) => {
     e.preventDefault();

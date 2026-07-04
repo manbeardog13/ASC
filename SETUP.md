@@ -80,6 +80,9 @@ You'll do three things: **(A)** set up the database, **(B)** connect the app,
    **● Live** dot in the top bar means sync is on.
 3. **Check-in:** tap **Check-in**, fill in the customer, vehicle, location and tire
    details, and **Save & make label**. Print the label and stick it on the set.
+   - **Shortcut:** tap **📷 Scan sidewall** to photograph a tire — it auto-fills the
+     size and DOT date into the next empty row. Sidewall text is hard to read, so
+     glance over what it filled in and fix anything that's off.
 4. **Find a set — three ways to scan:**
    - **Easiest:** open the phone's normal **Camera app** and point it at the sticker —
      a link pops up that opens the record. Works on any iPhone or Android.

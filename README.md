@@ -58,6 +58,7 @@ js/db.js                All database reads/writes
 js/app.js               Router + every screen
 js/scanner.js           Camera QR scanning
 js/qrlabel.js           QR label generation + printing
+js/ocr.js               Sidewall OCR (size + DOT) via Tesseract.js
 supabase/schema.sql     ← RUN THIS ONCE in Supabase (tables + security)
 assets/icon.svg         App icon
 SETUP.md                Step-by-step setup for the shop owner
@@ -80,8 +81,11 @@ See **[SETUP.md](SETUP.md)** for the full walk-through. Short version:
   season ordered by warehouse location, with a printable rack-by-rack pick list.
 - **Condition photos** — attach proof-of-condition photos to any set (stored in a
   private Supabase Storage bucket, shown as thumbnails on the set page).
+- **Sidewall OCR** — on check-in/edit, tap **📷 Scan sidewall** to photograph a tire
+  and auto-fill its **size** and **DOT date code** into the next empty row via
+  on-device OCR (Tesseract.js, loaded from CDN only when first used). Best-effort —
+  results are always shown for you to confirm/edit.
 
 ## Roadmap ideas
 
-- Auto-read the tire sidewall (size + DOT) from a photo via on-device OCR.
 - Email/SMS reminders when a set is due for pickup.
