@@ -1,0 +1,93 @@
+# Setup guide — ASC Tire Hotel
+
+This gets the app running with a shared database that both your **phone** and the
+**shop computer** use. It takes about 15 minutes and costs **$0** (Supabase and
+GitHub Pages both have free tiers that are plenty for one shop).
+
+You'll do three things: **(A)** set up the database, **(B)** connect the app,
+**(C)** put it online.
+
+---
+
+## A. Set up the database (Supabase)
+
+1. Go to **https://supabase.com** and sign up (free). Click **New project**.
+   - Give it a name like `asc-tire-hotel`, set a database password (save it), pick a region near you.
+   - Wait ~2 minutes for it to finish setting up.
+
+2. In the left menu, open **SQL Editor** → **New query**.
+   - Open the file `supabase/schema.sql` from this project, copy **all** of it,
+     paste it into the query box, and click **Run**.
+   - You should see "Success". This created your tables and locked them down so
+     only a logged-in user can see the data.
+
+3. Create your shop login. Left menu → **Authentication** → **Users** → **Add user**
+   → **Create new user**.
+   - Enter an email and password you'll remember — this is how you'll sign in to the app.
+   - (Leave "auto-confirm" on so you can log in right away.)
+
+4. Get your two connection values. Left menu → **Project Settings** → **Data API**
+   (or **API**).
+   - Copy the **Project URL** (looks like `https://abcdxyz.supabase.co`).
+   - Copy the **anon / public** API key (a long string). This one is safe to share —
+     your data stays protected by the security rules from step 2.
+
+---
+
+## B. Connect the app
+
+1. Open the file **`js/config.js`** in this project.
+2. Replace the three placeholder values:
+
+   ```js
+   SUPABASE_URL:      "https://abcdxyz.supabase.co",   // your Project URL
+   SUPABASE_ANON_KEY: "eyJhbGciOi...",                 // your anon key
+   APP_BASE_URL:      "https://manbeardog13.github.io/ASC/",  // where the app lives (step C)
+   ```
+
+3. Save the file.
+
+> The `APP_BASE_URL` is baked into every QR code, so a customer or an employee can
+> scan a sticker with the **normal phone camera** and it opens the right record.
+> If you host somewhere other than GitHub Pages, put that address here instead.
+
+---
+
+## C. Put it online (GitHub Pages)
+
+1. Commit and push this project to the GitHub repo (`manbeardog13/ASC`).
+2. On GitHub, open the repo → **Settings** → **Pages**.
+3. Under **Build and deployment → Source**, choose **Deploy from a branch**.
+   - Branch: **main**, folder: **/ (root)**. Click **Save**.
+4. Wait a minute, then GitHub shows your live address, e.g.
+   `https://manbeardog13.github.io/ASC/`.
+   - If that address is different from what you put in `APP_BASE_URL` (step B2),
+     update `config.js` and push again.
+
+---
+
+## Using it
+
+1. Open the app address on your phone. In the browser menu choose **Add to Home Screen**
+   so it installs like an app. Do the same on the shop computer.
+2. Sign in with the email/password you made in step A3.
+3. **Check-in:** tap **Check-in**, fill in the customer, vehicle, location and tire
+   details, and **Save & make label**. Print the label and stick it on the set.
+4. **Find a set:** use the search box (name, plate, code, size, brand or location),
+   or tap **Scan** and point the camera at a label.
+5. **Season swap / pickup:** open a set and **Mark checked out**; bring it back in
+   storage the same way next season.
+
+---
+
+## Troubleshooting
+
+- **"App isn't connected to your database yet"** — `config.js` still has placeholder
+  values, or they have a typo. Recheck step B.
+- **Camera won't open** — the site must be on **https** (GitHub Pages is), and the
+  browser will ask for camera permission the first time — tap **Allow**. You can
+  always type a code into the box on the Scan screen instead.
+- **"Invalid login credentials"** — the email/password must match a user you created
+  in Supabase (step A3).
+- **Nothing saves / permission error** — make sure you ran the whole `schema.sql`
+  and that you're signed in.

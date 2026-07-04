@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="ASC Tire Hotel">
+  <rect width="512" height="512" rx="96" fill="#111418"/>
+  <circle cx="256" cy="256" r="150" fill="none" stroke="#e8890c" stroke-width="34"/>
+  <circle cx="256" cy="256" r="70" fill="none" stroke="#e8890c" stroke-width="30"/>
+  <g stroke="#e8890c" stroke-width="26" stroke-linecap="round">
+    <line x1="256" y1="106" x2="256" y2="186"/>
+    <line x1="256" y1="326" x2="256" y2="406"/>
+    <line x1="106" y1="256" x2="186" y2="256"/>
+    <line x1="326" y1="256" x2="406" y2="256"/>
+  </g>
+  <text x="256" y="472" text-anchor="middle" font-family="Arial, sans-serif" font-size="64" font-weight="800" fill="#ffffff">ASC</text>
+</svg>

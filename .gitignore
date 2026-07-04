@@ -1,0 +1,13 @@
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+*.log
+.vscode/
+.idea/
+
+# Node (only if you later add tooling — not needed for the app itself)
+node_modules/
+
+# NOTE: js/config.js IS committed on purpose. It holds your Supabase URL and the
+# public "anon" key, which are safe to publish (Row Level Security protects the
+# data). GitHub Pages needs it in the repo to run the app.

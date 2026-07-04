@@ -1,0 +1,14 @@
+{
+  "name": "ASC Tire Hotel",
+  "short_name": "ASC Tires",
+  "description": "Seasonal tire storage manager — index, scan and track customers' tires.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f4f5f7",
+  "theme_color": "#111418",
+  "icons": [
+    { "src": "assets/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
