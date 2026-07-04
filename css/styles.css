@@ -448,7 +448,12 @@ details.disclose > .disclose-body { padding: 0 2px 16px; }
    Brand logo (top bar)
    ============================================================================ */
 .topbar .brand-logo { display: inline-flex; align-items: center; height: 30px; }
-.topbar .brand-logo img { height: 26px; width: auto; display: block; }
+.topbar .brand-logo img { height: 22px; width: auto; display: block; }
+/* Keep the top bar uncrowded on phones: online state shows just the dot */
+@media (max-width: 640px) {
+  .conn-online .ctext { display: none; }
+  .conn-online { padding: 0 6px; }
+}
 
 /* ============================================================================
    Glass login + splash — ultra-premium editorial / warm glassmorphism

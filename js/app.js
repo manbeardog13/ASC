@@ -60,7 +60,7 @@ function mountFrame() {
   if (document.getElementById("main")) return;
   root.innerHTML = `
     <header class="topbar">
-      <a class="brand-logo" href="#/" aria-label="ASC"><img src="assets/asc-mark.svg" alt="ASC"></a>
+      <a class="brand-logo" href="#/" aria-label="ASC"><img src="assets/asc-mark.png" alt="ASC"></a>
       <nav class="topbar-desk-nav" aria-label="Primary">
         ${NAV.filter((n) => !n.center).map((n) => `<a href="#${n.route}" data-route="${n.route}">${icon(n.iconName, 18)}${t(n.key)}</a>`).join("")}
       </nav>
@@ -94,7 +94,7 @@ function renderConn() {
   const { online, syncPending } = getState();
   if (online && !syncPending) {
     el.className = "conn conn-online";
-    el.innerHTML = `<span class="dot"></span>${t("conn.online")}`;
+    el.innerHTML = `<span class="dot"></span><span class="ctext">${t("conn.online")}</span>`;
   } else if (online && syncPending) {
     el.className = "conn conn-offline";
     el.innerHTML = `${icon("clock", 14)}${t("conn.syncing", { n: syncPending })}`;
@@ -195,7 +195,7 @@ function renderLogin() {
   root.innerHTML = `
     <div class="login-canvas">
       <div class="login-stage">
-        <img class="login-logo" src="assets/asc-logo.svg" alt="ASC — Auto Servisni Centar d.o.o.">
+        <img class="login-logo" src="assets/asc-logo.png" alt="ASC — Auto Servisni Centar d.o.o.">
         <div class="glass-card login-card">
           <div class="login-tagline">${t("tagline")}</div>
           <form id="loginForm" novalidate>
