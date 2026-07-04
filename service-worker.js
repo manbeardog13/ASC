@@ -2,7 +2,7 @@
    Makes the app installable and loads the shell instantly. Network-first for
    same-origin files (so deploys show up right away), cache fallback when
    offline. Live data always comes from Supabase online. */
-const CACHE = "asc-tirehotel-v7";
+const CACHE = "asc-tirehotel-v8";
 const SHELL = [
   "./",
   "./index.html",
@@ -11,6 +11,7 @@ const SHELL = [
   "./assets/icon.svg",
   "./assets/asc-logo.png",
   "./assets/asc-mark.png",
+  "./assets/background.jpg",
   "./js/app.js",
   "./js/i18n.js",
   "./js/config.js",
