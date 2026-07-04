@@ -10,7 +10,16 @@ import { initOffline } from "./offline.js";
 import * as db from "./db.js";
 import { icon, esc, go, toast, busy } from "./ui.js";
 
-const root = document.getElementById("app-root");
+// Self-heal a stale/mismatched shell: if a cached OLD index.html (which used a
+// different mount element) is served with this NEW app.js, the mount point would
+// be missing and the app would silently white-screen. Create it if absent.
+let root = document.getElementById("app-root");
+if (!root) {
+  document.body.innerHTML = "";
+  root = document.createElement("div");
+  root.id = "app-root";
+  document.body.appendChild(root);
+}
 let realtimeChannel = null;
 let refreshTimer = null;
 
