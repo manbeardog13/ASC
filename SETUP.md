@@ -108,6 +108,35 @@ You'll do three things: **(A)** set up the database, **(B)** connect the app,
 
 ---
 
+## D. Turn on automatic backups (recommended)
+
+Your data lives in Supabase. Backups make sure a mistake or outage can never wipe
+it out. Add two secrets on GitHub — **repo → Settings → Secrets and variables →
+Actions → New repository secret**:
+
+1. **`SUPABASE_DB_URL`** — Supabase → **Project Settings → Database → Connection
+   string → URI** (the direct one, port 5432).
+2. **`BACKUP_ENCRYPTION_KEY`** — a long random passphrase you make up and keep in a
+   password manager (run `openssl rand -base64 40` for a good one). Backups are
+   encrypted with this because the repo is public. **If you lose this key you can't
+   read your backups — store it safely.**
+
+That's it. Every night the app exports an encrypted database backup + a CSV, keeps
+30 daily / 12 monthly / 5 yearly, and once a week it test-restores the newest one
+to prove it works. The dashboard shows **Last backup** so you can see it's current.
+Also switch on Supabase's own daily backups (Project Settings → Database → Backups).
+
+Full details and how to restore: **[docs/DISASTER_RECOVERY.md](docs/DISASTER_RECOVERY.md)**.
+
+### Staff logins & roles
+
+The first user you create is a **manager** (full access, including permanently
+deleting and managing roles). Add more logins in Supabase → Authentication → Users;
+they start as **employees** (can check in, move, and recycle-bin sets, but not
+permanently delete). Change anyone's role in the `profiles` table.
+
+---
+
 ## Troubleshooting
 
 - **"App isn't connected to your database yet"** — `config.js` still has placeholder

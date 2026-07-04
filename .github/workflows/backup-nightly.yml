@@ -1,0 +1,91 @@
+name: Nightly backup
+
+# Layer 1 (encrypted DB dump) + Layer 2 (CSV snapshot) + soft-delete purge.
+# Scheduled workflows only run from the DEFAULT branch, so this activates once
+# this branch is merged to main.
+on:
+  schedule:
+    - cron: "0 2 * * *"     # 02:00 UTC every day
+  workflow_dispatch: {}      # ...and on demand from the Actions tab
+
+permissions:
+  contents: write            # to push to the backups branch
+
+concurrency:
+  group: asc-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    env:
+      DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      ENC_KEY: ${{ secrets.BACKUP_ENCRYPTION_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check required secrets
+        run: |
+          test -n "$DB_URL"  || { echo "::error::Missing secret SUPABASE_DB_URL"; exit 1; }
+          test -n "$ENC_KEY" || { echo "::error::Missing secret BACKUP_ENCRYPTION_KEY"; exit 1; }
+
+      - name: Install PostgreSQL 16 client
+        run: |
+          sudo sh -c 'echo "deb https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+          curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/pgdg.gpg
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client-16
+          echo "/usr/lib/postgresql/16/bin" >> "$GITHUB_PATH"
+
+      - name: Create encrypted backup + CSV snapshot
+        run: bash scripts/backup.sh
+
+      - name: Upload encrypted artifact (90-day retention)
+        uses: actions/upload-artifact@v4
+        with:
+          name: asc-backup-${{ env.stamp }}
+          path: out/*.enc
+          retention-days: 90
+
+      - name: Publish to backups branch (versioned, retention 30/12/5)
+        run: |
+          set -euo pipefail
+          git config user.name  "asc-backup-bot"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if git ls-remote --exit-code --heads origin backups >/dev/null 2>&1; then
+            git fetch --depth=1 origin backups
+            git worktree add -B backups .bk origin/backups
+          else
+            git worktree add --detach .bk HEAD
+            git -C .bk checkout --orphan backups
+            git -C .bk rm -rf . >/dev/null 2>&1 || true
+          fi
+          mkdir -p .bk/database_backups/db .bk/database_backups/csv
+          cp out/asc-*.sql.gz.enc .bk/database_backups/db/
+          cp out/asc-*.csv.enc    .bk/database_backups/csv/
+          node scripts/prune-backups.mjs .bk/database_backups/db
+          node scripts/prune-backups.mjs .bk/database_backups/csv
+          cat > .bk/README.md <<'EOF'
+          # ASC Tire Hotel — encrypted backups
+
+          AES-256 encrypted PostgreSQL dumps (`database_backups/db`) and CSV
+          inventory snapshots (`database_backups/csv`). They are encrypted because
+          this repository is public; the key lives only in the repo's Actions
+          secret `BACKUP_ENCRYPTION_KEY`. Restore steps: see
+          `docs/DISASTER_RECOVERY.md` on the main branch.
+          EOF
+          git -C .bk add -A
+          git -C .bk commit -m "backup ${{ env.stamp }}" || { echo "Nothing new to back up."; exit 0; }
+          git -C .bk push origin backups
+
+      - name: Record success + purge 30-day recycle bin
+        if: success()
+        run: |
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -c \
+            "insert into backup_runs(kind,status,detail,size_bytes,started_at) values('db','success','nightly encrypted dump + csv', ${db_bytes:-0}, now());"
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -c "select purge_deleted();"
+
+      - name: Record failure
+        if: failure()
+        run: |
+          psql "$DB_URL" -c "insert into backup_runs(kind,status,detail,started_at) values('db','failed','see Actions log', now());" || true
