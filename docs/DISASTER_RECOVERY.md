@@ -22,7 +22,7 @@
 | 3 | **Encrypted CSV snapshot** (human-readable once decrypted) | `backups` branch → `database_backups/csv/` + artifact | "the app is gone, I just need the list" |
 | 4 | **Audit log** (`audit_events`, event-sourced) | Supabase | "who moved/deleted this set" |
 | 5 | **Soft delete** (recycle bin, 30 days) | Supabase `storage_sets.deleted_at` | accidental deletes |
-| 6 | **Weekly restore test** | GitHub Actions | silent backup rot |
+| 6 | **Weekly integrity check** | GitHub Actions | silent backup rot |
 
 Retention on the `backups` branch: **30 daily · 12 monthly · 5 yearly** (older
 pruned automatically by `scripts/prune-backups.mjs`).
@@ -69,39 +69,41 @@ openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -pass pass:"$BACKUP_ENCRYPTION_
   -in asc-2026-07-04.csv.enc > Inventory_2026-07-04.csv
 ```
 
+Backups are **data-only** — the structure (tables, policies, triggers, roles)
+lives in `supabase/schema.sql`. So every restore is: **structure first, then data.**
+
 ### Full restore (RTO ≤ 1h)
 
-1. Create a fresh Supabase project (or reuse the existing one if only data was lost).
-2. Restore the decrypted dump:
+1. Target a Supabase project — a fresh one after a total loss, or the existing one
+   if only data was lost.
+2. **Structure:** paste `supabase/schema.sql` into the SQL Editor and run it
+   (creates tables, policies, triggers, roles). Skip if the project already has it.
+3. **Data:** load the decrypted data-only dump (triggers are disabled inside it, so
+   the audit log isn't re-fired):
    ```bash
    psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -f asc-2026-07-04.sql
    ```
-   (The dump uses `--clean --if-exists`, so it drops and recreates cleanly.)
-3. If it's a new project: run `supabase/schema.sql` for policies/roles, re-create
-   the `tire-photos` bucket, update `js/config.js` with the new URL + anon key.
-4. Confirm sign-in and that the dashboard shows the expected counts.
+4. **New project only:** re-create the private `tire-photos` bucket, recreate your
+   login user (Authentication → Users), and point `js/config.js` at the new project
+   URL + anon key.
+5. Confirm sign-in and that the dashboard counts look right.
 
-### Smart restore (one day / one set / one customer)
+### Smart restore (one set / one customer / one day)
 
-Restore the dump into a **throwaway** local database, then copy out only what you
-need — never overwrite the whole live DB for a small fix.
-
-```bash
-# 1. Spin a scratch DB and load a chosen day's backup
-docker run -d --name asc_scratch -e POSTGRES_PASSWORD=pw -p 5455:5432 postgres:16
-psql "postgresql://postgres:pw@localhost:5455/postgres" -f asc-2026-07-04.sql
-
-# 2a. One storage set back into production
-pg_dump "postgresql://postgres:pw@localhost:5455/postgres" \
-  --data-only --table=storage_sets \
-  --where="public_code='ASC-2026-0042'" | psql "$SUPABASE_DB_URL"
-
-# 2b. One customer (and cascade) — export the customer, their vehicles + sets + tires
-#     filtered by customer id, then load into production. See the queries in this
-#     folder's examples, or ask for a scoped extract.
-
-docker rm -f asc_scratch   # tear the scratch DB down
-```
+- **Accidental delete (the common case):** no backup needed — the set is in the
+  in-app **Recycle bin** for 30 days. Tap **Restore**.
+- **Recover specific rows from a backup:** load a chosen day's dump into a **scratch
+  Supabase project** (the free tier allows a second project, and it already has the
+  auth/storage structure), then copy out only what you need:
+  ```bash
+  # In the scratch project: run schema.sql, then load the dated dump
+  psql "$SCRATCH_DB_URL" -f asc-2026-07-04.sql
+  # Copy one set (and its tires/photos) back to production
+  pg_dump "$SCRATCH_DB_URL" --data-only --table=storage_sets \
+    --where="public_code='ASC-2026-0042'" | psql "$SUPABASE_DB_URL"
+  ```
+  Because the dump is plain-text `COPY` data, you can also just open the decrypted
+  `.sql` and lift the row(s) by hand for a one-off fix.
 
 ### Undo an accidental delete (no backup needed)
 
@@ -113,9 +115,10 @@ docker rm -f asc_scratch   # tear the scratch DB down
 
 ## Verification & monitoring
 
-- The **weekly verify workflow** restores the newest dump into a disposable
-  Postgres and checks the schema + row integrity. A failure emails you and writes
-  a `failed` row to `backup_runs`.
+- The **weekly verify workflow** decrypts the newest dump and confirms it's
+  intact — the key works, it decompresses, and every core table is present with a
+  plausible row count. A failure emails you and writes a `failed` row to
+  `backup_runs`. (Do a full restore drill into a scratch project quarterly.)
 - The app's **dashboard** shows **Last backup** (from `backup_runs`) so staff can
   see at a glance that protection is current.
 - Do a **manual fire drill quarterly**: run *Nightly backup* → *Weekly

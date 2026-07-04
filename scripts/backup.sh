@@ -1,9 +1,15 @@
 #!/usr/bin/env bash
 # ============================================================================
-# backup.sh — produce an encrypted database dump + an encrypted CSV snapshot.
-# Because the repository is PUBLIC, nothing that contains customer data is ever
-# written in plaintext. Everything is AES-256 encrypted with a key that lives
-# only in a GitHub Actions secret (never in the repo).
+# backup.sh — encrypted DATA-ONLY database dump + encrypted CSV snapshot.
+#
+# Structure (tables, policies, triggers, roles) lives in version control at
+# supabase/schema.sql, so backups only carry the customer DATA. This keeps the
+# dump free of Supabase's auth/storage coupling, so it restores cleanly into any
+# project where schema.sql has been run (see docs/DISASTER_RECOVERY.md).
+#
+# Because the repository is PUBLIC, nothing is ever written in plaintext — the
+# dump and CSV are AES-256 encrypted with a key that lives only in a GitHub
+# Actions secret.
 #
 # Requires env: DB_URL (Postgres connection string), ENC_KEY (passphrase).
 # Writes: out/asc-<date>.sql.gz.enc  and  out/asc-<date>.csv.enc
@@ -16,13 +22,15 @@ STAMP="$(date -u +%Y-%m-%d)"
 OUT="out"
 mkdir -p "$OUT"
 
-echo "→ Dumping database…"
-pg_dump "$DB_URL" --no-owner --no-privileges --clean --if-exists \
+echo "→ Dumping customer data (data-only; triggers disabled so restore won't re-fire the audit log)…"
+pg_dump "$DB_URL" --data-only --no-owner --no-privileges --disable-triggers \
+  --table=public.customers --table=public.vehicles --table=public.storage_sets \
+  --table=public.tires --table=public.photos --table=public.audit_events \
   | gzip -9 \
   | openssl enc -aes-256-cbc -pbkdf2 -iter 200000 -salt -pass env:ENC_KEY \
   > "$OUT/asc-$STAMP.sql.gz.enc"
 
-echo "→ Writing CSV inventory snapshot…"
+echo "→ Writing CSV inventory snapshot (one row per tire)…"
 psql "$DB_URL" -v ON_ERROR_STOP=1 -c "\copy (
   select s.public_code, s.status, s.season, s.zone, s.rack, s.shelf, s.slot,
          s.check_in_date, s.expected_out_date, s.picked_up_at, s.fee, s.paid,
@@ -40,6 +48,8 @@ psql "$DB_URL" -v ON_ERROR_STOP=1 -c "\copy (
   > "$OUT/asc-$STAMP.csv.enc"
 
 DB_BYTES=$(wc -c < "$OUT/asc-$STAMP.sql.gz.enc")
-echo "db_bytes=$DB_BYTES" >> "${GITHUB_ENV:-/dev/null}"
-echo "stamp=$STAMP" >> "${GITHUB_ENV:-/dev/null}"
+{
+  echo "db_bytes=$DB_BYTES"
+  echo "stamp=$STAMP"
+} >> "${GITHUB_ENV:-/dev/null}"
 echo "✓ Backup created: asc-$STAMP (encrypted, ${DB_BYTES} bytes)"

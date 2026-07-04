@@ -203,8 +203,14 @@ begin
       end if;
     end if;
   elsif TG_TABLE_NAME = 'photos' then
-    if TG_OP = 'INSERT' then v_action := 'photo_added'; v_entity := NEW.set_id; v_summary := 'Photo added';
-    else v_action := 'photo_removed'; v_entity := OLD.set_id; v_summary := 'Photo removed'; end if;
+    if TG_OP = 'INSERT' then
+      v_action := 'photo_added'; v_entity := NEW.set_id; v_summary := 'Photo added';
+    else
+      -- Skip auditing photos deleted by a parent-set cascade: the set is already
+      -- gone, so its 'purged' event covers it and we'd otherwise log a NULL code.
+      if not exists (select 1 from storage_sets where id = OLD.set_id) then return OLD; end if;
+      v_action := 'photo_removed'; v_entity := OLD.set_id; v_summary := 'Photo removed';
+    end if;
     select public_code into v_code from storage_sets where id = v_entity;
   end if;
 

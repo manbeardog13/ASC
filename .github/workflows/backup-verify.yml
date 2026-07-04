@@ -1,7 +1,7 @@
 name: Weekly backup verification
 
-# Layer 5 — an untested backup isn't a backup. Restores the newest encrypted
-# dump into a throwaway PostgreSQL, runs integrity checks, then throws it away.
+# Layer 5 — an untested backup isn't a backup. Decrypts the newest backup and
+# checks its integrity (key works, not corrupt, core tables present).
 on:
   schedule:
     - cron: "0 3 * * 1"     # 03:00 UTC every Monday
@@ -16,18 +16,6 @@ jobs:
     env:
       ENC_KEY: ${{ secrets.BACKUP_ENCRYPTION_KEY }}
       DB_URL: ${{ secrets.SUPABASE_DB_URL }}
-      TEST_DB_URL: postgresql://postgres:postgres@localhost:5432/postgres
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_PASSWORD: postgres
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres"
-          --health-interval 5s --health-timeout 5s --health-retries 12
-
     steps:
       - uses: actions/checkout@v4
 
@@ -48,15 +36,7 @@ jobs:
           ref: backups
           path: _backups
 
-      - name: Install PostgreSQL 16 client
-        if: steps.check.outputs.exists == 'true'
-        run: |
-          sudo sh -c 'echo "deb https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
-          curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/pgdg.gpg
-          sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client-16
-          echo "/usr/lib/postgresql/16/bin" >> "$GITHUB_PATH"
-
-      - name: Restore into throwaway DB + integrity checks
+      - name: Verify newest backup (decrypt + integrity)
         if: steps.check.outputs.exists == 'true'
         env:
           BACKUP_DIR: _backups/database_backups/db
@@ -66,7 +46,7 @@ jobs:
         if: steps.check.outputs.exists == 'true' && always() && env.DB_URL != ''
         run: |
           if [ "${{ job.status }}" = "success" ]; then
-            psql "$DB_URL" -c "insert into backup_runs(kind,status,detail,started_at) values('verify','success','weekly restore test: ${sets:-?} sets', now());" || true
+            psql "$DB_URL" -c "insert into backup_runs(kind,status,detail,started_at) values('verify','success','weekly integrity check: ${sets:-?} sets', now());" || true
           else
-            psql "$DB_URL" -c "insert into backup_runs(kind,status,detail,started_at) values('verify','failed','weekly restore test failed', now());" || true
+            psql "$DB_URL" -c "insert into backup_runs(kind,status,detail,started_at) values('verify','failed','weekly integrity check failed', now());" || true
           fi

@@ -29,13 +29,17 @@ jobs:
           test -n "$DB_URL"  || { echo "::error::Missing secret SUPABASE_DB_URL"; exit 1; }
           test -n "$ENC_KEY" || { echo "::error::Missing secret BACKUP_ENCRYPTION_KEY"; exit 1; }
 
-      - name: Install PostgreSQL 16 client
+      - name: Install PostgreSQL client matching the server
         run: |
           sudo sh -c 'echo "deb https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
           curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/pgdg.gpg
           sudo apt-get update -qq
-          sudo apt-get install -y -qq postgresql-client-16
-          echo "/usr/lib/postgresql/16/bin" >> "$GITHUB_PATH"
+          # Detect the Supabase server major version and install the matching
+          # pg_dump so the dump is always loadable by the production server.
+          MAJOR=$(psql "$DB_URL" -tAc "select current_setting('server_version_num')::int/10000")
+          echo "Supabase Postgres major version: $MAJOR"
+          sudo apt-get install -y -qq "postgresql-client-$MAJOR"
+          echo "/usr/lib/postgresql/$MAJOR/bin" >> "$GITHUB_PATH"
 
       - name: Create encrypted backup + CSV snapshot
         run: bash scripts/backup.sh

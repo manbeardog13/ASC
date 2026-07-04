@@ -118,22 +118,27 @@ function paymentHtml(set) {
 function wireDetail(main, set) {
   const $ = (id) => main.querySelector("#" + id);
 
-  // One-tap status change (optimistic)
+  // One-tap status change (optimistic). When offline the write is queued, so we
+  // re-render from the patched in-memory set rather than re-fetching (which would
+  // fail offline and wrongly show "not found").
   $("statusBtn")?.addEventListener("click", async (e) => {
     const to = e.currentTarget.dataset.to;
     busy(e.currentTarget, true);
     try {
       const res = await db.changeStatus(set.id, to);
-      toast(res.queued ? `Saved offline — will sync` : `Now ${statusLabel(to).toLowerCase()}`);
-      await render(main, { params: [set.public_code] });
+      if (res?.queued) { set.status = to; toast("Saved offline — will sync"); renderDetail(main, set); }
+      else { toast(`Now ${statusLabel(to).toLowerCase()}`); await render(main, { params: [set.public_code] }); }
     } catch (err) { toast(err.message, "err"); busy(e.currentTarget, false); }
   });
 
-  // Payment toggle
+  // Payment toggle (same offline-aware pattern; honest feedback)
   $("payBtn")?.addEventListener("click", async (e) => {
     busy(e.currentTarget, true);
-    try { await db.setPaid(set.id, !set.paid); toast(set.paid ? "Marked unpaid" : "Marked paid ✓"); await render(main, { params: [set.public_code] }); }
-    catch (err) { toast(err.message, "err"); busy(e.currentTarget, false); }
+    try {
+      const res = await db.setPaid(set.id, !set.paid);
+      if (res?.queued) { set.paid = !set.paid; toast("Saved offline — will sync"); renderDetail(main, set); }
+      else { toast(set.paid ? "Marked unpaid" : "Marked paid ✓"); await render(main, { params: [set.public_code] }); }
+    } catch (err) { toast(err.message, "err"); busy(e.currentTarget, false); }
   });
 
   // Print label
@@ -200,8 +205,12 @@ function openMove(main, set) {
   ["m_zone", "m_rack", "m_shelf", "m_slot"].forEach((id) => main.querySelector("#" + id).addEventListener("input", refreshPreview));
   main.querySelector("#confirmMove").addEventListener("click", async (e) => {
     busy(e.currentTarget, true);
-    try { await db.moveStorageSet(set, read()); toast("Location updated"); await render(main, { params: [set.public_code] }); }
-    catch (err) { toast(err.message, "err"); busy(e.currentTarget, false); }
+    const dest = read();
+    try {
+      const res = await db.moveStorageSet(set, dest);
+      if (res?.queued) { Object.assign(set, dest); toast("Saved offline — will sync"); renderDetail(main, set); }
+      else { toast("Location updated"); await render(main, { params: [set.public_code] }); }
+    } catch (err) { toast(err.message, "err"); busy(e.currentTarget, false); }
   });
 }
 
@@ -224,7 +233,7 @@ async function loadPhotos(main, set) {
   try { urls = await db.signedPhotoUrls(photos.map((p) => p.path)); } catch {}
   main.querySelector("#photoGrid").innerHTML = photos.map((p) => `
     <figure class="photo">
-      <a href="${urls[p.path] || "#"}" target="_blank" rel="noopener"><img src="${urls[p.path] || ""}" alt="condition photo" loading="lazy"></a>
+      <a href="${esc(urls[p.path] || "#")}" target="_blank" rel="noopener"><img src="${esc(urls[p.path] || "")}" alt="condition photo" loading="lazy"></a>
       <button class="del" data-id="${esc(p.id)}" data-path="${esc(p.path)}" aria-label="Delete photo">${icon("trash", 15)}</button>
     </figure>`).join("");
   main.querySelectorAll("#photoGrid .del").forEach((btn) => btn.onclick = async () => {
@@ -313,7 +322,7 @@ function renderEdit(main, set) {
     err.classList.add("hidden");
     busy(btn, true);
     try {
-      await db.updateCustomer(customer.id, { name: val("c_name"), phone: val("c_phone") || null, email: val("c_email") || null });
+      if (customer.id) await db.updateCustomer(customer.id, { name: val("c_name"), phone: val("c_phone") || null, email: val("c_email") || null });
       if (vehicle.id) await db.updateVehicle(vehicle.id, { make: val("v_make") || null, model: val("v_model") || null, year: val("v_year") ? Number(val("v_year")) : null, plate: val("v_plate").toUpperCase() || null });
       await db.updateStorageSet(set.id, {
         quantity: Number(val("s_qty")) || 4, expected_out_date: val("s_out") || null,

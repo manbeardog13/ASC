@@ -8,7 +8,10 @@ import { locationLine } from "../domain.js";
 import { toast } from "../ui.js";
 
 function cell(value) {
-  const s = value == null ? "" : String(value);
+  let s = value == null ? "" : String(value);
+  // Neutralize spreadsheet formula injection: a leading =, +, -, @, tab or CR
+  // makes Excel/Sheets execute the cell. Prefix with an apostrophe so it stays text.
+  if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
   return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
