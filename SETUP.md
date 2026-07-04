@@ -108,6 +108,43 @@ You'll do three things: **(A)** set up the database, **(B)** connect the app,
 
 ---
 
+## D. Turn on automatic backups (recommended)
+
+Your data lives in Supabase. Backups make sure a mistake or outage can never wipe
+it out. Add two secrets on GitHub — **repo → Settings → Secrets and variables →
+Actions → New repository secret**:
+
+1. **`SUPABASE_DB_URL`** — Supabase → **Project Settings → Database → Connection
+   string** → the **Session pooler** URI (port 5432). GitHub's runners are IPv4-only,
+   so use the pooler, not the direct connection. (Not the Transaction pooler / 6543.)
+2. **`BACKUP_ENCRYPTION_KEY`** — a long random passphrase you make up and keep in a
+   password manager (run `openssl rand -base64 40` for a good one). Backups are
+   encrypted with this because the repo is public. **If you lose this key you can't
+   read your backups — store it safely.**
+
+That's it. Every night the app exports an encrypted database backup + a CSV, keeps
+30 daily / 12 monthly / 5 yearly, and once a week it test-restores the newest one
+to prove it works. The dashboard shows **Last backup** so you can see it's current.
+Also switch on Supabase's own daily backups (Project Settings → Database → Backups).
+
+Full details and how to restore: **[docs/DISASTER_RECOVERY.md](docs/DISASTER_RECOVERY.md)**.
+
+### Staff logins & roles
+
+You (the account that set the shop up) are backfilled as a **manager** — full
+access, including permanently deleting and managing roles.
+
+New logins you add in Supabase → Authentication → Users start as **read-only**
+(they can see everything but not change it) — hosted Supabase doesn't let the app
+auto-assign roles, so this is deliberately safe. To let a staff member work, give
+them a role by adding a row in the **`profiles`** table (Supabase → Table editor →
+`profiles` → Insert row): their **id** and **email** (from Authentication → Users)
+plus **role** = `employee` (check in / move / recycle-bin), `reception`, or
+`manager`. Tip: keep public sign-ups **off** (Authentication → Providers → Email →
+disable "Enable sign-ups") so the only logins that exist are ones you created.
+
+---
+
 ## Troubleshooting
 
 - **"App isn't connected to your database yet"** — `config.js` still has placeholder

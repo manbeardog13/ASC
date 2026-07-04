@@ -1,271 +1,378 @@
 // ============================================================================
-// Data access layer — every database read/write goes through here.
+// db.js — every database operation. Nothing here renders UI; nothing outside
+// this file talks to Supabase. Functions read like English and fail with
+// human-readable messages. Field edits queue offline and replay when back.
 // ============================================================================
 import { supabase } from "./supabaseClient.js";
+import { compressImage } from "./images.js";
+import { isOnline, enqueue } from "./offline.js";
+import { rememberLocation } from "./store.js";
 
-// ---- Auth ------------------------------------------------------------------
+// Turn a Supabase error into a sentence an employee could read.
+function fail(error, doing) {
+  const message = error?.message || String(error);
+  if (/duplicate key|unique/i.test(message)) return new Error("That already exists.");
+  if (/Failed to fetch|network|fetch failed/i.test(message)) {
+    return new Error(`No connection while trying to ${doing}. It will retry when you're back online.`);
+  }
+  if (/row-level security|permission/i.test(message)) {
+    return new Error(`You don't have permission to ${doing}.`);
+  }
+  return new Error(`Couldn't ${doing}: ${message}`);
+}
+
+// ---- Auth + role ---------------------------------------------------------------
 export async function getSession() {
   const { data } = await supabase.auth.getSession();
   return data.session;
 }
-export function onAuthChange(cb) {
-  return supabase.auth.onAuthStateChange((_event, session) => cb(session));
+export function onAuthChange(callback) {
+  return supabase.auth.onAuthStateChange((_event, session) => callback(session));
 }
 export async function signIn(email, password) {
   const { error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error) throw error;
+  if (error) {
+    throw new Error(/Invalid login credentials/.test(error.message)
+      ? "Email or password doesn't match."
+      : error.message);
+  }
 }
 export async function signOut() {
   await supabase.auth.signOut();
 }
+export async function loadMyProfile() {
+  const session = await getSession();
+  if (!session) return null;
+  const { data } = await supabase.from("profiles").select("id, email, full_name, role").eq("id", session.user.id).maybeSingle();
+  // No profile row => least-privilege 'readonly', matching asc_role(). The shop
+  // owner is backfilled as 'manager' by schema.sql.
+  return data ?? { id: session.user.id, email: session.user.email, role: "readonly", full_name: null };
+}
 
-// ---- Dashboard: list sets with joined vehicle/customer/tires ---------------
-// Returns rows shaped for the list + search. Filtering by text is done in JS
-// so we can match across customer name, plate, code, size and brand at once.
-export async function listSets({ status = "all", season = "all" } = {}) {
-  let query = supabase
-    .from("storage_sets")
-    .select(`
-      id, public_code, season, on_rims, rim_type, quantity,
-      zone, rack, shelf, slot, check_in_date, expected_out_date,
-      fee, paid, status, notes, updated_at,
-      vehicle:vehicles ( make, model, year, plate,
-        customer:customers ( name, phone, email ) ),
-      tires ( size, brand, model, tread_mm, position )
-    `)
+// ---- Reading storage sets ------------------------------------------------------
+const SET_LIST_COLUMNS = `
+  id, public_code, season, on_rims, rim_type, quantity,
+  zone, rack, shelf, slot, check_in_date, expected_out_date, picked_up_at, reminded_at,
+  fee, paid, status, notes, deleted_at, updated_at, qr_version,
+  vehicle:vehicles ( id, make, model, year, plate,
+    customer:customers ( id, name, phone, email ) ),
+  tires ( size, brand, model, tread_mm, dot_code, position )`;
+
+// Everything currently in the shop (recycle-bin rows excluded).
+export async function listStorageSets() {
+  const { data, error } = await supabase.from("storage_sets")
+    .select(SET_LIST_COLUMNS)
+    .is("deleted_at", null)
     .order("updated_at", { ascending: false });
-
-  if (status !== "all") query = query.eq("status", status);
-  if (season !== "all") query = query.eq("season", season);
-
-  const { data, error } = await query;
-  if (error) throw error;
+  if (error) throw fail(error, "load the storage list");
   return data ?? [];
 }
 
-// ---- One set (full detail) by its public code ------------------------------
-export async function getSetByCode(code) {
-  const { data, error } = await supabase
-    .from("storage_sets")
-    .select(`
-      *,
-      vehicle:vehicles ( *, customer:customers ( * ) ),
-      tires ( * ),
-      photos ( id, path, caption, created_at )
-    `)
-    .eq("public_code", code)
+export async function loadStorageSet(publicCode) {
+  const { data, error } = await supabase.from("storage_sets")
+    .select(`*, vehicle:vehicles ( *, customer:customers ( * ) ), tires ( * ), photos ( id, path, caption, created_at )`)
+    .eq("public_code", publicCode)
     .single();
-  if (error) throw error;
-  // Sort tires by a sensible position order for display.
+  if (error) throw fail(error, `find ${publicCode}`);
   const order = { FL: 0, FR: 1, RL: 2, RR: 3, spare: 4 };
   data.tires?.sort((a, b) => (order[a.position] ?? 9) - (order[b.position] ?? 9));
   return data;
 }
 
-// ---- Check-in: create customer + vehicle + set + tires in one flow ---------
-// `form` shape is built by the check-in view. Returns the new public_code.
-export async function createCheckIn(form) {
-  // 1. Customer
-  const { data: customer, error: cErr } = await supabase
-    .from("customers")
-    .insert({
-      name: form.customer.name,
-      phone: form.customer.phone || null,
-      email: form.customer.email || null,
-    })
-    .select()
-    .single();
-  if (cErr) throw cErr;
+// ---- Dashboard health stats ----------------------------------------------------
+export async function countsByStatus() {
+  const countWhere = (col, val) => supabase.from("storage_sets")
+    .select("id", { count: "exact", head: true }).is("deleted_at", null).eq(col, val);
+  const [stored, reserved, pickedUp, missing] = await Promise.all([
+    countWhere("status", "in_storage"), countWhere("status", "reserved"),
+    countWhere("status", "checked_out"), countWhere("status", "missing"),
+  ]);
+  return {
+    in_storage: stored.count ?? 0, reserved: reserved.count ?? 0,
+    checked_out: pickedUp.count ?? 0, missing: missing.count ?? 0,
+  };
+}
 
-  // 2. Vehicle
-  const { data: vehicle, error: vErr } = await supabase
-    .from("vehicles")
-    .insert({
-      customer_id: customer.id,
-      make: form.vehicle.make || null,
-      model: form.vehicle.model || null,
-      year: form.vehicle.year || null,
-      plate: form.vehicle.plate || null,
-    })
-    .select()
-    .single();
-  if (vErr) throw vErr;
+export async function healthStats() {
+  const today = new Date().toISOString().slice(0, 10);
+  const checkIns = supabase.from("storage_sets").select("id", { count: "exact", head: true })
+    .is("deleted_at", null).eq("check_in_date", today);
+  const pickups = supabase.from("storage_sets").select("id", { count: "exact", head: true })
+    .gte("picked_up_at", today + "T00:00:00").lte("picked_up_at", today + "T23:59:59");
+  const inventory = supabase.from("storage_sets").select("id", { count: "exact", head: true }).is("deleted_at", null);
+  const lastBackup = supabase.from("backup_runs").select("kind, status, finished_at")
+    .order("finished_at", { ascending: false }).limit(1);
+  const [ci, pu, inv, lb] = await Promise.all([checkIns, pickups, inventory, lastBackup]);
+  return {
+    todayCheckIns: ci.count ?? 0,
+    todayPickups: pu.count ?? 0,
+    inventory: inv.count ?? 0,
+    lastBackup: lb.data?.[0] ?? null,
+  };
+}
 
-  // 3. Set (public_code is generated by the database default)
-  const { data: set, error: sErr } = await supabase
-    .from("storage_sets")
-    .insert({
-      vehicle_id: vehicle.id,
-      season: form.set.season,
-      on_rims: form.set.on_rims,
-      rim_type: form.set.on_rims ? form.set.rim_type || null : null,
-      quantity: form.set.quantity,
-      zone: form.set.zone || null,
-      rack: form.set.rack || null,
-      shelf: form.set.shelf || null,
-      slot: form.set.slot || null,
-      check_in_date: form.set.check_in_date || null,
-      expected_out_date: form.set.expected_out_date || null,
-      fee: form.set.fee || null,
-      paid: form.set.paid,
-      notes: form.set.notes || null,
-    })
-    .select()
-    .single();
-  if (sErr) throw sErr;
-
-  // 4. Tires
-  const tires = form.tires
-    .filter((t) => t.size || t.brand || t.tread_mm || t.dot_code)
-    .map((t) => ({
-      set_id: set.id,
-      position: t.position || null,
-      size: t.size || null,
-      brand: t.brand || null,
-      model: t.model || null,
-      tread_mm: t.tread_mm || null,
-      dot_code: t.dot_code || null,
-      studded: !!t.studded,
-      condition_notes: t.condition_notes || null,
-    }));
-  if (tires.length) {
-    const { error: tErr } = await supabase.from("tires").insert(tires);
-    if (tErr) throw tErr;
+// ---- Warehouse-location uniqueness (rule lives here + domain.js) ----------------
+export async function findSetAtLocation({ zone, rack, shelf, slot }, excludeSetId = null) {
+  if (!zone && !rack && !shelf && !slot) return null;
+  let query = supabase.from("storage_sets").select("id, public_code")
+    .is("deleted_at", null).eq("status", "in_storage").limit(1);
+  for (const [column, value] of Object.entries({ zone, rack, shelf, slot })) {
+    query = value ? query.ilike(column, value) : query.is(column, null);
   }
-
-  return set.public_code;
+  if (excludeSetId) query = query.neq("id", excludeSetId);
+  const { data, error } = await query;
+  if (error) throw fail(error, "check the location");
+  return data?.[0] ?? null;
 }
 
-// ---- Update set-level fields (edit, move location, etc.) -------------------
-export async function updateSet(id, patch) {
-  const { error } = await supabase.from("storage_sets").update(patch).eq("id", id);
-  if (error) throw error;
-}
-
-// ---- Toggle status (check out / bring back in) -----------------------------
-export async function setStatus(id, status) {
-  return updateSet(id, { status });
-}
-
-// ---- Update customer / vehicle fields (used by the edit screen) ------------
-export async function updateCustomer(id, patch) {
-  const { error } = await supabase.from("customers").update(patch).eq("id", id);
-  if (error) throw error;
-}
-export async function updateVehicle(id, patch) {
-  const { error } = await supabase.from("vehicles").update(patch).eq("id", id);
-  if (error) throw error;
-}
-
-// ---- Replace all tires for a set (simple + safe for a small app) -----------
-export async function replaceTires(setId, tires) {
-  const { error: delErr } = await supabase.from("tires").delete().eq("set_id", setId);
-  if (delErr) throw delErr;
-  const rows = tires
-    .filter((t) => t.size || t.brand || t.tread_mm || t.dot_code)
-    .map((t) => ({
-      set_id: setId,
-      position: t.position || null,
-      size: t.size || null,
-      brand: t.brand || null,
-      model: t.model || null,
-      tread_mm: t.tread_mm || null,
-      dot_code: t.dot_code || null,
-      studded: !!t.studded,
-      condition_notes: t.condition_notes || null,
-    }));
-  if (rows.length) {
-    const { error } = await supabase.from("tires").insert(rows);
-    if (error) throw error;
-  }
-}
-
-// ---- Delete a set (tires cascade) ------------------------------------------
-export async function deleteSet(id) {
-  const { error } = await supabase.from("storage_sets").delete().eq("id", id);
-  if (error) throw error;
-}
-
-// ---- Photos (Supabase Storage, private 'tire-photos' bucket) ---------------
-const PHOTO_BUCKET = "tire-photos";
-
-export async function addPhoto(setId, file) {
-  const safe = (file.name || "photo.jpg").replace(/[^a-zA-Z0-9._-]/g, "_");
-  const path = `${setId}/${Date.now()}-${safe}`;
-  const { error: upErr } = await supabase.storage
-    .from(PHOTO_BUCKET)
-    .upload(path, file, { cacheControl: "3600", upsert: false, contentType: file.type || "image/jpeg" });
-  if (upErr) throw upErr;
-  const { error } = await supabase.from("photos").insert({ set_id: setId, path });
-  if (error) throw error;
-  return path;
-}
-
-export async function deletePhoto(photo) {
-  const { error } = await supabase.from("photos").delete().eq("id", photo.id);
-  if (error) throw error;
-  await supabase.storage.from(PHOTO_BUCKET).remove([photo.path]);
-}
-
-// Turn stored object paths into temporary viewable URLs. Returns { path: url }.
-export async function signedUrls(paths, expiresIn = 3600) {
-  if (!paths || !paths.length) return {};
-  const { data, error } = await supabase.storage.from(PHOTO_BUCKET).createSignedUrls(paths, expiresIn);
-  if (error) throw error;
-  const map = {};
-  for (const item of data) if (item.signedUrl) map[item.path] = item.signedUrl;
-  return map;
-}
-
-// ---- Full inventory for CSV export -----------------------------------------
-export async function listAllDetailed() {
-  const { data, error } = await supabase
-    .from("storage_sets")
-    .select(`
-      public_code, status, season, on_rims, rim_type, quantity,
-      zone, rack, shelf, slot, check_in_date, expected_out_date, fee, paid, notes,
-      vehicle:vehicles ( make, model, year, plate, customer:customers ( name, phone, email ) ),
-      tires ( position, size, brand, model, tread_mm, dot_code, studded )
-    `)
-    .order("public_code", { ascending: true });
-  if (error) throw error;
+// Occupancy for the warehouse visualization: every located, in-storage set.
+export async function warehouseOccupancy() {
+  const { data, error } = await supabase.from("storage_sets")
+    .select(`public_code, status, zone, rack, shelf, slot,
+      vehicle:vehicles ( plate, customer:customers ( name ) )`)
+    .is("deleted_at", null)
+    .not("zone", "is", null)
+    .order("zone").order("rack").order("shelf").order("slot");
+  if (error) throw fail(error, "load the warehouse map");
   return data ?? [];
 }
 
-// ---- Realtime: run `onChange` whenever ANY of our tables change ------------
-// Used to live-refresh the current screen across all connected devices.
-// Returns the channel so the caller can tear it down on sign-out.
+// ---- Duplicate detection (high-signal only, to avoid alert fatigue) -------------
+// Warns on matching plate / phone / DOT — NOT tire size, which is too common and
+// would train employees to ignore the warning. Returns [{ public_code, reason }].
+export async function findPossibleDuplicates({ plate, phone, dotCodes = [] } = {}) {
+  const found = new Map();
+  const note = (code, reason) => {
+    if (!code) return;
+    const entry = found.get(code) ?? { public_code: code, reasons: new Set() };
+    entry.reasons.add(reason);
+    found.set(code, entry);
+  };
+
+  const jobs = [];
+  if (plate?.trim()) {
+    jobs.push(supabase.from("vehicles")
+      .select("plate, storage_sets ( public_code, deleted_at )").ilike("plate", plate.trim())
+      .then(({ data }) => data?.forEach((v) => v.storage_sets?.forEach((s) => !s.deleted_at && note(s.public_code, "same plate")))));
+  }
+  if (phone?.trim()) {
+    jobs.push(supabase.from("customers")
+      .select("phone, vehicles ( storage_sets ( public_code, deleted_at ) )").eq("phone", phone.trim())
+      .then(({ data }) => data?.forEach((c) => c.vehicles?.forEach((v) => v.storage_sets?.forEach((s) => !s.deleted_at && note(s.public_code, "same phone"))))));
+  }
+  const dots = dotCodes.filter(Boolean);
+  if (dots.length) {
+    jobs.push(supabase.from("tires")
+      .select("dot_code, set:storage_sets ( public_code, deleted_at )").in("dot_code", dots)
+      .then(({ data }) => data?.forEach((t) => t.set && !t.set.deleted_at && note(t.set.public_code, "same DOT code"))));
+  }
+
+  await Promise.all(jobs).catch(() => {}); // duplicate check is advisory — never blocks check-in
+  return [...found.values()].map((e) => ({ public_code: e.public_code, reason: [...e.reasons].join(" · ") }));
+}
+
+// ---- Creating a storage set ----------------------------------------------------
+export async function createStorageSet(form) {
+  const { data: customer, error: cErr } = await supabase.from("customers")
+    .insert({ name: form.customer.name, phone: form.customer.phone || null, email: form.customer.email || null })
+    .select().single();
+  if (cErr) throw fail(cErr, "save the customer");
+
+  const { data: vehicle, error: vErr } = await supabase.from("vehicles")
+    .insert({ customer_id: customer.id, make: form.vehicle.make || null, model: form.vehicle.model || null,
+      year: form.vehicle.year || null, plate: form.vehicle.plate || null }).select().single();
+  if (vErr) throw fail(vErr, "save the vehicle");
+
+  const { data: set, error: sErr } = await supabase.from("storage_sets")
+    .insert({
+      vehicle_id: vehicle.id, season: form.set.season, on_rims: form.set.on_rims,
+      rim_type: form.set.on_rims ? form.set.rim_type || null : null, quantity: form.set.quantity,
+      zone: form.set.zone || null, rack: form.set.rack || null, shelf: form.set.shelf || null, slot: form.set.slot || null,
+      check_in_date: form.set.check_in_date || null, expected_out_date: form.set.expected_out_date || null,
+      fee: form.set.fee ?? null, paid: form.set.paid, notes: form.set.notes || null,
+    }).select().single();
+  if (sErr) throw fail(sErr, "save the tire set");
+
+  const tires = toTireRows(set.id, form.tires);
+  if (tires.length) {
+    const { error: tErr } = await supabase.from("tires").insert(tires);
+    if (tErr) throw fail(tErr, "save the tire details");
+  }
+
+  rememberLocation(form.set);
+  return set.public_code;
+}
+
+function toTireRows(setId, tires) {
+  return (tires ?? [])
+    .filter((t) => t.size || t.brand || t.tread_mm || t.dot_code)
+    .map((t) => ({
+      set_id: setId, position: t.position || null, size: t.size || null,
+      brand: t.brand || null, model: t.model || null, tread_mm: t.tread_mm ?? null,
+      dot_code: t.dot_code || null, studded: Boolean(t.studded), condition_notes: t.condition_notes || null,
+    }));
+}
+
+// ---- Updating (offline-queueable) ----------------------------------------------
+async function applySetPatch(setId, patch) {
+  const { error } = await supabase.from("storage_sets").update(patch).eq("id", setId);
+  if (error) throw fail(error, "save the change");
+}
+
+export async function updateStorageSet(setId, patch) {
+  if (!isOnline()) {
+    enqueue({ kind: "updateSet", setId, patch });
+    return { queued: true };
+  }
+  await applySetPatch(setId, patch);
+  return { queued: false };
+}
+
+// offline.js replays queued mutations through this executor (FIFO).
+export async function executeQueuedMutation(mutation) {
+  if (mutation.kind === "updateSet") return applySetPatch(mutation.setId, mutation.patch);
+  console.warn("Unknown queued mutation skipped:", mutation.kind);
+}
+
+export async function changeStatus(setId, toStatus) {
+  const patch = { status: toStatus };
+  if (toStatus === "checked_out") patch.picked_up_at = new Date().toISOString();
+  if (toStatus === "reserved") patch.reserved_at = new Date().toISOString();
+  if (toStatus === "in_storage") { patch.picked_up_at = null; patch.reserved_at = null; }
+  return updateStorageSet(setId, patch);
+}
+
+export async function setPaid(setId, paid) {
+  return updateStorageSet(setId, { paid });
+}
+
+export async function markReminded(setId) {
+  return updateStorageSet(setId, { reminded_at: new Date().toISOString() });
+}
+
+export async function moveStorageSet(set, newLocation) {
+  const occupant = await findSetAtLocation(newLocation, set.id).catch(() => null);
+  if (occupant) throw new Error(`${occupant.public_code} is already at that location.`);
+  const result = await updateStorageSet(set.id, {
+    zone: newLocation.zone || null, rack: newLocation.rack || null,
+    shelf: newLocation.shelf || null, slot: newLocation.slot || null,
+  });
+  rememberLocation(newLocation);
+  return result;
+}
+
+export async function updateCustomer(customerId, patch) {
+  const { error } = await supabase.from("customers").update(patch).eq("id", customerId);
+  if (error) throw fail(error, "save the customer");
+}
+export async function updateVehicle(vehicleId, patch) {
+  const { error } = await supabase.from("vehicles").update(patch).eq("id", vehicleId);
+  if (error) throw fail(error, "save the vehicle");
+}
+export async function replaceTires(setId, tires) {
+  const { error: delErr } = await supabase.from("tires").delete().eq("set_id", setId);
+  if (delErr) throw fail(delErr, "update the tires");
+  const rows = toTireRows(setId, tires);
+  if (rows.length) {
+    const { error } = await supabase.from("tires").insert(rows);
+    if (error) throw fail(error, "update the tires");
+  }
+}
+
+// ---- Soft delete / recycle bin / restore ---------------------------------------
+export async function softDeleteSet(setId) {
+  await applySetPatch(setId, { deleted_at: new Date().toISOString() });
+}
+export async function restoreSet(setId) {
+  await applySetPatch(setId, { deleted_at: null });
+}
+export async function listRecycleBin() {
+  const { data, error } = await supabase.from("storage_sets")
+    .select(SET_LIST_COLUMNS)
+    .not("deleted_at", "is", null)
+    .order("deleted_at", { ascending: false });
+  if (error) throw fail(error, "load the recycle bin");
+  return data ?? [];
+}
+export async function purgeSetPermanently(setId) {
+  const { error } = await supabase.from("storage_sets").delete().eq("id", setId);
+  if (error) throw fail(error, "permanently delete the set");
+}
+
+// ---- Audit trail ---------------------------------------------------------------
+export async function loadAuditTrail(setId) {
+  const { data, error } = await supabase.from("audit_events")
+    .select("id, at, actor_email, action, summary, changes")
+    .eq("entity_id", setId)
+    .order("at", { ascending: false })
+    .limit(100);
+  if (error) throw fail(error, "load the history");
+  return data ?? [];
+}
+
+// ---- Photos --------------------------------------------------------------------
+const PHOTO_BUCKET = "tire-photos";
+export async function addPhoto(setId, file) {
+  const compressed = await compressImage(file);
+  const safe = (compressed.name || "photo.jpg").replace(/[^a-zA-Z0-9._-]/g, "_");
+  const path = `${setId}/${Date.now()}-${safe}`;
+  const { error: upErr } = await supabase.storage.from(PHOTO_BUCKET)
+    .upload(path, compressed, { cacheControl: "3600", upsert: false, contentType: compressed.type || "image/jpeg" });
+  if (upErr) throw fail(upErr, "upload the photo");
+  const { error } = await supabase.from("photos").insert({ set_id: setId, path });
+  if (error) throw fail(error, "save the photo");
+  return path;
+}
+export async function deletePhoto(photo) {
+  const { error } = await supabase.from("photos").delete().eq("id", photo.id);
+  if (error) throw fail(error, "delete the photo");
+  await supabase.storage.from(PHOTO_BUCKET).remove([photo.path]);
+}
+export async function signedPhotoUrls(paths, expiresIn = 3600) {
+  if (!paths?.length) return {};
+  const { data, error } = await supabase.storage.from(PHOTO_BUCKET).createSignedUrls(paths, expiresIn);
+  if (error) throw fail(error, "load the photos");
+  const urls = {};
+  for (const item of data) if (item.signedUrl) urls[item.path] = item.signedUrl;
+  return urls;
+}
+
+// ---- Customers -----------------------------------------------------------------
+export async function listCustomers() {
+  const { data, error } = await supabase.from("customers")
+    .select(`id, name, phone, email, created_at,
+      vehicles ( id, make, model, year, plate,
+        storage_sets ( public_code, status, season, deleted_at ) )`)
+    .order("name", { ascending: true });
+  if (error) throw fail(error, "load customers");
+  return data ?? [];
+}
+
+// ---- CSV export ----------------------------------------------------------------
+export async function listEverythingForExport() {
+  const { data, error } = await supabase.from("storage_sets")
+    .select(`public_code, status, season, on_rims, rim_type, quantity,
+      zone, rack, shelf, slot, check_in_date, expected_out_date, picked_up_at, fee, paid, notes,
+      vehicle:vehicles ( make, model, year, plate, customer:customers ( name, phone, email ) ),
+      tires ( position, size, brand, model, tread_mm, dot_code, studded )`)
+    .is("deleted_at", null)
+    .order("public_code", { ascending: true });
+  if (error) throw fail(error, "export the inventory");
+  return data ?? [];
+}
+
+// ---- Realtime ------------------------------------------------------------------
 export function subscribeToChanges(onChange) {
-  // Make sure the realtime socket carries the logged-in user's token so RLS
-  // lets it through.
   supabase.auth.getSession().then(({ data }) => {
     if (data.session) supabase.realtime.setAuth(data.session.access_token);
   });
-
   const channel = supabase.channel("asc-realtime");
-  for (const table of ["customers", "vehicles", "storage_sets", "tires"]) {
-    channel.on("postgres_changes", { event: "*", schema: "public", table }, (payload) =>
-      onChange(payload)
-    );
+  for (const table of ["customers", "vehicles", "storage_sets", "tires", "photos", "audit_events", "backup_runs"]) {
+    channel.on("postgres_changes", { event: "*", schema: "public", table }, onChange);
   }
   channel.subscribe();
   return channel;
 }
-
 export function unsubscribe(channel) {
   if (channel) supabase.removeChannel(channel);
-}
-
-// ---- Counts for the dashboard summary --------------------------------------
-export async function counts() {
-  const q = (status) =>
-    supabase
-      .from("storage_sets")
-      .select("id", { count: "exact", head: true })
-      .eq("status", status);
-  const [inStore, out] = await Promise.all([q("in_storage"), q("checked_out")]);
-  return {
-    in_storage: inStore.count ?? 0,
-    checked_out: out.count ?? 0,
-  };
 }

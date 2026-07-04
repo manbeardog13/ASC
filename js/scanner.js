@@ -1,70 +1,53 @@
 // ============================================================================
-// Camera QR scanning, using the global Html5Qrcode (loaded in index.html).
-// Extracts the set code from whatever the QR contains (a deep-link URL or a
-// raw code) and hands it back to the caller.
+// scanner.js — camera QR scanning (global Html5Qrcode, loaded in index.html).
+// Parsing lives in qr.js; this file only drives the camera and the photo
+// fallback. Callbacks receive a parsed result { code, version, checksumOk }.
 // ============================================================================
+import { parseScan } from "./qr.js";
 
 let active = null;
 
-// Pull "ASC-2026-0042" out of a scanned string, whether it's a full URL
-// (…#/set/ASC-2026-0042) or just the bare code.
-export function extractCode(text) {
-  if (!text) return null;
-  const marker = "#/set/";
-  const i = text.indexOf(marker);
-  if (i !== -1) return decodeURIComponent(text.slice(i + marker.length).split(/[?#]/)[0]).trim();
-  const m = text.match(/ASC-\d{4}-\d+/i);
-  if (m) return m[0].toUpperCase();
-  return text.trim();
-}
+export { parseScan };
 
-// Start scanning into element #<elementId>. Calls onCode(code) once, then stops.
-export async function start(elementId, onCode, onError) {
+// Start scanning into #<elementId>. Calls onResult(parsed) once, then stops.
+export async function start(elementId, onResult, onError) {
   await stop();
   const Html5Qrcode = window.Html5Qrcode;
   if (!Html5Qrcode) {
-    onError?.(new Error("Scanner library failed to load. Check your connection."));
+    onError?.(new Error("Scanner didn't load. Check your connection, then use a photo instead."));
     return;
   }
   active = new Html5Qrcode(elementId, { verbose: false });
-  const config = { fps: 10, qrbox: { width: 240, height: 240 } };
   try {
     await active.start(
       { facingMode: "environment" },
-      config,
+      { fps: 12, qrbox: { width: 240, height: 240 } },
       (decodedText) => {
-        const code = extractCode(decodedText);
+        const parsed = parseScan(decodedText);
         stop();
-        onCode(code);
+        onResult(parsed);
       },
-      () => {} // per-frame decode failures are normal; ignore
+      () => {} // per-frame decode misses are normal; ignore
     );
   } catch (err) {
     onError?.(err);
   }
 }
 
-// Decode a QR from a photo/image the user just took or picked. This is the
-// universal fallback: it uses the phone's NATIVE camera (via a file input),
-// so it works even where live getUserMedia is blocked (iOS Chrome, some iOS
-// standalone cases). Returns the extracted code, or throws if none is found.
+// Decode a QR from a photo (native camera → works even where live camera is blocked).
 export async function scanFile(file) {
   const Html5Qrcode = window.Html5Qrcode;
-  if (!Html5Qrcode) throw new Error("Scanner library not loaded.");
+  if (!Html5Qrcode) throw new Error("Scanner didn't load.");
   const tmp = document.createElement("div");
   tmp.id = "filescan-" + Date.now();
   tmp.style.display = "none";
   document.body.appendChild(tmp);
-  const inst = new Html5Qrcode(tmp.id);
+  const instance = new Html5Qrcode(tmp.id);
   try {
-    const decoded = await inst.scanFile(file, false);
-    return extractCode(decoded);
+    const decoded = await instance.scanFile(file, false);
+    return parseScan(decoded);
   } finally {
-    try {
-      await inst.clear();
-    } catch (_) {
-      /* ignore */
-    }
+    try { await instance.clear(); } catch { /* already gone */ }
     tmp.remove();
   }
 }
@@ -74,8 +57,6 @@ export async function stop() {
   try {
     await active.stop();
     await active.clear();
-  } catch (_) {
-    /* already stopped */
-  }
+  } catch { /* already stopped */ }
   active = null;
 }

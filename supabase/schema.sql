@@ -1,19 +1,18 @@
 -- ============================================================================
 -- ASC Tire Hotel — database schema for Supabase (PostgreSQL)
 -- ----------------------------------------------------------------------------
--- Run this ONCE in your Supabase project:
+-- Run this ONCE (and it is safe to re-run to upgrade):
 --   Supabase dashboard  ->  SQL Editor  ->  New query  ->  paste all  ->  Run
 --
--- It creates the tables, an auto-generated set code (e.g. ASC-2026-0042),
--- search indexes, and Row Level Security so ONLY your logged-in shop account
--- can read or write the data.
+-- Creates the tables, auto-generated set codes (ASC-2026-0042), search indexes,
+-- Row Level Security, realtime, an audit log, soft deletes, roles, and backup
+-- bookkeeping. Every block is idempotent.
 -- ============================================================================
 
--- Unique, human-friendly code for each stored set: ASC-<year>-<counter>
 create sequence if not exists set_code_seq;
 
 -- ----------------------------------------------------------------------------
--- Customers (the tire owners)
+-- Core tables
 -- ----------------------------------------------------------------------------
 create table if not exists customers (
   id          uuid primary key default gen_random_uuid(),
@@ -24,9 +23,6 @@ create table if not exists customers (
   created_at  timestamptz not null default now()
 );
 
--- ----------------------------------------------------------------------------
--- Vehicles (tires belong to a car)
--- ----------------------------------------------------------------------------
 create table if not exists vehicles (
   id          uuid primary key default gen_random_uuid(),
   customer_id uuid not null references customers(id) on delete cascade,
@@ -37,9 +33,6 @@ create table if not exists vehicles (
   created_at  timestamptz not null default now()
 );
 
--- ----------------------------------------------------------------------------
--- Storage sets (the physical unit that gets ONE QR label)
--- ----------------------------------------------------------------------------
 create table if not exists storage_sets (
   id               uuid primary key default gen_random_uuid(),
   public_code      text not null unique
@@ -48,64 +41,67 @@ create table if not exists storage_sets (
   vehicle_id       uuid references vehicles(id) on delete set null,
   season           text not null default 'winter',      -- winter | summer | all_season
   on_rims          boolean not null default false,
-  rim_type         text,                                -- steel | alloy | null
+  rim_type         text,
   quantity         int not null default 4,
-  -- Location / indexing (this is what the QR system points at)
   zone             text,
   rack             text,
   shelf            text,
   slot             text,
-  -- Logistics
   check_in_date    date not null default current_date,
   expected_out_date date,
   fee              numeric(10,2),
   paid             boolean not null default false,
-  status           text not null default 'in_storage',  -- in_storage | checked_out
+  status           text not null default 'in_storage',  -- in_storage | reserved | checked_out | missing
   notes            text,
   created_at       timestamptz not null default now(),
   updated_at       timestamptz not null default now()
 );
 
--- ----------------------------------------------------------------------------
--- Tires (the descriptive specs — 1 row per physical tire, usually 4 per set)
--- ----------------------------------------------------------------------------
 create table if not exists tires (
   id              uuid primary key default gen_random_uuid(),
   set_id          uuid not null references storage_sets(id) on delete cascade,
-  position        text,           -- FL | FR | RL | RR | spare
-  size            text,           -- e.g. 225/45R17 91V
+  position        text,
+  size            text,
   brand           text,
   model           text,
-  tread_mm        numeric(4,1),   -- new ~8.0, legal minimum 1.6
-  dot_code        text,           -- e.g. 2524 = week 25 of 2024
+  tread_mm        numeric(4,1),
+  dot_code        text,
   studded         boolean not null default false,
   condition_notes text
 );
 
--- ----------------------------------------------------------------------------
--- Photos (proof-of-condition at check-in). The image bytes live in Supabase
--- Storage; this table just records the path + an optional caption.
--- ----------------------------------------------------------------------------
 create table if not exists photos (
   id          uuid primary key default gen_random_uuid(),
   set_id      uuid not null references storage_sets(id) on delete cascade,
-  path        text not null,          -- object path in the 'tire-photos' bucket
+  path        text not null,
   caption     text,
   created_at  timestamptz not null default now()
 );
 
 -- ----------------------------------------------------------------------------
--- Search indexes
+-- v2 columns (added only if missing — safe on an existing database)
 -- ----------------------------------------------------------------------------
-create index if not exists idx_sets_status   on storage_sets(status);
-create index if not exists idx_sets_season   on storage_sets(season);
-create index if not exists idx_sets_code     on storage_sets(public_code);
-create index if not exists idx_vehicles_plate on vehicles(plate);
-create index if not exists idx_tires_set     on tires(set_id);
-create index if not exists idx_photos_set    on photos(set_id);
+alter table storage_sets add column if not exists deleted_at   timestamptz;      -- soft delete / recycle bin
+alter table storage_sets add column if not exists picked_up_at timestamptz;      -- audit timestamp
+alter table storage_sets add column if not exists reserved_at  timestamptz;
+alter table storage_sets add column if not exists qr_version   int not null default 2;  -- QR payload version
+alter table storage_sets add column if not exists reminded_at  timestamptz;      -- last pickup reminder sent
 
 -- ----------------------------------------------------------------------------
--- Keep updated_at fresh on every change to a set
+-- Indexes
+-- ----------------------------------------------------------------------------
+create index if not exists idx_sets_status     on storage_sets(status);
+create index if not exists idx_sets_season     on storage_sets(season);
+create index if not exists idx_sets_code       on storage_sets(public_code);
+create index if not exists idx_sets_deleted    on storage_sets(deleted_at);
+create index if not exists idx_sets_location   on storage_sets(zone, rack, shelf, slot);
+create index if not exists idx_vehicles_plate  on vehicles(plate);
+create index if not exists idx_vehicles_cust   on vehicles(customer_id);
+create index if not exists idx_tires_set       on tires(set_id);
+create index if not exists idx_photos_set      on photos(set_id);
+
+-- ----------------------------------------------------------------------------
+-- updated_at freshness
 -- ----------------------------------------------------------------------------
 create or replace function set_updated_at() returns trigger as $$
 begin
@@ -115,76 +111,261 @@ end;
 $$ language plpgsql;
 
 drop trigger if exists trg_sets_updated on storage_sets;
-create trigger trg_sets_updated
-  before update on storage_sets
+create trigger trg_sets_updated before update on storage_sets
   for each row execute function set_updated_at();
 
--- ----------------------------------------------------------------------------
--- Row Level Security: only an authenticated (logged-in) user can touch data.
--- This app is single-tenant (one shop = one login), so any logged-in user
--- gets full access. The public "anon" key in the frontend can do NOTHING
--- until someone signs in.
--- ----------------------------------------------------------------------------
+-- ============================================================================
+-- ROLES  (manager | employee | reception | readonly)
+-- One row per auth user. Missing row => treated as 'manager' so the original
+-- single-login owner is never locked out.
+-- ============================================================================
+create table if not exists profiles (
+  id         uuid primary key,   -- = auth.users.id (no cross-schema FK, to avoid privilege issues)
+  email      text,
+  full_name  text,
+  role       text not null default 'employee',
+  created_at timestamptz not null default now()
+);
+
+-- New signups get a profile automatically; the very first user is a manager.
+create or replace function handle_new_user() returns trigger as $$
+declare first_user boolean;
+begin
+  select count(*) = 0 into first_user from public.profiles;
+  insert into public.profiles (id, email, role)
+    values (new.id, new.email, case when first_user then 'manager' else 'employee' end)
+    on conflict (id) do nothing;
+  return new;
+end;
+$$ language plpgsql security definer set search_path = public, pg_temp;
+
+-- Backfill existing users + attach the signup trigger. Both touch auth.users,
+-- which some projects restrict — each is wrapped so a privilege error can NEVER
+-- abort the whole migration. Even if skipped, asc_role() below defaults a missing
+-- profile to 'manager', so the owner keeps full access; add staff roles by hand.
+do $$
+begin
+  insert into public.profiles (id, email, role)
+    select id, email, 'manager' from auth.users on conflict (id) do nothing;
+exception when others then raise notice 'profiles backfill skipped: %', sqlerrm;
+end $$;
+
+do $$
+begin
+  execute 'drop trigger if exists trg_new_user on auth.users';
+  execute 'create trigger trg_new_user after insert on auth.users for each row execute function handle_new_user()';
+exception when others then raise notice 'auth.users signup trigger skipped (set new staff roles in the profiles table): %', sqlerrm;
+end $$;
+
+-- Caller's role. Defaults to least-privilege 'readonly' when no profile row
+-- exists, so a brand-new login can never silently get admin rights. The shop
+-- owner is backfilled as 'manager' above; grant staff a role by inserting a
+-- profiles row (see SETUP.md).
+create or replace function asc_role() returns text as $$
+  select coalesce((select role from public.profiles where id = auth.uid()), 'readonly');
+$$ language sql stable security definer set search_path = public, pg_temp;
+
+-- ============================================================================
+-- AUDIT LOG  (event sourcing — who did what, when; never overwritten)
+-- ============================================================================
+create table if not exists audit_events (
+  id          bigint generated always as identity primary key,
+  at          timestamptz not null default now(),
+  actor       uuid,
+  actor_email text,
+  entity_type text not null,          -- storage_sets | photos
+  entity_id   uuid,
+  set_code    text,
+  action      text not null,          -- created | moved | status_changed | payment | photo_added | deleted | restored | purged | updated
+  summary     text,
+  changes     jsonb not null default '{}'::jsonb
+);
+create index if not exists idx_audit_entity on audit_events(entity_id, at desc);
+create index if not exists idx_audit_code   on audit_events(set_code, at desc);
+
+create or replace function asc_audit() returns trigger as $$
+declare
+  v_actor uuid := auth.uid();
+  v_email text := auth.jwt() ->> 'email';
+  v_action text; v_summary text; v_code text; v_entity uuid; v_changes jsonb := '{}'::jsonb;
+begin
+  if TG_TABLE_NAME = 'storage_sets' then
+    if TG_OP = 'INSERT' then
+      v_action := 'created'; v_entity := NEW.id; v_code := NEW.public_code; v_summary := 'Set created';
+    elsif TG_OP = 'DELETE' then
+      v_action := 'purged'; v_entity := OLD.id; v_code := OLD.public_code; v_summary := 'Permanently deleted';
+    else
+      v_entity := NEW.id; v_code := NEW.public_code;
+      if OLD.deleted_at is null and NEW.deleted_at is not null then
+        v_action := 'deleted'; v_summary := 'Moved to recycle bin';
+      elsif OLD.deleted_at is not null and NEW.deleted_at is null then
+        v_action := 'restored'; v_summary := 'Restored from recycle bin';
+      elsif OLD.status is distinct from NEW.status then
+        v_action := 'status_changed'; v_summary := OLD.status || ' → ' || NEW.status;
+        v_changes := jsonb_build_object('from', OLD.status, 'to', NEW.status);
+      elsif OLD.zone is distinct from NEW.zone or OLD.rack is distinct from NEW.rack
+         or OLD.shelf is distinct from NEW.shelf or OLD.slot is distinct from NEW.slot then
+        v_action := 'moved'; v_summary := 'Location changed';
+        v_changes := jsonb_build_object(
+          'from', jsonb_build_object('zone',OLD.zone,'rack',OLD.rack,'shelf',OLD.shelf,'slot',OLD.slot),
+          'to',   jsonb_build_object('zone',NEW.zone,'rack',NEW.rack,'shelf',NEW.shelf,'slot',NEW.slot));
+      elsif OLD.paid is distinct from NEW.paid then
+        v_action := 'payment'; v_summary := case when NEW.paid then 'Marked paid' else 'Marked unpaid' end;
+      else
+        v_action := 'updated'; v_summary := 'Details updated';
+      end if;
+    end if;
+  elsif TG_TABLE_NAME = 'photos' then
+    if TG_OP = 'INSERT' then
+      v_action := 'photo_added'; v_entity := NEW.set_id; v_summary := 'Photo added';
+    else
+      -- Skip auditing photos deleted by a parent-set cascade: the set is already
+      -- gone, so its 'purged' event covers it and we'd otherwise log a NULL code.
+      if not exists (select 1 from storage_sets where id = OLD.set_id) then return OLD; end if;
+      v_action := 'photo_removed'; v_entity := OLD.set_id; v_summary := 'Photo removed';
+    end if;
+    select public_code into v_code from storage_sets where id = v_entity;
+  end if;
+
+  insert into audit_events (actor, actor_email, entity_type, entity_id, set_code, action, summary, changes)
+    values (v_actor, v_email, TG_TABLE_NAME, v_entity, v_code, v_action, v_summary, v_changes);
+
+  if TG_OP = 'DELETE' then return OLD; else return NEW; end if;
+end;
+$$ language plpgsql security definer set search_path = public, pg_temp;
+
+drop trigger if exists trg_audit_sets on storage_sets;
+create trigger trg_audit_sets after insert or update or delete on storage_sets
+  for each row execute function asc_audit();
+drop trigger if exists trg_audit_photos on photos;
+create trigger trg_audit_photos after insert or delete on photos
+  for each row execute function asc_audit();
+
+-- ============================================================================
+-- SOFT-DELETE PURGE  (recycle bin retention — hard-delete after N days)
+-- Run by the nightly backup workflow, or manually. Cascades tires/photos rows.
+-- ============================================================================
+create or replace function purge_deleted(older_than interval default interval '30 days')
+returns int as $$
+declare n int;
+begin
+  with del as (
+    delete from storage_sets
+    where deleted_at is not null and deleted_at < now() - older_than
+    returning 1
+  ) select count(*) into n from del;
+  return n;
+end;
+$$ language plpgsql security definer set search_path = public, pg_temp;
+
+-- ============================================================================
+-- BACKUP BOOKKEEPING  (feeds the "Last backup" tile on the health dashboard)
+-- ============================================================================
+create table if not exists backup_runs (
+  id          bigint generated always as identity primary key,
+  kind        text not null,        -- db | csv | verify | purge
+  status      text not null,        -- success | failed
+  detail      text,
+  size_bytes  bigint,
+  started_at  timestamptz,
+  finished_at timestamptz not null default now()
+);
+create index if not exists idx_backup_runs_at on backup_runs(finished_at desc);
+
+-- ============================================================================
+-- ROW LEVEL SECURITY
+-- ============================================================================
 alter table customers    enable row level security;
 alter table vehicles     enable row level security;
 alter table storage_sets enable row level security;
 alter table tires        enable row level security;
 alter table photos       enable row level security;
+alter table profiles     enable row level security;
+alter table audit_events enable row level security;
+alter table backup_runs  enable row level security;
 
-drop policy if exists "auth full access" on customers;
-drop policy if exists "auth full access" on vehicles;
-drop policy if exists "auth full access" on storage_sets;
-drop policy if exists "auth full access" on tires;
-drop policy if exists "auth full access" on photos;
-
-create policy "auth full access" on customers
-  for all to authenticated using (true) with check (true);
-create policy "auth full access" on vehicles
-  for all to authenticated using (true) with check (true);
-create policy "auth full access" on storage_sets
-  for all to authenticated using (true) with check (true);
-create policy "auth full access" on tires
-  for all to authenticated using (true) with check (true);
-create policy "auth full access" on photos
-  for all to authenticated using (true) with check (true);
-
--- ----------------------------------------------------------------------------
--- Realtime: push every insert / update / delete to all logged-in devices.
--- Adds the tables to Supabase's realtime publication. (Safe to re-run — the
--- DO block skips tables that are already in the publication.)
--- ----------------------------------------------------------------------------
+-- Customers / vehicles / tires / photos: any authenticated user reads & writes;
+-- only managers may hard-delete (child rows also cascade from set deletes).
 do $$
-declare t text;
+declare tbl text;
 begin
-  foreach t in array array['customers','vehicles','storage_sets','tires','photos'] loop
-    if not exists (
-      select 1 from pg_publication_tables
-      where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = t
-    ) then
-      execute format('alter publication supabase_realtime add table public.%I', t);
-    end if;
+  foreach tbl in array array['customers','vehicles','tires','photos'] loop
+    execute format('drop policy if exists "auth full access" on %I', tbl);
+    execute format('drop policy if exists "%s_rw" on %I', tbl, tbl);
+    execute format('drop policy if exists "%s_del" on %I', tbl, tbl);
+    execute format('create policy "%s_rw" on %I for all to authenticated using (true) with check (true)', tbl, tbl);
   end loop;
 end $$;
 
--- ----------------------------------------------------------------------------
--- Storage bucket for condition photos + access policies.
--- Kept LAST so that if your project restricts storage DDL, everything above has
--- already run. If this block errors, just create a PRIVATE bucket named
--- 'tire-photos' in the dashboard (Storage -> New bucket) — the app will work.
--- ----------------------------------------------------------------------------
-insert into storage.buckets (id, name, public)
-values ('tire-photos', 'tire-photos', false)
-on conflict (id) do nothing;
+-- Storage sets: read = everyone signed in; write = staff; hard delete = manager.
+drop policy if exists "auth full access" on storage_sets;
+drop policy if exists "sets_select" on storage_sets;
+drop policy if exists "sets_insert" on storage_sets;
+drop policy if exists "sets_update" on storage_sets;
+drop policy if exists "sets_delete" on storage_sets;
+create policy "sets_select" on storage_sets for select to authenticated using (true);
+create policy "sets_insert" on storage_sets for insert to authenticated
+  with check (asc_role() in ('manager','employee','reception'));
+create policy "sets_update" on storage_sets for update to authenticated
+  using (asc_role() in ('manager','employee','reception'))
+  with check (asc_role() in ('manager','employee','reception'));
+create policy "sets_delete" on storage_sets for delete to authenticated
+  using (asc_role() = 'manager');
 
-drop policy if exists "tire-photos auth read"   on storage.objects;
-drop policy if exists "tire-photos auth write"  on storage.objects;
-drop policy if exists "tire-photos auth delete" on storage.objects;
+-- Profiles: everyone signed in can read; only managers manage roles.
+drop policy if exists "profiles_select" on profiles;
+drop policy if exists "profiles_write"  on profiles;
+create policy "profiles_select" on profiles for select to authenticated using (true);
+create policy "profiles_write" on profiles for all to authenticated
+  using (asc_role() = 'manager') with check (asc_role() = 'manager');
 
-create policy "tire-photos auth read" on storage.objects
-  for select to authenticated using (bucket_id = 'tire-photos');
-create policy "tire-photos auth write" on storage.objects
-  for insert to authenticated with check (bucket_id = 'tire-photos');
-create policy "tire-photos auth delete" on storage.objects
-  for delete to authenticated using (bucket_id = 'tire-photos');
+-- Audit log: append-only. Readable by all signed-in users; writes happen only
+-- through the SECURITY DEFINER trigger, so there are no insert/update policies.
+drop policy if exists "audit_select" on audit_events;
+create policy "audit_select" on audit_events for select to authenticated using (true);
 
--- Done. Next: create ONE user in Authentication -> Users (that's the shop login).
+-- Backup runs: readable by all; the backup workflow writes via the DB owner.
+drop policy if exists "backup_select" on backup_runs;
+drop policy if exists "backup_insert" on backup_runs;
+create policy "backup_select" on backup_runs for select to authenticated using (true);
+create policy "backup_insert" on backup_runs for insert to authenticated
+  with check (asc_role() = 'manager');
+
+-- ============================================================================
+-- REALTIME  (changes appear on every device within a second)
+-- ============================================================================
+do $$
+declare t text;
+begin
+  foreach t in array array['customers','vehicles','storage_sets','tires','photos','audit_events','backup_runs'] loop
+    begin
+      if not exists (
+        select 1 from pg_publication_tables
+        where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = t
+      ) then
+        execute format('alter publication supabase_realtime add table public.%I', t);
+      end if;
+    exception when others then raise notice 'realtime add % skipped: %', t, sqlerrm;
+    end;
+  end loop;
+end $$;
+
+-- ============================================================================
+-- STORAGE bucket for condition photos (kept last; if your project restricts
+-- storage DDL, just create a PRIVATE bucket named 'tire-photos' in the dashboard)
+-- ============================================================================
+do $$
+begin
+  insert into storage.buckets (id, name, public)
+    values ('tire-photos', 'tire-photos', false) on conflict (id) do nothing;
+  execute 'drop policy if exists "tire-photos auth read"   on storage.objects';
+  execute 'drop policy if exists "tire-photos auth write"  on storage.objects';
+  execute 'drop policy if exists "tire-photos auth delete" on storage.objects';
+  execute 'create policy "tire-photos auth read" on storage.objects for select to authenticated using (bucket_id = ''tire-photos'')';
+  execute 'create policy "tire-photos auth write" on storage.objects for insert to authenticated with check (bucket_id = ''tire-photos'')';
+  execute 'create policy "tire-photos auth delete" on storage.objects for delete to authenticated using (bucket_id = ''tire-photos'')';
+exception when others then
+  raise notice 'Storage bucket/policies skipped (%). Create a PRIVATE bucket named tire-photos in the dashboard.', sqlerrm;
+end $$;
+
+-- Done. Next: Authentication -> Users -> add your shop login (first user = manager).
