@@ -51,7 +51,7 @@ export async function loadMyProfile() {
 // ---- Reading storage sets ------------------------------------------------------
 const SET_LIST_COLUMNS = `
   id, public_code, season, on_rims, rim_type, quantity,
-  zone, rack, shelf, slot, check_in_date, expected_out_date, picked_up_at,
+  zone, rack, shelf, slot, check_in_date, expected_out_date, picked_up_at, reminded_at,
   fee, paid, status, notes, deleted_at, updated_at, qr_version,
   vehicle:vehicles ( id, make, model, year, plate,
     customer:customers ( id, name, phone, email ) ),
@@ -243,6 +243,10 @@ export async function changeStatus(setId, toStatus) {
 
 export async function setPaid(setId, paid) {
   return updateStorageSet(setId, { paid });
+}
+
+export async function markReminded(setId) {
+  return updateStorageSet(setId, { reminded_at: new Date().toISOString() });
 }
 
 export async function moveStorageSet(set, newLocation) {

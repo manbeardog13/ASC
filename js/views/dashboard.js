@@ -92,7 +92,7 @@ function paintDueSoon(main) {
   const box = main.querySelector("#dueSoon");
   if (!due.length) { box.innerHTML = ""; return; }
   box.innerHTML = `
-    <div class="section-title"><h2>Due for pickup soon</h2></div>
+    <div class="section-title"><h2>Due for pickup soon</h2><a class="link" href="#/reminders">Remind →</a></div>
     <div class="set-list">${due.slice(0, 5).map(setRow).join("")}</div>`;
 }
 

@@ -85,6 +85,7 @@ alter table storage_sets add column if not exists deleted_at   timestamptz;     
 alter table storage_sets add column if not exists picked_up_at timestamptz;      -- audit timestamp
 alter table storage_sets add column if not exists reserved_at  timestamptz;
 alter table storage_sets add column if not exists qr_version   int not null default 2;  -- QR payload version
+alter table storage_sets add column if not exists reminded_at  timestamptz;      -- last pickup reminder sent
 
 -- ----------------------------------------------------------------------------
 -- Indexes

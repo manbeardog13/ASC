@@ -2,7 +2,7 @@
    Makes the app installable and loads the shell instantly. Network-first for
    same-origin files (so deploys show up right away), cache fallback when
    offline. Live data always comes from Supabase online. */
-const CACHE = "asc-tirehotel-v3";
+const CACHE = "asc-tirehotel-v4";
 const SHELL = [
   "./",
   "./index.html",
@@ -29,6 +29,7 @@ const SHELL = [
   "./js/views/warehouse.js",
   "./js/views/customers.js",
   "./js/views/recycle.js",
+  "./js/views/reminders.js",
 ];
 
 self.addEventListener("install", (e) => {

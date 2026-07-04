@@ -118,6 +118,15 @@ export function isDueSoon(set, days = 7, today = new Date()) {
   return due <= horizon;
 }
 
+// Friendly, prefilled reminder text for SMS/email (customer's first name only).
+export function reminderMessage(set) {
+  const first = (set?.vehicle?.customer?.name || "there").split(/\s+/)[0];
+  const season = seasonLabel(set?.season).toLowerCase();
+  const when = set?.expected_out_date ? ` around ${set.expected_out_date}` : "";
+  return `Hi ${first}, your ${season} tires (${set?.public_code}) stored at ASC Tire Hotel `
+    + `are due for pickup${when}. Please let us know when you'd like to collect them. Thank you!`;
+}
+
 // ---- Tires --------------------------------------------------------------------
 export const TIRE_POSITIONS = ["FL", "FR", "RL", "RR", "spare"];
 export const COMMON_TIRE_SIZES = [

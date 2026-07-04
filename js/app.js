@@ -22,6 +22,7 @@ const ROUTES = [
   { pattern: /^\/warehouse$/,             load: () => import("./views/warehouse.js") },
   { pattern: /^\/customers$/,             load: () => import("./views/customers.js") },
   { pattern: /^\/customer\/([^/]+)$/,     load: () => import("./views/customers.js") },
+  { pattern: /^\/reminders$/,             load: () => import("./views/reminders.js") },
   { pattern: /^\/recycle$/,               load: () => import("./views/recycle.js") },
   { pattern: /^\/set\/([^/]+)\/edit$/,    load: () => import("./views/set-detail.js"), mode: "edit" },
   { pattern: /^\/set\/([^/]+)$/,          load: () => import("./views/set-detail.js") },
@@ -98,6 +99,7 @@ function openMenu() {
   const item = (route, iconName, label) =>
     `<a href="#${route}" role="menuitem" class="btn btn-ghost" style="justify-content:flex-start;width:100%">${icon(iconName, 18)}${label}</a>`;
   pop.innerHTML = `
+    ${item("/reminders", "clock", "Pickup reminders")}
     ${item("/recycle", "trash", "Recycle bin")}
     <button id="exportBtn" role="menuitem" class="btn btn-ghost" style="justify-content:flex-start;width:100%">${icon("download", 18)}Export CSV</button>
     <div style="border-top:1px solid var(--line);margin:6px 4px"></div>
