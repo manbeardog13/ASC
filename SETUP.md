@@ -115,7 +115,8 @@ it out. Add two secrets on GitHub — **repo → Settings → Secrets and variab
 Actions → New repository secret**:
 
 1. **`SUPABASE_DB_URL`** — Supabase → **Project Settings → Database → Connection
-   string → URI** (the direct one, port 5432).
+   string** → the **Session pooler** URI (port 5432). GitHub's runners are IPv4-only,
+   so use the pooler, not the direct connection. (Not the Transaction pooler / 6543.)
 2. **`BACKUP_ENCRYPTION_KEY`** — a long random passphrase you make up and keep in a
    password manager (run `openssl rand -base64 40` for a good one). Backups are
    encrypted with this because the repo is public. **If you lose this key you can't

@@ -41,7 +41,7 @@ Add two repository secrets — **Settings → Secrets and variables → Actions 
 
 | Secret | Value |
 |---|---|
-| `SUPABASE_DB_URL` | Supabase → **Project Settings → Database → Connection string → URI** (the **direct** connection, port 5432). Looks like `postgresql://postgres:PASSWORD@db.ilnqhlrvchuvpjgptjfx.supabase.co:5432/postgres` |
+| `SUPABASE_DB_URL` | Supabase → **Project Settings → Database → Connection string**. Use the **Session pooler** URI (port **5432**) — GitHub's runners are IPv4-only and the direct connection is IPv6-only, so the pooler is what works from Actions (and it supports `pg_dump`). Looks like `postgresql://postgres.ilnqhlrvchuvpjgptjfx:PASSWORD@aws-0-<region>.pooler.supabase.com:5432/postgres`. Do **not** use the Transaction pooler (port 6543). |
 | `BACKUP_ENCRYPTION_KEY` | A long random passphrase **you generate and store somewhere safe** (a password manager). Losing it means losing the ability to decrypt backups. Generate one: `openssl rand -base64 40` |
 
 Then merge this branch to `main` (scheduled workflows only run from the default
