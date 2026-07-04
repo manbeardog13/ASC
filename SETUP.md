@@ -42,13 +42,16 @@ You'll do three things: **(A)** set up the database, **(B)** connect the app,
 ## B. Connect the app
 
 1. Open the file **`js/config.js`** in this project.
-2. Replace the three placeholder values:
+2. Replace the three placeholder values — **already done for this shop**, they look like:
 
    ```js
-   SUPABASE_URL:      "https://abcdxyz.supabase.co",   // your Project URL
-   SUPABASE_ANON_KEY: "eyJhbGciOi...",                 // your anon key
-   APP_BASE_URL:      "https://manbeardog13.github.io/ASC/",  // where the app lives (step C)
+   SUPABASE_URL:      "https://ilnqhlrvchuvpjgptjfx.supabase.co",           // Project URL
+   SUPABASE_ANON_KEY: "sb_publishable_wLI8c19MvSw871n9wWSsyw_YpKHnkBA",     // publishable (anon) key
+   APP_BASE_URL:      "https://manbeardog13.github.io/ASC/",                // where the app lives (step C)
    ```
+
+   > ⚠ `SUPABASE_URL` must be the **Project URL only** — if you copy a URL ending in
+   > `/rest/v1/` from the dashboard, delete that suffix or nothing will load.
 
 3. Save the file.
 
