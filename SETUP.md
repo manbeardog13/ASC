@@ -131,10 +131,17 @@ Full details and how to restore: **[docs/DISASTER_RECOVERY.md](docs/DISASTER_REC
 
 ### Staff logins & roles
 
-The first user you create is a **manager** (full access, including permanently
-deleting and managing roles). Add more logins in Supabase → Authentication → Users;
-they start as **employees** (can check in, move, and recycle-bin sets, but not
-permanently delete). Change anyone's role in the `profiles` table.
+You (the account that set the shop up) are backfilled as a **manager** — full
+access, including permanently deleting and managing roles.
+
+New logins you add in Supabase → Authentication → Users start as **read-only**
+(they can see everything but not change it) — hosted Supabase doesn't let the app
+auto-assign roles, so this is deliberately safe. To let a staff member work, give
+them a role by adding a row in the **`profiles`** table (Supabase → Table editor →
+`profiles` → Insert row): their **id** and **email** (from Authentication → Users)
+plus **role** = `employee` (check in / move / recycle-bin), `reception`, or
+`manager`. Tip: keep public sign-ups **off** (Authentication → Providers → Email →
+disable "Enable sign-ups") so the only logins that exist are ones you created.
 
 ---
 

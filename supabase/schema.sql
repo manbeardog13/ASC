@@ -120,17 +120,12 @@ create trigger trg_sets_updated before update on storage_sets
 -- single-login owner is never locked out.
 -- ============================================================================
 create table if not exists profiles (
-  id         uuid primary key references auth.users(id) on delete cascade,
+  id         uuid primary key,   -- = auth.users.id (no cross-schema FK, to avoid privilege issues)
   email      text,
   full_name  text,
   role       text not null default 'employee',
   created_at timestamptz not null default now()
 );
-
--- Backfill: every existing auth user becomes a manager (they set the shop up).
-insert into profiles (id, email, role)
-  select id, email, 'manager' from auth.users
-  on conflict (id) do nothing;
 
 -- New signups get a profile automatically; the very first user is a manager.
 create or replace function handle_new_user() returns trigger as $$
@@ -142,16 +137,33 @@ begin
     on conflict (id) do nothing;
   return new;
 end;
-$$ language plpgsql security definer;
+$$ language plpgsql security definer set search_path = public, pg_temp;
 
-drop trigger if exists trg_new_user on auth.users;
-create trigger trg_new_user after insert on auth.users
-  for each row execute function handle_new_user();
+-- Backfill existing users + attach the signup trigger. Both touch auth.users,
+-- which some projects restrict — each is wrapped so a privilege error can NEVER
+-- abort the whole migration. Even if skipped, asc_role() below defaults a missing
+-- profile to 'manager', so the owner keeps full access; add staff roles by hand.
+do $$
+begin
+  insert into public.profiles (id, email, role)
+    select id, email, 'manager' from auth.users on conflict (id) do nothing;
+exception when others then raise notice 'profiles backfill skipped: %', sqlerrm;
+end $$;
 
--- Caller's role, defaulting to 'manager' when no profile row exists.
+do $$
+begin
+  execute 'drop trigger if exists trg_new_user on auth.users';
+  execute 'create trigger trg_new_user after insert on auth.users for each row execute function handle_new_user()';
+exception when others then raise notice 'auth.users signup trigger skipped (set new staff roles in the profiles table): %', sqlerrm;
+end $$;
+
+-- Caller's role. Defaults to least-privilege 'readonly' when no profile row
+-- exists, so a brand-new login can never silently get admin rights. The shop
+-- owner is backfilled as 'manager' above; grant staff a role by inserting a
+-- profiles row (see SETUP.md).
 create or replace function asc_role() returns text as $$
-  select coalesce((select role from public.profiles where id = auth.uid()), 'manager');
-$$ language sql stable security definer;
+  select coalesce((select role from public.profiles where id = auth.uid()), 'readonly');
+$$ language sql stable security definer set search_path = public, pg_temp;
 
 -- ============================================================================
 -- AUDIT LOG  (event sourcing — who did what, when; never overwritten)
@@ -220,7 +232,7 @@ begin
 
   if TG_OP = 'DELETE' then return OLD; else return NEW; end if;
 end;
-$$ language plpgsql security definer;
+$$ language plpgsql security definer set search_path = public, pg_temp;
 
 drop trigger if exists trg_audit_sets on storage_sets;
 create trigger trg_audit_sets after insert or update or delete on storage_sets
@@ -244,7 +256,7 @@ begin
   ) select count(*) into n from del;
   return n;
 end;
-$$ language plpgsql security definer;
+$$ language plpgsql security definer set search_path = public, pg_temp;
 
 -- ============================================================================
 -- BACKUP BOOKKEEPING  (feeds the "Last backup" tile on the health dashboard)
@@ -326,12 +338,15 @@ do $$
 declare t text;
 begin
   foreach t in array array['customers','vehicles','storage_sets','tires','photos','audit_events','backup_runs'] loop
-    if not exists (
-      select 1 from pg_publication_tables
-      where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = t
-    ) then
-      execute format('alter publication supabase_realtime add table public.%I', t);
-    end if;
+    begin
+      if not exists (
+        select 1 from pg_publication_tables
+        where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = t
+      ) then
+        execute format('alter publication supabase_realtime add table public.%I', t);
+      end if;
+    exception when others then raise notice 'realtime add % skipped: %', t, sqlerrm;
+    end;
   end loop;
 end $$;
 
@@ -339,18 +354,18 @@ end $$;
 -- STORAGE bucket for condition photos (kept last; if your project restricts
 -- storage DDL, just create a PRIVATE bucket named 'tire-photos' in the dashboard)
 -- ============================================================================
-insert into storage.buckets (id, name, public)
-  values ('tire-photos', 'tire-photos', false)
-  on conflict (id) do nothing;
-
-drop policy if exists "tire-photos auth read"   on storage.objects;
-drop policy if exists "tire-photos auth write"  on storage.objects;
-drop policy if exists "tire-photos auth delete" on storage.objects;
-create policy "tire-photos auth read" on storage.objects
-  for select to authenticated using (bucket_id = 'tire-photos');
-create policy "tire-photos auth write" on storage.objects
-  for insert to authenticated with check (bucket_id = 'tire-photos');
-create policy "tire-photos auth delete" on storage.objects
-  for delete to authenticated using (bucket_id = 'tire-photos');
+do $$
+begin
+  insert into storage.buckets (id, name, public)
+    values ('tire-photos', 'tire-photos', false) on conflict (id) do nothing;
+  execute 'drop policy if exists "tire-photos auth read"   on storage.objects';
+  execute 'drop policy if exists "tire-photos auth write"  on storage.objects';
+  execute 'drop policy if exists "tire-photos auth delete" on storage.objects';
+  execute 'create policy "tire-photos auth read" on storage.objects for select to authenticated using (bucket_id = ''tire-photos'')';
+  execute 'create policy "tire-photos auth write" on storage.objects for insert to authenticated with check (bucket_id = ''tire-photos'')';
+  execute 'create policy "tire-photos auth delete" on storage.objects for delete to authenticated using (bucket_id = ''tire-photos'')';
+exception when others then
+  raise notice 'Storage bucket/policies skipped (%). Create a PRIVATE bucket named tire-photos in the dashboard.', sqlerrm;
+end $$;
 
 -- Done. Next: Authentication -> Users -> add your shop login (first user = manager).

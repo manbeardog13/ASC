@@ -44,8 +44,9 @@ export async function loadMyProfile() {
   const session = await getSession();
   if (!session) return null;
   const { data } = await supabase.from("profiles").select("id, email, full_name, role").eq("id", session.user.id).maybeSingle();
-  // No row yet (owner created before roles existed) => treat as manager, matching asc_role().
-  return data ?? { id: session.user.id, email: session.user.email, role: "manager", full_name: null };
+  // No profile row => least-privilege 'readonly', matching asc_role(). The shop
+  // owner is backfilled as 'manager' by schema.sql.
+  return data ?? { id: session.user.id, email: session.user.email, role: "readonly", full_name: null };
 }
 
 // ---- Reading storage sets ------------------------------------------------------
