@@ -1,14 +1,14 @@
 // ============================================================================
 // views/warehouse.js — "Locate storage." A visual map grouped Zone → Rack →
-// Shelf → Slot. Occupied slots are tappable and jump to the set. Humans read
-// structure faster than encoded strings.
+// Shelf → Slot. Occupied slots are tappable and jump to the set.
 // ============================================================================
 import * as db from "../db.js";
 import { setViewRefresh } from "../store.js";
 import { icon, esc, skeletonRows, emptyState } from "../ui.js";
+import { t, noun } from "../i18n.js";
 
 export async function render(main) {
-  main.innerHTML = `<div class="row-between" style="margin-bottom:14px"><h1>Warehouse</h1></div>
+  main.innerHTML = `<div class="row-between" style="margin-bottom:14px"><h1>${t("wh.title")}</h1></div>
     <div id="map">${skeletonRows(4)}</div>`;
   setViewRefresh(() => load(main));
   await load(main);
@@ -21,14 +21,12 @@ async function load(main) {
 
   if (!sets.length) {
     main.querySelector("#map").innerHTML = emptyState({
-      iconName: "map", title: "No located sets yet",
-      body: "Give a set a Zone / Rack / Shelf / Slot when you check it in, and it appears on the map here.",
-      actionHtml: `<a class="btn btn-primary" href="#/checkin">${icon("plus", 18)}Store tires</a>`,
+      iconName: "map", title: t("wh.emptyTitle"), body: t("wh.emptyBody"),
+      actionHtml: `<a class="btn btn-primary" href="#/checkin">${icon("plus", 18)}${t("dash.storeTires")}</a>`,
     });
     return;
   }
 
-  // Group Zone -> Rack -> Shelf -> [sets]
   const zones = new Map();
   for (const set of sets) {
     const z = set.zone || "—", r = set.rack || "—", sh = set.shelf || "—";
@@ -46,14 +44,14 @@ async function load(main) {
     const zoneCount = [...racks.values()].reduce((n, sh) => n + [...sh.values()].reduce((m, arr) => m + arr.length, 0), 0);
     return `<div class="zone-block">
       <div class="zone-head"><span class="ic" style="color:var(--brand-strong)">${icon("map", 18)}</span>
-        <span class="zname">Zone ${esc(z)}</span><span class="zfill muted">${zoneCount} set${zoneCount === 1 ? "" : "s"}</span></div>
+        <span class="zname">${t("wh.zone", { z: esc(z) })}</span><span class="zfill muted">${t("wh.setsN", { n: zoneCount, sets: noun(zoneCount, "sets") })}</span></div>
       ${[...racks.keys()].sort(sortKeys).map((r) => {
         const shelves = racks.get(r);
         return `<div class="rack">
-          <div class="rack-head">Rack ${esc(r)}<span class="rfill">${[...shelves.values()].reduce((m, arr) => m + arr.length, 0)} filled</span></div>
+          <div class="rack-head">${t("wh.rack", { r: esc(r) })}<span class="rfill">${t("wh.filledN", { n: [...shelves.values()].reduce((m, arr) => m + arr.length, 0) })}</span></div>
           ${[...shelves.keys()].sort(sortKeys).map((sh) => `
             <div style="display:flex;gap:8px;align-items:center;margin-bottom:7px">
-              <span class="muted" style="font-size:12px;min-width:54px">Shelf ${esc(sh)}</span>
+              <span class="muted" style="font-size:12px;min-width:54px">${t("wh.shelf", { s: esc(sh) })}</span>
               <div class="slots">${shelves.get(sh).sort((a, b) => sortKeys(a.slot, b.slot)).map((set) => slotCell(set)).join("")}</div>
             </div>`).join("")}
         </div>`;

@@ -6,15 +6,15 @@
    ============================================================================ */
 :root {
   /* Neutral scale (cool gray, quiet) */
-  --bg: #f6f7f9;
-  --surface: #ffffff;
-  --surface-2: #fbfbfc;
+  --bg: #f2eee7;          /* warm ivory canvas */
+  --surface: #fffefb;     /* warm white */
+  --surface-2: #f7f3ec;
   --ink: #15181d;
   --ink-2: #3d444d;
   --muted: #6b7480;
   --faint: #99a1ac;
-  --line: #e7e9ee;
-  --line-strong: #d7dbe2;
+  --line: #e9e2d7;
+  --line-strong: #ddd4c7;
 
   /* Brand */
   --brand: #ea580c;          /* ASC orange — marks, accents, focus */
@@ -443,3 +443,104 @@ details.disclose > .disclose-body { padding: 0 2px 16px; }
 .ic { display: inline-block; vertical-align: middle; flex: none; }
 .hidden { display: none !important; }
 .center-narrow { max-width: 400px; margin: 6vh auto 0; }
+
+/* ============================================================================
+   Brand logo (top bar)
+   ============================================================================ */
+.topbar .brand-logo { display: inline-flex; align-items: center; height: 30px; }
+.topbar .brand-logo img { height: 26px; width: auto; display: block; }
+
+/* ============================================================================
+   Glass login + splash — ultra-premium editorial / warm glassmorphism
+   ============================================================================ */
+.login-canvas {
+  position: fixed; inset: 0; display: grid; place-items: center; padding: 24px;
+  background:
+    radial-gradient(120% 90% at 18% 8%, rgba(251,146,60,.16), transparent 46%),
+    radial-gradient(120% 90% at 88% 92%, rgba(234,88,12,.12), transparent 50%),
+    linear-gradient(160deg, #F6F3EE 0%, #F0EBE1 55%, #ECE7DF 100%);
+  overflow: hidden; animation: appFadeIn 640ms ease both;
+}
+/* Barely-there handmade-paper grain */
+.login-canvas::before {
+  content: ""; position: absolute; inset: -20%; pointer-events: none; opacity: .04; mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+.login-stage { display: flex; flex-direction: column; align-items: center; gap: 30px; width: 100%; max-width: 400px; position: relative; z-index: 1; }
+.login-logo {
+  width: 230px; max-width: 72%; height: auto;
+  filter: drop-shadow(0 8px 22px rgba(234,88,12,.16));
+  animation: splashFade 800ms ease both;
+}
+
+.glass-card {
+  width: 100%; padding: 30px 26px 24px; border-radius: 28px;
+  background: linear-gradient(155deg, rgba(255,255,255,.42), rgba(255,255,255,.16));
+  backdrop-filter: blur(24px) saturate(1.35);
+  -webkit-backdrop-filter: blur(24px) saturate(1.35);
+  border: 1px solid rgba(255,255,255,.55);
+  box-shadow:
+    0 24px 60px -18px rgba(90,60,30,.28),
+    0 6px 18px -10px rgba(90,60,30,.18),
+    inset 0 1px 0 rgba(255,255,255,.7),
+    inset 0 0 30px rgba(255,255,255,.12);
+}
+.login-card { animation: loginEmerge 850ms cubic-bezier(.16,.86,.3,1) 1000ms both; }
+
+.login-tagline {
+  text-align: center; text-transform: uppercase; letter-spacing: 3.5px;
+  font-size: 11.5px; font-weight: 600; color: #9a8f7e; margin-bottom: 22px;
+}
+.glass-card .field { margin-bottom: 16px; }
+.glass-card .field > .label {
+  font-size: 11px; text-transform: uppercase; letter-spacing: 1.2px; color: #8a8072; font-weight: 600; margin-bottom: 7px;
+}
+.glass-card input {
+  background: rgba(255,255,255,.4); border: 1px solid rgba(255,255,255,.65);
+  border-radius: 15px; color: var(--ink); padding: 13px 15px; min-height: 50px;
+  box-shadow: inset 0 1px 3px rgba(90,60,30,.07);
+  transition: border-color 200ms ease, box-shadow 200ms ease, background 200ms ease;
+}
+.glass-card input::placeholder { color: #a99f8e; }
+.glass-card input:focus {
+  outline: none; background: rgba(255,255,255,.62); border-color: rgba(249,115,22,.55);
+  box-shadow: 0 0 0 4px rgba(249,115,22,.16), inset 0 1px 2px rgba(90,60,30,.05);
+}
+.btn-sunset {
+  width: 100%; min-height: 52px; margin-top: 6px; border: none; border-radius: 999px; cursor: pointer;
+  font-family: inherit; font-size: 15.5px; font-weight: 700; letter-spacing: .2px; color: #fff;
+  background: linear-gradient(180deg, #FB923C 0%, #F1600F 52%, #E2560C 100%);
+  box-shadow: 0 10px 26px -8px rgba(234,88,12,.5), inset 0 1px 0 rgba(255,255,255,.35);
+  transition: transform 200ms ease, box-shadow 200ms ease, filter 200ms ease;
+}
+.btn-sunset:hover { transform: scale(1.015); box-shadow: 0 14px 32px -8px rgba(234,88,12,.55); filter: brightness(1.03); }
+.btn-sunset:active { transform: scale(.99); }
+.btn-sunset:disabled { opacity: .65; cursor: default; transform: none; }
+.btn-sunset.is-busy { color: transparent; position: relative; pointer-events: none; }
+.btn-sunset.is-busy::after {
+  content: ""; position: absolute; inset: 0; margin: auto; width: 18px; height: 18px; border-radius: 50%;
+  border: 2.5px solid rgba(255,255,255,.9); border-top-color: transparent; animation: spin .7s linear infinite;
+}
+.login-err { color: #b42318; font-size: 13.5px; font-weight: 600; margin-top: 12px; text-align: center; }
+
+/* Language toggle (EN | HR) */
+.lang-toggle { display: inline-flex; gap: 3px; padding: 3px; border-radius: 999px; }
+.lang-toggle.on-glass { background: rgba(255,255,255,.4); border: 1px solid rgba(255,255,255,.6); }
+.login-langs { display: flex; justify-content: center; margin-top: 20px; }
+.lang-toggle button {
+  min-height: 30px; padding: 0 13px; border: none; background: transparent; border-radius: 999px;
+  font-family: inherit; font-size: 12.5px; font-weight: 700; letter-spacing: .5px; color: #8a8072; cursor: pointer;
+  transition: background 180ms ease, color 180ms ease;
+}
+.lang-toggle button[aria-pressed="true"] { background: var(--brand-strong); color: #fff; }
+/* Compact toggle used in the top bar */
+.topbar .lang-toggle { background: rgba(20,24,29,.05); }
+.topbar .lang-toggle button { color: var(--muted); min-height: 28px; padding: 0 10px; }
+.topbar .lang-toggle button[aria-pressed="true"] { background: var(--brand-strong); color: #fff; }
+
+@keyframes appFadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes splashFade { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
+@keyframes loginEmerge {
+  from { opacity: 0; filter: blur(16px); transform: translateY(8px) scale(.985); }
+  to   { opacity: 1; filter: blur(0);   transform: translateY(0)   scale(1); }
+}

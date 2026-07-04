@@ -6,25 +6,24 @@ import * as db from "../db.js";
 import { getState, setViewRefresh } from "../store.js";
 import { matchesQuery, isDueSoon } from "../domain.js";
 import { icon, esc, skeletonRows, emptyState } from "../ui.js";
+import { t, noun } from "../i18n.js";
 import { setRow, timeAgo } from "./shared.js";
 
 let allSets = [];
 let query = "";
 
-export async function render(main, { go }) {
+export async function render(main) {
   main.innerHTML = `
     <div class="search-wrap" style="margin-bottom:16px">
       ${icon("search", 20)}
-      <input id="search" type="search" placeholder="Search name, plate, size, DOT, location…" autocomplete="off" value="${esc(query)}" aria-label="Search everything">
+      <input id="search" type="search" placeholder="${esc(t("dash.search"))}" autocomplete="off" value="${esc(query)}" aria-label="${esc(t("dash.search"))}">
     </div>
     <div id="tiles" class="tiles"></div>
     <div id="dueSoon"></div>
-    <div class="section-title"><h2>Inventory</h2><span id="listCount" class="muted" style="font-size:13px"></span></div>
+    <div class="section-title"><h2>${t("dash.inventory")}</h2><span id="listCount" class="muted" style="font-size:13px"></span></div>
     <div id="list">${skeletonRows(5)}</div>`;
 
-  const search = main.querySelector("#search");
-  search.addEventListener("input", (e) => { query = e.target.value; paintList(main); });
-
+  main.querySelector("#search").addEventListener("input", (e) => { query = e.target.value; paintList(main); });
   setViewRefresh(() => load(main));
   await load(main);
 }
@@ -48,42 +47,41 @@ function paintTiles(main, health, counts) {
   const dueSoon = allSets.filter((s) => isDueSoon(s)).length;
   const backup = health.lastBackup
     ? `${health.lastBackup.status === "success" ? "✓" : "⚠"} ${timeAgo(health.lastBackup.finished_at)}`
-    : "Not yet";
+    : t("dash.backupNotYet");
   main.querySelector("#tiles").innerHTML = `
     <div class="tile tile-accent">
-      <div class="tlabel">${icon("plus", 15)}Checked in today</div>
+      <div class="tlabel">${icon("plus", 15)}${t("dash.checkedInToday")}</div>
       <div class="tval tnum">${health.todayCheckIns}</div>
     </div>
     <div class="tile">
-      <div class="tlabel">${icon("check", 15)}Picked up today</div>
+      <div class="tlabel">${icon("check", 15)}${t("dash.pickedUpToday")}</div>
       <div class="tval tnum">${health.todayPickups}</div>
     </div>
     <div class="tile">
-      <div class="tlabel">${icon("box", 15)}In storage</div>
+      <div class="tlabel">${icon("box", 15)}${t("dash.inStorage")}</div>
       <div class="tval tnum">${counts.in_storage}</div>
-      <div class="tsub">${counts.reserved} reserved</div>
+      <div class="tsub">${t("dash.reservedN", { n: counts.reserved })}</div>
     </div>
     <div class="tile">
-      <div class="tlabel">${icon("clock", 15)}Due soon</div>
+      <div class="tlabel">${icon("clock", 15)}${t("dash.dueSoon")}</div>
       <div class="tval tnum">${dueSoon}</div>
-      <div class="tsub">next 7 days</div>
+      <div class="tsub">${t("dash.next7")}</div>
     </div>`;
 
-  // Compact system-health strip (item #10) folded into the tiles' sibling.
-  let health2 = main.querySelector("#healthStrip");
-  if (!health2) {
-    health2 = document.createElement("div");
-    health2.id = "healthStrip";
-    health2.className = "card";
-    health2.style.marginTop = "12px";
-    main.querySelector("#tiles").after(health2);
+  let strip = main.querySelector("#healthStrip");
+  if (!strip) {
+    strip = document.createElement("div");
+    strip.id = "healthStrip";
+    strip.className = "card";
+    strip.style.marginTop = "12px";
+    main.querySelector("#tiles").after(strip);
   }
-  health2.innerHTML = `
-    <div class="health-row"><span class="k">${icon("wifiOff", 16)}Connection</span>
-      <span class="v" style="color:${online ? "var(--ok)" : "var(--warn)"}">${online ? "Online" : "Offline"}</span></div>
-    <div class="health-row"><span class="k">${icon("clock", 16)}Pending sync</span>
+  strip.innerHTML = `
+    <div class="health-row"><span class="k">${icon("wifiOff", 16)}${t("dash.connection")}</span>
+      <span class="v" style="color:${online ? "var(--ok)" : "var(--warn)"}">${online ? t("conn.online") : t("conn.offline")}</span></div>
+    <div class="health-row"><span class="k">${icon("clock", 16)}${t("dash.pendingSync")}</span>
       <span class="v">${syncPending || 0}</span></div>
-    <div class="health-row"><span class="k">${icon("download", 16)}Last backup</span>
+    <div class="health-row"><span class="k">${icon("download", 16)}${t("dash.lastBackup")}</span>
       <span class="v">${esc(backup)}</span></div>`;
 }
 
@@ -92,24 +90,25 @@ function paintDueSoon(main) {
   const box = main.querySelector("#dueSoon");
   if (!due.length) { box.innerHTML = ""; return; }
   box.innerHTML = `
-    <div class="section-title"><h2>Due for pickup soon</h2><a class="link" href="#/reminders">Remind →</a></div>
+    <div class="section-title"><h2>${t("dash.dueForPickup")}</h2><a class="link" href="#/reminders">${t("dash.remind")}</a></div>
     <div class="set-list">${due.slice(0, 5).map(setRow).join("")}</div>`;
 }
 
 function paintList(main) {
   const rows = allSets.filter((s) => matchesQuery(s, query));
-  main.querySelector("#listCount").textContent = query ? `${rows.length} of ${allSets.length}` : `${allSets.length} sets`;
+  main.querySelector("#listCount").textContent = query
+    ? t("dash.shownOf", { shown: rows.length, total: allSets.length })
+    : t("dash.setsN", { n: allSets.length, sets: noun(allSets.length, "sets") });
   const list = main.querySelector("#list");
   if (!allSets.length) {
     list.innerHTML = emptyState({
-      iconName: "box", title: "No tires stored yet",
-      body: "Check in a customer's set to get started.",
-      actionHtml: `<a class="btn btn-primary" href="#/checkin">${icon("plus", 18)}Store tires</a>`,
+      iconName: "box", title: t("dash.emptyTitle"), body: t("dash.emptyBody"),
+      actionHtml: `<a class="btn btn-primary" href="#/checkin">${icon("plus", 18)}${t("dash.storeTires")}</a>`,
     });
     return;
   }
   if (!rows.length) {
-    list.innerHTML = emptyState({ iconName: "search", title: "No matches", body: `Nothing matches “${esc(query)}”. Try a plate, name, or DOT.` });
+    list.innerHTML = emptyState({ iconName: "search", title: t("dash.noMatchTitle"), body: t("dash.noMatchBody", { q: esc(query) }) });
     return;
   }
   list.innerHTML = `<div class="set-list">${rows.map(setRow).join("")}</div>`;

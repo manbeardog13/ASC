@@ -153,22 +153,22 @@ export async function findPossibleDuplicates({ plate, phone, dotCodes = [] } = {
   if (plate?.trim()) {
     jobs.push(supabase.from("vehicles")
       .select("plate, storage_sets ( public_code, deleted_at )").ilike("plate", plate.trim())
-      .then(({ data }) => data?.forEach((v) => v.storage_sets?.forEach((s) => !s.deleted_at && note(s.public_code, "same plate")))));
+      .then(({ data }) => data?.forEach((v) => v.storage_sets?.forEach((s) => !s.deleted_at && note(s.public_code, "plate")))));
   }
   if (phone?.trim()) {
     jobs.push(supabase.from("customers")
       .select("phone, vehicles ( storage_sets ( public_code, deleted_at ) )").eq("phone", phone.trim())
-      .then(({ data }) => data?.forEach((c) => c.vehicles?.forEach((v) => v.storage_sets?.forEach((s) => !s.deleted_at && note(s.public_code, "same phone"))))));
+      .then(({ data }) => data?.forEach((c) => c.vehicles?.forEach((v) => v.storage_sets?.forEach((s) => !s.deleted_at && note(s.public_code, "phone"))))));
   }
   const dots = dotCodes.filter(Boolean);
   if (dots.length) {
     jobs.push(supabase.from("tires")
       .select("dot_code, set:storage_sets ( public_code, deleted_at )").in("dot_code", dots)
-      .then(({ data }) => data?.forEach((t) => t.set && !t.set.deleted_at && note(t.set.public_code, "same DOT code"))));
+      .then(({ data }) => data?.forEach((t) => t.set && !t.set.deleted_at && note(t.set.public_code, "dot"))));
   }
 
   await Promise.all(jobs).catch(() => {}); // duplicate check is advisory — never blocks check-in
-  return [...found.values()].map((e) => ({ public_code: e.public_code, reason: [...e.reasons].join(" · ") }));
+  return [...found.values()].map((e) => ({ public_code: e.public_code, reasons: [...e.reasons] }));
 }
 
 // ---- Creating a storage set ----------------------------------------------------

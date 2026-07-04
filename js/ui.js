@@ -3,6 +3,7 @@
 // (those live in domain.js) and no database calls (db.js).
 // ============================================================================
 import { STATUSES, SEASONS, statusLabel, seasonLabel, locationParts, hasLocation, locationLine } from "./domain.js";
+import { t } from "./i18n.js";
 
 // ---- Navigation ---------------------------------------------------------------
 export function go(route) {
@@ -142,7 +143,7 @@ export function toast(message, options = {}) {
 
 // ---- Confirmation sheet (mistakes should be hard) ------------------------------------
 // Bottom sheet with big thumb-reachable buttons. Returns Promise<boolean>.
-export function confirmSheet({ title, body = "", confirmLabel = "Confirm", danger = false }) {
+export function confirmSheet({ title, body = "", confirmLabel = t("common.confirm"), danger = false }) {
   return new Promise((resolve) => {
     const wrap = document.createElement("div");
     wrap.className = "sheet-backdrop";
@@ -152,7 +153,7 @@ export function confirmSheet({ title, body = "", confirmLabel = "Confirm", dange
         ${body ? `<p>${esc(body)}</p>` : ""}
         <div class="sheet-actions">
           <button type="button" class="btn btn-lg ${danger ? "btn-danger" : "btn-primary"}" data-act="yes">${esc(confirmLabel)}</button>
-          <button type="button" class="btn btn-lg" data-act="no">Cancel</button>
+          <button type="button" class="btn btn-lg" data-act="no">${esc(t("common.cancel"))}</button>
         </div>
       </div>`;
     document.body.appendChild(wrap);

@@ -9,6 +9,9 @@ import { getState, setState, on, setViewRefresh, refreshActiveView, loadRecentLo
 import { initOffline } from "./offline.js";
 import * as db from "./db.js";
 import { icon, esc, go, toast, busy } from "./ui.js";
+import { t, lang, setLang, LANGS, onLangChange } from "./i18n.js";
+
+document.documentElement.lang = lang();
 
 // Self-heal a stale/mismatched shell: if a cached OLD index.html (which used a
 // different mount element) is served with this NEW app.js, the mount point would
@@ -38,33 +41,39 @@ const ROUTES = [
 ];
 
 const NAV = [
-  { route: "/",          label: "Home",     iconName: "home" },
-  { route: "/checkin",   label: "Check in", iconName: "plus" },
-  { route: "/scan",      label: "Scan",     iconName: "scan", center: true },
-  { route: "/warehouse", label: "Warehouse", iconName: "map" },
-  { route: "/customers", label: "Customers", iconName: "people" },
+  { route: "/",          key: "nav.home",      iconName: "home" },
+  { route: "/checkin",   key: "nav.checkin",   iconName: "plus" },
+  { route: "/scan",      key: "nav.scan",      iconName: "scan", center: true },
+  { route: "/warehouse", key: "nav.warehouse", iconName: "map" },
+  { route: "/customers", key: "nav.customers", iconName: "people" },
 ];
+
+// EN | HR pill. Clicks are caught by a delegated [data-lang] handler.
+function langToggle(onGlass) {
+  return `<div class="lang-toggle${onGlass ? " on-glass" : ""}" role="group" aria-label="Language">
+    ${LANGS.map((l) => `<button type="button" data-lang="${l.code}" aria-pressed="${lang() === l.code}">${l.label}</button>`).join("")}
+  </div>`;
+}
 
 // ---- App frame (built once when signed in) -----------------------------------
 function mountFrame() {
   if (document.getElementById("main")) return;
   root.innerHTML = `
     <header class="topbar">
-      <a class="wordmark" href="#/" aria-label="ASC Tire Hotel home">
-        <span class="mark">ASC</span><span class="sub">Tire Hotel</span>
-      </a>
+      <a class="brand-logo" href="#/" aria-label="ASC"><img src="assets/asc-mark.svg" alt="ASC"></a>
       <nav class="topbar-desk-nav" aria-label="Primary">
-        ${NAV.filter((n) => !n.center).map((n) => `<a href="#${n.route}" data-route="${n.route}">${icon(n.iconName, 18)}${n.label}</a>`).join("")}
+        ${NAV.filter((n) => !n.center).map((n) => `<a href="#${n.route}" data-route="${n.route}">${icon(n.iconName, 18)}${t(n.key)}</a>`).join("")}
       </nav>
       <span class="spacer"></span>
+      ${langToggle(false)}
       <span id="conn" class="conn"></span>
       <button id="menuBtn" class="btn btn-ghost" style="min-height:40px;padding:0 10px" aria-haspopup="menu" aria-label="More">${icon("list", 20)}</button>
     </header>
     <main id="main"></main>
     <nav class="tabbar" aria-label="Sections">
       ${NAV.map((n) => n.center
-        ? `<a href="#${n.route}" data-route="${n.route}" class="scan-tab" aria-label="Scan"><span class="scan-orb">${icon(n.iconName, 24)}</span></a>`
-        : `<a href="#${n.route}" data-route="${n.route}"><span class="ic">${icon(n.iconName, 22)}</span>${n.label}</a>`
+        ? `<a href="#${n.route}" data-route="${n.route}" class="scan-tab" aria-label="${t(n.key)}"><span class="scan-orb">${icon(n.iconName, 24)}</span></a>`
+        : `<a href="#${n.route}" data-route="${n.route}"><span class="ic">${icon(n.iconName, 22)}</span>${t(n.key)}</a>`
       ).join("")}
     </nav>`;
   document.getElementById("menuBtn").addEventListener("click", openMenu);
@@ -85,13 +94,13 @@ function renderConn() {
   const { online, syncPending } = getState();
   if (online && !syncPending) {
     el.className = "conn conn-online";
-    el.innerHTML = `<span class="dot"></span>Online`;
+    el.innerHTML = `<span class="dot"></span>${t("conn.online")}`;
   } else if (online && syncPending) {
     el.className = "conn conn-offline";
-    el.innerHTML = `${icon("clock", 14)}Syncing ${syncPending}`;
+    el.innerHTML = `${icon("clock", 14)}${t("conn.syncing", { n: syncPending })}`;
   } else {
     el.className = "conn conn-offline";
-    el.innerHTML = `${icon("wifiOff", 14)}Offline${syncPending ? ` · ${syncPending} queued` : ""}`;
+    el.innerHTML = `${icon("wifiOff", 14)}${t("conn.offline")}${syncPending ? t("conn.queued", { n: syncPending }) : ""}`;
   }
 }
 
@@ -108,12 +117,12 @@ function openMenu() {
   const item = (route, iconName, label) =>
     `<a href="#${route}" role="menuitem" class="btn btn-ghost" style="justify-content:flex-start;width:100%">${icon(iconName, 18)}${label}</a>`;
   pop.innerHTML = `
-    ${item("/reminders", "clock", "Pickup reminders")}
-    ${item("/recycle", "trash", "Recycle bin")}
-    <button id="exportBtn" role="menuitem" class="btn btn-ghost" style="justify-content:flex-start;width:100%">${icon("download", 18)}Export CSV</button>
+    ${item("/reminders", "clock", t("menu.reminders"))}
+    ${item("/recycle", "trash", t("menu.recycle"))}
+    <button id="exportBtn" role="menuitem" class="btn btn-ghost" style="justify-content:flex-start;width:100%">${icon("download", 18)}${t("menu.export")}</button>
     <div style="border-top:1px solid var(--line);margin:6px 4px"></div>
-    <div style="padding:6px 10px;font-size:12px;color:var(--muted)">Signed in · ${esc(role)}</div>
-    <button id="signOutBtn" role="menuitem" class="btn btn-ghost" style="justify-content:flex-start;width:100%">${icon("logout", 18)}Sign out</button>`;
+    <div style="padding:6px 10px;font-size:12px;color:var(--muted)">${t("menu.signedInAs", { role: esc(role) })}</div>
+    <button id="signOutBtn" role="menuitem" class="btn btn-ghost" style="justify-content:flex-start;width:100%">${icon("logout", 18)}${t("menu.signout")}</button>`;
   document.body.appendChild(pop);
   const close = (e) => {
     if (!pop.contains(e.target) && e.target.id !== "menuBtn") { pop.remove(); document.removeEventListener("click", close, true); }
@@ -143,7 +152,7 @@ async function route() {
   const main = document.getElementById("main");
 
   const match = ROUTES.map((r) => ({ r, m: path.match(r.pattern) })).find((x) => x.m);
-  if (!match) { main.innerHTML = `<div class="card"><h2>Page not found</h2><p class="muted">That screen doesn't exist. <a href="#/">Go home</a>.</p></div>`; return; }
+  if (!match) { main.innerHTML = `<div class="card"><h2>${t("common.notFound")}</h2><p class="muted"><a href="#/">${t("nav.home")}</a></p></div>`; return; }
 
   main.scrollTo?.(0, 0);
   window.scrollTo(0, 0);
@@ -174,24 +183,33 @@ function renderSetup() {
   stopRealtime();
   root.innerHTML = `<main><div class="card center-narrow stack">
     <div class="empty-icon" style="margin-inline:0">${icon("box", 40)}</div>
-    <h1>ASC Tire Hotel</h1>
-    <p class="muted">Not connected to a database yet. Add your Supabase details in <code>js/config.js</code>, then reload. Full steps are in <b>SETUP.md</b>.</p>
+    <h1>ASC · Tire Hotel</h1>
+    <p class="muted">${t("setup.body")}</p>
   </div></main>`;
 }
 
+// Splash + glass login: canvas + logo fade in, then the card blurs in and
+// drifts up ~2mm, easing to a stop (CSS: appFadeIn / splashFade / loginEmerge).
 function renderLogin() {
   stopRealtime();
-  root.innerHTML = `<main><div class="card center-narrow">
-    <div style="text-align:center;margin-bottom:18px">
-      <div class="wordmark" style="justify-content:center;font-size:22px"><span class="mark" style="font-size:24px">ASC</span><span class="sub">Tire Hotel</span></div>
-    </div>
-    <form id="loginForm" class="stack" novalidate>
-      <label class="field"><span class="label">Email</span><input id="email" type="email" autocomplete="username" required></label>
-      <label class="field"><span class="label">Password</span><input id="password" type="password" autocomplete="current-password" required></label>
-      <button class="btn btn-primary btn-lg" type="submit">Sign in</button>
-      <p id="loginErr" class="inline-err hidden"></p>
-    </form>
-  </div></main>`;
+  root.innerHTML = `
+    <div class="login-canvas">
+      <div class="login-stage">
+        <img class="login-logo" src="assets/asc-logo.svg" alt="ASC — Auto Servisni Centar d.o.o.">
+        <div class="glass-card login-card">
+          <div class="login-tagline">${t("tagline")}</div>
+          <form id="loginForm" novalidate>
+            <label class="field"><span class="label">${t("login.email")}</span>
+              <input id="email" type="email" autocomplete="username" required></label>
+            <label class="field"><span class="label">${t("login.password")}</span>
+              <input id="password" type="password" autocomplete="current-password" required></label>
+            <button class="btn-sunset" type="submit">${t("login.signin")}</button>
+            <p id="loginErr" class="login-err hidden"></p>
+          </form>
+          <div class="login-langs">${langToggle(true)}</div>
+        </div>
+      </div>
+    </div>`;
   const form = document.getElementById("loginForm");
   form.onsubmit = async (e) => {
     e.preventDefault();
@@ -208,7 +226,8 @@ function renderLogin() {
       busy(btn, false);
     }
   };
-  document.getElementById("email").focus();
+  // Focus after the entrance settles, without scroll-jerking the animation.
+  setTimeout(() => document.getElementById("email")?.focus({ preventScroll: true }), 80);
 }
 
 // ---- Keyboard shortcuts (desktop) --------------------------------------------
@@ -239,6 +258,17 @@ on("change", renderConn);
 on("connection", renderConn);
 window.addEventListener("hashchange", route);
 window.addEventListener("keydown", onKey);
+
+// Language toggle (delegated) → switch + re-render the whole UI in the new language.
+document.addEventListener("click", (e) => {
+  const btn = e.target.closest?.("[data-lang]");
+  if (btn) { e.preventDefault(); setLang(btn.dataset.lang); }
+});
+onLangChange(() => {
+  document.getElementById("menuPop")?.remove();
+  root.innerHTML = "";
+  boot();
+});
 
 if (isConfigured()) {
   loadRecentLocations();

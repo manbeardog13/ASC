@@ -4,10 +4,12 @@
 // live HERE and nowhere else. UI files render these; db.js persists them.
 // ============================================================================
 
+import { t } from "./i18n.js";
+
 // ---- Statuses ---------------------------------------------------------------
-// Stored values are stable identifiers (never rename in the DB); labels are
-// what employees read. `tone` maps to a chip style in ui.js — every status is
-// also distinguished by its label and icon, never by color alone.
+// Stored values are stable identifiers (never rename in the DB); labels come
+// from i18n. `tone` maps to a chip style in ui.js — every status is also
+// distinguished by its label and icon, never by color alone.
 export const STATUSES = {
   in_storage:  { label: "Stored",    tone: "ok",      icon: "box" },
   reserved:    { label: "Reserved",  tone: "info",    icon: "clock" },
@@ -17,15 +19,15 @@ export const STATUSES = {
 export const STATUS_ORDER = ["in_storage", "reserved", "checked_out", "missing"];
 
 export function statusLabel(status) {
-  return STATUSES[status]?.label ?? status ?? "—";
+  return status ? t(`status.${status}`) : "—";
 }
 
 // Which one-tap primary action does a set in this status offer next?
 export function nextStatusAction(status) {
-  if (status === "in_storage")  return { to: "reserved",    label: "Reserve for pickup" };
-  if (status === "reserved")    return { to: "checked_out", label: "Mark picked up" };
-  if (status === "checked_out") return { to: "in_storage",  label: "Store again" };
-  if (status === "missing")     return { to: "in_storage",  label: "Mark found & stored" };
+  if (status === "in_storage")  return { to: "reserved",    label: t("statusAction.reserved") };
+  if (status === "reserved")    return { to: "checked_out", label: t("statusAction.checked_out") };
+  if (status === "checked_out") return { to: "in_storage",  label: t("statusAction.in_storage") };
+  if (status === "missing")     return { to: "in_storage",  label: t("statusAction.found") };
   return null;
 }
 
@@ -38,7 +40,7 @@ export const SEASONS = {
 export const SEASON_ORDER = ["winter", "summer", "all_season"];
 
 export function seasonLabel(season) {
-  return SEASONS[season]?.label ?? season ?? "—";
+  return season ? t(`season.${season}`) : "—";
 }
 
 // The season an employee most likely stores NEXT (cars swap onto the opposite
@@ -56,16 +58,16 @@ export function hasLocation(set) {
 
 export function locationParts(set) {
   return [
-    { key: "zone",  label: "Zone",  value: set?.zone  ?? "" },
-    { key: "rack",  label: "Rack",  value: set?.rack  ?? "" },
-    { key: "shelf", label: "Shelf", value: set?.shelf ?? "" },
-    { key: "slot",  label: "Slot",  value: set?.slot  ?? "" },
+    { key: "zone",  label: t("loc.zone"),  value: set?.zone  ?? "" },
+    { key: "rack",  label: t("loc.rack"),  value: set?.rack  ?? "" },
+    { key: "shelf", label: t("loc.shelf"), value: set?.shelf ?? "" },
+    { key: "slot",  label: t("loc.slot"),  value: set?.slot  ?? "" },
   ];
 }
 
 // One readable line, structured words — used where a block doesn't fit.
 export function locationLine(set) {
-  if (!hasLocation(set)) return "No location yet";
+  if (!hasLocation(set)) return t("loc.none");
   return locationParts(set)
     .filter((part) => part.value !== "" && part.value != null)
     .map((part) => `${part.label} ${part.value}`)
@@ -120,11 +122,10 @@ export function isDueSoon(set, days = 7, today = new Date()) {
 
 // Friendly, prefilled reminder text for SMS/email (customer's first name only).
 export function reminderMessage(set) {
-  const first = (set?.vehicle?.customer?.name || "there").split(/\s+/)[0];
+  const first = (set?.vehicle?.customer?.name || "").split(/\s+/)[0] || t("rem.nameFallback");
   const season = seasonLabel(set?.season).toLowerCase();
-  const when = set?.expected_out_date ? ` around ${set.expected_out_date}` : "";
-  return `Hi ${first}, your ${season} tires (${set?.public_code}) stored at ASC Tire Hotel `
-    + `are due for pickup${when}. Please let us know when you'd like to collect them. Thank you!`;
+  const when = set?.expected_out_date ? t("rem.messageWhen", { date: set.expected_out_date }) : "";
+  return t("rem.message", { name: first, season, code: set?.public_code ?? "", when });
 }
 
 // ---- Tires --------------------------------------------------------------------

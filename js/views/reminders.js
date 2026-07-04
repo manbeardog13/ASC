@@ -1,21 +1,20 @@
 // ============================================================================
 // views/reminders.js — "Remind customers whose tires are due for pickup."
-// Zero external service: one tap opens the phone's own dialer / SMS / email with
-// a prefilled message. "Mark reminded" records reminded_at so the set shows it's
-// been contacted. (An automated email/SMS job can be layered on later — see
-// docs/DISASTER_RECOVERY.md's sibling ideas — but this works today on any phone.)
+// Zero external service: one tap opens the phone's own dialer / SMS / email
+// with a prefilled message (localized). "Mark reminded" records reminded_at.
 // ============================================================================
 import * as db from "../db.js";
 import { setViewRefresh } from "../store.js";
 import { isDueSoon, reminderMessage } from "../domain.js";
 import { icon, esc, toast, seasonChip, skeletonRows, emptyState } from "../ui.js";
+import { t } from "../i18n.js";
 import { fmtDate, timeAgo } from "./shared.js";
 
 export async function render(main) {
   main.innerHTML = `
-    <a class="btn btn-ghost" href="#/" style="margin-bottom:10px;min-height:38px">${icon("back", 18)} Home</a>
-    <div class="row-between" style="margin-bottom:4px"><h1>Pickup reminders</h1></div>
-    <p class="muted" style="font-size:13px;margin-bottom:14px">Sets due for pickup within 7 days. One tap to call, text, or email the customer.</p>
+    <a class="btn btn-ghost" href="#/" style="margin-bottom:10px;min-height:38px">${icon("back", 18)} ${t("common.home")}</a>
+    <div class="row-between" style="margin-bottom:4px"><h1>${t("rem.title")}</h1></div>
+    <p class="muted" style="font-size:13px;margin-bottom:14px">${t("rem.sub")}</p>
     <div id="rem">${skeletonRows(3)}</div>`;
   setViewRefresh(() => load(main));
   await load(main);
@@ -29,13 +28,13 @@ async function load(main) {
   const due = sets.filter(isDueSoon)
     .sort((a, b) => (a.expected_out_date || "").localeCompare(b.expected_out_date || ""));
   if (!due.length) {
-    main.querySelector("#rem").innerHTML = emptyState({ iconName: "check", title: "All caught up", body: "No pickups are due in the next 7 days." });
+    main.querySelector("#rem").innerHTML = emptyState({ iconName: "check", title: t("rem.allCaught"), body: t("rem.allCaughtBody") });
     return;
   }
   main.querySelector("#rem").innerHTML = due.map(card).join("");
   main.querySelectorAll("[data-remind]").forEach((btn) => btn.onclick = async () => {
     btn.disabled = true;
-    try { await db.markReminded(btn.dataset.remind); toast("Marked as reminded"); await load(main); }
+    try { await db.markReminded(btn.dataset.remind); toast(t("rem.marked")); await load(main); }
     catch (err) { toast(err.message, "err"); btn.disabled = false; }
   });
 }
@@ -46,7 +45,7 @@ function card(set) {
   const phone = (customer.phone || "").trim();
   const email = (customer.email || "").trim();
   const body = encodeURIComponent(reminderMessage(set));
-  const subject = encodeURIComponent(`ASC Tire Hotel — pickup for ${set.public_code}`);
+  const subject = encodeURIComponent(`ASC Tire Hotel — ${set.public_code}`);
   const action = (href, enabled, iconName, label) => enabled
     ? `<a class="btn" href="${href}" style="flex:1;min-height:44px">${icon(iconName, 18)} ${label}</a>`
     : `<span class="btn" style="flex:1;min-height:44px;opacity:.4;pointer-events:none">${icon(iconName, 18)} ${label}</span>`;
@@ -61,16 +60,16 @@ function card(set) {
         ${seasonChip(set.season)}
       </div>
       <div class="muted" style="font-size:13px;margin:8px 0 12px">
-        ${icon("clock", 14)} Due ${fmtDate(set.expected_out_date)}${vehicle.plate ? ` · ${esc(vehicle.plate)}` : ""}
-        ${set.reminded_at ? ` · <span style="color:var(--ok)">reminded ${timeAgo(set.reminded_at)}</span>` : ""}
+        ${icon("clock", 14)} ${t("rem.due", { date: fmtDate(set.expected_out_date) })}${vehicle.plate ? ` · ${esc(vehicle.plate)}` : ""}
+        ${set.reminded_at ? ` · <span style="color:var(--ok)">${t("rem.remindedAgo", { ago: timeAgo(set.reminded_at) })}</span>` : ""}
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
-        ${action(`tel:${encodeURIComponent(phone)}`, !!phone, "phone", "Call")}
-        ${action(`sms:${encodeURIComponent(phone)}?&body=${body}`, !!phone, "phone", "Text")}
-        ${action(`mailto:${encodeURIComponent(email)}?subject=${subject}&body=${body}`, !!email, "list", "Email")}
+        ${action(`tel:${encodeURIComponent(phone)}`, !!phone, "phone", t("rem.call"))}
+        ${action(`sms:${encodeURIComponent(phone)}?&body=${body}`, !!phone, "phone", t("rem.text"))}
+        ${action(`mailto:${encodeURIComponent(email)}?subject=${subject}&body=${body}`, !!email, "list", t("rem.email"))}
       </div>
       <button class="btn ${set.reminded_at ? "" : "btn-primary"}" data-remind="${esc(set.id)}" style="width:100%;margin-top:8px">
-        ${icon("check", 18)} ${set.reminded_at ? "Reminded — mark again" : "Mark reminded"}
+        ${icon("check", 18)} ${set.reminded_at ? t("rem.markAgain") : t("rem.mark")}
       </button>
     </div>`;
 }

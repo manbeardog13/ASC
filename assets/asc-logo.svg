@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 132" role="img" aria-label="ASC — Auto Servisni Centar d.o.o.">
+  <defs>
+    <linearGradient id="ascFill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFD9A8"/>
+      <stop offset=".22" stop-color="#FBA94C"/>
+      <stop offset=".5" stop-color="#F97316"/>
+      <stop offset=".78" stop-color="#EA580C"/>
+      <stop offset="1" stop-color="#B93E0A"/>
+    </linearGradient>
+    <linearGradient id="ascSub" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#F97316"/>
+      <stop offset="1" stop-color="#C2410C"/>
+    </linearGradient>
+  </defs>
+  <g font-family="'Arial Black','Arial',sans-serif" font-weight="900" font-style="italic">
+    <text x="180" y="82" text-anchor="middle" font-size="96" letter-spacing="3"
+          fill="url(#ascFill)" stroke="#8F3208" stroke-width="1.6" paint-order="stroke">ASC</text>
+  </g>
+  <text x="180" y="116" text-anchor="middle" font-family="'Arial',sans-serif" font-weight="800"
+        font-size="18.5" letter-spacing="1.4" fill="url(#ascSub)">AUTO SERVISNI CENTAR <tspan font-size="14">d.o.o.</tspan></text>
+</svg>
