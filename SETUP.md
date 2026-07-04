@@ -163,6 +163,35 @@ Authentication → Users and they'll pick up the role you assigned in the Users 
 The user list shows full names and Admin/User only; **emails are masked** (e.g.
 `c**********@gmail.com`) for everyone.
 
+### Optional: invite emails + full account deletion (Edge Function)
+
+Out of the box, "Add user" pre-authorizes an email (the person self-signs-up) and
+"Remove" revokes access (the inert login still exists in Supabase). If you want
+**real invite emails** on add, and **"Remove" to delete the login entirely**, deploy
+one small Edge Function. The app auto-detects it — if it's not deployed, everything
+above still works.
+
+1. **Deploy the function** (it's in `supabase/functions/admin-users/`). No secrets to
+   set — Supabase injects the service-role key for you.
+   - **With the CLI:** `supabase functions deploy admin-users --no-verify-jwt`
+     (the function verifies the caller itself; that flag keeps the browser's CORS
+     preflight from being blocked).
+   - **Or in the dashboard:** Edge Functions → **Create function**, name it exactly
+     `admin-users`, paste the contents of `supabase/functions/admin-users/index.ts`,
+     Deploy, then in the function's settings turn **Verify JWT** *off*.
+2. **Allow the app as a redirect target** so invite links come back to the app:
+   Authentication → **URL Configuration** → set **Site URL** to
+   `https://manbeardog13.github.io/ASC/` and add `https://manbeardog13.github.io/ASC/**`
+   under **Redirect URLs**.
+3. **Set up email delivery (SMTP)** so invites actually send: Authentication → **SMTP
+   settings** → add your provider (e.g. Resend, SendGrid, Postmark). Supabase's
+   built-in email is heavily rate-limited and meant only for testing.
+
+With that done: adding a user emails them an invite; they click it and land on a
+**"Set your password"** screen, then they're in with the role you gave them.
+Removing a user deletes their login for good. The owner is refused by the function
+too, so a delete can never take out `cryptonii13@gmail.com`.
+
 ---
 
 ## Troubleshooting

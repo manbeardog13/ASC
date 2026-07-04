@@ -142,8 +142,10 @@ function wireAddForm(main) {
     const btn = form.querySelector('button[type="submit"]');
     btn.classList.add("is-busy"); btn.disabled = true;
     try {
-      await db.addAllowedUser({ full_name: name, email, role });
-      toast(t("users.added", { name }));
+      const res = await db.inviteUser({ full_name: name, email, role });
+      toast(res.mode === "invited" ? t("users.invited", { name })
+          : res.mode === "exists" ? t("users.roleChanged")
+          : t("users.added", { name }));
       form.reset();
       role = "employee";
       await load(main);

@@ -25,6 +25,9 @@ if (!root) {
 }
 let realtimeChannel = null;
 let refreshTimer = null;
+// Captured before Supabase consumes the URL: an invite/recovery link lands here
+// with `type=invite|recovery` in the hash → the user must set a password first.
+let mustSetPassword = /type=(invite|recovery)/.test(location.hash);
 
 // ---- Routes (each view module exports `render(main, ctx)`) --------------------
 const ROUTES = [
@@ -150,6 +153,9 @@ async function route() {
   const session = await db.getSession();
   if (!session) return renderLogin();
 
+  // Finish an emailed invite / password reset before anything else.
+  if (mustSetPassword) return renderSetPassword();
+
   // Know the caller's role before rendering. 'readonly' = no access yet (just
   // signed up, or removed by an admin) → show the access-pending gate.
   let profile = getState().profile;
@@ -215,6 +221,54 @@ function renderAccessGate() {
       </div>
     </div>`;
   document.getElementById("gateOut").onclick = async () => { setState({ profile: null }); await db.signOut(); };
+}
+
+// After an emailed invite / reset link: the user is signed in but must choose a
+// password before using the app.
+function renderSetPassword() {
+  stopRealtime();
+  root.innerHTML = `
+    <div class="login-canvas">
+      <div class="login-stage">
+        <img class="login-logo" src="assets/asc-logo.png" alt="ASC">
+        <div class="glass-card login-card">
+          <div class="login-tagline">${t("setpw.title")}</div>
+          <p class="muted" style="text-align:center;font-size:13.5px;margin:-8px 0 16px">${t("setpw.body")}</p>
+          <form id="pwForm" novalidate>
+            <label class="field"><span class="label">${t("setpw.new")}</span>
+              <input id="pw1" type="password" autocomplete="new-password" required></label>
+            <label class="field"><span class="label">${t("setpw.confirm")}</span>
+              <input id="pw2" type="password" autocomplete="new-password" required></label>
+            <button class="btn-sunset" type="submit">${t("setpw.submit")}</button>
+            <p id="pwErr" class="login-err hidden"></p>
+          </form>
+        </div>
+      </div>
+    </div>`;
+  const form = document.getElementById("pwForm");
+  form.onsubmit = async (e) => {
+    e.preventDefault();
+    const err = document.getElementById("pwErr");
+    const p1 = document.getElementById("pw1").value;
+    const p2 = document.getElementById("pw2").value;
+    err.classList.add("hidden");
+    if (p1.length < 6) { err.textContent = t("login.minPass"); err.classList.remove("hidden"); return; }
+    if (p1 !== p2) { err.textContent = t("setpw.mismatch"); err.classList.remove("hidden"); return; }
+    const btn = form.querySelector("button");
+    busy(btn, true);
+    try {
+      await db.updatePassword(p1);
+      mustSetPassword = false;
+      toast(t("setpw.done"));
+      location.hash = "#/";
+      await boot();
+    } catch (e2) {
+      err.textContent = e2.message;
+      err.classList.remove("hidden");
+      busy(btn, false);
+    }
+  };
+  setTimeout(() => document.getElementById("pw1")?.focus({ preventScroll: true }), 80);
 }
 
 // Splash + glass login: canvas + logo fade in, then the card blurs in and

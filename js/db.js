@@ -4,6 +4,7 @@
 // human-readable messages. Field edits queue offline and replay when back.
 // ============================================================================
 import { supabase } from "./supabaseClient.js";
+import { config } from "./config.js";
 import { compressImage } from "./images.js";
 import { isOnline, enqueue } from "./offline.js";
 import { rememberLocation } from "./store.js";
@@ -39,6 +40,11 @@ export async function signIn(email, password) {
 }
 export async function signOut() {
   await supabase.auth.signOut();
+}
+// Used by the "set your password" screen after an invite/recovery link.
+export async function updatePassword(newPassword) {
+  const { error } = await supabase.auth.updateUser({ password: newPassword });
+  if (error) throw new Error(error.message);
 }
 export async function signUp(email, password) {
   const { data, error } = await supabase.auth.signUp({ email: email.trim().toLowerCase(), password });
@@ -113,6 +119,30 @@ export async function addAllowedUser({ full_name, email, role }) {
   if (error) throw fail(error, "add the user");
 }
 
+// Call the privileged admin-users Edge Function. Returns { data } on success, or
+// { notDeployed: true } if the function isn't deployed (so callers can fall back);
+// throws with the function's message on a real error.
+async function callAdminFn(body) {
+  const { data, error } = await supabase.functions.invoke("admin-users", { body });
+  if (!error) return { data };
+  const status = error?.context?.status;
+  if (error.name === "FunctionsFetchError" || status === 404) return { notDeployed: true };
+  let msg = error.message;
+  try { const j = await error.context.json(); if (j?.error) msg = j.error; } catch { /* keep msg */ }
+  throw new Error(msg);
+}
+
+// Add a user. With the Edge Function deployed this emails a real invite; without
+// it, falls back to allowlisting the email for self-signup. mode: invited|exists|allowlist.
+export async function inviteUser({ full_name, email, role }) {
+  const clean = (email || "").trim().toLowerCase();
+  if (!clean) throw new Error("Email is required.");
+  if (isOwnerEmail(clean)) throw new Error("That is the owner account — it already has full access.");
+  const res = await callAdminFn({ action: "invite", email: clean, full_name, role, appUrl: config.APP_BASE_URL });
+  if (res.notDeployed) { await addAllowedUser({ full_name, email: clean, role }); return { mode: "allowlist" }; }
+  return { mode: res.data?.status === "exists" ? "exists" : "invited" };
+}
+
 export async function setUserRole(row, role) {
   if (row.is_owner) throw new Error("The owner is always an admin.");
   if (row.pending) {
@@ -124,8 +154,10 @@ export async function setUserRole(row, role) {
   if (error) throw fail(error, "change the role");
 }
 
-// Remove a user. Signed-up users lose their role (become inert); pending invites
-// are withdrawn. The owner can never be removed (also enforced in the database).
+// Remove a user. Pending invites are withdrawn. For signed-up users, the Edge
+// Function deletes the auth login entirely; without it, we fall back to deleting
+// the profile (which revokes all access — the account becomes inert). The owner
+// can never be removed (enforced here, in the function, and in the database).
 export async function removeUser(row) {
   if (row.is_owner) throw new Error("The owner account can't be removed.");
   if (row.pending) {
@@ -133,8 +165,11 @@ export async function removeUser(row) {
     if (error) throw fail(error, "remove the user");
     return;
   }
-  const { error } = await supabase.from("profiles").delete().eq("id", row.id);
-  if (error) throw fail(error, "remove the user");
+  const res = await callAdminFn({ action: "delete", user_id: row.id });
+  if (res.notDeployed) {
+    const { error } = await supabase.from("profiles").delete().eq("id", row.id);
+    if (error) throw fail(error, "remove the user");
+  }
 }
 
 // ---- Reading storage sets ------------------------------------------------------
