@@ -50,6 +50,35 @@ function fieldVal(id) {
 }
 
 // ---------------------------------------------------------------------------
+// Realtime: one shared subscription refreshes whatever screen is open, live,
+// on every device. Views set `currentRefresh` to opt in to live updates.
+// ---------------------------------------------------------------------------
+let realtimeChannel = null;
+let currentRefresh = null;
+let refreshTimer = null;
+
+function ensureRealtime() {
+  if (realtimeChannel) return;
+  realtimeChannel = db.subscribeToChanges(() => {
+    // A single check-in writes to several tables; debounce so we refresh once.
+    clearTimeout(refreshTimer);
+    refreshTimer = setTimeout(() => currentRefresh && currentRefresh(), 250);
+  });
+  markLive(true);
+}
+function teardownRealtime() {
+  if (realtimeChannel) {
+    db.unsubscribe(realtimeChannel);
+    realtimeChannel = null;
+  }
+  markLive(false);
+}
+function markLive(on) {
+  const dot = document.getElementById("livedot");
+  if (dot) dot.classList.toggle("on", on);
+}
+
+// ---------------------------------------------------------------------------
 // Router
 // ---------------------------------------------------------------------------
 const routes = [];
@@ -59,6 +88,7 @@ function route(pattern, handler) {
 
 async function render() {
   const hash = location.hash.replace(/^#/, "") || "/";
+  currentRefresh = null; // each view re-opts-in to live refresh below
 
   // Setup gate: nothing works until config.js is filled in.
   if (!isConfigured()) return viewSetup();
@@ -66,9 +96,11 @@ async function render() {
   // Auth gate.
   const session = await db.getSession();
   if (!session) {
+    teardownRealtime();
     navEl.hidden = true;
     return viewLogin();
   }
+  ensureRealtime();
   navEl.hidden = false;
   renderNav(hash);
 
@@ -93,6 +125,7 @@ function renderNav(hash) {
       ${item("#/checkin", "Check-in", "＋")}
       ${item("#/scan", "Scan", "▣")}
     </div>
+    <span id="livedot" class="live ${realtimeChannel ? "on" : ""}" title="Live sync across all devices">● Live</span>
     <button id="signout" class="linkbtn">Sign out</button>`;
   $("#signout").onclick = async () => {
     await db.signOut();
@@ -190,6 +223,7 @@ async function viewDashboard() {
     dashState.season = e.target.value;
     loadDashboard();
   };
+  currentRefresh = loadDashboard; // live-refresh the list on any device's change
   loadDashboard();
 }
 
@@ -429,8 +463,8 @@ function viewCheckin() {
 // ---------------------------------------------------------------------------
 // View: set detail
 // ---------------------------------------------------------------------------
-async function viewSet(code) {
-  app.innerHTML = `<div class="card"><p class="muted">Loading ${esc(code)}…</p></div>`;
+async function viewSet(code, silent = false) {
+  if (!silent) app.innerHTML = `<div class="card"><p class="muted">Loading ${esc(code)}…</p></div>`;
   let s;
   try {
     s = await db.getSetByCode(code);
@@ -439,6 +473,10 @@ async function viewSet(code) {
       <a class="btn ghost" href="#/">Back</a></div>`;
     return;
   }
+  // Live-refresh this detail screen when any device changes its data.
+  currentRefresh = () => {
+    if (location.hash.startsWith(`#/set/${code}`)) viewSet(code, true);
+  };
   const c = s.vehicle?.customer || {};
   const v = s.vehicle || {};
   const inStore = s.status === "in_storage";
@@ -643,25 +681,51 @@ function viewScan() {
       <p class="muted">Point the camera at a set's QR sticker.</p>
       <div id="reader" class="reader"></div>
       <p id="scanErr" class="error" hidden></p>
+
+      <div class="scanalt">
+        <label class="btn" for="photo">📷 Take a photo instead</label>
+        <input id="photo" type="file" accept="image/*" capture="environment" hidden>
+      </div>
+
       <div class="actions">
         <input id="manual" placeholder="…or type a code e.g. ASC-2026-0042" class="search">
         <button id="goManual" class="btn">Open</button>
         <a class="btn ghost" href="#/">Cancel</a>
       </div>
+      <p class="muted tiny">Tip: a phone's built-in Camera app can scan the sticker too — it
+        opens the record automatically, no need to be in this app.</p>
     </div>`;
 
+  const showErr = (msg) => {
+    const p = $("#scanErr");
+    p.hidden = false;
+    p.textContent = msg;
+  };
+
+  // Primary: live camera (Android + iOS Safari).
   scanner.start(
     "reader",
     (code) => {
       if (code) go(`/set/${code}`);
     },
-    (err) => {
-      const p = $("#scanErr");
-      p.hidden = false;
-      p.textContent =
-        "Camera unavailable: " + (err.message || err) + ". Use the code box below.";
-    }
+    (err) =>
+      showErr(
+        "Live camera unavailable: " + (err.message || err) + ". Use “Take a photo” or type the code."
+      )
   );
+
+  // Universal fallback: native camera photo → decode the image.
+  $("#photo").onchange = async (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    try {
+      const code = await scanner.scanFile(file);
+      if (code) go(`/set/${code}`);
+      else showErr("No QR code found in that photo — try again, closer and well-lit.");
+    } catch (err) {
+      showErr("Couldn't read that photo: " + (err.message || err));
+    }
+  };
 
   $("#goManual").onclick = () => {
     const code = scanner.extractCode($("#manual").value);

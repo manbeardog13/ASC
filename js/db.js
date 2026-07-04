@@ -185,6 +185,30 @@ export async function deleteSet(id) {
   if (error) throw error;
 }
 
+// ---- Realtime: run `onChange` whenever ANY of our tables change ------------
+// Used to live-refresh the current screen across all connected devices.
+// Returns the channel so the caller can tear it down on sign-out.
+export function subscribeToChanges(onChange) {
+  // Make sure the realtime socket carries the logged-in user's token so RLS
+  // lets it through.
+  supabase.auth.getSession().then(({ data }) => {
+    if (data.session) supabase.realtime.setAuth(data.session.access_token);
+  });
+
+  const channel = supabase.channel("asc-realtime");
+  for (const table of ["customers", "vehicles", "storage_sets", "tires"]) {
+    channel.on("postgres_changes", { event: "*", schema: "public", table }, (payload) =>
+      onChange(payload)
+    );
+  }
+  channel.subscribe();
+  return channel;
+}
+
+export function unsubscribe(channel) {
+  if (channel) supabase.removeChannel(channel);
+}
+
 // ---- Counts for the dashboard summary --------------------------------------
 export async function counts() {
   const q = (status) =>

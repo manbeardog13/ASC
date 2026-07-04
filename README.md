@@ -6,8 +6,11 @@ with any phone** to pull up who it belongs to, what's on it, and exactly where
 it lives in the warehouse.
 
 - **Phone-first & installable** — works as an app on a phone or the shop PC.
-- **QR labels** — print a sticker per set; scan with the phone camera to open the record.
-- **Multi-device** — phone + front desk share one live database (Supabase).
+- **QR labels** — print a sticker per set; scan to open the record. Three ways:
+  the phone's **built-in Camera app** (the QR is a URL, so it just works on iOS &
+  Android), an **in-app live scanner**, or **take a photo** (universal fallback).
+- **Real-time multi-user** — several staff can work at once; every change appears
+  on all devices in under a second (Supabase Realtime).
 - **No build step** — plain HTML/CSS/JS, hosted free on GitHub Pages.
 
 ## What it tracks
@@ -26,10 +29,21 @@ Modeled on how real tire-storage systems work:
 | Layer | Choice | Why |
 |-------|--------|-----|
 | Frontend | Static HTML/CSS/JS (PWA) | Free hosting, installable, no toolchain |
-| Hosting | GitHub Pages | HTTPS out of the box (needed for phone camera) |
-| Backend | Supabase (Postgres + Auth) | Free tier, live multi-device sync, secure |
-| Scanning | `html5-qrcode` (camera) | Works on iPhone & Android browsers |
+| Hosting | GitHub Pages | HTTPS out of the box (required for phone camera) |
+| Backend | Supabase (Postgres + Auth) | Free tier, secure (Row Level Security) |
+| Realtime | Supabase Realtime (Postgres Changes) | Live sync to all devices; free tier = 200 connections / 2M msgs / mo |
+| Scanning | Native camera app + `html5-qrcode` + photo fallback | Reliable on both iOS & Android (see note below) |
 | Labels | `qrcode-generator` (SVG) | Crisp printable QR stickers |
+
+### Cross-platform scanning notes
+
+- The QR encodes a full `https://…#/set/CODE` URL, so the **native Camera app**
+  on any iPhone/Android scans it and opens the record — the most reliable path.
+- The **in-app live scanner** (html5-qrcode) works on Android browsers and **iOS
+  Safari**. On iOS the app deliberately opens in Safari (not "standalone" PWA
+  mode) because WebKit has long-standing camera bugs in standalone mode.
+- The **"take a photo" fallback** uses the native camera to capture an image and
+  decodes it locally — works even where the live camera is blocked.
 
 ## Project layout
 

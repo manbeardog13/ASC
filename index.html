@@ -11,9 +11,14 @@
   <meta name="theme-color" content="#111418">
   <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="assets/icon.svg">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="ASC Tires">
+  <!-- Deliberately NOT setting apple-mobile-web-app-capable: on iOS the
+       "standalone" home-screen mode has long-standing WebKit camera bugs
+       (getUserMedia fails / repeated permission prompts on hash change).
+       Leaving it off makes the iOS home-screen icon open in Safari, where
+       the QR camera scanner works reliably. Android still installs standalone
+       via the web manifest, and camera works fine there. -->
+  <meta name="mobile-web-app-capable" content="yes">
 
   <link rel="stylesheet" href="css/styles.css">
 

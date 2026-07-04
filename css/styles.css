@@ -57,6 +57,9 @@ h1, h2, h3 { line-height: 1.2; }
 #nav .navlinks a:hover { color: #fff; }
 .linkbtn { background: none; border: none; color: #9aa3ad; cursor: pointer; font-size: 13px; }
 .linkbtn:hover { color: #fff; }
+.live { font-size: 12px; font-weight: 700; color: #7b828c; white-space: nowrap; letter-spacing: .3px; }
+.live.on { color: #58d18b; animation: livepulse 2s ease-in-out infinite; }
+@keyframes livepulse { 0%, 100% { opacity: 1; } 50% { opacity: .55; } }
 
 /* ---- Layout ---- */
 main { max-width: var(--maxw); margin: 0 auto; padding: 16px; }
@@ -179,6 +182,8 @@ button:disabled { opacity: .55; cursor: default; }
 /* ---- Scanner ---- */
 .reader { max-width: 340px; margin: 12px auto; border-radius: var(--radius); overflow: hidden; }
 .reader video { width: 100% !important; border-radius: var(--radius); }
+.scanalt { margin: 10px 0 4px; }
+.tiny { font-size: 12px; margin-top: 12px; }
 
 /* ---- Toast ---- */
 .toast {

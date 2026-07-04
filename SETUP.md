@@ -18,8 +18,9 @@ You'll do three things: **(A)** set up the database, **(B)** connect the app,
 2. In the left menu, open **SQL Editor** → **New query**.
    - Open the file `supabase/schema.sql` from this project, copy **all** of it,
      paste it into the query box, and click **Run**.
-   - You should see "Success". This created your tables and locked them down so
-     only a logged-in user can see the data.
+   - You should see "Success". This created your tables, locked them down so only a
+     logged-in user can see the data, and switched on **live sync** so every device
+     updates in real time — no extra step needed.
 
 3. Create your shop login. Left menu → **Authentication** → **Users** → **Add user**
    → **Create new user**.
@@ -69,14 +70,26 @@ You'll do three things: **(A)** set up the database, **(B)** connect the app,
 ## Using it
 
 1. Open the app address on your phone. In the browser menu choose **Add to Home Screen**
-   so it installs like an app. Do the same on the shop computer.
-2. Sign in with the email/password you made in step A3.
+   so it launches like an app. Do the same on the shop computer.
+2. Sign in with the email/password you made in step A3. Everyone who logs in shares
+   the same data, and **changes show up on every device within a second** — the green
+   **● Live** dot in the top bar means sync is on.
 3. **Check-in:** tap **Check-in**, fill in the customer, vehicle, location and tire
    details, and **Save & make label**. Print the label and stick it on the set.
-4. **Find a set:** use the search box (name, plate, code, size, brand or location),
-   or tap **Scan** and point the camera at a label.
+4. **Find a set — three ways to scan:**
+   - **Easiest:** open the phone's normal **Camera app** and point it at the sticker —
+     a link pops up that opens the record. Works on any iPhone or Android.
+   - **In-app:** tap **Scan** for a live scanner (works in Safari on iPhone, and in
+     Chrome on Android).
+   - **Take a photo:** on the Scan screen, tap **📷 Take a photo instead** if the live
+     camera won't start — it snaps a picture and reads the code from it.
+   - Or just **search** by name, plate, code, size, brand or location.
 5. **Season swap / pickup:** open a set and **Mark checked out**; bring it back in
    storage the same way next season.
+
+> **iPhone note:** open the app from Safari (the Home-Screen icon does this). Apple's
+> "full-screen app" mode has camera bugs, so the app intentionally stays in Safari on
+> iPhone — the camera scanner is reliable there. Android runs it full-screen fine.
 
 ---
 

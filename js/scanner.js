@@ -44,6 +44,31 @@ export async function start(elementId, onCode, onError) {
   }
 }
 
+// Decode a QR from a photo/image the user just took or picked. This is the
+// universal fallback: it uses the phone's NATIVE camera (via a file input),
+// so it works even where live getUserMedia is blocked (iOS Chrome, some iOS
+// standalone cases). Returns the extracted code, or throws if none is found.
+export async function scanFile(file) {
+  const Html5Qrcode = window.Html5Qrcode;
+  if (!Html5Qrcode) throw new Error("Scanner library not loaded.");
+  const tmp = document.createElement("div");
+  tmp.id = "filescan-" + Date.now();
+  tmp.style.display = "none";
+  document.body.appendChild(tmp);
+  const inst = new Html5Qrcode(tmp.id);
+  try {
+    const decoded = await inst.scanFile(file, false);
+    return extractCode(decoded);
+  } finally {
+    try {
+      await inst.clear();
+    } catch (_) {
+      /* ignore */
+    }
+    tmp.remove();
+  }
+}
+
 export async function stop() {
   if (!active) return;
   try {

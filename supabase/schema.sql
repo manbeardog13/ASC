@@ -131,4 +131,22 @@ create policy "auth full access" on storage_sets
 create policy "auth full access" on tires
   for all to authenticated using (true) with check (true);
 
+-- ----------------------------------------------------------------------------
+-- Realtime: push every insert / update / delete to all logged-in devices.
+-- Adds the tables to Supabase's realtime publication. (Safe to re-run — the
+-- DO block skips tables that are already in the publication.)
+-- ----------------------------------------------------------------------------
+do $$
+declare t text;
+begin
+  foreach t in array array['customers','vehicles','storage_sets','tires'] loop
+    if not exists (
+      select 1 from pg_publication_tables
+      where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = t
+    ) then
+      execute format('alter publication supabase_realtime add table public.%I', t);
+    end if;
+  end loop;
+end $$;
+
 -- Done. Next: create ONE user in Authentication -> Users (that's the shop login).
