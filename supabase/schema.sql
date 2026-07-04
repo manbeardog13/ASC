@@ -368,4 +368,228 @@ exception when others then
   raise notice 'Storage bucket/policies skipped (%). Create a PRIVATE bucket named tire-photos in the dashboard.', sqlerrm;
 end $$;
 
--- Done. Next: Authentication -> Users -> add your shop login (first user = manager).
+-- ============================================================================
+-- v3 — USER MANAGEMENT
+-- Admins add/remove users and assign roles. A permanent owner account can never
+-- be deleted or demoted. The user directory exposes only masked emails. Every
+-- block below is idempotent and safe to re-run.
+-- ----------------------------------------------------------------------------
+--   Role tiers used app-wide:
+--     admin | manager  -> ADMIN tier: manage users + everything in the app
+--     employee | reception -> USER tier: normal shop staff
+--     readonly            -> inert: no access to any data until an admin grants a role
+-- ============================================================================
+
+-- The permanent owner. This account can never be removed or demoted, by anyone.
+create or replace function asc_owner_email() returns text as $$
+  select 'cryptonii13@gmail.com'::text;
+$$ language sql immutable;
+
+-- ADMIN tier. 'manager' is kept admin-equivalent so the original owner backfill
+-- (which used 'manager') keeps full rights even before this migration re-runs.
+create or replace function asc_is_admin() returns boolean as $$
+  select asc_role() in ('admin','manager');
+$$ language sql stable security definer set search_path = public, pg_temp;
+
+-- Pre-authorized emails ("invites"). An admin adds a user by allowlisting their
+-- email with a role; when that person signs up with the same email, the row is
+-- claimed by handle_new_user() and removed.
+create table if not exists allowed_emails (
+  email      text primary key,          -- always stored lower-cased
+  full_name  text,
+  role       text not null default 'employee',
+  invited_by uuid,
+  created_at timestamptz not null default now()
+);
+
+-- New signups: owner => admin; allowlisted email => its role (+ name, consumed);
+-- very first account ever => admin (bootstrap); otherwise => readonly (inert).
+create or replace function handle_new_user() returns trigger as $$
+declare
+  v_email   text := lower(coalesce(new.email, ''));
+  v_pending public.allowed_emails%rowtype;
+  v_role    text;
+  v_name    text;
+  first_user boolean;
+begin
+  select count(*) = 0 into first_user from public.profiles;
+
+  if v_email = lower(public.asc_owner_email()) then
+    v_role := 'admin';
+  else
+    select * into v_pending from public.allowed_emails where email = v_email;
+    if found then
+      v_role := coalesce(v_pending.role, 'employee');
+      v_name := v_pending.full_name;
+    elsif first_user then
+      v_role := 'admin';
+    else
+      v_role := 'readonly';
+    end if;
+  end if;
+
+  insert into public.profiles (id, email, full_name, role)
+    values (new.id, new.email, v_name, v_role)
+    on conflict (id) do nothing;
+
+  delete from public.allowed_emails where email = v_email;
+  return new;
+end;
+$$ language plpgsql security definer set search_path = public, pg_temp;
+
+-- Owner guard: the owner row can never be deleted, demoted, re-keyed, or have its
+-- email swapped away; and no other row may claim the owner email. profiles.id is
+-- the auth.users id, so it is immutable for EVERY row — that closes a lockout where
+-- an admin re-keys the owner's id to orphan their auth.uid(). Runs for all callers.
+create or replace function asc_protect_owner() returns trigger as $$
+declare owner_email text := lower(public.asc_owner_email());
+begin
+  if TG_OP = 'DELETE' then
+    if lower(coalesce(OLD.email,'')) = owner_email then
+      raise exception 'The owner account cannot be removed.';
+    end if;
+    return OLD;
+  end if;
+
+  if TG_OP = 'INSERT' then
+    -- The owner account is always an admin (matches handle_new_user()).
+    if lower(coalesce(NEW.email,'')) = owner_email then
+      NEW.role := 'admin';
+    end if;
+    return NEW;
+  end if;
+
+  -- UPDATE: id is immutable (= auth.users id). This alone defeats the re-key lockout.
+  if NEW.id is distinct from OLD.id then
+    raise exception 'profiles.id is immutable';
+  end if;
+  -- No non-owner row may be relabeled with the owner email.
+  if lower(coalesce(NEW.email,'')) = owner_email and lower(coalesce(OLD.email,'')) <> owner_email then
+    raise exception 'The owner email cannot be assigned to another account.';
+  end if;
+  -- The owner stays an admin with its email intact.
+  if lower(coalesce(OLD.email,'')) = owner_email then
+    NEW.role  := 'admin';
+    NEW.email := OLD.email;
+  end if;
+  return NEW;
+end;
+$$ language plpgsql security definer set search_path = public, pg_temp;
+
+drop trigger if exists trg_protect_owner on profiles;
+create trigger trg_protect_owner before insert or update or delete on profiles
+  for each row execute function asc_protect_owner();
+
+-- One profile per email (each maps 1:1 to an auth user). A row-level trigger can't
+-- see across rows, so this constraint is what stops a second row being injected with
+-- the owner email to impersonate the owner in the directory.
+do $$
+begin
+  create unique index if not exists uniq_profiles_email_ci
+    on public.profiles (lower(email)) where email is not null;
+exception when others then raise notice 'profiles email unique index skipped (duplicate emails already exist?): %', sqlerrm;
+end $$;
+
+-- Guarantee the owner is an admin. If they've already signed up, promote their
+-- profile; if not, leave a permanent admin invite that their first login claims.
+do $$
+begin
+  update public.profiles set role = 'admin'
+    where lower(coalesce(email,'')) = lower(public.asc_owner_email());
+  if not exists (select 1 from public.profiles
+                 where lower(coalesce(email,'')) = lower(public.asc_owner_email())) then
+    insert into public.allowed_emails (email, full_name, role)
+      values (lower(public.asc_owner_email()), 'Owner', 'admin')
+      on conflict (email) do update set role = 'admin';
+  end if;
+exception when others then raise notice 'owner bootstrap skipped: %', sqlerrm;
+end $$;
+
+-- Masked user directory. SECURITY DEFINER so any signed-in staff member can read
+-- the list without being able to read raw emails from the profiles table. Emails
+-- come back as  c**********@gmail.com  (first letter + stars, domain revealed).
+-- 'readonly' (inert) accounts get an empty list.
+create or replace function list_users()
+returns table (id uuid, full_name text, role text, email_masked text, is_owner boolean) as $$
+  select
+    p.id,
+    p.full_name,
+    p.role,
+    case when coalesce(p.email,'') = '' then ''
+         else left(p.email, 1)
+              || repeat('*', greatest(char_length(split_part(p.email,'@',1)) - 1, 0))
+              || case when position('@' in p.email) > 0 then '@' || split_part(p.email,'@',2) else '' end
+    end as email_masked,
+    lower(coalesce(p.email,'')) = lower(public.asc_owner_email()) as is_owner
+  from public.profiles p
+  where asc_role() <> 'readonly'
+  order by (lower(coalesce(p.email,'')) = lower(public.asc_owner_email())) desc,
+           p.full_name nulls last, p.email;
+$$ language sql stable security definer set search_path = public, pg_temp;
+
+grant execute on function list_users() to authenticated;
+
+-- ----------------------------------------------------------------------------
+-- v3 RLS — supersedes the policies defined earlier in this file.
+-- 'readonly' is now a true no-access state; admins gain all manager powers.
+-- ----------------------------------------------------------------------------
+-- Customers / vehicles / tires / photos: staff (non-readonly) read & write.
+do $$
+declare tbl text;
+begin
+  foreach tbl in array array['customers','vehicles','tires','photos'] loop
+    execute format('drop policy if exists "%s_rw" on %I', tbl, tbl);
+    execute format('create policy "%s_rw" on %I for all to authenticated using (asc_role() <> ''readonly'') with check (asc_role() <> ''readonly'')', tbl, tbl);
+  end loop;
+end $$;
+
+-- Storage sets: read = staff; write = staff; hard delete = admin.
+drop policy if exists "sets_select" on storage_sets;
+drop policy if exists "sets_insert" on storage_sets;
+drop policy if exists "sets_update" on storage_sets;
+drop policy if exists "sets_delete" on storage_sets;
+create policy "sets_select" on storage_sets for select to authenticated using (asc_role() <> 'readonly');
+create policy "sets_insert" on storage_sets for insert to authenticated
+  with check (asc_role() in ('admin','manager','employee','reception'));
+create policy "sets_update" on storage_sets for update to authenticated
+  using (asc_role() in ('admin','manager','employee','reception'))
+  with check (asc_role() in ('admin','manager','employee','reception'));
+create policy "sets_delete" on storage_sets for delete to authenticated using (asc_is_admin());
+
+-- Profiles: you can read your own row; admins read all. Only admins write, and
+-- the owner guard above still blocks removing/demoting the owner.
+drop policy if exists "profiles_select" on profiles;
+drop policy if exists "profiles_write"  on profiles;
+drop policy if exists "profiles_admin_write" on profiles;
+create policy "profiles_select" on profiles for select to authenticated
+  using (id = auth.uid() or asc_is_admin());
+create policy "profiles_admin_write" on profiles for all to authenticated
+  using (asc_is_admin()) with check (asc_is_admin());
+
+-- Allowed-emails invites: admins only.
+alter table allowed_emails enable row level security;
+drop policy if exists "allowed_admin_all" on allowed_emails;
+create policy "allowed_admin_all" on allowed_emails for all to authenticated
+  using (asc_is_admin()) with check (asc_is_admin());
+
+-- Audit log + backup runs: staff read; admins record backups.
+drop policy if exists "audit_select" on audit_events;
+create policy "audit_select" on audit_events for select to authenticated using (asc_role() <> 'readonly');
+drop policy if exists "backup_select" on backup_runs;
+drop policy if exists "backup_insert" on backup_runs;
+create policy "backup_select" on backup_runs for select to authenticated using (asc_role() <> 'readonly');
+create policy "backup_insert" on backup_runs for insert to authenticated with check (asc_is_admin());
+
+-- Condition-photo objects: staff only (best-effort; skipped if storage DDL is restricted).
+do $$
+begin
+  execute 'drop policy if exists "tire-photos auth read"   on storage.objects';
+  execute 'drop policy if exists "tire-photos auth write"  on storage.objects';
+  execute 'drop policy if exists "tire-photos auth delete" on storage.objects';
+  execute 'create policy "tire-photos auth read"   on storage.objects for select to authenticated using (bucket_id = ''tire-photos'' and public.asc_role() <> ''readonly'')';
+  execute 'create policy "tire-photos auth write"  on storage.objects for insert to authenticated with check (bucket_id = ''tire-photos'' and public.asc_role() <> ''readonly'')';
+  execute 'create policy "tire-photos auth delete" on storage.objects for delete to authenticated using (bucket_id = ''tire-photos'' and public.asc_role() <> ''readonly'')';
+exception when others then raise notice 'storage photo policies skipped: %', sqlerrm;
+end $$;
+
+-- Done. Next: Authentication -> Users -> add your shop login (first user = admin).

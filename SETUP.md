@@ -129,19 +129,39 @@ Also switch on Supabase's own daily backups (Project Settings → Database → B
 
 Full details and how to restore: **[docs/DISASTER_RECOVERY.md](docs/DISASTER_RECOVERY.md)**.
 
-### Staff logins & roles
+### Users & roles (managed inside the app)
 
-You (the account that set the shop up) are backfilled as a **manager** — full
-access, including permanently deleting and managing roles.
+Everything below is installed by `schema.sql` — if you set the shop up before this
+was added, just **re-run `schema.sql`** (SQL Editor → paste all → Run; it's safe to
+re-run and won't touch your data).
 
-New logins you add in Supabase → Authentication → Users start as **read-only**
-(they can see everything but not change it) — hosted Supabase doesn't let the app
-auto-assign roles, so this is deliberately safe. To let a staff member work, give
-them a role by adding a row in the **`profiles`** table (Supabase → Table editor →
-`profiles` → Insert row): their **id** and **email** (from Authentication → Users)
-plus **role** = `employee` (check in / move / recycle-bin), `reception`, or
-`manager`. Tip: keep public sign-ups **off** (Authentication → Providers → Email →
-disable "Enable sign-ups") so the only logins that exist are ones you created.
+**Two levels:**
+
+- **Admin** — manages users (add / remove / grant admin) *and* everything in the
+  shop (check-in, moves, permanent delete, etc.).
+- **User** — runs the shop but can't manage accounts.
+
+**The owner.** `cryptonii13@gmail.com` is the permanent **owner**: always an admin,
+and it can **never be removed or demoted** — that's enforced in the database, so no
+other admin (or a stray API call) can lock the owner out. Sign in with that email to
+get full control from day one.
+
+**Adding staff — all in the app, no dashboard needed.** Open the **Users** tab
+(top-right menu → *Users*). Tap **Add user**, enter their full name + email and
+pick **Admin** or **User**. Then the new person opens the app, taps **"First time?
+Create account"** on the login screen, and signs up with *that same email* and a
+password they choose. They land in the role you assigned. **Remove** anyone from the
+same Users tab — they lose access immediately.
+
+**One Supabase switch to flip:** Authentication → Providers → **Email** → make sure
+**"Enable sign-ups" is ON**. That's what lets invited staff create their own login.
+It's safe: anyone who signs up **without** an invite becomes **read-only and sees
+nothing at all** until an admin grants them a role — so an uninvited account is inert.
+(If you'd rather not allow self-signup, you can instead create each user in
+Authentication → Users and they'll pick up the role you assigned in the Users tab.)
+
+The user list shows full names and Admin/User only; **emails are masked** (e.g.
+`c**********@gmail.com`) for everyone.
 
 ---
 

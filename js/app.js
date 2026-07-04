@@ -34,6 +34,7 @@ const ROUTES = [
   { pattern: /^\/warehouse$/,             load: () => import("./views/warehouse.js") },
   { pattern: /^\/customers$/,             load: () => import("./views/customers.js") },
   { pattern: /^\/customer\/([^/]+)$/,     load: () => import("./views/customers.js") },
+  { pattern: /^\/users$/,                 load: () => import("./views/users.js") },
   { pattern: /^\/reminders$/,             load: () => import("./views/reminders.js") },
   { pattern: /^\/recycle$/,               load: () => import("./views/recycle.js") },
   { pattern: /^\/set\/([^/]+)\/edit$/,    load: () => import("./views/set-detail.js"), mode: "edit" },
@@ -63,6 +64,7 @@ function mountFrame() {
       <a class="brand-logo" href="#/" aria-label="ASC"><img src="assets/asc-mark.png" alt="ASC"></a>
       <nav class="topbar-desk-nav" aria-label="Primary">
         ${NAV.filter((n) => !n.center).map((n) => `<a href="#${n.route}" data-route="${n.route}">${icon(n.iconName, 18)}${t(n.key)}</a>`).join("")}
+        <a href="#/users" data-route="/users">${icon("people", 18)}${t("nav.users")}</a>
       </nav>
       <span class="spacer"></span>
       ${langToggle(false)}
@@ -117,6 +119,7 @@ function openMenu() {
   const item = (route, iconName, label) =>
     `<a href="#${route}" role="menuitem" class="btn btn-ghost" style="justify-content:flex-start;width:100%">${icon(iconName, 18)}${label}</a>`;
   pop.innerHTML = `
+    ${item("/users", "people", t("menu.users"))}
     ${item("/reminders", "clock", t("menu.reminders"))}
     ${item("/recycle", "trash", t("menu.recycle"))}
     <button id="exportBtn" role="menuitem" class="btn btn-ghost" style="justify-content:flex-start;width:100%">${icon("download", 18)}${t("menu.export")}</button>
@@ -146,6 +149,12 @@ async function route() {
   if (!isConfigured()) return renderSetup();
   const session = await db.getSession();
   if (!session) return renderLogin();
+
+  // Know the caller's role before rendering. 'readonly' = no access yet (just
+  // signed up, or removed by an admin) → show the access-pending gate.
+  let profile = getState().profile;
+  if (!profile) { profile = await db.loadMyProfile().catch(() => null); if (profile) setState({ profile }); }
+  if (profile && profile.role === "readonly") return renderAccessGate();
 
   mountFrame();
   setActiveNav(path);
@@ -183,51 +192,97 @@ function renderSetup() {
   stopRealtime();
   root.innerHTML = `<main><div class="card center-narrow stack">
     <div class="empty-icon" style="margin-inline:0">${icon("box", 40)}</div>
-    <h1>ASC · Tire Hotel</h1>
+    <h1>ASC</h1>
     <p class="muted">${t("setup.body")}</p>
   </div></main>`;
 }
 
+// Signed in, but the account has no role yet (fresh signup awaiting an admin, or
+// removed). No app data is reachable — show a calm gate with a way out.
+function renderAccessGate() {
+  stopRealtime();
+  root.innerHTML = `
+    <div class="login-canvas">
+      <div class="login-stage">
+        <img class="login-logo" src="assets/asc-logo.png" alt="ASC">
+        <div class="glass-card login-card" style="text-align:center">
+          <div class="gate-icon">${icon("clock", 30)}</div>
+          <h2 style="margin-bottom:8px">${t("gate.title")}</h2>
+          <p class="muted" style="font-size:14px">${t("gate.body")}</p>
+          <button id="gateOut" class="btn btn-block" style="margin-top:20px">${icon("logout", 18)} ${t("menu.signout")}</button>
+          <div class="login-langs">${langToggle(true)}</div>
+        </div>
+      </div>
+    </div>`;
+  document.getElementById("gateOut").onclick = async () => { setState({ profile: null }); await db.signOut(); };
+}
+
 // Splash + glass login: canvas + logo fade in, then the card blurs in and
 // drifts up ~2mm, easing to a stop (CSS: appFadeIn / splashFade / loginEmerge).
-function renderLogin() {
+// `mode` is "signin" (default) or "signup"; the toggle swaps only the form body
+// so the card doesn't re-animate.
+function renderLogin(mode = "signin") {
   stopRealtime();
   root.innerHTML = `
     <div class="login-canvas">
       <div class="login-stage">
         <img class="login-logo" src="assets/asc-logo.png" alt="ASC — Auto Servisni Centar d.o.o.">
         <div class="glass-card login-card">
-          <div class="login-tagline">${t("tagline")}</div>
-          <form id="loginForm" novalidate>
-            <label class="field"><span class="label">${t("login.email")}</span>
-              <input id="email" type="email" autocomplete="username" required></label>
-            <label class="field"><span class="label">${t("login.password")}</span>
-              <input id="password" type="password" autocomplete="current-password" required></label>
-            <button class="btn-sunset" type="submit">${t("login.signin")}</button>
-            <p id="loginErr" class="login-err hidden"></p>
-          </form>
+          <div id="loginBody"></div>
           <div class="login-langs">${langToggle(true)}</div>
         </div>
       </div>
     </div>`;
-  const form = document.getElementById("loginForm");
+  paintLogin(mode);
+  setTimeout(() => document.getElementById("email")?.focus({ preventScroll: true }), 80);
+}
+
+function paintLogin(mode) {
+  const signup = mode === "signup";
+  const body = document.getElementById("loginBody");
+  body.innerHTML = `
+    <form id="loginForm" novalidate>
+      <label class="field"><span class="label">${t("login.email")}</span>
+        <input id="email" type="email" autocomplete="${signup ? "email" : "username"}" required></label>
+      <label class="field"><span class="label">${t("login.password")}</span>
+        <input id="password" type="password" autocomplete="${signup ? "new-password" : "current-password"}" required></label>
+      <button class="btn-sunset" type="submit">${signup ? t("login.signupCta") : t("login.signin")}</button>
+      <p id="loginErr" class="login-err hidden"></p>
+      <p id="loginOk" class="login-ok hidden"></p>
+    </form>
+    <button type="button" id="loginSwitch" class="login-switch">${signup ? t("login.haveAccount") : t("login.newHere")}</button>`;
+
+  const form = body.querySelector("#loginForm");
+  const err = body.querySelector("#loginErr");
+  const ok = body.querySelector("#loginOk");
+  const hide = () => { err.classList.add("hidden"); ok.classList.add("hidden"); };
+
   form.onsubmit = async (e) => {
     e.preventDefault();
-    const btn = form.querySelector("button");
-    const err = document.getElementById("loginErr");
-    err.classList.add("hidden");
+    const btn = form.querySelector("button[type=submit]");
+    const email = document.getElementById("email").value.trim();
+    const password = document.getElementById("password").value;
+    hide();
+    if (signup && password.length < 6) { err.textContent = t("login.minPass"); err.classList.remove("hidden"); return; }
     busy(btn, true);
     try {
-      await db.signIn(document.getElementById("email").value.trim(), document.getElementById("password").value);
-      // onAuthChange fires → boot() re-runs.
+      if (signup) {
+        const { needsConfirm } = await db.signUp(email, password);
+        if (needsConfirm) {
+          ok.textContent = t("login.signupDone"); ok.classList.remove("hidden");
+          busy(btn, false);
+        }
+        // If confirmation is off, a session exists → onAuthChange → boot().
+      } else {
+        await db.signIn(email, password); // onAuthChange fires → boot() re-runs.
+      }
     } catch (e2) {
       err.textContent = e2.message;
       err.classList.remove("hidden");
       busy(btn, false);
     }
   };
-  // Focus after the entrance settles, without scroll-jerking the animation.
-  setTimeout(() => document.getElementById("email")?.focus({ preventScroll: true }), 80);
+  body.querySelector("#loginSwitch").onclick = () => paintLogin(signup ? "signin" : "signup");
 }
 
 // ---- Keyboard shortcuts (desktop) --------------------------------------------
@@ -247,9 +302,11 @@ async function boot() {
   const session = await db.getSession();
   if (session) {
     startRealtime();
-    db.loadMyProfile().then((profile) => setState({ profile })).catch(() => {});
+    const profile = await db.loadMyProfile().catch(() => null);
+    setState({ profile });
   } else {
     stopRealtime();
+    setState({ profile: null });
   }
   await route();
 }

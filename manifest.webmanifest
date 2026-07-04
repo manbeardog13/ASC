@@ -1,7 +1,7 @@
 {
-  "name": "ASC Tire Hotel",
-  "short_name": "ASC Tires",
-  "description": "Seasonal tire storage manager — index, scan and track customers' tires.",
+  "name": "ASC",
+  "short_name": "ASC",
+  "description": "Index, scan and track customers' tires.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

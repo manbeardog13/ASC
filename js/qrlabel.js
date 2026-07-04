@@ -63,7 +63,7 @@ export function printLabel(set) {
   @media print{body{padding:0}.noprint{display:none}}
 </style></head><body>
   <div class="label">
-    <div class="head"><span class="brand">ASC · TIRE HOTEL</span><span class="season">${esc(season)}${set.on_rims ? " · on rims" : ""}</span></div>
+    <div class="head"><span class="brand">ASC</span><span class="season">${esc(season)}${set.on_rims ? " · on rims" : ""}</span></div>
     <div class="code">${esc(set.public_code)}</div>
     <div class="row">
       <div class="qr">${qrSvg(set.public_code)}</div>

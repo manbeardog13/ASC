@@ -40,13 +40,101 @@ export async function signIn(email, password) {
 export async function signOut() {
   await supabase.auth.signOut();
 }
+export async function signUp(email, password) {
+  const { data, error } = await supabase.auth.signUp({ email: email.trim().toLowerCase(), password });
+  if (error) {
+    throw new Error(/already registered|already exists/i.test(error.message)
+      ? "That email already has an account — sign in instead."
+      : error.message);
+  }
+  // With email confirmation on, no session is returned until the user confirms.
+  return { needsConfirm: !data.session };
+}
 export async function loadMyProfile() {
   const session = await getSession();
   if (!session) return null;
   const { data } = await supabase.from("profiles").select("id, email, full_name, role").eq("id", session.user.id).maybeSingle();
   // No profile row => least-privilege 'readonly', matching asc_role(). The shop
-  // owner is backfilled as 'manager' by schema.sql.
+  // owner is forced to 'admin' by schema.sql.
   return data ?? { id: session.user.id, email: session.user.email, role: "readonly", full_name: null };
+}
+
+// ---- Access management (admins) ------------------------------------------------
+export const OWNER_EMAIL = "cryptonii13@gmail.com";
+export const ADMIN_ROLES = ["admin", "manager"];
+export function isAdminRole(role) { return ADMIN_ROLES.includes(role); }
+export function isOwnerEmail(email) { return (email || "").trim().toLowerCase() === OWNER_EMAIL; }
+
+// c**********@gmail.com — first letter, then stars for the rest of the local
+// part, with everything from the @ onward revealed. Mirrors list_users() in SQL.
+export function maskEmail(email) {
+  const e = (email || "").trim();
+  const at = e.indexOf("@");
+  if (!e) return "";
+  if (at < 1) return e[0] + "***";
+  return e[0] + "*".repeat(Math.max(at - 1, 0)) + e.slice(at);
+}
+
+// Everyone with an account (masked). Uses the secure directory RPC; falls back to
+// reading profiles directly (masking client-side) if the migration isn't re-run yet.
+export async function listUsers() {
+  const rpc = await supabase.rpc("list_users");
+  if (!rpc.error && Array.isArray(rpc.data)) {
+    return rpc.data.map((u) => ({ ...u, pending: false }));
+  }
+  const { data, error } = await supabase.from("profiles").select("id, full_name, role, email");
+  if (error) throw fail(error, "load the user list");
+  return (data ?? []).map((u) => ({
+    id: u.id, full_name: u.full_name, role: u.role,
+    email_masked: maskEmail(u.email), is_owner: isOwnerEmail(u.email), pending: false,
+  }));
+}
+
+// Invited-but-not-yet-signed-up users (admin-only table). Returns [] when the
+// table is missing or the caller isn't an admin.
+export async function listPendingUsers() {
+  const { data, error } = await supabase.from("allowed_emails").select("email, full_name, role, created_at");
+  if (error) return [];
+  return (data ?? [])
+    .filter((r) => !isOwnerEmail(r.email))
+    .map((r) => ({
+      id: "pending:" + r.email, email: r.email, email_masked: maskEmail(r.email),
+      full_name: r.full_name, role: r.role, is_owner: false, pending: true,
+    }));
+}
+
+// Add (invite) a user by allowlisting their email + role. They finish signup.
+export async function addAllowedUser({ full_name, email, role }) {
+  const clean = (email || "").trim().toLowerCase();
+  if (!clean) throw new Error("Email is required.");
+  if (isOwnerEmail(clean)) throw new Error("That is the owner account — it already has full access.");
+  const { error } = await supabase.from("allowed_emails")
+    .upsert({ email: clean, full_name: (full_name || "").trim() || null, role }, { onConflict: "email" });
+  if (error) throw fail(error, "add the user");
+}
+
+export async function setUserRole(row, role) {
+  if (row.is_owner) throw new Error("The owner is always an admin.");
+  if (row.pending) {
+    const { error } = await supabase.from("allowed_emails").update({ role }).eq("email", row.email);
+    if (error) throw fail(error, "change the role");
+    return;
+  }
+  const { error } = await supabase.from("profiles").update({ role }).eq("id", row.id);
+  if (error) throw fail(error, "change the role");
+}
+
+// Remove a user. Signed-up users lose their role (become inert); pending invites
+// are withdrawn. The owner can never be removed (also enforced in the database).
+export async function removeUser(row) {
+  if (row.is_owner) throw new Error("The owner account can't be removed.");
+  if (row.pending) {
+    const { error } = await supabase.from("allowed_emails").delete().eq("email", row.email);
+    if (error) throw fail(error, "remove the user");
+    return;
+  }
+  const { error } = await supabase.from("profiles").delete().eq("id", row.id);
+  if (error) throw fail(error, "remove the user");
 }
 
 // ---- Reading storage sets ------------------------------------------------------

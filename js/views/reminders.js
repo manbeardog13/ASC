@@ -45,7 +45,7 @@ function card(set) {
   const phone = (customer.phone || "").trim();
   const email = (customer.email || "").trim();
   const body = encodeURIComponent(reminderMessage(set));
-  const subject = encodeURIComponent(`ASC Tire Hotel — ${set.public_code}`);
+  const subject = encodeURIComponent(`ASC — ${set.public_code}`);
   const action = (href, enabled, iconName, label) => enabled
     ? `<a class="btn" href="${href}" style="flex:1;min-height:44px">${icon(iconName, 18)} ${label}</a>`
     : `<span class="btn" style="flex:1;min-height:44px;opacity:.4;pointer-events:none">${icon(iconName, 18)} ${label}</span>`;
