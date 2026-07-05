@@ -77,7 +77,7 @@ export async function mountSpaceScene() {
   renderer.setPixelRatio(dpr);
   renderer.setSize(w, h, false);
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.18;
+  renderer.toneMappingExposure = 0.82;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
 
   const scene = new THREE.Scene();
@@ -104,8 +104,8 @@ export async function mountSpaceScene() {
 
   // --- Lights: warm off-screen key (the sun) + cool fill + cool rim (6:1) ------
   const key = new THREE.DirectionalLight(0xfff2dd, 4.2); key.position.set(-8, 6, 6);
-  const fill = new THREE.DirectionalLight(0x3a4d70, 0.5); fill.position.set(7, -2, 4);
-  const rim = new THREE.DirectionalLight(0x88a8ff, 0.7); rim.position.set(3, 3, -8);
+  const fill = new THREE.DirectionalLight(0x3a4d70, 0.28); fill.position.set(7, -2, 4);
+  const rim = new THREE.DirectionalLight(0x88a8ff, 0.45); rim.position.set(3, 3, -8);
   scene.add(key, fill, rim);
 
   // --- Starfield (3 depth layers, stellar colours, a few hero stars) -----------
@@ -165,8 +165,6 @@ export async function mountSpaceScene() {
   composer.setPixelRatio(dpr);
   composer.setSize(w, h);
   composer.addPass(new RenderPass(scene, camera));
-  const bloom = new UnrealBloomPass(new THREE.Vector2(w, h), 0.5, 0.7, 0.82);
-  composer.addPass(bloom);
   const smaa = new SMAAPass(w * dpr, h * dpr);
   composer.addPass(smaa);
   composer.addPass(new OutputPass());
@@ -189,7 +187,6 @@ export async function mountSpaceScene() {
     ({ w, h } = size());
     renderer.setSize(w, h, false);
     composer.setSize(w, h);
-    bloom.setSize(w, h);
     recompute();
     render();
   };
@@ -311,14 +308,23 @@ function normalizeWheel(THREE, src) {
   return wrap;
 }
 
-// Make the model's materials sing under the HDRI: crank reflections + sharpen metal.
+// Silvery metallic alloy + dark matte tyre. Classify by base-colour luminance:
+// the bright part is the rim → real chrome-silver metal reflecting the HDRI; the
+// dark part is the tyre → matte rubber.
 function enhanceWheelMaterials(root) {
   root.traverse((o) => {
     if (!o.isMesh || !o.material) return;
     const mats = Array.isArray(o.material) ? o.material : [o.material];
     mats.forEach((m) => {
-      m.envMapIntensity = 1.6;
-      if (m.roughness !== undefined) m.roughness = Math.min(m.roughness, 0.55);
+      const c = m.color;
+      const lum = c ? c.r * 0.3 + c.g * 0.6 + c.b * 0.1 : 0.5;
+      if (lum > 0.26) {                    // alloy → silvery metallic
+        m.metalness = 1.0; m.roughness = 0.24; m.envMapIntensity = 2.0;
+        if (c) c.setRGB(0.80, 0.82, 0.86);
+        m.map = null;                      // drop flat albedo so pure metal reflects
+      } else {                             // tyre → dark matte rubber
+        m.metalness = 0.0; m.roughness = 0.9; m.envMapIntensity = 0.3;
+      }
       m.needsUpdate = true;
     });
   });
