@@ -52,10 +52,16 @@ const NAV = [
   { route: "/customers", key: "nav.customers", iconName: "people" },
 ];
 
-// EN | HR pill. Clicks are caught by a delegated [data-lang] handler.
+// Flag language switch (US = English, HR = Croatian). Inline SVGs so the flags
+// render identically on iOS and Windows (emoji flags don't render on Windows).
+// Clicks are caught by the delegated [data-lang] handler.
+const FLAGS = {
+  en: '<svg class="flag" viewBox="0 0 24 16" aria-hidden="true"><clipPath id="us-c"><rect width="24" height="16" rx="2.5"/></clipPath><g clip-path="url(#us-c)"><rect width="24" height="16" fill="#fff"/><g fill="#b22234"><rect width="24" height="1.23"/><rect y="2.46" width="24" height="1.23"/><rect y="4.92" width="24" height="1.23"/><rect y="7.39" width="24" height="1.23"/><rect y="9.85" width="24" height="1.23"/><rect y="12.31" width="24" height="1.23"/><rect y="14.77" width="24" height="1.23"/></g><rect width="10.4" height="8.62" fill="#3c3b6e"/><g fill="#fff"><circle cx="1.7" cy="1.5" r=".55"/><circle cx="4.2" cy="1.5" r=".55"/><circle cx="6.7" cy="1.5" r=".55"/><circle cx="9.2" cy="1.5" r=".55"/><circle cx="2.95" cy="3.1" r=".55"/><circle cx="5.45" cy="3.1" r=".55"/><circle cx="7.95" cy="3.1" r=".55"/><circle cx="1.7" cy="4.7" r=".55"/><circle cx="4.2" cy="4.7" r=".55"/><circle cx="6.7" cy="4.7" r=".55"/><circle cx="9.2" cy="4.7" r=".55"/><circle cx="2.95" cy="6.3" r=".55"/><circle cx="5.45" cy="6.3" r=".55"/><circle cx="7.95" cy="6.3" r=".55"/></g></g></svg>',
+  hr: '<svg class="flag" viewBox="0 0 24 16" aria-hidden="true"><clipPath id="hr-c"><rect width="24" height="16" rx="2.5"/></clipPath><g clip-path="url(#hr-c)"><rect width="24" height="5.34" fill="#ff0000"/><rect y="5.34" width="24" height="5.32" fill="#fff"/><rect y="10.66" width="24" height="5.34" fill="#171796"/><g transform="translate(9.4,3.2)"><rect width="5.2" height="6.4" rx=".4" fill="#fff" stroke="#0a3aa0" stroke-width=".4"/><g fill="#d80027"><rect width="1.3" height="1.28"/><rect x="2.6" width="1.3" height="1.28"/><rect x="1.3" y="1.28" width="1.3" height="1.28"/><rect x="3.9" y="1.28" width="1.3" height="1.28"/><rect y="2.56" width="1.3" height="1.28"/><rect x="2.6" y="2.56" width="1.3" height="1.28"/><rect x="1.3" y="3.84" width="1.3" height="1.28"/><rect x="3.9" y="3.84" width="1.3" height="1.28"/><rect y="5.12" width="1.3" height="1.28"/><rect x="2.6" y="5.12" width="1.3" height="1.28"/></g></g></g></svg>',
+};
 function langToggle(onGlass) {
   return `<div class="lang-toggle${onGlass ? " on-glass" : ""}" role="group" aria-label="Language">
-    ${LANGS.map((l) => `<button type="button" data-lang="${l.code}" aria-pressed="${lang() === l.code}">${l.label}</button>`).join("")}
+    ${LANGS.map((l) => `<button type="button" class="lang-flag" data-lang="${l.code}" aria-pressed="${lang() === l.code}" aria-label="${l.name}" title="${l.name}">${FLAGS[l.code] || l.label}</button>`).join("")}
   </div>`;
 }
 
@@ -210,6 +216,7 @@ function renderAccessGate() {
   stopRealtime();
   root.innerHTML = `
     <div class="login-canvas">
+      <div class="login-langs-top">${langToggle(true)}</div>
       <div class="login-stage">
         <img class="login-logo" src="assets/asc-logo.png" alt="ASC">
         <div class="glass-card login-card" style="text-align:center">
@@ -217,7 +224,6 @@ function renderAccessGate() {
           <h2 style="margin-bottom:8px">${t("gate.title")}</h2>
           <p class="muted" style="font-size:14px">${t("gate.body")}</p>
           <button id="gateOut" class="btn btn-block" style="margin-top:20px">${icon("logout", 18)} ${t("menu.signout")}</button>
-          <div class="login-langs">${langToggle(true)}</div>
         </div>
       </div>
     </div>`;
@@ -284,11 +290,11 @@ function renderLogin(mode = "signin") {
   if (document.getElementById("loginBody")) return;
   root.innerHTML = `
     <div class="login-canvas">
+      <div class="login-langs-top">${langToggle(true)}</div>
       <div class="login-stage">
         <img class="login-logo" src="assets/asc-logo.png" alt="ASC — Auto Servisni Centar d.o.o.">
         <div class="glass-card login-card">
           <div id="loginBody"></div>
-          <div class="login-langs">${langToggle(true)}</div>
         </div>
       </div>
     </div>`;

@@ -462,20 +462,25 @@ details.disclose > .disclose-body { padding: 0 2px 16px; }
    ============================================================================ */
 .login-canvas {
   position: fixed; inset: 0; display: grid; place-items: center; padding: 24px; overflow: hidden;
+  animation: appFadeIn 640ms ease both;
+}
+/* Backdrop photo with a slight blur (inset overflow hides the blurred edges). */
+.login-canvas::before {
+  content: ""; position: absolute; inset: -24px; z-index: 0;
   background:
     linear-gradient(180deg, rgba(8,9,11,.74) 0%, rgba(8,9,11,.42) 46%, rgba(8,9,11,.82) 100%),
     url("../assets/background.jpg") center / cover no-repeat;
-  animation: appFadeIn 640ms ease both;
+  filter: blur(7px);
 }
-.login-stage { display: flex; flex-direction: column; align-items: center; gap: 22px; width: 100%; max-width: 332px; position: relative; z-index: 1; }
+.login-stage { display: flex; flex-direction: column; align-items: center; gap: 20px; width: 100%; max-width: 300px; position: relative; z-index: 1; }
 .login-logo {
-  width: 182px; max-width: 60%; height: auto;
+  width: 200px; max-width: 74%; height: auto;
   filter: drop-shadow(0 8px 26px rgba(234,88,12,.4));
   animation: splashFade 800ms ease both;
 }
 
 .glass-card {
-  width: 100%; padding: 24px 22px 20px; border-radius: 16px;
+  width: 100%; padding: 21px 19px 18px; border-radius: 15px;
   background: linear-gradient(155deg, rgba(40,44,52,.55), rgba(18,20,25,.42));
   backdrop-filter: blur(22px) saturate(1.2);
   -webkit-backdrop-filter: blur(22px) saturate(1.2);
@@ -488,7 +493,7 @@ details.disclose > .disclose-body { padding: 0 2px 16px; }
   text-align: center; text-transform: uppercase; letter-spacing: 3.5px;
   font-size: 11.5px; font-weight: 600; color: #b3ac9f; margin-bottom: 22px;
 }
-.glass-card .field { margin-bottom: 14px; }
+.glass-card .field { margin-bottom: 12px; }
 .glass-card .field > .label {
   font-size: 11px; text-transform: uppercase; letter-spacing: 1.2px; color: #a49d90; font-weight: 600; margin-bottom: 6px;
 }
@@ -503,14 +508,19 @@ details.disclose > .disclose-body { padding: 0 2px 16px; }
   outline: none; background: rgba(255,255,255,.1); border-color: rgba(251,146,60,.65);
   box-shadow: 0 0 0 4px rgba(249,115,22,.22), inset 0 1px 2px rgba(0,0,0,.2);
 }
+/* Glassy orange: frosted, semi-transparent, blurs what's behind it. */
 .btn-sunset {
-  width: 100%; min-height: 48px; margin-top: 4px; border: none; border-radius: 10px; cursor: pointer;
+  width: 100%; min-height: 48px; margin-top: 4px; border-radius: 12px; cursor: pointer;
   font-family: inherit; font-size: 15.5px; font-weight: 700; letter-spacing: .2px; color: #fff;
-  background: linear-gradient(180deg, #FB923C 0%, #F1600F 52%, #E2560C 100%);
-  box-shadow: 0 12px 30px -8px rgba(234,88,12,.6), inset 0 1px 0 rgba(255,255,255,.35);
-  transition: transform 200ms ease, box-shadow 200ms ease, filter 200ms ease;
+  background: linear-gradient(180deg, rgba(251,146,60,.52), rgba(226,86,12,.40));
+  border: 1px solid rgba(255,176,120,.55);
+  backdrop-filter: blur(12px) saturate(1.6);
+  -webkit-backdrop-filter: blur(12px) saturate(1.6);
+  box-shadow: 0 10px 26px -10px rgba(234,88,12,.5), inset 0 1px 0 rgba(255,255,255,.28);
+  text-shadow: 0 1px 2px rgba(120,40,0,.4);
+  transition: transform 200ms ease, box-shadow 200ms ease, background 200ms ease;
 }
-.btn-sunset:hover { transform: scale(1.015); box-shadow: 0 16px 36px -8px rgba(234,88,12,.7); filter: brightness(1.04); }
+.btn-sunset:hover { transform: scale(1.015); background: linear-gradient(180deg, rgba(251,146,60,.64), rgba(226,86,12,.50)); box-shadow: 0 14px 32px -10px rgba(234,88,12,.6); }
 .btn-sunset:active { transform: scale(.99); }
 .btn-sunset:disabled { opacity: .65; cursor: default; transform: none; }
 .btn-sunset.is-busy { color: transparent; position: relative; pointer-events: none; }
@@ -532,20 +542,36 @@ details.disclose > .disclose-body { padding: 0 2px 16px; }
   background: var(--brand-tint); color: var(--brand);
 }
 
-/* Language toggle (EN | HR) */
-.lang-toggle { display: inline-flex; gap: 3px; padding: 3px; border-radius: 8px; }
+/* Language switch — inline SVG flags (US = English, HR = Croatian) */
+.lang-toggle { display: inline-flex; gap: 4px; padding: 3px; border-radius: 999px; }
 .lang-toggle.on-glass { background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.14); }
-.login-langs { display: flex; justify-content: center; margin-top: 20px; }
-.lang-toggle button {
-  min-height: 30px; padding: 0 13px; border: none; background: transparent; border-radius: 6px;
-  font-family: inherit; font-size: 12.5px; font-weight: 700; letter-spacing: .5px; color: #cfc9bd; cursor: pointer;
-  transition: background 180ms ease, color 180ms ease;
+.lang-toggle .lang-flag {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-height: auto; padding: 4px; border: none; background: transparent; border-radius: 7px;
+  cursor: pointer; opacity: .5; line-height: 0;
+  transition: opacity 160ms ease, transform 160ms ease;
 }
-.lang-toggle button[aria-pressed="true"] { background: var(--brand-strong); color: #fff; }
-/* Compact toggle used in the top bar */
-.topbar .lang-toggle { background: rgba(255,255,255,.07); }
-.topbar .lang-toggle button { color: var(--muted); min-height: 28px; padding: 0 10px; }
-.topbar .lang-toggle button[aria-pressed="true"] { background: var(--brand-strong); color: #fff; }
+.lang-toggle .lang-flag:hover { opacity: .85; }
+.lang-toggle .lang-flag[aria-pressed="true"] { opacity: 1; }
+.flag { display: block; width: 20px; height: auto; border-radius: 3px; box-shadow: 0 1px 3px rgba(0,0,0,.45); }
+.lang-toggle .lang-flag[aria-pressed="true"] .flag { box-shadow: 0 0 0 1.6px rgba(255,255,255,.85), 0 1px 4px rgba(0,0,0,.5); }
+
+/* Login / gate: flags pinned to the top-right corner, out of the glass card. */
+.login-langs-top {
+  position: absolute; z-index: 3;
+  top: max(14px, env(safe-area-inset-top));
+  right: max(14px, env(safe-area-inset-right));
+}
+.login-langs-top .lang-toggle {
+  background: rgba(10,12,16,.42); border: 1px solid rgba(255,255,255,.12);
+  backdrop-filter: blur(10px) saturate(1.2); -webkit-backdrop-filter: blur(10px) saturate(1.2);
+  box-shadow: 0 6px 20px -8px rgba(0,0,0,.6);
+}
+
+/* Compact flags in the app top bar */
+.topbar .lang-toggle { background: rgba(255,255,255,.06); }
+.topbar .lang-toggle .lang-flag { padding: 3px; }
+.topbar .flag { width: 18px; }
 
 @keyframes appFadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes splashFade { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
