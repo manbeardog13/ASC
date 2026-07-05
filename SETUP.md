@@ -114,9 +114,10 @@ Your data lives in Supabase. Backups make sure a mistake or outage can never wip
 it out. Add two secrets on GitHub — **repo → Settings → Secrets and variables →
 Actions → New repository secret**:
 
-1. **`SUPABASE_DB_URL`** — Supabase → **Project Settings → Database → Connection
-   string** → the **Session pooler** URI (port 5432). GitHub's runners are IPv4-only,
-   so use the pooler, not the direct connection. (Not the Transaction pooler / 6543.)
+1. **`SUPABASE_DB_PASSWORD`** — just your Supabase **database password** (the one you
+   set when creating the project; reset it under Project Settings → Database if
+   needed). Paste the raw password only — no URL, no encoding. The workflow builds
+   the Session-pooler connection string (IPv4, port 5432) around it automatically.
 2. **`BACKUP_ENCRYPTION_KEY`** — a long random passphrase you make up and keep in a
    password manager (run `openssl rand -base64 40` for a good one). Backups are
    encrypted with this because the repo is public. **If you lose this key you can't

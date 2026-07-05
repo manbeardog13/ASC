@@ -19,15 +19,23 @@ jobs:
   backup:
     runs-on: ubuntu-latest
     env:
-      DB_URL: ${{ secrets.SUPABASE_DB_URL }}
       ENC_KEY: ${{ secrets.BACKUP_ENCRYPTION_KEY }}
     steps:
       - uses: actions/checkout@v4
 
-      - name: Check required secrets
+      # Build the Session-pooler connection string from a single password secret,
+      # percent-encoding the password so special characters can never break the URI.
+      # Host/user/db aren't secret (the project ref is public in js/config.js).
+      - name: Build database connection string
+        env:
+          DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
         run: |
-          test -n "$DB_URL"  || { echo "::error::Missing secret SUPABASE_DB_URL"; exit 1; }
-          test -n "$ENC_KEY" || { echo "::error::Missing secret BACKUP_ENCRYPTION_KEY"; exit 1; }
+          test -n "$DB_PASSWORD" || { echo "::error::Missing secret SUPABASE_DB_PASSWORD"; exit 1; }
+          test -n "$ENC_KEY"     || { echo "::error::Missing secret BACKUP_ENCRYPTION_KEY"; exit 1; }
+          ENC=$(python3 -c 'import urllib.parse,os;print(urllib.parse.quote(os.environ["DB_PASSWORD"], safe=""))')
+          URL="postgresql://postgres.ilnqhlrvchuvpjgptjfx:${ENC}@aws-0-eu-west-1.pooler.supabase.com:5432/postgres"
+          echo "::add-mask::$URL"
+          echo "DB_URL=$URL" >> "$GITHUB_ENV"
 
       - name: Install PostgreSQL client matching the server
         run: |
