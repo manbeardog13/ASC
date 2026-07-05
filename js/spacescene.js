@@ -1,11 +1,8 @@
 // ============================================================================
 // spacescene.js — the login screen's backdrop: cinematic real-time 3D (WebGL).
 //
-// Deep, living space: a slowly-drifting three-layer starfield with a few
-// distant spiral galaxies turning at ~1 revolution/hour; two wide alloy wheels
-// (silvery metal rims, dead-matte black tyres, vivid-red centre caps) drifting
-// far away and slow; and rare transient events far off in the void — comets
-// streaking past every few minutes and the odd supernova flaring and fading.
+// Deep space: a slowly-drifting two-layer starfield with two wide alloy wheels
+// (silvery metal rims, dead-matte black tyres) drifting far away and slow.
 //
 // The wheels are a light physics sim: each deviates from its slow orbit with a
 // spring-damper that settles in ~5s. They collide with each other elastically
@@ -22,8 +19,7 @@
 // offline, blocked, no WebGL, reduced-motion — it silently falls back to the
 // CSS starfield underneath.
 //
-// Debug (login console): window.__ascSky.comet() / .nova() / .hit(0|1) fire a
-// comet, supernova, or a shot on a wheel on demand.
+// Debug (login console): window.__ascSky.hit(0|1) fires a shot on a wheel.
 // ============================================================================
 
 const CDN = "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/";
@@ -40,10 +36,8 @@ const TILT = 0.5;                     // orbit-plane tilt
 const WHEEL_SCALE = 0.91;             // wheel size (30% wider than the old 0.7)
 const WHEEL_R = WHEEL_SCALE * 0.95;   // wheel collision radius (world units)
 const HIT_R = WHEEL_SCALE * 1.22;     // clickable radius (a touch generous)
-const GALAXY_W = (Math.PI * 2) / 3600;      // 1 rotation / 60 min
 const STAR_W0 = (Math.PI * 2) / 3000;       // far star layer drift
 const STAR_W1 = (Math.PI * 2) / 2100;       // near star layer drift (parallax)
-const EVENT_MIN = 150, EVENT_MAX = 320;     // seconds between comet/supernova
 
 // Physics: spring-damper on each wheel's DEVIATION from its scripted orbit, tuned
 // (K, C) so a shot/bounce decays to rest in ~5s with a little lively overshoot.
@@ -141,7 +135,7 @@ export async function mountSpaceScene() {
   const rim = new THREE.DirectionalLight(0x88a8ff, 0.45); rim.position.set(3, 3, -8);
   scene.add(key, fill, rim);
 
-  // --- Starfield (2 far layers) + distant spinning galaxies --------------------
+  // --- Starfield (2 far layers, slow parallax drift) ---------------------------
   const starSprite = makeStarSprite(THREE);
   disposables.push(starSprite);
   const starLayers = [
@@ -149,31 +143,6 @@ export async function mountSpaceScene() {
     buildStars(THREE, disposables, starSprite, mobile ? 500 : 820, 175, 1.0, 1.5),
   ];
   starLayers.forEach((s) => scene.add(s));
-  const galaxies = buildGalaxies(THREE, scene, disposables);
-
-  // Shared transient-event textures (created once, disposed at teardown).
-  const glowTex = makeGlowTexture(THREE);
-  const cometTex = makeCometTexture(THREE);
-  const flareTex = makeFlareTexture(THREE);
-  const ringTex = makeRingTexture(THREE);
-  disposables.push(glowTex, cometTex, flareTex, ringTex);
-
-  // --- Red centre-cap kit (added to each wheel, orientation-agnostic) ----------
-  // Low metalness + candy clearcoat so it reads as VIVID red under the warm key,
-  // instead of going dark maroon like a metallic red would in this dim scene.
-  const redCapMat = new THREE.MeshPhysicalMaterial({ color: 0xe4141f, metalness: 0.25, roughness: 0.42, clearcoat: 0.7, clearcoatRoughness: 0.2, envMapIntensity: 0.9 });
-  const capGeo = new THREE.SphereGeometry(0.30, 28, 16, 0, Math.PI * 2, 0, Math.PI * 0.5);
-  disposables.push(redCapMat, capGeo);
-  const addCaps = (parent, halfDepth) => {
-    const zf = Math.max(0.12, halfDepth * 0.96);
-    for (const s of [1, -1]) {
-      const cap = new THREE.Mesh(capGeo, redCapMat);
-      cap.rotation.x = s > 0 ? -Math.PI / 2 : Math.PI / 2;   // dome faces outward
-      cap.scale.set(1, 0.5, 1);                              // flatten the dome
-      cap.position.z = s * zf;
-      parent.add(cap);
-    }
-  };
 
   // --- Two wheels ---------------------------------------------------------------
   // Rig: orbiter (physics position) → tiltBase (fixed viewing angle + scale) →
@@ -191,15 +160,13 @@ export async function mountSpaceScene() {
 
   new GLTFLoader().load("assets/wheel.glb", (gltf) => {
     if (!_scene) return;   // scene torn down while loading
-    const { wrap, halfDepth } = normalizeWheel(THREE, gltf.scene);
+    const { wrap } = normalizeWheel(THREE, gltf.scene);
     enhanceWheelMaterials(wrap);
     rigA.spinner.add(wrap);
     rigB.spinner.add(wrap.clone(true));
-    addCaps(rigA.spinner, halfDepth);
-    addCaps(rigB.spinner, halfDepth);
   }, undefined, () => {
     // Model unavailable → keep a procedural wheel so the scene still has wheels.
-    const shared = makeWheelParts(THREE, disposables, redCapMat);
+    const shared = makeWheelParts(THREE, disposables);
     rigA.spinner.add(buildWheel(THREE, shared));
     rigB.spinner.add(buildWheel(THREE, shared));
   });
@@ -327,19 +294,8 @@ export async function mountSpaceScene() {
   };
   window.addEventListener("pointerdown", onPointer);
 
-  // --- Transient events far in the void ----------------------------------------
-  const transients = [];
-  const fireEvent = () => {
-    transients.push(Math.random() < 0.62
-      ? spawnComet(THREE, scene, cometTex)
-      : spawnNova(THREE, scene, flareTex, ringTex));
-  };
-  let nextEvt = 22 + Math.random() * 16;      // first bit of life within ~40s
-
-  // Dev-console hooks for testing (login screen only).
+  // Dev-console hook for testing the wheel shot (login screen only).
   window.__ascSky = {
-    comet: () => transients.push(spawnComet(THREE, scene, cometTex)),
-    nova: () => transients.push(spawnNova(THREE, scene, flareTex, ringTex)),
     hit: (i = 0) => { const b = wheels[i]; if (b) shoot(b, _c.set((R() - 0.5), (R() - 0.5), -1).normalize(), null); },
   };
 
@@ -363,16 +319,9 @@ export async function mountSpaceScene() {
     collide();
     for (const b of wheels) applyBody(b);
 
-    // Living universe: drifting star layers (parallax) + turning galaxies.
+    // Living universe: drifting star layers with a touch of parallax.
     starLayers[0].rotation.set(Math.sin(t * 0.02) * 0.02, t * STAR_W0, 0);
     starLayers[1].rotation.set(Math.sin(t * 0.03) * 0.015, t * STAR_W1, 0);
-    for (const g of galaxies) g.sprite.material.rotation = g.ph + t * g.w;
-
-    // Scheduled far-away events.
-    if (t >= nextEvt) { fireEvent(); nextEvt = t + EVENT_MIN + Math.random() * (EVENT_MAX - EVENT_MIN); }
-    for (let i = transients.length - 1; i >= 0; i--) {
-      if (transients[i].update(dt)) { transients[i].dispose(); transients.splice(i, 1); }
-    }
 
     composer.render();
   };
@@ -391,8 +340,6 @@ export async function mountSpaceScene() {
 
   const dispose = () => {
     try { delete window.__ascSky; } catch { window.__ascSky = undefined; }
-    transients.forEach((x) => x.dispose());
-    transients.length = 0;
     renderer.dispose();
     composer.dispose?.();
     pmrem.dispose();
@@ -471,173 +418,6 @@ function buildStars(THREE, disposables, sprite, count, radius, sizeMin, sizeMax)
   return new THREE.Points(geo, mat);
 }
 
-// ---- Distant spiral galaxies (far, faint, turning ~1 rev/hour) -----------------
-function makeGalaxyTexture(THREE, tint) {
-  const S = 256; const c = document.createElement("canvas"); c.width = c.height = S;
-  const x = c.getContext("2d");
-  const col = new THREE.Color(tint);
-  const rgb = (a) => `rgba(${(col.r * 255) | 0},${(col.g * 255) | 0},${(col.b * 255) | 0},${a})`;
-  x.translate(S / 2, S / 2); x.rotate(0.4); x.scale(1, 0.55);   // tilted disc
-  x.globalCompositeOperation = "lighter";
-  const core = x.createRadialGradient(0, 0, 0, 0, 0, 42);
-  core.addColorStop(0, "rgba(255,255,255,0.95)");
-  core.addColorStop(0.3, rgb(0.7));
-  core.addColorStop(1, rgb(0));
-  x.fillStyle = core; x.beginPath(); x.arc(0, 0, 42, 0, 7); x.fill();
-  for (let arm = 0; arm < 2; arm++) {
-    const ph = arm * Math.PI;
-    for (let r = 10; r < 120; r += 2) {
-      const a = ph + Math.log(r) * 2.4;
-      const px = Math.cos(a) * r, py = Math.sin(a) * r;
-      const fall = 1 - r / 120;
-      const rad = 1 + fall * 5;
-      const g = x.createRadialGradient(px, py, 0, px, py, rad);
-      g.addColorStop(0, rgb(0.5 * fall));
-      g.addColorStop(1, rgb(0));
-      x.fillStyle = g; x.beginPath(); x.arc(px, py, rad, 0, 7); x.fill();
-    }
-  }
-  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; return tex;
-}
-function buildGalaxies(THREE, scene, disposables) {
-  const specs = [
-    { p: [-95, 55, -230], s: 78, tint: 0x93a7ff, dir: 1, ph: 0.0 },
-    { p: [120, -42, -260], s: 104, tint: 0xffcf9a, dir: -1, ph: 1.1 },
-    { p: [46, 96, -245], s: 64, tint: 0xcaa6ff, dir: 1, ph: 2.2 },
-  ];
-  const arr = [];
-  for (const sp of specs) {
-    const tex = makeGalaxyTexture(THREE, sp.tint);
-    const mat = new THREE.SpriteMaterial({ map: tex, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, opacity: 0.85 });
-    disposables.push(tex, mat);
-    const spr = new THREE.Sprite(mat);
-    spr.position.set(sp.p[0], sp.p[1], sp.p[2]);
-    spr.scale.setScalar(sp.s);
-    spr.material.rotation = sp.ph;
-    scene.add(spr);
-    arr.push({ sprite: spr, w: GALAXY_W * sp.dir, ph: sp.ph });
-  }
-  return arr;
-}
-
-// ---- Shared soft-glow / streak / flare / ring textures -------------------------
-function makeGlowTexture(THREE) {
-  const S = 128; const c = document.createElement("canvas"); c.width = c.height = S;
-  const x = c.getContext("2d");
-  const g = x.createRadialGradient(64, 64, 0, 64, 64, 64);
-  g.addColorStop(0, "rgba(255,255,255,1)");
-  g.addColorStop(0.25, "rgba(235,245,255,0.75)");
-  g.addColorStop(0.6, "rgba(200,225,255,0.18)");
-  g.addColorStop(1, "rgba(200,225,255,0)");
-  x.fillStyle = g; x.fillRect(0, 0, S, S);
-  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; return tex;
-}
-function makeCometTexture(THREE) {
-  const c = document.createElement("canvas"); c.width = 256; c.height = 64;
-  const x = c.getContext("2d");
-  x.globalCompositeOperation = "lighter";
-  for (let px = 205; px > 12; px -= 2) {          // tail: fading beam toward the left
-    const k = (px - 12) / (205 - 12);
-    const rad = 1.5 + k * 9;
-    const alpha = 0.05 + k * 0.16;
-    const g = x.createRadialGradient(px, 32, 0, px, 32, rad);
-    g.addColorStop(0, `rgba(200,225,255,${alpha})`);
-    g.addColorStop(1, "rgba(200,225,255,0)");
-    x.fillStyle = g; x.beginPath(); x.arc(px, 32, rad, 0, 7); x.fill();
-  }
-  const h = x.createRadialGradient(214, 32, 0, 214, 32, 20);   // bright head at the right
-  h.addColorStop(0, "rgba(255,255,255,1)");
-  h.addColorStop(0.4, "rgba(220,240,255,0.8)");
-  h.addColorStop(1, "rgba(200,225,255,0)");
-  x.fillStyle = h; x.beginPath(); x.arc(214, 32, 20, 0, 7); x.fill();
-  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; return tex;
-}
-function makeFlareTexture(THREE) {
-  const S = 128; const c = document.createElement("canvas"); c.width = c.height = S;
-  const x = c.getContext("2d"); const cx = S / 2;
-  x.globalCompositeOperation = "lighter";
-  const core = x.createRadialGradient(cx, cx, 0, cx, cx, cx);
-  core.addColorStop(0, "rgba(255,255,255,1)");
-  core.addColorStop(0.15, "rgba(255,246,235,0.9)");
-  core.addColorStop(0.4, "rgba(255,230,200,0.25)");
-  core.addColorStop(1, "rgba(255,220,190,0)");
-  x.fillStyle = core; x.fillRect(0, 0, S, S);
-  for (const [dx, dy] of [[1, 0], [0, 1]]) {       // 4-point diffraction spikes
-    const g = x.createLinearGradient(cx - dx * cx, cx - dy * cx, cx + dx * cx, cx + dy * cx);
-    g.addColorStop(0, "rgba(255,255,255,0)");
-    g.addColorStop(0.5, "rgba(255,255,255,0.85)");
-    g.addColorStop(1, "rgba(255,255,255,0)");
-    x.fillStyle = g;
-    if (dx) x.fillRect(0, cx - 1.5, S, 3); else x.fillRect(cx - 1.5, 0, 3, S);
-  }
-  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; return tex;
-}
-function makeRingTexture(THREE) {
-  const S = 128; const c = document.createElement("canvas"); c.width = c.height = S;
-  const x = c.getContext("2d"); const cx = S / 2;
-  x.globalCompositeOperation = "lighter";
-  for (let i = 0; i < 6; i++) {
-    x.strokeStyle = `rgba(200,225,255,${0.11 - i * 0.014})`;
-    x.lineWidth = 3 - i * 0.35;
-    x.beginPath(); x.arc(cx, cx, 44 - i * 2, 0, 7); x.stroke();
-  }
-  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; return tex;
-}
-
-// ---- Comet: a bright head + streak tail crossing the far sky, tail trailing ----
-function spawnComet(THREE, scene, tex) {
-  const z = -140;
-  const dir = Math.random() * Math.PI * 2;
-  const vx = Math.cos(dir), vy = Math.sin(dir);
-  const span = 150, life = 7.5, speed = span / life;
-  const head = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, color: 0xcfe6ff, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, opacity: 0 }));
-  head.scale.set(22, 5.5, 1);
-  head.material.rotation = Math.atan2(vy, vx);            // point head along travel
-  head.position.set(-vx * span * 0.55 + (Math.random() - 0.5) * 40, -vy * span * 0.55 + (Math.random() - 0.5) * 40, z);
-  scene.add(head);
-  let age = 0;
-  return {
-    update(dt) {
-      age += dt;
-      head.position.x += vx * speed * dt;
-      head.position.y += vy * speed * dt;
-      const k = age / life;
-      let o = 1;
-      if (k < 0.15) o = k / 0.15; else if (k > 0.7) o = Math.max(0, (1 - k) / 0.3);
-      head.material.opacity = o * 0.95;
-      return age >= life;
-    },
-    dispose() { scene.remove(head); head.material.dispose(); },
-  };
-}
-
-// ---- Supernova: a point that flares hard, then fades, with an expanding shell --
-function spawnNova(THREE, scene, flareTex, ringTex) {
-  const z = -150;
-  const a = Math.random() * Math.PI * 2, R = 55 + Math.random() * 20;
-  const pos = new THREE.Vector3(Math.cos(a) * R, Math.sin(a) * R * 0.7, z + (Math.random() - 0.5) * 20);
-  const flare = new THREE.Sprite(new THREE.SpriteMaterial({ map: flareTex, color: 0xfff0e6, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, opacity: 0 }));
-  const ring = new THREE.Sprite(new THREE.SpriteMaterial({ map: ringTex, color: 0x9fc7ff, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, opacity: 0 }));
-  flare.position.copy(pos); ring.position.copy(pos);
-  flare.scale.setScalar(2); ring.scale.setScalar(2);
-  scene.add(flare); scene.add(ring);
-  let age = 0; const life = 9;
-  return {
-    update(dt) {
-      age += dt; const k = age / life;
-      const rise = Math.min(1, age / 0.8);                       // fast rise ≈0.8s
-      const decay = Math.max(0, 1 - Math.max(0, age - 0.8) / (life - 0.8));
-      const bright = rise * decay;
-      flare.material.opacity = bright;
-      flare.scale.setScalar(2 + bright * 8);
-      ring.material.opacity = Math.max(0, 1 - k) * 0.5 * Math.min(1, age / 0.5);
-      ring.scale.setScalar(2 + k * 18);
-      return age >= life;
-    },
-    dispose() { scene.remove(flare); scene.remove(ring); flare.material.dispose(); ring.material.dispose(); },
-  };
-}
-
 // ---- Tyre tread bump (procedural fallback wheel) -------------------------------
 function makeTireBump(THREE) {
   const c = document.createElement("canvas"); c.width = 256; c.height = 256;
@@ -702,7 +482,7 @@ function enhanceWheelMaterials(root) {
 }
 
 // ---- Fallback wheel: shared geometry + PBR materials (env-map driven) -----------
-function makeWheelParts(THREE, disposables, redCapMat) {
+function makeWheelParts(THREE, disposables) {
   const alloy = new THREE.MeshPhysicalMaterial({ color: 0xdfe3e8, metalness: 1.0, roughness: 0.2, envMapIntensity: 1.9, clearcoat: 0.5, clearcoatRoughness: 0.14 });
   const lipMat = new THREE.MeshPhysicalMaterial({ color: 0xf2f4f7, metalness: 1.0, roughness: 0.05, envMapIntensity: 2.1 });
   const darkMetal = new THREE.MeshStandardMaterial({ color: 0x3a3f47, metalness: 1.0, roughness: 0.55, envMapIntensity: 1.0 });
@@ -732,7 +512,7 @@ function makeWheelParts(THREE, disposables, redCapMat) {
   const spokeGeo = new THREE.ExtrudeGeometry(shape, { depth: 0.06, bevelEnabled: true, bevelThickness: 0.026, bevelSize: 0.024, bevelSegments: 3, steps: 1 });
   disposables.push(tireGeo, barrelGeo, lipGeo, hubGeo, capGeo, lugGeo, spokeGeo);
 
-  return { alloy, lipMat, darkMetal, tireMat, redCap: redCapMat, tireGeo, barrelGeo, lipGeo, hubGeo, capGeo, lugGeo, spokeGeo };
+  return { alloy, lipMat, darkMetal, tireMat, tireGeo, barrelGeo, lipGeo, hubGeo, capGeo, lugGeo, spokeGeo };
 }
 
 function buildWheel(THREE, s) {
@@ -749,8 +529,8 @@ function buildWheel(THREE, s) {
     g.add(spoke); wheel.add(g);
   }
   const hub = new THREE.Mesh(s.hubGeo, s.darkMetal); hub.rotation.x = AX; hub.position.z = -0.02; wheel.add(hub);
-  // Vivid-red centre cap.
-  const cap = new THREE.Mesh(s.capGeo, s.redCap); cap.rotation.x = -AX; cap.position.z = 0.17; cap.scale.set(1, 0.62, 1); wheel.add(cap);
+  // Silvery alloy centre cap (no paint).
+  const cap = new THREE.Mesh(s.capGeo, s.alloy); cap.rotation.x = -AX; cap.position.z = 0.17; cap.scale.set(1, 0.62, 1); wheel.add(cap);
   for (let i = 0; i < 5; i++) {
     const a = (i / 5) * Math.PI * 2 + 0.3;
     const l = new THREE.Mesh(s.lugGeo, s.darkMetal);
