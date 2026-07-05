@@ -47,7 +47,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  * { animation-duration: .001ms !important; transition-duration: .001ms !important; scroll-behavior: auto !important; }
+  * { animation-duration: .001ms !important; animation-delay: 0s !important; transition-duration: .001ms !important; scroll-behavior: auto !important; }
 }
 
 * { box-sizing: border-box; }
@@ -482,7 +482,7 @@ details.disclose > .disclose-body { padding: 0 2px 16px; }
   border: 1px solid rgba(255,255,255,.14);
   box-shadow: 0 30px 70px -20px rgba(0,0,0,.75), inset 0 1px 0 rgba(255,255,255,.16);
 }
-.login-card { animation: loginEmerge 850ms cubic-bezier(.16,.86,.3,1) 1000ms both; }
+.login-card { animation: loginEmerge 620ms cubic-bezier(.16,.86,.3,1) 220ms both; }
 
 .login-tagline {
   text-align: center; text-transform: uppercase; letter-spacing: 3.5px;

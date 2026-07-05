@@ -277,6 +277,10 @@ function renderSetPassword() {
 // so the card doesn't re-animate.
 function renderLogin(mode = "signin") {
   stopRealtime();
+  // Redundant auth events (INITIAL_SESSION, token refreshes) re-run boot()/route().
+  // If the login is already on screen, don't rebuild it — rebuilding restarts the
+  // entrance animation every time and can leave the card stuck hidden.
+  if (document.getElementById("loginBody")) return;
   root.innerHTML = `
     <div class="login-canvas">
       <div class="login-stage">
