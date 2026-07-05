@@ -16,12 +16,9 @@
 // ============================================================================
 
 const CDN = "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/";
-// Real NASA-derived Earth textures + a CC0 night HDRI (both CORS-enabled).
+// CC0 night HDRI (CORS-enabled) — drives the physically-correct metal reflections.
 const TEX = {
-  earth:  "https://cdn.jsdelivr.net/gh/mrdoob/three.js@r160/examples/textures/planets/earth_atmos_2048.jpg",
-  normal: "https://cdn.jsdelivr.net/gh/mrdoob/three.js@r160/examples/textures/planets/earth_normal_2048.jpg",
-  clouds: "https://cdn.jsdelivr.net/gh/mrdoob/three.js@r160/examples/textures/planets/earth_clouds_2048.png",
-  hdr:    "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/dikhololo_night_1k.hdr",
+  hdr: "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/dikhololo_night_1k.hdr",
 };
 
 export function spaceSceneHtml() {
@@ -120,13 +117,6 @@ export async function mountSpaceScene() {
   ];
   starLayers.forEach((s) => scene.add(s));
 
-  // --- Earth: real textures, pushed far and low, atmosphere rim + clouds --------
-  const earth = buildEarth(THREE, disposables);
-  earth.grp.position.set(-5, -29, -98);
-  earth.grp.scale.setScalar(6.2);
-  earth.grp.rotation.z = 0.32;
-  scene.add(earth.grp);
-
   // --- Two wheels (shared geometry/materials) ----------------------------------
   const shared = makeWheelParts(THREE, disposables);
   const wheelA = buildWheel(THREE, shared);
@@ -175,8 +165,6 @@ export async function mountSpaceScene() {
     const spin = t * (Math.PI * 2 / T_SPIN);
     wheelA.rotation.z = spin;
     wheelB.rotation.z = -spin * 0.92;
-    earth.earth.rotation.y = t * 0.004;
-    earth.clouds.rotation.y = t * 0.0055;
     composer.render();
   };
   const loop = () => { _scene.raf = requestAnimationFrame(loop); if (running) render(); };
@@ -270,45 +258,6 @@ function buildStars(THREE, disposables, sprite, count, radius, sizeMin, sizeMax)
   });
   disposables.push(geo, mat);
   return new THREE.Points(geo, mat);
-}
-
-// ---- Earth: real day texture + normal map + cloud shell + atmospheric rim ------
-function buildEarth(THREE, disposables) {
-  const grp = new THREE.Group();
-  const loader = new THREE.TextureLoader();
-  const map = loader.load(TEX.earth);   map.colorSpace = THREE.SRGBColorSpace;
-  const normal = loader.load(TEX.normal);
-  const clouds = loader.load(TEX.clouds); clouds.colorSpace = THREE.SRGBColorSpace;
-  disposables.push(map, normal, clouds);
-
-  const geo = new THREE.SphereGeometry(1, 64, 64);
-  const mat = new THREE.MeshStandardMaterial({
-    map, normalMap: normal, normalScale: new THREE.Vector2(0.8, 0.8),
-    roughness: 0.86, metalness: 0.0,
-  });
-  disposables.push(geo, mat);
-  const earth = new THREE.Mesh(geo, mat);
-  grp.add(earth);
-
-  const cloudGeo = new THREE.SphereGeometry(1.012, 64, 64);
-  const cloudMat = new THREE.MeshStandardMaterial({ alphaMap: clouds, transparent: true, roughness: 1, metalness: 0, color: 0xffffff, depthWrite: false, opacity: 0.9 });
-  disposables.push(cloudGeo, cloudMat);
-  const cloudsMesh = new THREE.Mesh(cloudGeo, cloudMat);
-  grp.add(cloudsMesh);
-
-  const atmGeo = new THREE.SphereGeometry(1.14, 64, 64);
-  const atmMat = new THREE.ShaderMaterial({
-    side: THREE.BackSide, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
-    uniforms: { glow: { value: new THREE.Color(0x5b8bff) }, power: { value: 2.6 } },
-    vertexShader: `varying vec3 vN; varying vec3 vV;
-      void main(){ vec4 mv = modelViewMatrix*vec4(position,1.0); vN = normalize(normalMatrix*normal); vV = normalize(-mv.xyz); gl_Position = projectionMatrix*mv; }`,
-    fragmentShader: `varying vec3 vN; varying vec3 vV; uniform vec3 glow; uniform float power;
-      void main(){ float f = pow(1.0 - abs(dot(vN,vV)), power); gl_FragColor = vec4(glow, f); }`,
-  });
-  disposables.push(atmGeo, atmMat);
-  grp.add(new THREE.Mesh(atmGeo, atmMat));
-
-  return { grp, earth, clouds: cloudsMesh };
 }
 
 // ---- Tyre tread bump -----------------------------------------------------------
