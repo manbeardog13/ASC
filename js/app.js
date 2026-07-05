@@ -10,7 +10,6 @@ import { initOffline } from "./offline.js";
 import * as db from "./db.js";
 import { icon, esc, go, toast, busy } from "./ui.js";
 import { t, lang, setLang, LANGS, onLangChange } from "./i18n.js";
-import { spaceSceneHtml, mountSpaceScene, unmountSpaceScene } from "./spacescene.js";
 
 document.documentElement.lang = lang();
 
@@ -95,7 +94,6 @@ function langToggle(onGlass) {
 
 // ---- App frame (built once when signed in) -----------------------------------
 function mountFrame() {
-  unmountSpaceScene();
   if (document.getElementById("main")) return;
   root.innerHTML = `
     <header class="topbar">
@@ -246,6 +244,8 @@ async function route() {
   try {
     const mod = await match.r.load();
     await mod.render(main, { params: match.m.slice(1), mode: match.r.mode, go });
+    // Replay the view-enter transition so every navigation glides in.
+    main.classList.remove("view-enter"); void main.offsetWidth; main.classList.add("view-enter");
   } catch (err) {
     console.error(err);
     main.innerHTML = `<div class="card"><h2>Something went wrong</h2><p class="muted">${esc(err.message || "Please try again.")}</p>
@@ -279,7 +279,6 @@ function renderSetup() {
 // removed). No app data is reachable — show a calm gate with a way out.
 function renderAccessGate() {
   stopRealtime();
-  unmountSpaceScene();
   root.innerHTML = `
     <div class="login-canvas">
       <div class="login-langs-top">${langToggle(true)}</div>
@@ -300,7 +299,6 @@ function renderAccessGate() {
 // password before using the app.
 function renderSetPassword() {
   stopRealtime();
-  unmountSpaceScene();
   root.innerHTML = `
     <div class="login-canvas">
       <div class="login-stage">
@@ -362,7 +360,6 @@ function renderLogin(mode = "signin") {
   if (document.getElementById("loginBody")) return;
   root.innerHTML = `
     <div class="login-canvas auth">
-      ${spaceSceneHtml()}
       <div class="login-langs-top">${langToggle(true)}</div>
       <div class="auth-col">
         <img class="auth-logo" src="assets/asc-logo.png" alt="ASC — Auto Servisni Centar d.o.o.">
@@ -370,7 +367,6 @@ function renderLogin(mode = "signin") {
       </div>
     </div>`;
   paintLogin(mode);
-  mountSpaceScene();   // real 3D backdrop (lazy Three.js; no-op if unavailable)
   setTimeout(() => document.getElementById("email")?.focus({ preventScroll: true }), 80);
 }
 
