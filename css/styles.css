@@ -586,7 +586,91 @@ details.disclose > .disclose-body { padding: 0 2px 16px; }
   font-family: "Sora", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 /* Whole login scaled to 90% (zoom reflows, so it stays centered + scrollable). */
-.auth-col { margin: auto; width: min(340px, 100% - 44px); padding: 48px 0 44px; display: flex; flex-direction: column; zoom: 0.9; }
+.auth-col { position: relative; z-index: 1; margin: auto; width: min(340px, 100% - 44px); padding: 48px 0 44px; display: flex; flex-direction: column; zoom: 0.9; }
+
+/* ============================================================================
+   Login "open space" backdrop — luxury alloy wheels orbiting the sign-in card.
+   Decoration ONLY: pointer-events:none, sits behind the form (z-index 0). Every
+   moving layer animates transform/opacity so it composites on the GPU and holds
+   60fps on a phone. Orbit radius (--R) + wheel size (--S) are retuned per
+   breakpoint below so wheels always clear the card and read as "far away".
+   Freezes to a still arrangement under prefers-reduced-motion.
+   ============================================================================ */
+.space-scene {
+  position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none;
+  --R: 25vmin; --S: 11vmin;                 /* orbit-radius unit · wheel-size unit */
+  contain: layout paint size style;
+}
+.space-haze {
+  position: absolute; inset: -20%;
+  background:
+    radial-gradient(38% 30% at 72% 20%, rgba(78,104,160,.18), transparent 60%),
+    radial-gradient(44% 34% at 18% 84%, rgba(224,120,40,.10), transparent 62%),
+    radial-gradient(70% 60% at 50% 50%, rgba(16,22,34,.35), transparent 72%);
+  animation: ascHaze 46s ease-in-out infinite alternate;
+  will-change: transform;
+}
+.space-stars {
+  position: absolute; inset: 0;
+  background-image:
+    radial-gradient(1.7px 1.7px at 18% 24%, rgba(255,255,255,.9), transparent 60%),
+    radial-gradient(1.4px 1.4px at 68% 13%, rgba(255,255,255,.65), transparent 60%),
+    radial-gradient(1.5px 1.5px at 83% 61%, rgba(255,255,255,.75), transparent 60%),
+    radial-gradient(1.3px 1.3px at 33% 77%, rgba(255,255,255,.6), transparent 60%),
+    radial-gradient(1.2px 1.2px at 52% 39%, rgba(255,255,255,.55), transparent 60%),
+    radial-gradient(1.6px 1.6px at 91% 29%, rgba(255,255,255,.75), transparent 60%),
+    radial-gradient(1.1px 1.1px at 8% 57%, rgba(255,255,255,.5), transparent 60%),
+    radial-gradient(1.1px 1.1px at 45% 8%, rgba(255,255,255,.5), transparent 60%),
+    radial-gradient(1.2px 1.2px at 60% 90%, rgba(255,255,255,.55), transparent 60%),
+    radial-gradient(1px 1px at 15% 15%, rgba(255,255,255,.2), transparent 60%),
+    radial-gradient(1px 1px at 55% 65%, rgba(255,255,255,.18), transparent 60%);
+  background-size: auto, auto, auto, auto, auto, auto, auto, auto, auto, 150px 150px, 97px 97px;
+  background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, repeat, repeat;
+  animation: ascTwinkle 7s ease-in-out infinite alternate;
+}
+.orbit-field { position: absolute; top: 50%; left: 50%; width: 0; height: 0; transform: translateZ(0); }
+.orbit {
+  position: absolute; top: 0; left: 0; width: 0; height: 0;
+  animation: ascOrbit var(--dur, 200s) linear infinite;
+  will-change: transform;
+}
+.wheel-wrap {
+  position: absolute; top: 0; left: 0;
+  width: calc(var(--S) * var(--sz, 1)); height: calc(var(--S) * var(--sz, 1));
+  margin: calc(var(--S) * var(--sz, 1) / -2);
+  transform: translateX(calc(var(--R) * var(--rk, 1)));
+  opacity: var(--op, .6);
+  filter: blur(var(--bl, 0)) drop-shadow(0 9px 20px rgba(0,0,0,.55));
+}
+.wheel-wrap .wheel-svg {
+  display: block; width: 100%; height: 100%;
+  animation: ascSpin var(--sp, 40s) linear infinite;
+  animation-direction: var(--dir, normal);
+  will-change: transform;
+}
+.space-vignette {
+  position: absolute; inset: 0;
+  background: radial-gradient(60% 50% at 50% 46%, transparent 42%, rgba(6,7,9,.5) 100%);
+}
+@keyframes ascOrbit { to { transform: rotate(360deg); } }
+@keyframes ascSpin  { to { transform: rotate(360deg); } }
+@keyframes ascTwinkle { from { opacity: .55; } to { opacity: .95; } }
+@keyframes ascHaze { from { transform: translate3d(-1.5%, -1%, 0) scale(1.02); } to { transform: translate3d(2%, 1.5%, 0) scale(1.06); } }
+
+/* Tablet — a touch wider so wheels breathe around the card. */
+@media (max-width: 1023px) and (min-width: 620px) { .space-scene { --R: 29vmin; --S: 12vmin; } }
+/* Phone — the card fills the width, so push wheels out (vw so sides clear the
+   card) and shrink them; drop the three "far" wheels to keep it airy + fast. */
+@media (max-width: 619px) {
+  .space-scene { --R: 50vw; --S: 20vw; }
+  .space-scene .orbit-far { display: none; }
+}
+
+/* Respect reduced-motion: stop all orbiting/spinning/twinkle — the scene stays,
+   just frozen (still a pretty, premium still-life behind the card). */
+@media (prefers-reduced-motion: reduce) {
+  .space-haze, .space-stars, .orbit, .wheel-wrap .wheel-svg { animation: none !important; }
+}
 .auth-logo { width: 216px; max-width: 76%; height: auto; align-self: center; margin-bottom: 42px; animation: splashFade 700ms ease both; }
 .auth-form { display: flex; flex-direction: column; }
 

@@ -10,6 +10,7 @@ import { initOffline } from "./offline.js";
 import * as db from "./db.js";
 import { icon, esc, go, toast, busy } from "./ui.js";
 import { t, lang, setLang, LANGS, onLangChange } from "./i18n.js";
+import { spaceSceneHtml } from "./spacescene.js";
 
 document.documentElement.lang = lang();
 
@@ -332,6 +333,7 @@ function renderLogin(mode = "signin") {
   if (document.getElementById("loginBody")) return;
   root.innerHTML = `
     <div class="login-canvas auth">
+      ${spaceSceneHtml()}
       <div class="login-langs-top">${langToggle(true)}</div>
       <div class="auth-col">
         <img class="auth-logo" src="assets/asc-logo.png" alt="ASC — Auto Servisni Centar d.o.o.">
