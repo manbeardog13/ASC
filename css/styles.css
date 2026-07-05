@@ -603,7 +603,7 @@ details.disclose > .disclose-body { padding: 0 2px 16px; }
     radial-gradient(38% 30% at 72% 20%, rgba(78,104,160,.18), transparent 60%),
     radial-gradient(44% 34% at 18% 84%, rgba(224,120,40,.10), transparent 62%),
     radial-gradient(70% 60% at 50% 50%, rgba(16,22,34,.35), transparent 72%);
-  animation: ascHaze 46s ease-in-out infinite alternate;
+  animation: ascHaze 92s ease-in-out infinite alternate;
   will-change: transform;
 }
 .space-stars {
@@ -622,7 +622,7 @@ details.disclose > .disclose-body { padding: 0 2px 16px; }
     radial-gradient(1px 1px at 55% 65%, rgba(255,255,255,.18), transparent 60%);
   background-size: auto, auto, auto, auto, auto, auto, auto, auto, auto, 150px 150px, 97px 97px;
   background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, repeat, repeat;
-  animation: ascTwinkle 7s ease-in-out infinite alternate;
+  animation: ascTwinkle 14s ease-in-out infinite alternate;
 }
 /* The real 3D wheels render into this WebGL canvas (spacescene.js), layered above
    the starfield but beneath the edge vignette so distant wheels sink into the dark. */

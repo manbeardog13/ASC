@@ -102,7 +102,7 @@ export async function mountSpaceScene() {
   const orbiterA = new THREE.Group(); orbiterA.add(wheelA); scene.add(orbiterA);
   const orbiterB = new THREE.Group(); orbiterB.add(wheelB); scene.add(orbiterB);
 
-  const T_ORBIT = 360, T_SPIN = 30, ORBIT_Z = -2.0, TILT = 0.5;
+  const T_ORBIT = 720, T_SPIN = 60, ORBIT_Z = -2.0, TILT = 0.5;
   let Rx = 6, Ry = 5;
   const recompute = () => {
     const aspect = w / h;
@@ -129,7 +129,7 @@ export async function mountSpaceScene() {
     const spin = t * (Math.PI * 2 / T_SPIN);
     wheelA.rotation.z = spin;
     wheelB.rotation.z = -spin * 0.92;
-    earth.earth.rotation.y = t * 0.012;
+    earth.earth.rotation.y = t * 0.006;
     renderer.render(scene, camera);
   };
   const loop = () => { _scene.raf = requestAnimationFrame(loop); if (running) render(); };
