@@ -36,6 +36,11 @@ const TILT = 0.5;                     // orbit-plane tilt
 const WHEEL_SCALE = 0.91;             // wheel size (30% wider than the old 0.7)
 const WHEEL_R = WHEEL_SCALE * 0.95;   // wheel collision radius (world units)
 const HIT_R = WHEEL_SCALE * 1.22;     // clickable radius (a touch generous)
+// Wheel = the generated alloy (kept below ALLOY_KEEP_R) + a purpose-built flat,
+// ridged, matte "formula" tyre (TYRE_INNER..TYRE_OUTER) wrapping the rim.
+const ALLOY_KEEP_R = 0.80;            // keep GLB geometry inside this radius as the alloy
+const TYRE_INNER = 0.70;              // tyre bead (overlaps inward to hide the cut edge)
+const TYRE_OUTER = 1.0;               // tyre tread radius (the wheel's outer edge)
 const STAR_W0 = (Math.PI * 2) / 3000;       // far star layer drift
 const STAR_W1 = (Math.PI * 2) / 2100;       // near star layer drift (parallax)
 
@@ -104,11 +109,11 @@ export async function mountSpaceScene() {
   renderer.setPixelRatio(dpr);
   renderer.setSize(w, h, false);
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 0.82;
+  renderer.toneMappingExposure = 1.15;                 // brighter — comfortable, not gloomy
   renderer.outputColorSpace = THREE.SRGBColorSpace;
 
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x05070c);
+  scene.background = new THREE.Color(0x0a0f18);         // slightly lifted deep blue, less pitch-black
   const camera = new THREE.PerspectiveCamera(35, w / h, 0.1, 600);
   camera.position.set(0, 0, 16);
 
@@ -131,9 +136,10 @@ export async function mountSpaceScene() {
 
   // --- Lights: warm off-screen key (the sun) + cool fill + cool rim (6:1) ------
   const key = new THREE.DirectionalLight(0xfff2dd, 4.2); key.position.set(-8, 6, 6);
-  const fill = new THREE.DirectionalLight(0x3a4d70, 0.28); fill.position.set(7, -2, 4);
-  const rim = new THREE.DirectionalLight(0x88a8ff, 0.45); rim.position.set(3, 3, -8);
-  scene.add(key, fill, rim);
+  const fill = new THREE.DirectionalLight(0x4a5f86, 0.5); fill.position.set(7, -2, 4);
+  const rim = new THREE.DirectionalLight(0x88a8ff, 0.5); rim.position.set(3, 3, -8);
+  const amb = new THREE.AmbientLight(0x2c3a54, 0.35);   // lift shadows so the scene feels comfortable, not eerie
+  scene.add(key, fill, rim, amb);
 
   // --- Starfield (2 far layers, slow parallax drift) ---------------------------
   const starSprite = makeStarSprite(THREE);
@@ -158,18 +164,28 @@ export async function mountSpaceScene() {
   const rigA = mkRig([0.4, -0.6, 0]);
   const rigB = mkRig([0.3, 0.66, 0]);
 
-  new GLTFLoader().load("assets/wheel.glb", (gltf) => {
-    if (!_scene) return;   // scene torn down while loading
-    const { wrap } = normalizeWheel(THREE, gltf.scene);
-    enhanceWheelMaterials(wrap);
-    rigA.spinner.add(wrap);
-    rigB.spinner.add(wrap.clone(true));
-  }, undefined, () => {
-    // Model unavailable → keep a procedural wheel so the scene still has wheels.
+  // Matte rubber shared by both wheels' tyres.
+  const treadBump = makeTireBump(THREE); disposables.push(treadBump);
+  const tyreMat = makeTyreMaterial(THREE, treadBump); disposables.push(tyreMat);
+  const assembleGlb = (alloy, tyreGeo) => {
+    const g = new THREE.Group();
+    g.add(new THREE.Mesh(alloy.geo, alloy.mat));       // the generated alloy (kept)
+    g.add(new THREE.Mesh(tyreGeo, tyreMat));           // the flat, ridged, matte tyre
+    return g;
+  };
+  const addProcWheels = () => {                        // offline fallback
     const shared = makeWheelParts(THREE, disposables);
     rigA.spinner.add(buildWheel(THREE, shared));
     rigB.spinner.add(buildWheel(THREE, shared));
-  });
+  };
+  new GLTFLoader().load("assets/wheel.glb", (gltf) => {
+    if (!_scene) return;   // scene torn down while loading
+    const alloy = splitAlloyWheel(THREE, gltf.scene, ALLOY_KEEP_R, disposables);
+    if (!alloy) return addProcWheels();
+    const tyre = buildFormulaTyre(THREE, alloy.dims, disposables);
+    rigA.spinner.add(assembleGlb(alloy, tyre.geo));
+    rigB.spinner.add(assembleGlb(alloy, tyre.geo));
+  }, undefined, addProcWheels);
 
   // Orbit radii recomputed from the viewport so wheels ride near the edges.
   let Rx = 6, Ry = 5;
@@ -433,52 +449,92 @@ function makeTireBump(THREE) {
   return tex;
 }
 
-// ---- Generated wheel: normalise (orient axle → +Z, centre, unit-scale) ---------
-function normalizeWheel(THREE, src) {
-  const model = src;
-  model.updateMatrixWorld(true);
-  let box = new THREE.Box3().setFromObject(model);
-  const s0 = box.getSize(new THREE.Vector3());
-  // The axle is the shortest bbox dimension — rotate it onto +Z so the wheel faces us.
-  if (s0.x <= s0.y && s0.x <= s0.z) model.rotation.y = Math.PI / 2;
-  else if (s0.y <= s0.x && s0.y <= s0.z) model.rotation.x = Math.PI / 2;
-  model.updateMatrixWorld(true);
-  box = new THREE.Box3().setFromObject(model);
-  const c = box.getCenter(new THREE.Vector3());
-  const s = box.getSize(new THREE.Vector3());
-  model.position.sub(c);                                   // centre at origin
-  const wrap = new THREE.Group();
-  wrap.add(model);
-  const maxXY = Math.max(s.x, s.y, 0.0001);
-  wrap.scale.setScalar(2 / maxXY);                         // fit diameter → 2 (radius 1)
-  return { wrap, halfDepth: s.z / maxXY };                 // z half-depth in radius-1 units
+// The generated wheel is ONE fused, textured mesh. Keep only its inner region
+// (the alloy face + rim, inside keepR·radius) rendered as silver metal, and drop
+// the outer band (the rounded, glossy generated "tyre") — a purpose-built flat
+// matte tyre replaces it. Returns the normalised alloy geometry (axle → +Z,
+// centred, full-wheel radius → 1) + its silver material + tyre-sizing dims.
+function splitAlloyWheel(THREE, root, keepR, disposables) {
+  root.updateMatrixWorld(true);
+  let src = null;
+  root.traverse((o) => { if (!src && o.isMesh && o.geometry) src = o; });
+  if (!src) return null;
+
+  const g = src.geometry.clone();
+  g.applyMatrix4(src.matrixWorld);                         // bake node transforms → world frame
+  g.computeBoundingBox();
+  const size = new THREE.Vector3(), ctr = new THREE.Vector3();
+  g.boundingBox.getSize(size); g.boundingBox.getCenter(ctr);
+  const S = [size.x, size.y, size.z], C = [ctr.x, ctr.y, ctr.z];
+  const ax = (S[0] <= S[1] && S[0] <= S[2]) ? 0 : (S[1] <= S[0] && S[1] <= S[2]) ? 1 : 2;  // axle = shortest
+  const p0 = ax === 0 ? 1 : 0, p1 = ax === 2 ? 1 : 2;     // the two perpendicular (wheel-plane) axes
+  const wheelR = Math.max(S[p0], S[p1]) / 2 || 1;
+
+  // Filter the INDEX (keep the shared vertex buffer) so the alloy stays light.
+  const P = g.attributes.position.array;
+  const rad = (i) => Math.hypot(P[i * 3 + p0] - C[p0], P[i * 3 + p1] - C[p1]);
+  const thr = keepR * wheelR;
+  const keep = [];
+  if (g.index) {
+    const I = g.index.array;
+    for (let t = 0; t < I.length; t += 3) {
+      const a = I[t], b = I[t + 1], c = I[t + 2];
+      if ((rad(a) + rad(b) + rad(c)) / 3 < thr) keep.push(a, b, c);
+    }
+  } else {
+    for (let t = 0; t < g.attributes.position.count; t += 3) {
+      if ((rad(t) + rad(t + 1) + rad(t + 2)) / 3 < thr) keep.push(t, t + 1, t + 2);
+    }
+  }
+  if (keep.length < 3) { g.dispose(); return null; }
+
+  g.setIndex(keep);
+  if (g.attributes.uv) g.deleteAttribute("uv");           // silver metal doesn't need the atlas UVs
+  g.translate(-C[0], -C[1], -C[2]);                        // centre
+  if (ax === 0) g.rotateY(Math.PI / 2); else if (ax === 1) g.rotateX(Math.PI / 2);  // axle → +Z
+  g.scale(1 / wheelR, 1 / wheelR, 1 / wheelR);             // full-wheel radius → 1
+
+  const mat = new THREE.MeshStandardMaterial({ metalness: 1.0, roughness: 0.26, envMapIntensity: 2.0 });
+  mat.color.setRGB(0.80, 0.82, 0.86);                      // the silvery alloy you liked
+  disposables.push(g, mat);
+  return { geo: g, mat, dims: { inner: TYRE_INNER, outer: TYRE_OUTER, halfWidth: Math.min((S[ax] / 2) / wheelR, 0.95) } };
 }
 
-// Silvery metallic alloy + dead-matte black tyre. Classify by base-colour
-// luminance: the bright part is the rim → real chrome-silver metal reflecting
-// the HDRI; the dark part is the tyre → pure black rubber, zero reflection.
-function enhanceWheelMaterials(root) {
-  root.traverse((o) => {
-    if (!o.isMesh || !o.material) return;
-    const mats = Array.isArray(o.material) ? o.material : [o.material];
-    mats.forEach((m) => {
-      const c = m.color;
-      const lum = c ? c.r * 0.3 + c.g * 0.6 + c.b * 0.1 : 0.5;
-      if (lum > 0.26) {                    // alloy → silvery metallic
-        m.metalness = 1.0; m.roughness = 0.24; m.envMapIntensity = 2.0;
-        if (c) c.setRGB(0.80, 0.82, 0.86);
-        m.map = null;                      // drop flat albedo so pure metal reflects
-      } else {                             // tyre → dead-matte black, no reflection
-        m.metalness = 0.0; m.roughness = 1.0; m.envMapIntensity = 0.0;
-        if (c) c.setRGB(0.02, 0.02, 0.022);
-        if (m.emissive) m.emissive.setRGB(0, 0, 0);
-        if ("clearcoat" in m) m.clearcoat = 0;
-        if ("sheen" in m) m.sheen = 0;
-        m.map = null;                      // uniform black, no baked highlights
-      }
-      m.needsUpdate = true;
-    });
+// Purpose-built "formula" tyre: wide, FLAT tread (a cylinder face, not a rounded
+// doughnut) with a few circumferential grooves (ridges), lathed and stood up so
+// the axle is +Z. Matte rubber material comes from makeTyreMaterial.
+function buildFormulaTyre(THREE, dims, disposables) {
+  const inner = dims.inner, outer = dims.outer, hw = dims.halfWidth;
+  const treadHalf = hw * 0.82, gd = 0.045, gw = 0.028;    // groove depth / half-width
+  const grooves = [-0.62, -0.21, 0.21, 0.62].map((f) => f * treadHalf);
+  const P = [];
+  const add = (r, z) => P.push(new THREE.Vector2(r, z));
+  add(inner, -hw);                                         // inner bead
+  add(outer * 0.9, -hw * 0.8);                             // sidewall bulge
+  add(outer, -treadHalf);                                  // shoulder
+  for (const gz of grooves) {                              // flat tread interrupted by grooves
+    add(outer, gz - gw); add(outer - gd, gz - gw * 0.35);
+    add(outer - gd, gz + gw * 0.35); add(outer, gz + gw);
+  }
+  add(outer, treadHalf);                                   // shoulder
+  add(outer * 0.9, hw * 0.8);                              // sidewall
+  add(inner, hw);                                          // far bead
+  const geo = new THREE.LatheGeometry(P, 200);
+  geo.rotateX(Math.PI / 2);                                // lathe axis Y → axle +Z
+  geo.computeVertexNormals();
+  disposables.push(geo);
+  return { geo };
+}
+
+// Matte rubber: near-zero specular + high roughness so it doesn't go glossy;
+// a whisper of env so it isn't a dead void under the lifted exposure.
+function makeTyreMaterial(THREE, bump) {
+  const m = new THREE.MeshPhysicalMaterial({
+    color: 0x101012, metalness: 0.0, roughness: 0.98, envMapIntensity: 0.12,
+    bumpMap: bump, bumpScale: 0.004,
   });
+  if ("specularIntensity" in m) m.specularIntensity = 0.15;   // kill the dielectric sheen → truly matte
+  return m;
 }
 
 // ---- Fallback wheel: shared geometry + PBR materials (env-map driven) -----------
