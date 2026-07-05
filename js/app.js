@@ -10,7 +10,7 @@ import { initOffline } from "./offline.js";
 import * as db from "./db.js";
 import { icon, esc, go, toast, busy } from "./ui.js";
 import { t, lang, setLang, LANGS, onLangChange } from "./i18n.js";
-import { spaceSceneHtml } from "./spacescene.js";
+import { spaceSceneHtml, mountSpaceScene, unmountSpaceScene } from "./spacescene.js";
 
 document.documentElement.lang = lang();
 
@@ -95,6 +95,7 @@ function langToggle(onGlass) {
 
 // ---- App frame (built once when signed in) -----------------------------------
 function mountFrame() {
+  unmountSpaceScene();
   if (document.getElementById("main")) return;
   root.innerHTML = `
     <header class="topbar">
@@ -278,6 +279,7 @@ function renderSetup() {
 // removed). No app data is reachable — show a calm gate with a way out.
 function renderAccessGate() {
   stopRealtime();
+  unmountSpaceScene();
   root.innerHTML = `
     <div class="login-canvas">
       <div class="login-langs-top">${langToggle(true)}</div>
@@ -298,6 +300,7 @@ function renderAccessGate() {
 // password before using the app.
 function renderSetPassword() {
   stopRealtime();
+  unmountSpaceScene();
   root.innerHTML = `
     <div class="login-canvas">
       <div class="login-stage">
@@ -367,6 +370,7 @@ function renderLogin(mode = "signin") {
       </div>
     </div>`;
   paintLogin(mode);
+  mountSpaceScene();   // real 3D backdrop (lazy Three.js; no-op if unavailable)
   setTimeout(() => document.getElementById("email")?.focus({ preventScroll: true }), 80);
 }
 
