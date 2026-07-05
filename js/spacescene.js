@@ -3,23 +3,27 @@
 //
 // Deep, living space: a slowly-drifting three-layer starfield with a few
 // distant spiral galaxies turning at ~1 revolution/hour; two wide alloy wheels
-// (silvery metal rims, dead-matte black tyres, vivid-red centre caps) orbiting
+// (silvery metal rims, dead-matte black tyres, vivid-red centre caps) drifting
 // far away and slow; and rare transient events far off in the void — comets
-// streaking past every few minutes, the odd supernova flaring and fading, and
-// a Millennium Falcon fly-by every 5 hours that jumps to warp. NO bloom/glow.
+// streaking past every few minutes and the odd supernova flaring and fading.
+//
+// The wheels are a light physics sim: each deviates from its slow orbit with a
+// spring-damper that settles in ~5s. They collide with each other elastically
+// (bounce), and you can CLICK/TAP a wheel to "shoot" it — an impulse + spin kick
+// that it rides out and calms back from over ~5 seconds. Spawn is randomised.
 //
 // Physically-based: a real HDRI environment drives the metal reflections, a
 // warm off-screen key rakes the polished alloy. Post is Render → SMAA → Output
 // (ACES + sRGB) — deliberately no bloom pass, so nothing "glows".
 //
-// PURE DECORATION: pointer-events:none, behind the form. Three.js + add-ons and
-// all textures are lazy-loaded from CDNs only on the login screen (bare
-// specifiers resolve through the import map in index.html). If anything is
-// unavailable — offline, blocked, no WebGL, reduced-motion — it silently falls
-// back to the CSS starfield underneath.
+// PURE DECORATION otherwise: behind the form. Three.js + add-ons and all
+// textures are lazy-loaded from CDNs only on the login screen (bare specifiers
+// resolve through the import map in index.html). If anything is unavailable —
+// offline, blocked, no WebGL, reduced-motion — it silently falls back to the
+// CSS starfield underneath.
 //
-// Debug (login screen, dev-console): window.__ascSky.comet() / .nova() / .warp()
-// fire a comet, supernova, or Falcon warp-jump on demand.
+// Debug (login console): window.__ascSky.comet() / .nova() / .hit(0|1) fire a
+// comet, supernova, or a shot on a wheel on demand.
 // ============================================================================
 
 const CDN = "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/";
@@ -31,14 +35,24 @@ const TEX = {
 // --- Scene tuning knobs -------------------------------------------------------
 const T_ORBIT = 1300;                 // wheel orbit period (s) — slow
 const T_SPIN = 150;                   // wheel own-axis spin (s) — slow
-const ORBIT_Z = -5.0;                 // pushed deeper into space than before
+const ORBIT_Z = -5.0;                 // pushed deep into space
 const TILT = 0.5;                     // orbit-plane tilt
-const WHEEL_SCALE = 0.91;             // 30% wider than the previous 0.7
+const WHEEL_SCALE = 0.91;             // wheel size (30% wider than the old 0.7)
+const WHEEL_R = WHEEL_SCALE * 0.95;   // wheel collision radius (world units)
+const HIT_R = WHEEL_SCALE * 1.22;     // clickable radius (a touch generous)
 const GALAXY_W = (Math.PI * 2) / 3600;      // 1 rotation / 60 min
 const STAR_W0 = (Math.PI * 2) / 3000;       // far star layer drift
 const STAR_W1 = (Math.PI * 2) / 2100;       // near star layer drift (parallax)
 const EVENT_MIN = 150, EVENT_MAX = 320;     // seconds between comet/supernova
-const FALCON_PERIOD = 5 * 3600;             // Millennium Falcon fly-by: every 5h
+
+// Physics: spring-damper on each wheel's DEVIATION from its scripted orbit, tuned
+// (K, C) so a shot/bounce decays to rest in ~5s with a little lively overshoot.
+const SPRING_K = 2.0, SPRING_C = 1.55;
+const SPIN_DECAY = 1.35;              // extra-spin time constant (s) → ~5s to calm
+const TILT_K = 7.0, TILT_C = 2.6;    // knock-wobble spring (snappier)
+const RESTITUTION = 0.92;            // wheel-wheel bounciness
+const SHOT_PUSH = 5.5;               // shot linear impulse (world u/s) along the ray
+const SHOT_SPIN = 12.0;              // shot angular impulse (rad/s)
 
 export function spaceSceneHtml() {
   return `<div class="space-scene" aria-hidden="true">
@@ -57,6 +71,7 @@ export function unmountSpaceScene() {
     cancelAnimationFrame(_scene.raf);
     window.removeEventListener("resize", _scene.onResize);
     document.removeEventListener("visibilitychange", _scene.onVis);
+    window.removeEventListener("pointerdown", _scene.onPointer);
     _scene.dispose();
   } catch { /* ignore */ }
   _scene = null;
@@ -160,14 +175,16 @@ export async function mountSpaceScene() {
     }
   };
 
-  // --- Two wheels: the generated GLB, cloned into two orbiters -----------------
-  // orbiter (orbit position) → tilt (fixed viewing angle) → spinner (own-axis spin).
+  // --- Two wheels ---------------------------------------------------------------
+  // Rig: orbiter (physics position) → tiltBase (fixed viewing angle + scale) →
+  // wobble (dynamic knock-wobble, springs to 0) → spinner (own-axis spin).
   const mkRig = (tilt) => {
     const orbiter = new THREE.Group();
-    const t = new THREE.Group(); t.rotation.set(tilt[0], tilt[1], tilt[2]); t.scale.setScalar(WHEEL_SCALE);
+    const tiltBase = new THREE.Group(); tiltBase.rotation.set(tilt[0], tilt[1], tilt[2]); tiltBase.scale.setScalar(WHEEL_SCALE);
+    const wobble = new THREE.Group();
     const spinner = new THREE.Group();
-    t.add(spinner); orbiter.add(t); scene.add(orbiter);
-    return { orbiter, spinner };
+    wobble.add(spinner); tiltBase.add(wobble); orbiter.add(tiltBase); scene.add(orbiter);
+    return { orbiter, wobble, spinner };
   };
   const rigA = mkRig([0.4, -0.6, 0]);
   const rigB = mkRig([0.3, 0.66, 0]);
@@ -187,6 +204,7 @@ export async function mountSpaceScene() {
     rigB.spinner.add(buildWheel(THREE, shared));
   });
 
+  // Orbit radii recomputed from the viewport so wheels ride near the edges.
   let Rx = 6, Ry = 5;
   const recompute = () => {
     const aspect = w / h;
@@ -198,10 +216,116 @@ export async function mountSpaceScene() {
     Ry = halfH * 0.86;
   };
   recompute();
-  const place = (orbiter, ang) => {
-    const lx = Math.cos(ang) * Rx, ly = Math.sin(ang) * Ry;
-    orbiter.position.set(lx, ly * Math.cos(TILT), ly * Math.sin(TILT) + ORBIT_Z);
+
+  // --- Wheel physics bodies (randomised spawn) ---------------------------------
+  const R = Math.random;
+  const setAnchor = (b, t) => {
+    const ang = b.phase + t * (Math.PI * 2 / b.period);
+    const lx = Math.cos(ang) * Rx * b.rs + b.cx;
+    const ly = Math.sin(ang) * Ry * b.rs + b.cy;
+    b.anchor.set(lx, ly * Math.cos(TILT), ly * Math.sin(TILT) + ORBIT_Z);
   };
+  const makeBody = (rig, cfg) => {
+    const b = {
+      rig, phase: cfg.phase, period: cfg.period, rs: cfg.rs, cx: cfg.cx, cy: cfg.cy, spinDir: cfg.spinDir,
+      offset: new THREE.Vector3(), offVel: new THREE.Vector3(), vel: new THREE.Vector3(),
+      anchor: new THREE.Vector3(), anchorPrev: new THREE.Vector3(),
+      spinAngle: cfg.spin0, spinExtra: 0, tiltX: 0, tiltY: 0, tiltVX: 0, tiltVY: 0,
+    };
+    setAnchor(b, 0); b.anchorPrev.copy(b.anchor);
+    return b;
+  };
+  const phaseA = R() * Math.PI * 2;
+  const wheels = [
+    makeBody(rigA, { phase: phaseA, period: T_ORBIT, rs: 1.0, cx: 0, cy: 0, spinDir: 1, spin0: R() * Math.PI * 2 }),
+    // B: offset centre + different radius & period so the two paths cross and the
+    // wheels occasionally meet (and bounce) on their own, not just when shot.
+    makeBody(rigB, { phase: phaseA + Math.PI + (R() - 0.5) * 1.4, period: T_ORBIT * 1.17, rs: 0.9, cx: (R() - 0.5) * 2.5, cy: -1.6, spinDir: -1, spin0: R() * Math.PI * 2 }),
+  ];
+  // A whisper of initial drift so it doesn't look frozen at spawn.
+  wheels.forEach((b) => b.offVel.set((R() - 0.5) * 0.6, (R() - 0.5) * 0.6, 0));
+
+  // Scratch vectors (reused every frame; no per-frame allocation).
+  const _av = new THREE.Vector3(), _f = new THREE.Vector3();
+  const _pa = new THREE.Vector3(), _pb = new THREE.Vector3(), _n = new THREE.Vector3(), _vr = new THREE.Vector3(), _vt = new THREE.Vector3();
+
+  const stepBody = (b, dt) => {
+    b.anchorPrev.copy(b.anchor);
+    setAnchor(b, b._t);
+    _av.subVectors(b.anchor, b.anchorPrev).multiplyScalar(dt > 0 ? 1 / dt : 0);   // anchor velocity
+    // spring-damper on the offset: offVel += (-K*offset - C*offVel)*dt
+    _f.copy(b.offset).multiplyScalar(-SPRING_K).addScaledVector(b.offVel, -SPRING_C);
+    b.offVel.addScaledVector(_f, dt);
+    b.offset.addScaledVector(b.offVel, dt);
+    b.vel.copy(_av).add(b.offVel);                       // total world velocity (for collisions)
+    // spin: nominal drift + decaying shot/impact spin
+    b.spinExtra *= Math.exp(-dt / SPIN_DECAY);
+    b.spinAngle += (b.spinDir * (Math.PI * 2 / T_SPIN) + b.spinExtra) * dt;
+    // knock-wobble springs back to flat
+    b.tiltVX += (-TILT_K * b.tiltX - TILT_C * b.tiltVX) * dt; b.tiltX += b.tiltVX * dt;
+    b.tiltVY += (-TILT_K * b.tiltY - TILT_C * b.tiltVY) * dt; b.tiltY += b.tiltVY * dt;
+  };
+
+  const collide = () => {
+    const A = wheels[0], B = wheels[1];
+    _pa.copy(A.anchor).add(A.offset);
+    _pb.copy(B.anchor).add(B.offset);
+    _n.subVectors(_pb, _pa);
+    const dist = _n.length(), minD = WHEEL_R * 2;
+    if (dist < 1e-4 || dist >= minD) return;
+    _n.multiplyScalar(1 / dist);                         // contact normal A→B
+    _vr.subVectors(B.vel, A.vel);
+    const vn = _vr.dot(_n);
+    if (vn < 0) {                                        // approaching → elastic bounce
+      const j = -(1 + RESTITUTION) * vn * 0.5;           // equal mass
+      A.offVel.addScaledVector(_n, -j);
+      B.offVel.addScaledVector(_n, j);
+      _vt.copy(_vr).addScaledVector(_n, -vn);            // tangential → spin transfer
+      const tmag = _vt.length();
+      A.spinExtra += tmag * 0.7; B.spinExtra -= tmag * 0.7;
+      A.tiltVX -= _n.y * vn * 0.5; B.tiltVX += _n.y * vn * 0.5;
+    }
+    const overlap = minD - dist;                         // positional de-penetration (split)
+    A.offset.addScaledVector(_n, -overlap * 0.5);
+    B.offset.addScaledVector(_n, overlap * 0.5);
+  };
+
+  const applyBody = (b) => {
+    b.rig.orbiter.position.copy(b.anchor).add(b.offset);
+    b.rig.wobble.rotation.set(b.tiltX, b.tiltY, 0);
+    b.rig.spinner.rotation.z = b.spinAngle;
+  };
+
+  // --- Click / tap a wheel to "shoot" it ---------------------------------------
+  const ray = new THREE.Raycaster();
+  const _sph = new THREE.Sphere(), _hit = new THREE.Vector3(), _c = new THREE.Vector3(), _off = new THREE.Vector3();
+  const shoot = (b, dir, hitOff) => {
+    b.offVel.addScaledVector(dir, SHOT_PUSH);                       // knock-back along the shot
+    const side = hitOff && hitOff.x !== 0 ? Math.sign(hitOff.x) : (R() < 0.5 ? -1 : 1);
+    b.spinExtra += SHOT_SPIN * (0.6 + R() * 0.8) * side;            // whirl
+    b.tiltVX += (R() - 0.5) * 3 + (hitOff ? hitOff.y * 3 : 0);      // rock it
+    b.tiltVY += (R() - 0.5) * 3 - (hitOff ? hitOff.x * 3 : 0);
+  };
+  const onPointer = (ev) => {
+    if (ev.clientX == null) return;
+    const rect = canvas.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+    const nx = ((ev.clientX - rect.left) / rect.width) * 2 - 1;
+    const ny = -((ev.clientY - rect.top) / rect.height) * 2 + 1;
+    if (nx < -1 || nx > 1 || ny < -1 || ny > 1) return;            // outside the canvas → ignore
+    ray.setFromCamera({ x: nx, y: ny }, camera);
+    let best = null, bestDist = Infinity, bestOff = null;
+    for (const b of wheels) {
+      _c.copy(b.anchor).add(b.offset);
+      _sph.set(_c, HIT_R);
+      if (ray.ray.intersectSphere(_sph, _hit)) {
+        const d = _hit.distanceTo(camera.position);
+        if (d < bestDist) { bestDist = d; best = b; bestOff = _off.subVectors(_hit, _c).clone(); }
+      }
+    }
+    if (best) shoot(best, ray.ray.direction, bestOff);
+  };
+  window.addEventListener("pointerdown", onPointer);
 
   // --- Transient events far in the void ----------------------------------------
   const transients = [];
@@ -210,15 +334,13 @@ export async function mountSpaceScene() {
       ? spawnComet(THREE, scene, cometTex)
       : spawnNova(THREE, scene, flareTex, ringTex));
   };
-  const falcon = makeFalcon(THREE, scene, glowTex);
   let nextEvt = 22 + Math.random() * 16;      // first bit of life within ~40s
-  let nextFalcon = FALCON_PERIOD;
 
-  // Dev-console hooks so the rare Falcon warp can actually be seen/tested.
+  // Dev-console hooks for testing (login screen only).
   window.__ascSky = {
     comet: () => transients.push(spawnComet(THREE, scene, cometTex)),
     nova: () => transients.push(spawnNova(THREE, scene, flareTex, ringTex)),
-    warp: () => falcon.trigger(),
+    hit: (i = 0) => { const b = wheels[i]; if (b) shoot(b, _c.set((R() - 0.5), (R() - 0.5), -1).normalize(), null); },
   };
 
   // --- Cinematic post: Render → SMAA → Output(ACES + sRGB). No bloom/glow. ------
@@ -236,13 +358,10 @@ export async function mountSpaceScene() {
     let dt = t - last; last = t;
     if (dt > 0.05) dt = 0.05; else if (dt < 0) dt = 0;
 
-    // Wheels: slow orbit + slow spin.
-    const ao = t * (Math.PI * 2 / T_ORBIT);
-    place(rigA.orbiter, ao);
-    place(rigB.orbiter, ao + Math.PI);
-    const spin = t * (Math.PI * 2 / T_SPIN);
-    rigA.spinner.rotation.z = spin;
-    rigB.spinner.rotation.z = -spin * 0.92;
+    // Wheels: physics step → collide → apply.
+    for (const b of wheels) { b._t = t; stepBody(b, dt); }
+    collide();
+    for (const b of wheels) applyBody(b);
 
     // Living universe: drifting star layers (parallax) + turning galaxies.
     starLayers[0].rotation.set(Math.sin(t * 0.02) * 0.02, t * STAR_W0, 0);
@@ -251,12 +370,9 @@ export async function mountSpaceScene() {
 
     // Scheduled far-away events.
     if (t >= nextEvt) { fireEvent(); nextEvt = t + EVENT_MIN + Math.random() * (EVENT_MAX - EVENT_MIN); }
-    if (t >= nextFalcon && !falcon.isActive()) { falcon.trigger(); nextFalcon = t + FALCON_PERIOD; }
-
     for (let i = transients.length - 1; i >= 0; i--) {
       if (transients[i].update(dt)) { transients[i].dispose(); transients.splice(i, 1); }
     }
-    falcon.update(dt);
 
     composer.render();
   };
@@ -277,7 +393,6 @@ export async function mountSpaceScene() {
     try { delete window.__ascSky; } catch { window.__ascSky = undefined; }
     transients.forEach((x) => x.dispose());
     transients.length = 0;
-    falcon.dispose();
     renderer.dispose();
     composer.dispose?.();
     pmrem.dispose();
@@ -287,7 +402,7 @@ export async function mountSpaceScene() {
     scene.environment = null;
   };
 
-  _scene = { raf: 0, onResize, onVis, dispose, _env: null };
+  _scene = { raf: 0, onResize, onVis, onPointer, dispose, _env: null };
   render();
   _scene.raf = requestAnimationFrame(loop);
 }
@@ -521,170 +636,6 @@ function spawnNova(THREE, scene, flareTex, ringTex) {
     },
     dispose() { scene.remove(flare); scene.remove(ring); flare.material.dispose(); ring.material.dispose(); },
   };
-}
-
-// ---- Millennium Falcon fly-by + warp jump --------------------------------------
-// Generated GLB (assets/falcon.glb) flown across the far distance; on cue the
-// engines flare, the ship stretches along its heading, and it snaps to warp.
-function makeFalcon(THREE, scene, glowTex) {
-  let active = false, state = "idle", age = 0, parts = [], modelCache = null, GLTFLoaderRef = null;
-  let root = null, inner = null, ship = null, engineGlow = null, flash = null, vx = 0, vy = 0, speed = 0;
-
-  const ensureLoader = () => {
-    if (GLTFLoaderRef) return Promise.resolve(GLTFLoaderRef);
-    return import(CDN + "loaders/GLTFLoader.js").then((m) => (GLTFLoaderRef = m.GLTFLoader));
-  };
-
-  function build() {
-    parts = [];
-    root = new THREE.Group(); inner = new THREE.Group(); root.add(inner);
-
-    // A holder the model drops into; scaled/normalised once loaded.
-    ship = new THREE.Group();
-    inner.add(ship);
-
-    // Engine glow (blue-white) trailing behind the ship; the warp streak.
-    engineGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: 0x9fd2ff, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, opacity: 0.85 }));
-    engineGlow.position.set(-1.25, 0, 0);
-    engineGlow.scale.set(0.8, 1.4, 1);
-    inner.add(engineGlow);
-    parts.push(engineGlow.material);
-
-    // Warp flash (in root, so it doesn't stretch with the ship).
-    flash = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: 0xffffff, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, opacity: 0 }));
-    flash.scale.setScalar(0.1);
-    root.add(flash);
-    parts.push(flash.material);
-
-    root.scale.setScalar(2.6);
-    scene.add(root);
-
-    // Load (and cache) the generated model; orient nose → +X, unit-scale.
-    ensureLoader().then((Loader) => {
-      if (!active || !ship) return;
-      const place = (obj) => { ship.add(obj); };
-      if (modelCache) { place(modelCache.clone(true)); return; }
-      new Loader().load("assets/falcon.glb", (gltf) => {
-        if (!ship) return;
-        const m = normalizeFalcon(THREE, gltf.scene);
-        modelCache = m;
-        place(m.clone(true));
-      }, undefined, () => { /* offline first-run → engine glow still streaks */ });
-    });
-  }
-
-  function cleanup() {
-    if (root) scene.remove(root);
-    parts.forEach((p) => p && p.dispose && p.dispose());
-    parts = []; root = inner = ship = engineGlow = flash = null;
-    active = false; state = "idle";
-  }
-
-  function trigger() {
-    if (active) return;
-    active = true; age = 0; state = "cruise";
-    build();
-    const dir = Math.random() * Math.PI * 2;
-    vx = Math.cos(dir); vy = Math.sin(dir); speed = 9;
-    const R = 50;
-    root.position.set(-vx * R + (Math.random() - 0.5) * 16, -vy * R * 0.6 + 12 + (Math.random() - 0.5) * 8, -85);
-    inner.rotation.z = Math.atan2(vy, vx);       // heading in the screen plane
-    root.rotation.set(0.52, -0.34, 0);           // fixed 3/4 viewing tilt
-  }
-
-  function update(dt) {
-    if (!active) return;
-    age += dt;
-    root.position.x += vx * speed * dt;
-    root.position.y += vy * speed * dt;
-    inner.position.y = Math.sin(age * 1.4) * 0.04;   // gentle bob
-
-    if (state === "cruise") {
-      engineGlow.material.opacity = 0.85;
-      if (age > 3.1) state = "charge";
-    } else if (state === "charge") {
-      const k = (age - 3.1) / 0.9;                   // engines build, ship eases up
-      speed = Math.max(4, 9 - 5 * k);
-      engineGlow.material.opacity = 0.85 + 0.15 * Math.sin(age * 30);
-      engineGlow.scale.set(0.8 + 0.6 * k, 1.4 + 0.7 * k, 1);
-      if (age > 4.0) state = "warp";
-    } else if (state === "warp") {
-      const wv = Math.min(1, (age - 4.0) / 1.0);
-      if (ship) ship.scale.x = 1 + wv * 8;           // stretch along heading
-      speed = 9 + wv * wv * 120;                     // snap forward
-      engineGlow.scale.set(1.4 + wv * 7, 2.2, 1);    // long warp streak
-      engineGlow.material.opacity = 0.9;
-      flash.material.opacity = Math.sin(wv * Math.PI) * 0.9;
-      flash.scale.setScalar(0.2 + wv * 6);
-      if (wv >= 1) cleanup();
-    }
-  }
-
-  return { trigger, update, dispose: cleanup, isActive: () => active };
-}
-
-// Normalise the generated Falcon: stand the disc up to face the camera (+Z, thin
-// along Z), centre it, aim its nose (mandible fork) to +X so it flies nose-first,
-// and unit-scale it. Returns a group whose local +X is "forward".
-function normalizeFalcon(THREE, src) {
-  const model = src;
-  model.updateMatrixWorld(true);
-  let box = new THREE.Box3().setFromObject(model);
-  const s0 = box.getSize(new THREE.Vector3());
-  // Thinnest axis is the disc's normal → stand it up to face +Z.
-  if (s0.x <= s0.y && s0.x <= s0.z) model.rotation.y = Math.PI / 2;
-  else if (s0.y <= s0.x && s0.y <= s0.z) model.rotation.x = Math.PI / 2;
-  model.updateMatrixWorld(true);
-  box = new THREE.Box3().setFromObject(model);
-  const c = box.getCenter(new THREE.Vector3());
-  const s = box.getSize(new THREE.Vector3());
-  model.position.sub(c);
-  model.updateMatrixWorld(true);
-  // Give every material an env-lit metallic finish (weathered hull) if flat.
-  model.traverse((o) => {
-    if (!o.isMesh || !o.material) return;
-    const mats = Array.isArray(o.material) ? o.material : [o.material];
-    mats.forEach((m) => {
-      if (m.metalness !== undefined) { m.metalness = Math.max(m.metalness, 0.55); m.roughness = Math.min(m.roughness ?? 1, 0.6); m.envMapIntensity = 1.0; }
-      m.needsUpdate = true;
-    });
-  });
-  // Aim the nose along +X: the farthest-out vertices in the disc plane are the
-  // mandible tips; their average direction is "forward". Spin the ship to match.
-  const yawGroup = new THREE.Group();
-  yawGroup.rotation.z = -falconForwardYaw(THREE, model);
-  yawGroup.add(model);
-  const wrap = new THREE.Group();
-  wrap.add(yawGroup);
-  wrap.scale.setScalar(2 / Math.max(s.x, s.y, 0.0001));   // longest span → 2
-  return wrap;
-}
-
-// The Millennium Falcon's mandible fork sticks out past the round disc, so the
-// vertices farthest from the axle axis cluster at the two prongs; averaging their
-// in-plane direction points along the ship's nose.
-function falconForwardYaw(THREE, model) {
-  const v = new THREE.Vector3();
-  let maxR = 0;
-  const scan = (fn) => model.traverse((o) => {
-    const p = o.isMesh && o.geometry && o.geometry.attributes && o.geometry.attributes.position;
-    if (!p) return;
-    const step = Math.max(1, Math.floor(p.count / 20000));
-    for (let i = 0; i < p.count; i += step) { v.fromBufferAttribute(p, i).applyMatrix4(o.matrixWorld); fn(Math.hypot(v.x, v.y)); }
-  });
-  scan((r) => { if (r > maxR) maxR = r; });
-  if (maxR <= 0) return 0;
-  let sx = 0, sy = 0, n = 0; const thr = maxR * 0.85;
-  model.traverse((o) => {
-    const p = o.isMesh && o.geometry && o.geometry.attributes && o.geometry.attributes.position;
-    if (!p) return;
-    const step = Math.max(1, Math.floor(p.count / 20000));
-    for (let i = 0; i < p.count; i += step) {
-      v.fromBufferAttribute(p, i).applyMatrix4(o.matrixWorld);
-      if (Math.hypot(v.x, v.y) >= thr) { sx += v.x; sy += v.y; n++; }
-    }
-  });
-  return n ? Math.atan2(sy, sx) : 0;
 }
 
 // ---- Tyre tread bump (procedural fallback wheel) -------------------------------

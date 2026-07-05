@@ -68,7 +68,7 @@ const DICT = {
     "login.signupDone": "Account created. Check your email to confirm it, then sign in.",
     "login.minPass": "Use at least 6 characters for the password.",
     "login.remember": "Remember me", "login.forgot": "Forgot password?",
-    "login.google": "Continue with Google", "login.firstTime": "First time here?",
+    "login.google": "Continue with Google", "login.firstTime": "First time here?", "login.or": "or",
     "login.showPw": "Show password", "login.hidePw": "Hide password",
     "login.forgotSent": "Reset link sent — check your email.", "login.forgotNeedEmail": "Enter your email first.",
     // access gate (signed in but no role yet / removed)
@@ -209,7 +209,7 @@ const DICT = {
     "login.signupDone": "Račun je izrađen. Provjerite e-poštu i potvrdite ga, zatim se prijavite.",
     "login.minPass": "Lozinka mora imati barem 6 znakova.",
     "login.remember": "Zapamti me", "login.forgot": "Zaboravljena lozinka?",
-    "login.google": "Nastavi s Googleom", "login.firstTime": "Prvi put ovdje?",
+    "login.google": "Nastavi s Googleom", "login.firstTime": "Prvi put ovdje?", "login.or": "ili",
     "login.showPw": "Prikaži lozinku", "login.hidePw": "Sakrij lozinku",
     "login.forgotSent": "Poveznica za ponovno postavljanje poslana — provjerite e-poštu.", "login.forgotNeedEmail": "Najprije unesite e-poštu.",
     "gate.title": "Pristup na čekanju", "gate.body": "Vaš račun još nema pristup. Zatražite od administratora da vam dodijeli ulogu, zatim se ponovno prijavite.",

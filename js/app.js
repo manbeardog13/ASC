@@ -391,7 +391,7 @@ function paintLogin(mode) {
         ${emailField}${passField}
         <button class="btn-amber" type="submit">${t("login.signupCta")}</button>
         ${status}
-        <div class="auth-gap"></div>
+        <div class="auth-divider"><span>${t("login.or")}</span></div>
         ${googleBtn}
         <p class="auth-create"><button type="button" id="loginSwitch" class="auth-create-link">${t("login.haveAccount")}</button></p>
       </form>`
@@ -401,7 +401,7 @@ function paintLogin(mode) {
         <button class="btn-amber" type="submit">${t("login.signin")}</button>
         ${status}
         <button type="button" id="forgot" class="auth-forgot">${t("login.forgot")}</button>
-        <div class="auth-gap"></div>
+        <div class="auth-divider"><span>${t("login.or")}</span></div>
         ${googleBtn}
         <p class="auth-create">${t("login.firstTime")} <button type="button" id="loginSwitch" class="auth-create-link">${t("login.createAccount")}</button></p>
       </form>`;
