@@ -2,7 +2,7 @@
    Makes the app installable and loads the shell instantly. Network-first for
    same-origin files (so deploys show up right away), cache fallback when
    offline. Live data always comes from Supabase online. */
-const CACHE = "asc-tirehotel-v12";
+const CACHE = "asc-tirehotel-v13";
 const SHELL = [
   "./",
   "./index.html",
@@ -52,16 +52,41 @@ self.addEventListener("activate", (e) => {
   );
 });
 
+// Only ever cache clean, complete, same-origin 200s — never opaque, redirected,
+// or error responses (any of those, served back later, can wedge the app).
+function cacheable(res) {
+  return res && res.ok && res.type === "basic" && !res.redirected;
+}
+
 self.addEventListener("fetch", (e) => {
   const req = e.request;
   if (req.method !== "GET" || new URL(req.url).origin !== self.location.origin) return;
+
+  // Full page loads (incl. pull-to-refresh): network-first; on failure fall back
+  // to the cached app shell. The shell is the ONLY thing we ever answer a
+  // navigation with.
+  if (req.mode === "navigate") {
+    e.respondWith(
+      fetch(req)
+        .then((res) => {
+          if (cacheable(res)) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put("./index.html", copy)).catch(() => {}); }
+          return res;
+        })
+        .catch(() => caches.match("./index.html").then((r) => r || caches.match("./")))
+    );
+    return;
+  }
+
+  // Scripts / styles / images / data: network-first, cache clean 200s.
+  // CRUCIAL: if it's not cached and the network fails, let it fail — do NOT fall
+  // back to index.html. Serving HTML for a .js request makes the browser throw a
+  // parse error and white-screens the whole app (this was the reload crash).
   e.respondWith(
     fetch(req)
       .then((res) => {
-        const copy = res.clone();
-        caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
+        if (cacheable(res)) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {}); }
         return res;
       })
-      .catch(() => caches.match(req).then((r) => r || caches.match("./index.html")))
+      .catch(() => caches.match(req))
   );
 });

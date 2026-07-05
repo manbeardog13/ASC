@@ -30,6 +30,36 @@
     <noscript><div style="padding:24px;font-family:sans-serif">ASC needs JavaScript enabled.</div></noscript>
   </div>
 
+  <!-- Recovery watchdog (plain script, runs even if the app bundle fails to load).
+       If a reload ever serves a broken/stale shell, app.js won't set __ascBooted,
+       and after 10s we show a one-tap Reset that clears the service worker + caches
+       — so a wedged state never again requires deleting the app from the home screen. -->
+  <script>
+    window.__ascBooted = false;
+    function ascReset(btn){
+      if (btn) { btn.disabled = true; btn.textContent = "…"; }
+      var reload = function(){ location.reload(); };
+      var p = Promise.resolve();
+      if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations) {
+        p = navigator.serviceWorker.getRegistrations().then(function(rs){ return Promise.all(rs.map(function(r){ return r.unregister(); })); });
+      }
+      p.then(function(){ return (window.caches && caches.keys) ? caches.keys().then(function(ks){ return Promise.all(ks.map(function(k){ return caches.delete(k); })); }) : null; })
+       .then(reload, reload);
+    }
+    setTimeout(function(){
+      if (window.__ascBooted) return;
+      var r = document.getElementById("app-root") || document.body;
+      r.innerHTML = '<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;'
+        + 'font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;background:#0d0f13;color:#f1ede6;text-align:center">'
+        + '<div style="max-width:320px">'
+        + '<div style="font-weight:800;font-size:24px;letter-spacing:2px;color:#fb8b3c;margin-bottom:12px">ASC</div>'
+        + '<p style="color:#c7c2b8;font-size:15px;line-height:1.5;margin:0 0 20px">Trebamo osvježiti aplikaciju.<br>The app needs to refresh.</p>'
+        + '<button onclick="ascReset(this)" style="width:100%;min-height:48px;border:none;border-radius:10px;'
+        + 'font-family:inherit;font-size:15px;font-weight:700;color:#fff;cursor:pointer;'
+        + 'background:linear-gradient(180deg,#FB923C,#E2560C)">Osvježi · Reset</button></div></div>';
+    }, 10000);
+  </script>
+
   <script type="module" src="js/app.js"></script>
   <script>
     if ("serviceWorker" in navigator) {

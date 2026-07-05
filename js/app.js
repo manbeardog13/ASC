@@ -145,6 +145,7 @@ function openMenu() {
 
 // ---- Router -------------------------------------------------------------------
 async function route() {
+  window.__ascBooted = true; // the JS bundle loaded and is running (recovery watchdog)
   const path = (location.hash.replace(/^#/, "") || "/");
   setViewRefresh(null);
   setState({ route: path });
