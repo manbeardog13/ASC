@@ -542,36 +542,35 @@ details.disclose > .disclose-body { padding: 0 2px 16px; }
   background: var(--brand-tint); color: var(--brand);
 }
 
-/* Language switch — inline SVG flags (US = English, HR = Croatian) */
-.lang-toggle { display: inline-flex; gap: 4px; padding: 3px; border-radius: 999px; }
-.lang-toggle.on-glass { background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.14); }
-.lang-toggle .lang-flag {
+/* Language switch — one flag for the current language; tap cross-fades to the
+   other (US = English, HR = Croatian). 16px = 20% smaller than the old 20px. */
+.flag-swap {
   display: inline-flex; align-items: center; justify-content: center;
-  min-height: auto; padding: 4px; border: none; background: transparent; border-radius: 7px;
-  cursor: pointer; opacity: .5; line-height: 0;
-  transition: opacity 160ms ease, transform 160ms ease;
+  padding: 9px; border: none; background: transparent; cursor: pointer; border-radius: 999px;
+  line-height: 0; -webkit-tap-highlight-color: transparent;
+  transition: transform 160ms ease;
 }
-.lang-toggle .lang-flag:hover { opacity: .85; }
-.lang-toggle .lang-flag[aria-pressed="true"] { opacity: 1; }
-.flag { display: block; width: 20px; height: auto; border-radius: 3px; box-shadow: 0 1px 3px rgba(0,0,0,.45); }
-.lang-toggle .lang-flag[aria-pressed="true"] .flag { box-shadow: 0 0 0 1.6px rgba(255,255,255,.85), 0 1px 4px rgba(0,0,0,.5); }
+.flag-swap:active { transform: scale(.93); }
+.flag-stack { position: relative; display: block; width: 16px; aspect-ratio: 3 / 2; }
+.flag-face { position: absolute; inset: 0; opacity: 0; }
+.flag-swap[data-cur="hr"] .flag-face[data-face="hr"],
+.flag-swap[data-cur="en"] .flag-face[data-face="en"] { opacity: 1; }
+.flag { display: block; width: 16px; height: auto; border-radius: 2.5px; box-shadow: 0 1px 3px rgba(0,0,0,.5); }
 
-/* Login / gate: flags pinned to the top-right corner, out of the glass card. */
+/* Login / gate: flag pinned to the top-right corner in a glass pill. */
 .login-langs-top {
   position: absolute; z-index: 3;
   top: max(14px, env(safe-area-inset-top));
   right: max(14px, env(safe-area-inset-right));
 }
-.login-langs-top .lang-toggle {
+.login-langs-top .flag-swap {
   background: rgba(10,12,16,.42); border: 1px solid rgba(255,255,255,.12);
   backdrop-filter: blur(10px) saturate(1.2); -webkit-backdrop-filter: blur(10px) saturate(1.2);
   box-shadow: 0 6px 20px -8px rgba(0,0,0,.6);
 }
 
-/* Compact flags in the app top bar */
-.topbar .lang-toggle { background: rgba(255,255,255,.06); }
-.topbar .lang-toggle .lang-flag { padding: 3px; }
-.topbar .flag { width: 18px; }
+/* Compact flag in the app top bar */
+.topbar .flag-swap { padding: 6px; }
 
 @keyframes appFadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes splashFade { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }

@@ -62,10 +62,18 @@ const FLAGS = {
   en: '<svg class="flag" viewBox="0 0 24 16" aria-hidden="true"><clipPath id="us-c"><rect width="24" height="16" rx="2.5"/></clipPath><g clip-path="url(#us-c)"><rect width="24" height="16" fill="#fff"/><g fill="#b22234"><rect width="24" height="1.23"/><rect y="2.46" width="24" height="1.23"/><rect y="4.92" width="24" height="1.23"/><rect y="7.39" width="24" height="1.23"/><rect y="9.85" width="24" height="1.23"/><rect y="12.31" width="24" height="1.23"/><rect y="14.77" width="24" height="1.23"/></g><rect width="10.4" height="8.62" fill="#3c3b6e"/><g fill="#fff"><circle cx="1.7" cy="1.5" r=".55"/><circle cx="4.2" cy="1.5" r=".55"/><circle cx="6.7" cy="1.5" r=".55"/><circle cx="9.2" cy="1.5" r=".55"/><circle cx="2.95" cy="3.1" r=".55"/><circle cx="5.45" cy="3.1" r=".55"/><circle cx="7.95" cy="3.1" r=".55"/><circle cx="1.7" cy="4.7" r=".55"/><circle cx="4.2" cy="4.7" r=".55"/><circle cx="6.7" cy="4.7" r=".55"/><circle cx="9.2" cy="4.7" r=".55"/><circle cx="2.95" cy="6.3" r=".55"/><circle cx="5.45" cy="6.3" r=".55"/><circle cx="7.95" cy="6.3" r=".55"/></g></g></svg>',
   hr: '<svg class="flag" viewBox="0 0 24 16" aria-hidden="true"><clipPath id="hr-c"><rect width="24" height="16" rx="2.5"/></clipPath><g clip-path="url(#hr-c)"><rect width="24" height="5.34" fill="#ff0000"/><rect y="5.34" width="24" height="5.32" fill="#fff"/><rect y="10.66" width="24" height="5.34" fill="#171796"/><g transform="translate(9.4,3.2)"><rect width="5.2" height="6.4" rx=".4" fill="#fff" stroke="#0a3aa0" stroke-width=".4"/><g fill="#d80027"><rect width="1.3" height="1.28"/><rect x="2.6" width="1.3" height="1.28"/><rect x="1.3" y="1.28" width="1.3" height="1.28"/><rect x="3.9" y="1.28" width="1.3" height="1.28"/><rect y="2.56" width="1.3" height="1.28"/><rect x="2.6" y="2.56" width="1.3" height="1.28"/><rect x="1.3" y="3.84" width="1.3" height="1.28"/><rect x="3.9" y="3.84" width="1.3" height="1.28"/><rect y="5.12" width="1.3" height="1.28"/><rect x="2.6" y="5.12" width="1.3" height="1.28"/></g></g></g></svg>',
 };
+// A single flag showing the CURRENT language. Tapping it cross-fades to the other
+// language's flag over 1s (handled below), then switches the language.
 function langToggle(onGlass) {
-  return `<div class="lang-toggle${onGlass ? " on-glass" : ""}" role="group" aria-label="Language">
-    ${LANGS.map((l) => `<button type="button" class="lang-flag" data-lang="${l.code}" aria-pressed="${lang() === l.code}" aria-label="${l.name}" title="${l.name}">${FLAGS[l.code] || l.label}</button>`).join("")}
-  </div>`;
+  const cur = lang();
+  const target = cur === "hr" ? "en" : "hr";
+  const targetName = (LANGS.find((l) => l.code === target) || {}).name || target;
+  return `<button type="button" class="flag-swap${onGlass ? " on-glass" : ""}" data-lang-swap data-cur="${cur}" data-target="${target}" aria-label="${targetName}" title="${targetName}">
+    <span class="flag-stack">
+      <span class="flag-face" data-face="hr">${FLAGS.hr}</span>
+      <span class="flag-face" data-face="en">${FLAGS.en}</span>
+    </span>
+  </button>`;
 }
 
 // ---- App frame (built once when signed in) -----------------------------------
@@ -390,10 +398,26 @@ on("connection", renderConn);
 window.addEventListener("hashchange", route);
 window.addEventListener("keydown", onKey);
 
-// Language toggle (delegated) → switch + re-render the whole UI in the new language.
+// Flag switch (delegated). Cross-fade the current flag out (first 0.5s) and the
+// target flag in (next 0.5s) — 1s total — then switch the language (which re-renders
+// the whole UI, landing on the target flag). Reduced-motion skips straight to the swap.
 document.addEventListener("click", (e) => {
-  const btn = e.target.closest?.("[data-lang]");
-  if (btn) { e.preventDefault(); setLang(btn.dataset.lang); }
+  const swap = e.target.closest?.("[data-lang-swap]");
+  if (!swap) return;
+  e.preventDefault();
+  const target = swap.dataset.target;
+  if (!target || swap.dataset.animating) return;
+  const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (reduce) { setLang(target); return; }
+  const cur = target === "en" ? "hr" : "en";
+  const curFace = swap.querySelector(`[data-face="${cur}"]`);
+  const tgtFace = swap.querySelector(`[data-face="${target}"]`);
+  if (!curFace || !tgtFace || !curFace.animate) { setLang(target); return; }
+  swap.dataset.animating = "1";
+  const opts = { duration: 1000, easing: "ease", fill: "forwards" };
+  curFace.animate([{ opacity: 1, offset: 0 }, { opacity: 0, offset: 0.5 }, { opacity: 0, offset: 1 }], opts);
+  tgtFace.animate([{ opacity: 0, offset: 0 }, { opacity: 0, offset: 0.5 }, { opacity: 1, offset: 1 }], opts);
+  setTimeout(() => setLang(target), 1000);
 });
 onLangChange(() => {
   document.getElementById("menuPop")?.remove();
