@@ -428,11 +428,22 @@ begin
     end if;
   end if;
 
-  insert into public.profiles (id, email, full_name, role)
-    values (new.id, new.email, v_name, v_role)
-    on conflict (id) do nothing;
+  -- CRITICAL: never let a profile-write problem abort the auth-user insert. If it
+  -- did, Supabase rolls back the signup and bounces the login with "Database error
+  -- saving new user" — the OAuth "goes all the way but lands back on login" bug.
+  -- The `on conflict (id)` clause only covers the primary key; a pre-existing row
+  -- that already owns this email would still trip the `uniq_profiles_email_ci`
+  -- unique index and raise. Swallow ANY failure here: the user is still created and
+  -- defaults to inert 'readonly' via asc_role() until an admin sorts the profile out.
+  begin
+    insert into public.profiles (id, email, full_name, role)
+      values (new.id, new.email, v_name, v_role)
+      on conflict (id) do nothing;
+    delete from public.allowed_emails where email = v_email;
+  exception when others then
+    raise notice 'handle_new_user: profile write skipped for %: %', v_email, sqlerrm;
+  end;
 
-  delete from public.allowed_emails where email = v_email;
   return new;
 end;
 $$ language plpgsql security definer set search_path = public, pg_temp;

@@ -32,6 +32,22 @@ let refreshTimer = null;
 // with `type=invite|recovery` in the hash → the user must set a password first.
 let mustSetPassword = /type=(invite|recovery)/.test(location.hash);
 
+// Also captured before Supabase strips the URL: if the OAuth round-trip failed,
+// we're bounced back with an error in the hash (implicit: #error=…&error_description=…)
+// or query (?error=…). Without this the login screen silently reappears with no
+// explanation ("goes all the way, lands back on login"). Surface it instead — it
+// both tells the user what happened and reveals the real cause (e.g. a signup-trigger
+// error shows here as "Database error saving new user").
+let pendingAuthError = (() => {
+  try {
+    const h = new URLSearchParams(location.hash.replace(/^#\/?/, ""));
+    const q = new URLSearchParams(location.search);
+    const raw = h.get("error_description") || q.get("error_description")
+             || h.get("error") || q.get("error");
+    return raw ? decodeURIComponent(raw).replace(/\+/g, " ") : "";
+  } catch { return ""; }
+})();
+
 // ---- Routes (each view module exports `render(main, ctx)`) --------------------
 const ROUTES = [
   { pattern: /^\/?$/,                     load: () => import("./views/dashboard.js") },
@@ -366,6 +382,10 @@ function paintLogin(mode) {
   const showErr = (m) => { err.textContent = m; err.classList.remove("hidden"); ok.classList.add("hidden"); };
   const showOk = (m) => { ok.textContent = m; ok.classList.remove("hidden"); err.classList.add("hidden"); };
   const clearMsg = () => { err.classList.add("hidden"); ok.classList.add("hidden"); };
+
+  // A failed OAuth return (captured at load, before Supabase stripped the URL) —
+  // show it once so the sign-in bounce is explained instead of silent.
+  if (pendingAuthError) { showErr(pendingAuthError); pendingAuthError = ""; }
 
   // Show / hide password
   const pwToggle = body.querySelector("#pwToggle");
