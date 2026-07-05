@@ -16,7 +16,9 @@ let current = (() => {
     const saved = localStorage.getItem(LANG_KEY);
     if (saved === "en" || saved === "hr") return saved;
   } catch { /* ignore */ }
-  return (navigator.language || "").toLowerCase().startsWith("hr") ? "hr" : "en";
+  // Croatian shop → default to HR. Users can switch to EN with the toggle; the
+  // choice is remembered (localStorage), so this only affects first load.
+  return "hr";
 })();
 
 const listeners = new Set();
