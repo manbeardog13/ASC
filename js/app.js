@@ -23,6 +23,9 @@ if (!root) {
   root.id = "app-root";
   document.body.appendChild(root);
 }
+// The JS bundle parsed and is executing → tell the recovery watchdog we're alive.
+// (Its only job is to catch a bundle that failed to load, NOT a slow network.)
+window.__ascBooted = true;
 let realtimeChannel = null;
 let refreshTimer = null;
 // Captured before Supabase consumes the URL: an invite/recovery link lands here
@@ -151,7 +154,6 @@ function openMenu() {
 
 // ---- Router -------------------------------------------------------------------
 async function route() {
-  window.__ascBooted = true; // the JS bundle loaded and is running (recovery watchdog)
   const path = (location.hash.replace(/^#/, "") || "/");
   setViewRefresh(null);
   setState({ route: path });
@@ -163,10 +165,11 @@ async function route() {
   // Finish an emailed invite / password reset before anything else.
   if (mustSetPassword) return renderSetPassword();
 
-  // Know the caller's role before rendering. 'readonly' = no access yet (just
-  // signed up, or removed by an admin) → show the access-pending gate.
-  let profile = getState().profile;
-  if (!profile) { profile = await db.loadMyProfile().catch(() => null); if (profile) setState({ profile }); }
+  // Gate only a KNOWN-readonly (inert) account. If the profile hasn't loaded yet,
+  // render the app now — RLS protects the data, and boot() re-routes to the gate if
+  // the profile resolves as readonly. Never block the first paint on the profile
+  // fetch: on a slow phone that left a logged-in reload showing nothing at all.
+  const profile = getState().profile;
   if (profile && profile.role === "readonly") return renderAccessGate();
 
   mountFrame();
@@ -367,8 +370,14 @@ async function boot() {
   const session = await db.getSession();
   if (session) {
     startRealtime();
-    const profile = await db.loadMyProfile().catch(() => null);
-    setState({ profile });
+    // Load the profile in the BACKGROUND — don't block the first paint on it.
+    // When it resolves, apply it; if the account is readonly (inert), re-route to
+    // the access gate.
+    if (!getState().profile) {
+      db.loadMyProfile()
+        .then((profile) => { setState({ profile }); if (profile && profile.role === "readonly") route(); })
+        .catch(() => {});
+    }
   } else {
     stopRealtime();
     setState({ profile: null });
