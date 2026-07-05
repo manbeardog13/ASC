@@ -671,6 +671,20 @@ details.disclose > .disclose-body { padding: 0 2px 16px; }
 @media (prefers-reduced-motion: reduce) {
   .space-haze, .space-stars, .orbit, .wheel-wrap .wheel-svg { animation: none !important; }
 }
+
+/* Overflow (⋮) menu — snappy scale/fade in, quick fade out, dropping from the
+   top-right button. It dismisses instantly on select/navigate/Escape/outside-click
+   (see openMenu). Instant under reduced-motion. */
+.menu-pop {
+  transform-origin: top right;
+  opacity: 0; transform: scale(.95) translateY(-6px);
+  transition: opacity 130ms cubic-bezier(.2,.8,.25,1), transform 130ms cubic-bezier(.2,.8,.25,1);
+  will-change: opacity, transform;
+}
+.menu-pop.in  { opacity: 1; transform: none; }
+.menu-pop.out { opacity: 0; transform: scale(.97) translateY(-4px); transition-duration: 90ms; }
+@media (prefers-reduced-motion: reduce) { .menu-pop { transition: none; } }
+
 .auth-logo { width: 216px; max-width: 76%; height: auto; align-self: center; margin-bottom: 42px; animation: splashFade 700ms ease both; }
 .auth-form { display: flex; flex-direction: column; }
 

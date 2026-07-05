@@ -153,13 +153,25 @@ function renderConn() {
 }
 
 // ---- Overflow menu ------------------------------------------------------------
+// Snappy close: picking any item, navigating, Escape, or an outside click all
+// dismiss the menu with a fast scale/fade-out — it never lingers. `menuCleanup`
+// tears down the global listeners so nothing leaks between opens.
+let menuCleanup = null;
+function closeMenu() {
+  const pop = document.getElementById("menuPop");
+  if (!pop || pop.classList.contains("out")) return;
+  if (menuCleanup) { menuCleanup(); menuCleanup = null; }
+  pop.classList.add("out");
+  const done = () => pop.remove();
+  pop.addEventListener("transitionend", done, { once: true });
+  setTimeout(done, 180);  // fallback if the transition is skipped (reduced-motion)
+}
 function openMenu() {
-  const existing = document.getElementById("menuPop");
-  if (existing) { existing.remove(); return; }
+  if (document.getElementById("menuPop")) { closeMenu(); return; }
   const role = getState().profile?.role ?? "manager";
   const pop = document.createElement("div");
   pop.id = "menuPop";
-  pop.className = "card";
+  pop.className = "card menu-pop";
   pop.style.cssText = "position:fixed;top:52px;right:12px;z-index:50;padding:6px;min-width:210px;box-shadow:var(--shadow-pop)";
   pop.setAttribute("role", "menu");
   const item = (route, iconName, label) =>
@@ -174,16 +186,30 @@ function openMenu() {
     <div style="padding:6px 10px;font-size:12px;color:var(--muted)">${t("menu.signedInAs", { role: esc(role) })}</div>
     <button id="signOutBtn" role="menuitem" class="btn btn-ghost" style="justify-content:flex-start;width:100%">${icon("logout", 18)}${t("menu.signout")}</button>`;
   document.body.appendChild(pop);
-  const close = (e) => {
-    if (!pop.contains(e.target) && e.target.id !== "menuBtn") { pop.remove(); document.removeEventListener("click", close, true); }
+  requestAnimationFrame(() => pop.classList.add("in"));   // trigger the enter transition
+
+  const onDocClick = (e) => { if (!pop.contains(e.target) && e.target.id !== "menuBtn" && !e.target.closest?.("#menuBtn")) closeMenu(); };
+  const onHash = () => closeMenu();
+  const onKey = (e) => { if (e.key === "Escape") closeMenu(); };
+  setTimeout(() => {
+    document.addEventListener("click", onDocClick, true);
+    window.addEventListener("hashchange", onHash);
+    document.addEventListener("keydown", onKey);
+  }, 0);
+  menuCleanup = () => {
+    document.removeEventListener("click", onDocClick, true);
+    window.removeEventListener("hashchange", onHash);
+    document.removeEventListener("keydown", onKey);
   };
-  setTimeout(() => document.addEventListener("click", close, true), 0);
-  pop.querySelector("#signOutBtn").onclick = async () => { pop.remove(); await db.signOut(); };
+
+  // Choosing a navigation item closes the menu at once (the link still navigates).
+  pop.addEventListener("click", (e) => { if (e.target.closest("a[role=menuitem]")) closeMenu(); });
+  pop.querySelector("#signOutBtn").onclick = async () => { closeMenu(); await db.signOut(); };
   pop.querySelector("#exportBtn").onclick = async (e) => {
     const { exportInventoryCsv } = await import("./views/export.js");
     busy(e.currentTarget, true);
     try { await exportInventoryCsv(); } catch (err) { toast(err.message, "err"); }
-    pop.remove();
+    closeMenu();
   };
 }
 
