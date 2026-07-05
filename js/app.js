@@ -10,6 +10,7 @@ import { initOffline } from "./offline.js";
 import * as db from "./db.js";
 import { icon, esc, go, toast, busy } from "./ui.js";
 import { t, lang, setLang, LANGS, onLangChange } from "./i18n.js";
+import { initMotion } from "./motion.js";
 
 document.documentElement.lang = lang();
 
@@ -26,6 +27,7 @@ if (!root) {
 // The JS bundle parsed and is executing → tell the recovery watchdog we're alive.
 // (Its only job is to catch a bundle that failed to load, NOT a slow network.)
 window.__ascBooted = true;
+initMotion();   // magnetic hover + tactile press (spring physics; delegated once)
 let realtimeChannel = null;
 let refreshTimer = null;
 // Captured before Supabase consumes the URL: an invite/recovery link lands here
