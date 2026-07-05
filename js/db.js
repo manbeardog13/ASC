@@ -159,6 +159,13 @@ export async function inviteUser({ full_name, email, role }) {
   return { mode: res.data?.status === "exists" ? "exists" : "invited" };
 }
 
+// Count of signed-up accounts still awaiting a role (role = readonly). A privacy-
+// safe signal for the admin badge; RLS means non-admins only ever see 0.
+export async function countPendingApprovals() {
+  const { count, error } = await supabase.from("profiles").select("id", { count: "exact", head: true }).eq("role", "readonly");
+  return error ? 0 : (count ?? 0);
+}
+
 export async function setUserRole(row, role) {
   if (row.is_owner) throw new Error("The owner is always an admin.");
   if (row.pending) {

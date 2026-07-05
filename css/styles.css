@@ -702,6 +702,22 @@ details.disclose > .disclose-body { padding: 0 2px 16px; }
 .badge-you     { background: rgba(255,255,255,.1); color: var(--ink-2); }
 .badge-pending { background: var(--warn-tint); color: var(--warn); }
 
+/* Pending-approval badge (Users nav) + dot (⋮ menu) */
+.nav-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; padding: 0 5px; margin-left: 6px; border-radius: 999px; background: var(--brand); color: #fff; font-size: 11px; font-weight: 700; line-height: 1; }
+.menu-dot { position: absolute; top: 6px; right: 6px; width: 9px; height: 9px; border-radius: 50%; background: var(--brand); box-shadow: 0 0 0 2px var(--surface); }
+
+/* Approval queue */
+.approve-card { background: var(--surface); border: 1px solid var(--brand); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 16px; box-shadow: var(--shadow-1); }
+.approve-head { display: flex; align-items: center; gap: 8px; font-size: 15px; color: var(--ink); }
+.approve-count { display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; background: var(--brand); color: #fff; font-size: 12px; font-weight: 700; }
+.approve-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-top: 1px solid var(--line); flex-wrap: wrap; }
+.approve-row .body { flex: 1; min-width: 130px; }
+.approve-row .who { font-weight: 700; font-size: 15px; }
+.approve-row .user-mail { font-size: 13px; color: var(--muted); margin-top: 2px; }
+.approve-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.approve-actions .btn { min-height: 36px; font-size: 13px; }
+.btn-reject { color: var(--danger); }
+
 .user-actions { display: flex; flex-direction: column; gap: 8px; align-items: stretch; align-self: center; flex: none; min-width: 168px; }
 .user-actions .segmented { width: 100%; }
 .user-actions .segmented button { min-height: 34px; font-size: 13px; }

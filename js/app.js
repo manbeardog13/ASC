@@ -84,12 +84,12 @@ function mountFrame() {
       <a class="brand-logo" href="#/" aria-label="ASC"><img src="assets/asc-mark.png" alt="ASC"></a>
       <nav class="topbar-desk-nav" aria-label="Primary">
         ${NAV.filter((n) => !n.center).map((n) => `<a href="#${n.route}" data-route="${n.route}">${icon(n.iconName, 18)}${t(n.key)}</a>`).join("")}
-        <a href="#/users" data-route="/users">${icon("people", 18)}${t("nav.users")}</a>
+        <a href="#/users" data-route="/users">${icon("people", 18)}${t("nav.users")}<span class="nav-badge users-badge" hidden></span></a>
       </nav>
       <span class="spacer"></span>
       ${langToggle(false)}
       <span id="conn" class="conn"></span>
-      <button id="menuBtn" class="btn btn-ghost" style="min-height:40px;padding:0 10px" aria-haspopup="menu" aria-label="More">${icon("list", 20)}</button>
+      <button id="menuBtn" class="btn btn-ghost" style="min-height:40px;padding:0 10px;position:relative" aria-haspopup="menu" aria-label="More">${icon("list", 20)}<span class="menu-dot users-dot" hidden></span></button>
     </header>
     <main id="main"></main>
     <nav class="tabbar" aria-label="Sections">
@@ -100,6 +100,15 @@ function mountFrame() {
     </nav>`;
   document.getElementById("menuBtn").addEventListener("click", openMenu);
   renderConn();
+  renderUsersBadge();
+}
+
+// Pending-approval badge on the Users nav link + a dot on the ⋮ menu (admins only;
+// non-admins always see 0 via RLS, so nothing shows).
+function renderUsersBadge() {
+  const n = getState().pendingApprovals || 0;
+  document.querySelectorAll(".users-badge").forEach((b) => { b.textContent = n; b.hidden = !n; });
+  document.querySelectorAll(".users-dot").forEach((d) => { d.hidden = !n; });
 }
 
 function setActiveNav(path) {
@@ -138,8 +147,9 @@ function openMenu() {
   pop.setAttribute("role", "menu");
   const item = (route, iconName, label) =>
     `<a href="#${route}" role="menuitem" class="btn btn-ghost" style="justify-content:flex-start;width:100%">${icon(iconName, 18)}${label}</a>`;
+  const pending = getState().pendingApprovals || 0;
   pop.innerHTML = `
-    ${item("/users", "people", t("menu.users"))}
+    <a href="#/users" role="menuitem" class="btn btn-ghost" style="justify-content:flex-start;width:100%">${icon("people", 18)}${t("menu.users")}${pending ? `<span class="nav-badge" style="margin-left:auto">${pending}</span>` : ""}</a>
     ${item("/reminders", "clock", t("menu.reminders"))}
     ${item("/recycle", "trash", t("menu.recycle"))}
     <button id="exportBtn" role="menuitem" class="btn btn-ghost" style="justify-content:flex-start;width:100%">${icon("download", 18)}${t("menu.export")}</button>
@@ -441,7 +451,14 @@ async function boot() {
     // the access gate.
     if (!getState().profile) {
       db.loadMyProfile()
-        .then((profile) => { setState({ profile }); if (profile && profile.role === "readonly") route(); })
+        .then((profile) => {
+          setState({ profile });
+          if (profile && profile.role === "readonly") { route(); return; }
+          // Admins: fetch the pending-approval count for the Users badge.
+          if (profile && db.isAdminRole(profile.role)) {
+            db.countPendingApprovals().then((n) => setState({ pendingApprovals: n })).catch(() => {});
+          }
+        })
         .catch(() => {});
     }
   } else {
@@ -452,6 +469,7 @@ async function boot() {
 }
 
 on("change", renderConn);
+on("change", renderUsersBadge);
 on("connection", renderConn);
 window.addEventListener("hashchange", route);
 window.addEventListener("keydown", onKey);

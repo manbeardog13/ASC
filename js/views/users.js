@@ -5,7 +5,7 @@
 // account is locked: it can never be removed or demoted (enforced in the DB too).
 // ============================================================================
 import * as db from "../db.js";
-import { getState, setViewRefresh } from "../store.js";
+import { getState, setState, setViewRefresh } from "../store.js";
 import { icon, esc, toast, confirmSheet, skeletonRows, emptyState } from "../ui.js";
 import { t } from "../i18n.js";
 
@@ -41,8 +41,10 @@ async function load(main) {
     return;
   }
 
-  // Merge signed-up users with pending invites; owner first, then admins, then rest.
-  const rows = [...users, ...pending].sort((a, b) => {
+  // Signed-up accounts with no role yet (readonly) = awaiting approval.
+  const awaiting = users.filter((u) => !u.is_owner && u.role === "readonly");
+  // Everyone else + not-yet-signed-up invites; owner first, then admins, then rest.
+  const team = [...users.filter((u) => u.is_owner || u.role !== "readonly"), ...pending].sort((a, b) => {
     if (a.is_owner !== b.is_owner) return a.is_owner ? -1 : 1;
     if (a.pending !== b.pending) return a.pending ? 1 : -1;
     const ar = db.isAdminRole(a.role), br = db.isAdminRole(b.role);
@@ -50,21 +52,66 @@ async function load(main) {
     return (a.full_name || "").localeCompare(b.full_name || "");
   });
 
+  // Keep the app-wide "pending approvals" badge in sync.
+  setState({ pendingApprovals: isAdmin ? awaiting.length : 0 });
+
   main.querySelector("#addSlot").innerHTML = isAdmin ? addFormHtml() : "";
   if (isAdmin) wireAddForm(main);
 
-  if (!rows.length) {
-    main.querySelector("#userList").innerHTML = emptyState({ iconName: "people", title: t("users.emptyTitle"), body: isAdmin ? t("users.emptyBody") : "" });
+  const listEl = main.querySelector("#userList");
+  if (!team.length && !awaiting.length) {
+    listEl.innerHTML = emptyState({ iconName: "people", title: t("users.emptyTitle"), body: isAdmin ? t("users.emptyBody") : "" });
     return;
   }
 
-  main.querySelector("#userList").innerHTML = `<div class="set-list">${rows.map((u) => rowHtml(u, me, isAdmin)).join("")}</div>`;
-  if (isAdmin) wireRowActions(main);
-  else if (rows.length) {
-    // Gentle note for non-admins so it's clear management is admin-only.
-    main.querySelector("#userList").insertAdjacentHTML("beforeend",
+  const awaitingHtml = (isAdmin && awaiting.length) ? awaitingSectionHtml(awaiting) : "";
+  listEl.innerHTML = awaitingHtml + `<div class="set-list">${team.map((u) => rowHtml(u, me, isAdmin)).join("")}</div>`;
+  if (isAdmin) { wireApproveActions(main); wireRowActions(main); }
+  else {
+    listEl.insertAdjacentHTML("beforeend",
       `<p class="muted" style="font-size:12.5px;margin-top:12px">${t("users.readOnlyNote")}</p>`);
   }
+}
+
+// Approval queue: people who signed in but have no role yet.
+function awaitingSectionHtml(awaiting) {
+  return `<div class="approve-card">
+    <div class="approve-head">${icon("clock", 16)} <b>${t("users.awaitingTitle")}</b> <span class="approve-count">${awaiting.length}</span></div>
+    <p class="muted" style="font-size:12.5px;margin:2px 0 12px">${t("users.awaitingSub")}</p>
+    ${awaiting.map(approveRowHtml).join("")}
+  </div>`;
+}
+function approveRowHtml(u) {
+  const name = esc(u.full_name || t("users.noName"));
+  return `<div class="approve-row" data-row="${esc(u.id)}">
+    <div class="body"><div class="who">${name}</div><div class="user-mail tnum">${esc(u.email_masked || "")}</div></div>
+    <div class="approve-actions">
+      <button class="btn btn-primary" data-approve="${esc(u.id)}" data-role="employee" data-name="${name}">${t("users.approveUser")}</button>
+      <button class="btn" data-approve="${esc(u.id)}" data-role="admin" data-name="${name}">${t("users.approveAdmin")}</button>
+      <button class="btn btn-ghost btn-reject" data-reject="${esc(u.id)}" data-name="${name}">${t("users.reject")}</button>
+    </div>
+  </div>`;
+}
+
+function wireApproveActions(main) {
+  main.querySelectorAll("[data-approve]").forEach((btn) => btn.onclick = async () => {
+    const row = btn.closest(".approve-row");
+    row?.querySelectorAll("button").forEach((b) => b.disabled = true);
+    try {
+      await db.setUserRole({ id: btn.dataset.approve, pending: false }, btn.dataset.role);
+      toast(t("users.approved", { name: btn.dataset.name }));
+      await load(main);
+    } catch (err) { toast(err.message, "err"); row?.querySelectorAll("button").forEach((b) => b.disabled = false); }
+  });
+  main.querySelectorAll("[data-reject]").forEach((btn) => btn.onclick = async () => {
+    const ok = await confirmSheet({ title: t("users.rejectQ", { name: btn.dataset.name }), body: t("users.rejectBody"), confirmLabel: t("users.reject"), danger: true });
+    if (!ok) return;
+    try {
+      await db.removeUser({ id: btn.dataset.reject, pending: false });
+      toast(t("users.removed", { name: btn.dataset.name }));
+      await load(main);
+    } catch (err) { toast(err.message, "err"); }
+  });
 }
 
 function rowHtml(u, me, isAdmin) {
