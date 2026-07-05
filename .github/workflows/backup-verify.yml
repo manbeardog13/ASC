@@ -22,12 +22,16 @@ jobs:
       - name: Build database connection string
         env:
           DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          DB_URL_FULL: ${{ secrets.SUPABASE_DB_URL }}
         run: |
           if [ -n "$DB_PASSWORD" ]; then
             ENC=$(python3 -c 'import urllib.parse,os;print(urllib.parse.quote(os.environ["DB_PASSWORD"], safe=""))')
             URL="postgresql://postgres.ilnqhlrvchuvpjgptjfx:${ENC}@aws-0-eu-west-1.pooler.supabase.com:5432/postgres"
             echo "::add-mask::$URL"
             echo "DB_URL=$URL" >> "$GITHUB_ENV"
+          elif [ -n "$DB_URL_FULL" ]; then
+            echo "::add-mask::$DB_URL_FULL"
+            echo "DB_URL=$DB_URL_FULL" >> "$GITHUB_ENV"
           fi
 
       - name: Is there a backups branch yet?

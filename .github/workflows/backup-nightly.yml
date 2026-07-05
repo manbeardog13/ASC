@@ -29,11 +29,17 @@ jobs:
       - name: Build database connection string
         env:
           DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          DB_URL_FULL: ${{ secrets.SUPABASE_DB_URL }}
         run: |
-          test -n "$DB_PASSWORD" || { echo "::error::Missing secret SUPABASE_DB_PASSWORD"; exit 1; }
-          test -n "$ENC_KEY"     || { echo "::error::Missing secret BACKUP_ENCRYPTION_KEY"; exit 1; }
-          ENC=$(python3 -c 'import urllib.parse,os;print(urllib.parse.quote(os.environ["DB_PASSWORD"], safe=""))')
-          URL="postgresql://postgres.ilnqhlrvchuvpjgptjfx:${ENC}@aws-0-eu-west-1.pooler.supabase.com:5432/postgres"
+          test -n "$ENC_KEY" || { echo "::error::Missing secret BACKUP_ENCRYPTION_KEY"; exit 1; }
+          if [ -n "$DB_PASSWORD" ]; then
+            ENC=$(python3 -c 'import urllib.parse,os;print(urllib.parse.quote(os.environ["DB_PASSWORD"], safe=""))')
+            URL="postgresql://postgres.ilnqhlrvchuvpjgptjfx:${ENC}@aws-0-eu-west-1.pooler.supabase.com:5432/postgres"
+          elif [ -n "$DB_URL_FULL" ]; then
+            URL="$DB_URL_FULL"
+          else
+            echo "::error::Set SUPABASE_DB_PASSWORD to your database password."; exit 1
+          fi
           echo "::add-mask::$URL"
           echo "DB_URL=$URL" >> "$GITHUB_ENV"
 
