@@ -11,6 +11,15 @@ import { setRow, timeAgo } from "./shared.js";
 
 let allSets = [];
 let query = "";
+let filter = null;   // active tile filter: checkedInToday | pickedUpToday | inStorage | dueSoon | null
+
+const today = () => new Date().toISOString().slice(0, 10);
+const TILE_FILTERS = {
+  checkedInToday: (s) => (s.check_in_date || "").slice(0, 10) === today(),
+  pickedUpToday:  (s) => (s.picked_up_at || "").slice(0, 10) === today(),
+  inStorage:      (s) => s.status === "in_storage",
+  dueSoon:        (s) => isDueSoon(s),
+};
 
 export async function render(main) {
   main.innerHTML = `
@@ -48,25 +57,29 @@ function paintTiles(main, health, counts) {
   const backup = health.lastBackup
     ? `${health.lastBackup.status === "success" ? "✓" : "⚠"} ${timeAgo(health.lastBackup.finished_at)}`
     : t("dash.backupNotYet");
-  main.querySelector("#tiles").innerHTML = `
-    <div class="tile tile-accent">
-      <div class="tlabel">${icon("plus", 15)}${t("dash.checkedInToday")}</div>
-      <div class="tval tnum">${health.todayCheckIns}</div>
-    </div>
-    <div class="tile">
-      <div class="tlabel">${icon("check", 15)}${t("dash.pickedUpToday")}</div>
-      <div class="tval tnum">${health.todayPickups}</div>
-    </div>
-    <div class="tile">
-      <div class="tlabel">${icon("box", 15)}${t("dash.inStorage")}</div>
-      <div class="tval tnum">${counts.in_storage}</div>
-      <div class="tsub">${t("dash.reservedN", { n: counts.reserved })}</div>
-    </div>
-    <div class="tile">
-      <div class="tlabel">${icon("clock", 15)}${t("dash.dueSoon")}</div>
-      <div class="tval tnum">${dueSoon}</div>
-      <div class="tsub">${t("dash.next7")}</div>
-    </div>`;
+  const tile = (key, extra, cls = "") => `
+    <div class="tile${cls ? " " + cls : ""}${filter === key ? " is-active" : ""}" role="button" tabindex="0"
+         data-filter="${key}" aria-pressed="${filter === key}">${extra}</div>`;
+  main.querySelector("#tiles").innerHTML =
+    tile("checkedInToday", `<div class="tlabel">${icon("plus", 15)}${t("dash.checkedInToday")}</div><div class="tval tnum">${health.todayCheckIns}</div>`, "tile-accent") +
+    tile("pickedUpToday", `<div class="tlabel">${icon("check", 15)}${t("dash.pickedUpToday")}</div><div class="tval tnum">${health.todayPickups}</div>`) +
+    tile("inStorage", `<div class="tlabel">${icon("box", 15)}${t("dash.inStorage")}</div><div class="tval tnum">${counts.in_storage}</div><div class="tsub">${t("dash.reservedN", { n: counts.reserved })}</div>`) +
+    tile("dueSoon", `<div class="tlabel">${icon("clock", 15)}${t("dash.dueSoon")}</div><div class="tval tnum">${dueSoon}</div><div class="tsub">${t("dash.next7")}</div>`);
+
+  // Tap a tile to filter the inventory list below; tap the active one again to clear.
+  main.querySelectorAll("#tiles [data-filter]").forEach((el) => {
+    const toggle = () => {
+      filter = filter === el.dataset.filter ? null : el.dataset.filter;
+      main.querySelectorAll("#tiles .tile").forEach((t2) => {
+        const on = t2.dataset.filter === filter;
+        t2.classList.toggle("is-active", on);
+        t2.setAttribute("aria-pressed", String(on));
+      });
+      paintList(main);
+    };
+    el.addEventListener("click", toggle);
+    el.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); } });
+  });
 
   let strip = main.querySelector("#healthStrip");
   if (!strip) {
@@ -95,10 +108,21 @@ function paintDueSoon(main) {
 }
 
 function paintList(main) {
-  const rows = allSets.filter((s) => matchesQuery(s, query));
-  main.querySelector("#listCount").textContent = query
-    ? t("dash.shownOf", { shown: rows.length, total: allSets.length })
-    : t("dash.setsN", { n: allSets.length, sets: noun(allSets.length, "sets") });
+  const pred = TILE_FILTERS[filter];
+  const rows = allSets.filter((s) => (!pred || pred(s)) && matchesQuery(s, query));
+  const count = main.querySelector("#listCount");
+  if (query || filter) {
+    count.innerHTML = esc(t("dash.shownOf", { shown: rows.length, total: allSets.length }))
+      + (filter ? ` · <button type="button" id="clearFilter" class="link-btn">${esc(t("dash.showAll"))}</button>` : "");
+    const clear = main.querySelector("#clearFilter");
+    if (clear) clear.onclick = () => {
+      filter = null;
+      main.querySelectorAll("#tiles .tile.is-active").forEach((t2) => { t2.classList.remove("is-active"); t2.setAttribute("aria-pressed", "false"); });
+      paintList(main);
+    };
+  } else {
+    count.textContent = t("dash.setsN", { n: allSets.length, sets: noun(allSets.length, "sets") });
+  }
   const list = main.querySelector("#list");
   if (!allSets.length) {
     list.innerHTML = emptyState({
@@ -108,7 +132,9 @@ function paintList(main) {
     return;
   }
   if (!rows.length) {
-    list.innerHTML = emptyState({ iconName: "search", title: t("dash.noMatchTitle"), body: t("dash.noMatchBody", { q: esc(query) }) });
+    list.innerHTML = (filter && !query)
+      ? emptyState({ iconName: "box", title: t("dash.noneHere"), body: t("dash.noneHereBody") })
+      : emptyState({ iconName: "search", title: t("dash.noMatchTitle"), body: t("dash.noMatchBody", { q: esc(query) }) });
     return;
   }
   list.innerHTML = `<div class="set-list">${rows.map(setRow).join("")}</div>`;

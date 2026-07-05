@@ -119,6 +119,7 @@ const DICT = {
     "dash.connection": "Connection", "dash.pendingSync": "Pending sync", "dash.lastBackup": "Last backup", "dash.backupNotYet": "Not yet",
     "dash.dueForPickup": "Due for pickup soon", "dash.remind": "Remind →", "dash.setsN": "{n} {sets}", "dash.shownOf": "{shown} of {total}",
     "dash.emptyTitle": "No tires stored yet", "dash.emptyBody": "Check in a customer's set to get started.", "dash.storeTires": "Store tires",
+    "dash.showAll": "Show all", "dash.noneHere": "Nothing here", "dash.noneHereBody": "No sets match this filter right now.",
     "dash.noMatchTitle": "No matches", "dash.noMatchBody": "Nothing matches “{q}”. Try a plate, name, or DOT.",
     "dash.loadError": "{err}",
     // check-in
@@ -246,6 +247,7 @@ const DICT = {
     "dash.connection": "Veza", "dash.pendingSync": "Za sinkronizaciju", "dash.lastBackup": "Zadnja kopija", "dash.backupNotYet": "Još ne",
     "dash.dueForPickup": "Uskoro za preuzimanje", "dash.remind": "Podsjeti →", "dash.setsN": "{n} {sets}", "dash.shownOf": "{shown} od {total}",
     "dash.emptyTitle": "Još nema spremljenih guma", "dash.emptyBody": "Zaprimite komplet kupca za početak.", "dash.storeTires": "Spremi gume",
+    "dash.showAll": "Prikaži sve", "dash.noneHere": "Ništa ovdje", "dash.noneHereBody": "Trenutno nema kompleta za ovaj filtar.",
     "dash.noMatchTitle": "Nema rezultata", "dash.noMatchBody": "Ništa ne odgovara upitu „{q}”. Pokušajte s registracijom, imenom ili DOT-om.",
     "dash.loadError": "{err}",
     "ci.title": "Spremi gume", "ci.customer": "Kupac", "ci.name": "Ime", "ci.phone": "Telefon", "ci.email": "E-pošta",
