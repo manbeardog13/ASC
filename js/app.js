@@ -141,16 +141,45 @@ function renderConn() {
   const el = document.getElementById("conn");
   if (!el) return;
   const { online, syncPending } = getState();
+  let cls, html, key;
   if (online && !syncPending) {
-    el.className = "conn conn-online";
-    el.innerHTML = `<span class="dot"></span><span class="ctext">${t("conn.online")}</span>`;
+    cls = "conn conn-online"; key = "on";
+    html = `<span class="dot"></span><span class="ctext">${t("conn.online")}</span>`;
   } else if (online && syncPending) {
-    el.className = "conn conn-offline";
-    el.innerHTML = `${icon("clock", 14)}${t("conn.syncing", { n: syncPending })}`;
+    cls = "conn conn-offline"; key = "sync:" + syncPending;
+    html = `${icon("clock", 14)}${t("conn.syncing", { n: syncPending })}`;
   } else {
-    el.className = "conn conn-offline";
-    el.innerHTML = `${icon("wifiOff", 14)}${t("conn.offline")}${syncPending ? t("conn.queued", { n: syncPending }) : ""}`;
+    cls = "conn conn-offline"; key = "off:" + (syncPending || 0);
+    html = `${icon("wifiOff", 14)}${t("conn.offline")}${syncPending ? t("conn.queued", { n: syncPending }) : ""}`;
   }
+  morphConn(el, cls, html, key);
+}
+
+// Dynamic-Island-style morph for the connection pill: the current content lifts
+// and fades out, the pill width springs to the new size, and the new content
+// rises + fades in. Never a hard swap. First paint + reduced-motion are instant.
+function morphConn(el, cls, html, key) {
+  if (el.dataset.k === key) return;
+  const firstPaint = !el.dataset.k;
+  el.dataset.k = key;
+  const reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (firstPaint || reduce || !el.animate) { el.className = cls; el.innerHTML = html; return; }
+  const w0 = el.getBoundingClientRect().width;
+  const out = el.animate(
+    [{ opacity: 1, transform: "translateY(0)" }, { opacity: 0, transform: "translateY(-5px)" }],
+    { duration: 150, easing: "cubic-bezier(.4,0,1,1)", fill: "forwards" });
+  out.onfinish = () => {
+    out.cancel();
+    el.className = cls; el.innerHTML = html;
+    const w1 = el.getBoundingClientRect().width;
+    el.style.width = w0 + "px"; void el.getBoundingClientRect();
+    el.style.transition = "width .44s cubic-bezier(.34,1.4,.5,1)";
+    el.style.width = w1 + "px";
+    el.animate(
+      [{ opacity: 0, transform: "translateY(6px)" }, { opacity: 1, transform: "translateY(0)" }],
+      { duration: 320, easing: "cubic-bezier(.16,1,.3,1)" });
+    setTimeout(() => { el.style.width = ""; el.style.transition = ""; }, 520);
+  };
 }
 
 // ---- Overflow menu ------------------------------------------------------------

@@ -27,7 +27,7 @@ export function initMotion() {
   if (!mm("(hover: hover) and (pointer: fine)").matches) return;   // touch keeps the CSS press
 
   let el = null, rect = null, raf = 0, last = 0, pressed = false;
-  const sx = mkSpring(230, 26), sy = mkSpring(230, 26), ss = mkSpring(260, 24);
+  const sx = mkSpring(210, 24), sy = mkSpring(210, 24), ss = mkSpring(240, 30);
 
   const write = () => {
     if (el) el.style.transform =
@@ -50,7 +50,7 @@ export function initMotion() {
     sx.x = sy.x = ss.x = 0; sx.v = sy.v = ss.v = 0;   // start clean (no carry-over jump)
     // JS owns transform; let CSS keep animating shadow/tint softly.
     node.style.transition = "box-shadow .42s cubic-bezier(.16,1,.3,1), background-color .22s ease, border-color .22s ease, filter .22s ease";
-    ss.target = 0.03;                                  // gentle hover lift
+    ss.target = 0.02;                                  // gentle hover lift
   };
 
   document.addEventListener("pointerover", (e) => {
@@ -62,7 +62,7 @@ export function initMotion() {
   document.addEventListener("pointermove", (e) => {
     if (!el) return;
     const cx = rect.left + rect.width / 2, cy = rect.top + rect.height / 2;
-    const cap = 7, k = 0.16;                            // magnetize: fraction of offset, capped
+    const cap = 6, k = 0.15;                            // magnetize: fraction of offset, capped
     sx.target = Math.max(-cap, Math.min(cap, (e.clientX - cx) * k));
     sy.target = Math.max(-cap, Math.min(cap, (e.clientY - cy) * k));
     kick();
@@ -74,6 +74,6 @@ export function initMotion() {
     sx.target = 0; sy.target = 0; ss.target = 0; pressed = false; kick();
   }, { passive: true });
 
-  document.addEventListener("pointerdown", () => { if (el) { pressed = true; ss.target = -0.05; kick(); } }, { passive: true });
-  window.addEventListener("pointerup", () => { if (pressed) { pressed = false; ss.target = el ? 0.03 : 0; kick(); } }, { passive: true });
+  document.addEventListener("pointerdown", () => { if (el) { pressed = true; ss.target = -0.045; kick(); } }, { passive: true });
+  window.addEventListener("pointerup", () => { if (pressed) { pressed = false; ss.target = el ? 0.02 : 0; kick(); } }, { passive: true });
 }
