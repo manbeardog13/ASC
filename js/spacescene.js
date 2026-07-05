@@ -110,10 +110,10 @@ export async function mountSpaceScene() {
   // --- Starfield (3 depth layers, stellar colours, a few hero stars) -----------
   const starSprite = makeStarSprite(THREE);
   disposables.push(starSprite);
+  // Two far layers of small stars only — no big/near "hero" orbs (they read as a moon).
   const starLayers = [
-    buildStars(THREE, disposables, starSprite, mobile ? 900 : 1500, 260, 0.7, 1.1),
-    buildStars(THREE, disposables, starSprite, mobile ? 420 : 700, 170, 1.2, 1.9),
-    buildStars(THREE, disposables, starSprite, mobile ? 30 : 46, 90, 2.6, 3.6),
+    buildStars(THREE, disposables, starSprite, mobile ? 1000 : 1700, 260, 0.6, 1.0),
+    buildStars(THREE, disposables, starSprite, mobile ? 500 : 820, 175, 1.0, 1.5),
   ];
   starLayers.forEach((s) => scene.add(s));
 
