@@ -2,7 +2,7 @@
    Makes the app installable and loads the shell instantly. Network-first for
    same-origin files (so deploys show up right away), cache fallback when
    offline. Live data always comes from Supabase online. */
-const CACHE = "asc-tirehotel-v21";
+const CACHE = "asc-tirehotel-v22";
 const SHELL = [
   "./",
   "./index.html",
@@ -67,7 +67,10 @@ self.addEventListener("fetch", (e) => {
   // navigation with.
   if (req.mode === "navigate") {
     e.respondWith(
-      fetch(req)
+      // Revalidate with the server (bypass the ~10-min GitHub Pages HTTP cache) so a
+      // fresh deploy shows up immediately. Fetch by URL because a navigate-mode
+      // Request can't take a cache override.
+      fetch(req.url, { cache: "no-cache" })
         .then((res) => {
           if (cacheable(res)) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put("./index.html", copy)).catch(() => {}); }
           return res;
@@ -82,7 +85,7 @@ self.addEventListener("fetch", (e) => {
   // back to index.html. Serving HTML for a .js request makes the browser throw a
   // parse error and white-screens the whole app (this was the reload crash).
   e.respondWith(
-    fetch(req)
+    fetch(req, { cache: "no-cache" })
       .then((res) => {
         if (cacheable(res)) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {}); }
         return res;
