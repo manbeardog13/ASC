@@ -49,11 +49,12 @@ export async function mountSpaceScene() {
   if (!canvas) return;
   if (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
-  let THREE, RGBELoader, EffectComposer, RenderPass, UnrealBloomPass, SMAAPass, OutputPass;
+  let THREE, RGBELoader, GLTFLoader, EffectComposer, RenderPass, UnrealBloomPass, SMAAPass, OutputPass;
   try {
-    [THREE, { RGBELoader }, { EffectComposer }, { RenderPass }, { UnrealBloomPass }, { SMAAPass }, { OutputPass }] = await Promise.all([
+    [THREE, { RGBELoader }, { GLTFLoader }, { EffectComposer }, { RenderPass }, { UnrealBloomPass }, { SMAAPass }, { OutputPass }] = await Promise.all([
       import("three"),
       import(CDN + "loaders/RGBELoader.js"),
+      import(CDN + "loaders/GLTFLoader.js"),
       import(CDN + "postprocessing/EffectComposer.js"),
       import(CDN + "postprocessing/RenderPass.js"),
       import(CDN + "postprocessing/UnrealBloomPass.js"),
@@ -117,15 +118,30 @@ export async function mountSpaceScene() {
   ];
   starLayers.forEach((s) => scene.add(s));
 
-  // --- Two wheels (shared geometry/materials) ----------------------------------
-  const shared = makeWheelParts(THREE, disposables);
-  const wheelA = buildWheel(THREE, shared);
-  const wheelB = buildWheel(THREE, shared);
-  wheelA.scale.setScalar(0.66); wheelB.scale.setScalar(0.66);
-  wheelA.rotation.set(0.4, -0.6, 0);
-  wheelB.rotation.set(0.3, 0.66, 0);
-  const orbiterA = new THREE.Group(); orbiterA.add(wheelA); scene.add(orbiterA);
-  const orbiterB = new THREE.Group(); orbiterB.add(wheelB); scene.add(orbiterB);
+  // --- Two wheels: the generated GLB, cloned into two orbiters -----------------
+  // orbiter (orbit position) → tilt (fixed viewing angle) → spinner (own-axis spin).
+  const mkRig = (tilt) => {
+    const orbiter = new THREE.Group();
+    const t = new THREE.Group(); t.rotation.set(tilt[0], tilt[1], tilt[2]); t.scale.setScalar(0.7);
+    const spinner = new THREE.Group();
+    t.add(spinner); orbiter.add(t); scene.add(orbiter);
+    return { orbiter, spinner };
+  };
+  const rigA = mkRig([0.4, -0.6, 0]);
+  const rigB = mkRig([0.3, 0.66, 0]);
+
+  new GLTFLoader().load("assets/wheel.glb", (gltf) => {
+    if (!_scene) return;   // scene torn down while loading
+    const model = normalizeWheel(THREE, gltf.scene);
+    enhanceWheelMaterials(model);
+    rigA.spinner.add(model);
+    rigB.spinner.add(model.clone(true));
+  }, undefined, () => {
+    // Model unavailable → keep a procedural wheel so the scene still has wheels.
+    const shared = makeWheelParts(THREE, disposables);
+    rigA.spinner.add(buildWheel(THREE, shared));
+    rigB.spinner.add(buildWheel(THREE, shared));
+  });
 
   const T_ORBIT = 720, T_SPIN = 60, ORBIT_Z = -2.0, TILT = 0.5;
   let Rx = 6, Ry = 5;
@@ -160,11 +176,11 @@ export async function mountSpaceScene() {
   const render = () => {
     const t = clock.getElapsedTime();
     const ao = t * (Math.PI * 2 / T_ORBIT);
-    place(orbiterA, ao);
-    place(orbiterB, ao + Math.PI);
+    place(rigA.orbiter, ao);
+    place(rigB.orbiter, ao + Math.PI);
     const spin = t * (Math.PI * 2 / T_SPIN);
-    wheelA.rotation.z = spin;
-    wheelB.rotation.z = -spin * 0.92;
+    rigA.spinner.rotation.z = spin;
+    rigB.spinner.rotation.z = -spin * 0.92;
     composer.render();
   };
   const loop = () => { _scene.raf = requestAnimationFrame(loop); if (running) render(); };
@@ -275,7 +291,40 @@ function makeTireBump(THREE) {
   return tex;
 }
 
-// ---- Wheel: shared geometry + PBR materials (env-map driven) --------------------
+// ---- Generated wheel: normalise (orient axle → +Z, centre, unit-scale) ---------
+function normalizeWheel(THREE, src) {
+  const model = src;
+  model.updateMatrixWorld(true);
+  let box = new THREE.Box3().setFromObject(model);
+  const s0 = box.getSize(new THREE.Vector3());
+  // The axle is the shortest bbox dimension — rotate it onto +Z so the wheel faces us.
+  if (s0.x <= s0.y && s0.x <= s0.z) model.rotation.y = Math.PI / 2;
+  else if (s0.y <= s0.x && s0.y <= s0.z) model.rotation.x = Math.PI / 2;
+  model.updateMatrixWorld(true);
+  box = new THREE.Box3().setFromObject(model);
+  const c = box.getCenter(new THREE.Vector3());
+  const s = box.getSize(new THREE.Vector3());
+  model.position.sub(c);                                   // centre at origin
+  const wrap = new THREE.Group();
+  wrap.add(model);
+  wrap.scale.setScalar(2 / Math.max(s.x, s.y, 0.0001));    // fit diameter → 2 (radius 1)
+  return wrap;
+}
+
+// Make the model's materials sing under the HDRI: crank reflections + sharpen metal.
+function enhanceWheelMaterials(root) {
+  root.traverse((o) => {
+    if (!o.isMesh || !o.material) return;
+    const mats = Array.isArray(o.material) ? o.material : [o.material];
+    mats.forEach((m) => {
+      m.envMapIntensity = 1.6;
+      if (m.roughness !== undefined) m.roughness = Math.min(m.roughness, 0.55);
+      m.needsUpdate = true;
+    });
+  });
+}
+
+// ---- Fallback wheel: shared geometry + PBR materials (env-map driven) -----------
 function makeWheelParts(THREE, disposables) {
   const alloy = new THREE.MeshPhysicalMaterial({ color: 0xdfe3e8, metalness: 1.0, roughness: 0.2, envMapIntensity: 1.9, clearcoat: 0.5, clearcoatRoughness: 0.14 });
   const lipMat = new THREE.MeshPhysicalMaterial({ color: 0xf2f4f7, metalness: 1.0, roughness: 0.05, envMapIntensity: 2.1 });
