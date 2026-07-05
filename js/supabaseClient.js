@@ -14,8 +14,22 @@ export { isConfigured };
 // session never got established). Implicit is the reliable choice here — and it makes
 // invite/reset links carry `type=recovery` in the hash, which the set-password screen
 // already detects.
+// `lock` (pass-through): bypass supabase-js's default Web Locks API coordination.
+// That default (navigatorLock) could DEADLOCK on reload — a lock left stuck by a
+// prior tab/context made getSession() hang forever, so boot() never finished and
+// the app showed a blank white screen until storage was manually cleared. This is
+// a single-user shop tool that doesn't need cross-tab lock coordination, so we run
+// the callback directly: no lock, no deadlock, reloads are instant and reliable.
+const passThroughLock = (_name, _acquireTimeout, fn) => fn();
+
 export const supabase = isConfigured()
   ? createClient(config.SUPABASE_URL, config.SUPABASE_ANON_KEY, {
-      auth: { flowType: "implicit", detectSessionInUrl: true, persistSession: true, autoRefreshToken: true },
+      auth: {
+        flowType: "implicit",
+        detectSessionInUrl: true,
+        persistSession: true,
+        autoRefreshToken: true,
+        lock: passThroughLock,
+      },
     })
   : null;
