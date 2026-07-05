@@ -41,6 +41,22 @@ export async function signIn(email, password) {
 export async function signOut() {
   await supabase.auth.signOut();
 }
+// Email a password-reset link. The link returns to the app with type=recovery,
+// which app.js routes to the "set your password" screen.
+export async function sendPasswordReset(email) {
+  const { error } = await supabase.auth.resetPasswordForEmail((email || "").trim(), { redirectTo: config.APP_BASE_URL });
+  if (error) throw new Error(error.message);
+}
+// Google OAuth. Requires the Google provider enabled in Supabase (Auth →
+// Providers) and the app URL listed under Auth → URL Configuration.
+export async function signInWithGoogle() {
+  const { error } = await supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo: config.APP_BASE_URL } });
+  if (error) {
+    throw new Error(/not enabled|unsupported provider|provider/i.test(error.message)
+      ? "Google sign-in isn't enabled yet — turn on the Google provider in Supabase."
+      : error.message);
+  }
+}
 // Used by the "set your password" screen after an invite/recovery link.
 export async function updatePassword(newPassword) {
   const { error } = await supabase.auth.updateUser({ password: newPassword });

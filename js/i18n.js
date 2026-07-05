@@ -67,6 +67,10 @@ const DICT = {
     "login.newHere": "First time? Create account", "login.signupCta": "Create account",
     "login.signupDone": "Account created. Check your email to confirm it, then sign in.",
     "login.minPass": "Use at least 6 characters for the password.",
+    "login.remember": "Remember me", "login.forgot": "Forgot password?",
+    "login.google": "Continue with Google", "login.firstTime": "First time here?",
+    "login.showPw": "Show password", "login.hidePw": "Hide password",
+    "login.forgotSent": "Reset link sent — check your email.", "login.forgotNeedEmail": "Enter your email first.",
     // access gate (signed in but no role yet / removed)
     "gate.title": "Access pending", "gate.body": "Your account doesn't have access yet. Ask an admin to grant you a role, then sign in again.",
     // users / access management
@@ -199,6 +203,10 @@ const DICT = {
     "login.newHere": "Prvi put? Izradite račun", "login.signupCta": "Izradi račun",
     "login.signupDone": "Račun je izrađen. Provjerite e-poštu i potvrdite ga, zatim se prijavite.",
     "login.minPass": "Lozinka mora imati barem 6 znakova.",
+    "login.remember": "Zapamti me", "login.forgot": "Zaboravljena lozinka?",
+    "login.google": "Nastavi s Googleom", "login.firstTime": "Prvi put ovdje?",
+    "login.showPw": "Prikaži lozinku", "login.hidePw": "Sakrij lozinku",
+    "login.forgotSent": "Poveznica za ponovno postavljanje poslana — provjerite e-poštu.", "login.forgotNeedEmail": "Najprije unesite e-poštu.",
     "gate.title": "Pristup na čekanju", "gate.body": "Vaš račun još nema pristup. Zatražite od administratora da vam dodijeli ulogu, zatim se ponovno prijavite.",
     "users.title": "Korisnici", "users.sub": "Svi koji imaju pristup ASC-u.",
     "users.add": "Dodaj korisnika", "users.fullName": "Ime i prezime", "users.email": "E-pošta", "users.role": "Uloga",

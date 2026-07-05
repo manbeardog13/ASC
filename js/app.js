@@ -289,24 +289,27 @@ function renderSetPassword() {
   setTimeout(() => document.getElementById("pw1")?.focus({ preventScroll: true }), 80);
 }
 
-// Splash + glass login: canvas + logo fade in, then the card blurs in and
-// drifts up ~2mm, easing to a stop (CSS: appFadeIn / splashFade / loginEmerge).
-// `mode` is "signin" (default) or "signup"; the toggle swaps only the form body
-// so the card doesn't re-animate.
+// Auth-screen icons (login-specific, inline to avoid touching the shared icon set).
+const A_MAIL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M3.5 7.5l8.5 5.5 8.5-5.5"/></svg>';
+const A_LOCK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="10.5" width="15" height="9.5" rx="2.5"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/></svg>';
+const A_EYE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12z"/><circle cx="12" cy="12" r="2.8"/></svg>';
+const A_EYE_OFF = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4l16 16"/><path d="M9.6 5.8A10.7 10.7 0 0 1 12 5.5c6.4 0 10 6.5 10 6.5a17.6 17.6 0 0 1-3.3 4M6.4 7.7A17.3 17.3 0 0 0 2 12s3.6 6.5 10 6.5c1 0 2-.1 2.9-.4"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>';
+const A_GOOGLE = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="#4285F4" d="M23.52 12.27c0-.79-.07-1.54-.2-2.27H12v4.51h6.47c-.28 1.48-1.13 2.73-2.41 3.58v2.97h3.9c2.28-2.1 3.56-5.19 3.56-8.79z"/><path fill="#34A853" d="M12 24c3.24 0 5.96-1.07 7.95-2.91l-3.9-2.97c-1.08.72-2.45 1.15-4.05 1.15-3.12 0-5.76-2.11-6.71-4.94H1.28v3.06C3.26 21.3 7.31 24 12 24z"/><path fill="#FBBC05" d="M5.29 14.33c-.24-.72-.38-1.49-.38-2.28s.14-1.56.38-2.28V6.71H1.28C.47 8.31 0 10.1 0 12s.47 3.69 1.28 5.29l4.01-3.06z"/><path fill="#EA4335" d="M12 4.75c1.76 0 3.34.61 4.58 1.79l3.44-3.44C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.28 6.71l4.01 3.06C6.24 6.86 8.88 4.75 12 4.75z"/></svg>';
+const A_CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg>';
+
+// Minimal auth screen (dark, card-less): logo, form, language flag top-right.
+// `mode` is "signin" (default) or "signup"; the toggle swaps only the form body.
 function renderLogin(mode = "signin") {
   stopRealtime();
-  // Redundant auth events (INITIAL_SESSION, token refreshes) re-run boot()/route().
-  // If the login is already on screen, don't rebuild it — rebuilding restarts the
-  // entrance animation every time and can leave the card stuck hidden.
+  // Redundant auth events (INITIAL_SESSION, token refreshes) re-run boot()/route();
+  // don't rebuild if the login is already on screen.
   if (document.getElementById("loginBody")) return;
   root.innerHTML = `
-    <div class="login-canvas">
+    <div class="login-canvas auth">
       <div class="login-langs-top">${langToggle(true)}</div>
-      <div class="login-stage">
-        <img class="login-logo" src="assets/asc-logo.png" alt="ASC — Auto Servisni Centar d.o.o.">
-        <div class="glass-card login-card">
-          <div id="loginBody"></div>
-        </div>
+      <div class="auth-col">
+        <img class="auth-logo" src="assets/asc-logo.png" alt="ASC — Auto Servisni Centar d.o.o.">
+        <div id="loginBody"></div>
       </div>
     </div>`;
   paintLogin(mode);
@@ -316,48 +319,103 @@ function renderLogin(mode = "signin") {
 function paintLogin(mode) {
   const signup = mode === "signup";
   const body = document.getElementById("loginBody");
-  body.innerHTML = `
-    <form id="loginForm" novalidate>
-      <label class="field"><span class="label">${t("login.email")}</span>
-        <input id="email" type="email" autocomplete="${signup ? "email" : "username"}" required></label>
-      <label class="field"><span class="label">${t("login.password")}</span>
-        <input id="password" type="password" autocomplete="${signup ? "new-password" : "current-password"}" required></label>
-      <button class="btn-sunset" type="submit">${signup ? t("login.signupCta") : t("login.signin")}</button>
-      <p id="loginErr" class="login-err hidden"></p>
-      <p id="loginOk" class="login-ok hidden"></p>
-    </form>
-    <button type="button" id="loginSwitch" class="login-switch">${signup ? t("login.haveAccount") : t("login.newHere")}</button>`;
+
+  const emailField = `<label class="fieldx"><span class="fx-icon">${A_MAIL}</span>
+      <input id="email" type="email" placeholder="${t("login.email")}" autocomplete="${signup ? "email" : "username"}" required></label>`;
+  const passField = `<label class="fieldx"><span class="fx-icon">${A_LOCK}</span>
+      <input id="password" type="password" placeholder="${t("login.password")}" autocomplete="${signup ? "new-password" : "current-password"}" required>
+      <button type="button" class="fx-eye" id="pwToggle" aria-label="${t("login.showPw")}">${A_EYE}</button></label>`;
+  const googleBtn = `<button type="button" class="btn-google" id="googleBtn">${A_GOOGLE}<span>${t("login.google")}</span></button>`;
+  const status = `<p id="loginErr" class="auth-err hidden"></p><p id="loginOk" class="auth-ok hidden"></p>`;
+
+  body.innerHTML = signup
+    ? `<form id="loginForm" class="auth-form" novalidate>
+        ${emailField}${passField}
+        <button class="btn-amber" type="submit">${t("login.signupCta")}</button>
+        ${status}
+        <div class="auth-gap"></div>
+        ${googleBtn}
+        <p class="auth-create"><button type="button" id="loginSwitch" class="auth-create-link">${t("login.haveAccount")}</button></p>
+      </form>`
+    : `<form id="loginForm" class="auth-form" novalidate>
+        ${emailField}${passField}
+        <label class="remember"><input type="checkbox" id="remember"><span class="rm-box">${A_CHECK}</span><span class="rm-label">${t("login.remember")}</span></label>
+        <button class="btn-amber" type="submit">${t("login.signin")}</button>
+        ${status}
+        <button type="button" id="forgot" class="auth-forgot">${t("login.forgot")}</button>
+        <div class="auth-gap"></div>
+        ${googleBtn}
+        <p class="auth-create">${t("login.firstTime")} <button type="button" id="loginSwitch" class="auth-create-link">${t("login.createAccount")}</button></p>
+      </form>`;
 
   const form = body.querySelector("#loginForm");
   const err = body.querySelector("#loginErr");
   const ok = body.querySelector("#loginOk");
-  const hide = () => { err.classList.add("hidden"); ok.classList.add("hidden"); };
+  const pwInput = body.querySelector("#password");
+  const remember = body.querySelector("#remember");
+  const showErr = (m) => { err.textContent = m; err.classList.remove("hidden"); ok.classList.add("hidden"); };
+  const showOk = (m) => { ok.textContent = m; ok.classList.remove("hidden"); err.classList.add("hidden"); };
+  const clearMsg = () => { err.classList.add("hidden"); ok.classList.add("hidden"); };
+
+  // Show / hide password
+  const pwToggle = body.querySelector("#pwToggle");
+  pwToggle.onclick = () => {
+    const reveal = pwInput.type === "password";
+    pwInput.type = reveal ? "text" : "password";
+    pwToggle.innerHTML = reveal ? A_EYE_OFF : A_EYE;
+    pwToggle.setAttribute("aria-label", t(reveal ? "login.hidePw" : "login.showPw"));
+  };
+
+  // Remember me → prefill the remembered email on the sign-in screen.
+  if (!signup && remember) {
+    let saved = "";
+    try { saved = localStorage.getItem("asc.rememberEmail") || ""; } catch { /* ignore */ }
+    if (saved) { body.querySelector("#email").value = saved; remember.checked = true; }
+  }
+
+  // Forgot password → email a reset link (lands on the set-password screen).
+  const forgot = body.querySelector("#forgot");
+  if (forgot) forgot.onclick = async () => {
+    clearMsg();
+    const email = body.querySelector("#email").value.trim();
+    if (!email) { body.querySelector("#email").focus(); return showErr(t("login.forgotNeedEmail")); }
+    forgot.disabled = true;
+    try { await db.sendPasswordReset(email); showOk(t("login.forgotSent")); }
+    catch (e2) { showErr(e2.message); }
+    finally { forgot.disabled = false; }
+  };
+
+  // Continue with Google (OAuth redirect)
+  const googleEl = body.querySelector("#googleBtn");
+  googleEl.onclick = async () => {
+    clearMsg();
+    googleEl.disabled = true;
+    try { await db.signInWithGoogle(); }        // redirects away on success
+    catch (e2) { showErr(e2.message); googleEl.disabled = false; }
+  };
 
   form.onsubmit = async (e) => {
     e.preventDefault();
     const btn = form.querySelector("button[type=submit]");
-    const email = document.getElementById("email").value.trim();
-    const password = document.getElementById("password").value;
-    hide();
-    if (signup && password.length < 6) { err.textContent = t("login.minPass"); err.classList.remove("hidden"); return; }
+    const email = body.querySelector("#email").value.trim();
+    const password = pwInput.value;
+    clearMsg();
+    if (signup && password.length < 6) return showErr(t("login.minPass"));
+    if (!signup && remember) {
+      try { remember.checked ? localStorage.setItem("asc.rememberEmail", email) : localStorage.removeItem("asc.rememberEmail"); } catch { /* ignore */ }
+    }
     busy(btn, true);
     try {
       if (signup) {
         const { needsConfirm } = await db.signUp(email, password);
-        if (needsConfirm) {
-          ok.textContent = t("login.signupDone"); ok.classList.remove("hidden");
-          busy(btn, false);
-        }
-        // If confirmation is off, a session exists → onAuthChange → boot().
+        if (needsConfirm) { showOk(t("login.signupDone")); busy(btn, false); }
+        // confirmation off → session exists → onAuthChange → boot()
       } else {
-        await db.signIn(email, password); // onAuthChange fires → boot() re-runs.
+        await db.signIn(email, password);       // onAuthChange → boot()
       }
-    } catch (e2) {
-      err.textContent = e2.message;
-      err.classList.remove("hidden");
-      busy(btn, false);
-    }
+    } catch (e2) { showErr(e2.message); busy(btn, false); }
   };
+
   body.querySelector("#loginSwitch").onclick = () => paintLogin(signup ? "signin" : "signup");
 }
 
