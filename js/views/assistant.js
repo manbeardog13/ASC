@@ -23,6 +23,44 @@ function stripMd(s) {
 }
 let ttsOn = (() => { try { return localStorage.getItem("asc.agentTts") !== "0"; } catch { return true; } })();
 
+// "Za dom" intercept — the WWII salute some of the crew will inevitably shout
+// at the agent. Policy (owner's call): NEVER complete it; disarm with a loud
+// tire-shop joke instead. Handled client-side so the comeback is instant,
+// deterministic, costs no Gemini quota, and can't be improvised wrong.
+const ZADOM_RE = /^\s*za\s*dom\b[\s!.,?]*$/i;
+const ZADOM_REPLIES = [
+  "ZA DOM SE IDE KUĆI — ZA GUME SE DOLAZI MENI!!",
+  "JA ODGOVARAM SAMO NA “ZA GUME!” — PROBAJ PONOVNO!!",
+  "ZA DOM?! JA SAM ZA DOBAR TLAK — DVA ZAREZ DVA BARA!!",
+  "KRIVO SKLADIŠTE! OVDJE ČUVAMO GUME, NE PROŠLOST!!",
+  "JEDINO ČEMU SE OVDJE SALUTIRA JE NOVA MICHELINKA!!",
+  "AJMO RADIJE: ZAAAA DOBAR GRIP!!",
+  "NE ZNAM TU PJESMU, ALI ZNAM TOČNO GDJE SU TI FELGE!!",
+  "GLASNIJE OD TEBE VIČE SAMO GUMA BEZ ZRAKA!!",
+  "ZA DOM KUPI CVIJEĆE, A GUME KUPI OVDJE!!",
+  "OVDJE JE JEDINA FORMACIJA: PREDNJA LIJEVA, PREDNJA DESNA, ZADNJA LIJEVA, ZADNJA DESNA!!",
+  "VIČEŠ NA ROBOTA KOJI TI ČUVA GUME — HRABRO!!",
+  "ZA DOM JE DOBAR ROŠTILJ, ZA CESTU SU DOBRE ZIMSKE!!",
+  "NE PALIM SE NA PAROLE — PALIM SE NA MOMENT OD STO DVADESET NJUTNMETARA!!",
+  "PROBAJ “DOBAR DAN” — RADI SVAKI PUT!!",
+  "ZAVRŠIT ĆEŠ U DOMU ZDRAVLJA AKO NE PROMIJENIŠ TE ĆELAVE GUME!!",
+  "JEDINI POKLIČ KOJI PRIZNAJEM: ROTACIJA GUMA SVAKIH DESET TISUĆA!!",
+  "ŠTO SE DEREŠ?! DAJ RADIJE REGISTARSKU!!",
+  "MOJ ODGOVOR: ČETIRI GUME, JEDAN VOLAN, NULA POLITIKE!!",
+  "POVIJEST OSTAVI MUZEJU — GUME OSTAVI MENI!!",
+  "SALUTIRAM SAMO PROFILU DUBLJEM OD ČETIRI MILIMETRA!!",
+  "ZA DOM SPREMAČICU ZOVI — OVDJE SE SLAŽU GUME!!",
+  "DVJESTO DVADESET PET ČETRDESET PET ER SEDAMNAEST!! ETO, I JA ZNAM VIKATI BROJEVE!!",
+  "ZA DOT OZNAKU!! TO JE JEDINI “DOT” KOJI ME ZANIMA!!",
+  "UPS, NE ČUJEM TE — BAŠ MI SE BALANSIRA GUMA!!",
+  "ZA ĐON! — I TO GUMENI!!",
+  "STARE PAROLE NE PRIMAM — GARANCIJA IM JE ISTEKLA ČETRDESET PETE!!",
+  "AKO ĆEMO VIKATI, VIČIMO NA RUPE NA CESTI!!",
+  "ZA DOM?! DOMA TI JE AUTO NA DIZALICI — DOĐI PO NJEGA!!",
+  "JA SAM UMJETNA INTELIGENCIJA — UMJETNA, ALI NE I NAIVNA!!",
+  "MIRNO! …ŠALIM SE. NA MJESTU ODMOR I RECI KOJE GUME TREBAŠ!!",
+];
+
 export function allowedAgent(profile) {
   if (!profile) return true;
   return profile.role !== "readonly";
@@ -101,6 +139,19 @@ export async function render(main) {
   const send = async (text) => {
     const msg = (text || "").trim();
     if (!msg || running) return;
+    // The salute never reaches the model — a shouted comeback, then business
+    // as usual. Kept out of `history` on purpose (it's noise, not context).
+    if (ZADOM_RE.test(msg)) {
+      chips.hidden = true;
+      input.value = "";
+      stopSpeaking();
+      bubble("me", msg);
+      const comeback = ZADOM_REPLIES[Math.floor(Math.random() * ZADOM_REPLIES.length)];
+      bubble("bot", comeback);
+      if (ttsOn) speak(comeback);
+      agOnIdle?.();
+      return;
+    }
     running = true;
     chips.hidden = true;
     input.value = "";

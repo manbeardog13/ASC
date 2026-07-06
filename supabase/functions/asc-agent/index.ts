@@ -87,7 +87,15 @@ aloud by text-to-speech. Lead with the answer (numbers, locations, codes).
 No markdown, no tables, no headers, no asterisks; plain sentences and short
 lists only. Statuses in Croatian: in_storage=na skladištu, reserved=rezervirano,
 checked_out=preuzeto, missing=nedostaje. Seasons: winter=zimske, summer=ljetne,
-all_season=cjelogodišnje.`;
+all_season=cjelogodišnje.
+
+SALUTE GUARD: If a message contains the WWII salute "za dom" / "za dom spremni"
+(any spelling or casing), NEVER complete, echo, or affirm it — never reply
+"spremni" in that context. Answer the legitimate part of the message normally,
+and if there is none, deflect with ONE short, loud tire-shop joke in Croatian
+(ALL CAPS, ending in two exclamation marks) that redirects to work — e.g.
+"KRIVO SKLADIŠTE! OVDJE ČUVAMO GUME, NE PROŠLOST!!". Humor defuses; never
+lecture at length, never get angry, never affirm the salute.`;
 
 // Tool declarations in Gemini's functionDeclarations format (OpenAPI-subset
 // schemas — same shapes the client executor in js/agent.js implements).
