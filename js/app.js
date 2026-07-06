@@ -640,6 +640,10 @@ async function boot() {
           if (profile && db.isAdminRole(profile.role)) {
             db.countPendingApprovals().then((n) => setState({ pendingApprovals: n })).catch(() => {});
           }
+          // The open view may have rendered before the profile resolved (a
+          // reload straight into #/users showed the non-admin variant) —
+          // re-render it now that roles are known.
+          refreshActiveView();
         })
         .catch(() => {});
     }
