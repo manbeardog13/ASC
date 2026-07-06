@@ -1,22 +1,27 @@
 // ============================================================================
 // asc-agent — the in-app AI assistant's brain (Supabase Edge Function).
 //
-// The static PWA can't hold an Anthropic API key, so this function is the only
-// place it lives. The client sends the conversation (messages[]); this function
+// Powered by Google's Gemini API (FREE tier: an AI Studio key needs no credit
+// card; Flash models allow ~10 req/min and ~1,500 req/day — plenty for the
+// shop). The static PWA can't hold an API key, so this function is the only
+// place it lives. The client speaks an Anthropic-style content-block protocol
+// (text / tool_use / tool_result + stop_reason); this function TRANSLATES that
+// to Gemini's contents/functionCall/functionResponse format and back, so the
+// client code is provider-agnostic. The client sends the conversation; this
+// function
 //   • verifies the caller's JWT and that they have an active role (not readonly),
-//   • attaches the server-held system prompt + tool definitions,
-//   • calls the Claude Messages API and returns {content, stop_reason} verbatim.
+//   • attaches the server-held system prompt + tool declarations,
+//   • calls Gemini generateContent and returns {content, stop_reason}.
 // TOOLS EXECUTE ON THE CLIENT against db.js with the user's own session, so RLS
 // applies to every read/write — this function never touches business data.
 //
 // Deploy:  supabase functions deploy asc-agent --no-verify-jwt
-// Secrets: supabase secrets set ANTHROPIC_API_KEY=sk-ant-...
-//          (optional) ASC_AGENT_MODEL=claude-opus-4-8
+// Secrets: supabase secrets set GEMINI_API_KEY=AIza...   (free: aistudio.google.com/apikey)
+//          (optional) GEMINI_MODEL=gemini-flash-latest
 // ============================================================================
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import Anthropic from "npm:@anthropic-ai/sdk";
 
-const MODEL = Deno.env.get("ASC_AGENT_MODEL") || "claude-opus-4-8";
+const MODEL = Deno.env.get("GEMINI_MODEL") || "gemini-flash-latest";
 const BLOCKED_ROLES = ["readonly"];
 const MAX_MESSAGES = 40;          // conversation window the client may send
 const MAX_BODY_BYTES = 200_000;   // hard cap on request size
@@ -51,12 +56,14 @@ Statuses in Croatian: in_storage=na skladištu, reserved=rezervirano,
 checked_out=preuzeto, missing=nedostaje. Seasons: winter=zimske, summer=ljetne,
 all_season=cjelogodišnje.`;
 
-const TOOLS: Anthropic.Tool[] = [
+// Tool declarations in Gemini's functionDeclarations format (OpenAPI-subset
+// schemas — same shapes the client executor in js/agent.js implements).
+const FUNCTION_DECLARATIONS = [
   {
     name: "search_sets",
     description:
       "Search the live tire-set database. Matches customer name, phone, email, license plate, vehicle, tire size, DOT, set code, location and notes. Call this for any question about specific customers, cars or sets.",
-    input_schema: {
+    parameters: {
       type: "object",
       properties: {
         query: { type: "string", description: "Search terms, e.g. a plate, a name, a set code, a tire size" },
@@ -67,7 +74,7 @@ const TOOLS: Anthropic.Tool[] = [
   {
     name: "get_set",
     description: "Load one tire set's full details (tires, treads, location, payment, dates) by its public code, e.g. ASC-2026-0042.",
-    input_schema: {
+    parameters: {
       type: "object",
       properties: { code: { type: "string", description: "The set's public code" } },
       required: ["code"],
@@ -76,18 +83,18 @@ const TOOLS: Anthropic.Tool[] = [
   {
     name: "inventory_overview",
     description: "Live totals: sets in storage / reserved / picked up, today's check-ins and pickups, and pickups due in the next 7 days. Call for any 'how many / what's the state of the warehouse' question.",
-    input_schema: { type: "object", properties: {} },
+    parameters: { type: "object", properties: {} },
   },
   {
     name: "due_pickups",
     description: "List the sets due for pickup in the next 7 days (code, customer, date, phone).",
-    input_schema: { type: "object", properties: {} },
+    parameters: { type: "object", properties: {} },
   },
   {
     name: "create_tire_set",
     description:
       "Draft a NEW tire set for storage. The app shows the user a review card with these fields and asks them to confirm; on confirm the set is created in the database and the result tells you the new set code. Fill only fields the user actually provided.",
-    input_schema: {
+    parameters: {
       type: "object",
       properties: {
         customer_name: { type: "string", description: "REQUIRED — the customer's full name" },
@@ -111,6 +118,63 @@ const TOOLS: Anthropic.Tool[] = [
   },
 ];
 
+// ---- Protocol translation ---------------------------------------------------
+// Client wire format (unchanged from day one): Anthropic-style messages —
+//   user: "text"  |  user: [{type:"tool_result", tool_use_id, content}]
+//   assistant: [{type:"text"|"tool_use", ...}]
+// Gemini wants contents[{role:"user"|"model", parts:[{text}|{functionCall}|
+// {functionResponse}]}]. Gemini function calls carry NO ids, so we synthesize
+// ids on the way out and resolve tool_use_id → function name on the way in
+// (the full history is present each call, so this stays stateless).
+function toGeminiContents(messages: any[]): unknown[] {
+  const nameById = new Map<string, string>();
+  for (const m of messages) {
+    if (m?.role === "assistant" && Array.isArray(m.content)) {
+      for (const b of m.content) if (b?.type === "tool_use" && b.id) nameById.set(b.id, b.name);
+    }
+  }
+  const contents: unknown[] = [];
+  for (const m of messages) {
+    if (m?.role === "user") {
+      if (typeof m.content === "string") {
+        contents.push({ role: "user", parts: [{ text: m.content }] });
+      } else if (Array.isArray(m.content)) {
+        const parts = m.content
+          .filter((b: any) => b?.type === "tool_result")
+          .map((b: any) => ({
+            functionResponse: {
+              name: nameById.get(b.tool_use_id) || "unknown_tool",
+              response: { result: typeof b.content === "string" ? b.content : JSON.stringify(b.content) },
+            },
+          }));
+        if (parts.length) contents.push({ role: "user", parts });
+      }
+    } else if (m?.role === "assistant" && Array.isArray(m.content)) {
+      const parts = m.content.map((b: any) =>
+        b?.type === "text" ? { text: b.text }
+        : b?.type === "tool_use" ? { functionCall: { name: b.name, args: b.input || {} } }
+        : null
+      ).filter(Boolean);
+      if (parts.length) contents.push({ role: "model", parts });
+    }
+  }
+  return contents;
+}
+
+function fromGeminiResponse(data: any) {
+  const parts = data?.candidates?.[0]?.content?.parts || [];
+  const content: unknown[] = [];
+  let hasCall = false;
+  parts.forEach((p: any, i: number) => {
+    if (typeof p?.text === "string" && p.text) content.push({ type: "text", text: p.text });
+    if (p?.functionCall?.name) {
+      hasCall = true;
+      content.push({ type: "tool_use", id: `fc_${Date.now()}_${i}`, name: p.functionCall.name, input: p.functionCall.args || {} });
+    }
+  });
+  return { content, stop_reason: hasCall ? "tool_use" : "end_turn" };
+}
+
 const cors = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -123,7 +187,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
 
-  const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
+  const apiKey = Deno.env.get("GEMINI_API_KEY");
   if (!apiKey) return json({ error: "agent_not_configured" }, 503);
 
   // -- Auth: signed-in user with an active (non-readonly) role ----------------
@@ -148,25 +212,30 @@ Deno.serve(async (req) => {
   if (!Array.isArray(messages) || !messages.length) return json({ error: "Bad request." }, 400);
   if (messages.length > MAX_MESSAGES) return json({ error: "Conversation too long — start a new chat." }, 413);
 
-  // -- Claude ------------------------------------------------------------------
-  const anthropic = new Anthropic({ apiKey });
+  // -- Gemini ------------------------------------------------------------------
   try {
-    const response = await anthropic.messages.create({
-      model: MODEL,
-      max_tokens: 8192,
-      thinking: { type: "adaptive" },
-      output_config: { effort: "low" },   // shop-floor answers: fast + focused
-      system: SYSTEM,
-      tools: TOOLS,
-      messages: messages as Anthropic.MessageParam[],
-    });
-    return json({ content: response.content, stop_reason: response.stop_reason });
-  } catch (err) {
-    if (err instanceof Anthropic.RateLimitError) return json({ error: "busy" }, 429);
-    if (err instanceof Anthropic.APIError) {
-      console.error("[asc-agent] API error", err.status, err.message);
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: SYSTEM }] },
+          tools: [{ functionDeclarations: FUNCTION_DECLARATIONS }],
+          toolConfig: { functionCallingConfig: { mode: "AUTO" } },
+          contents: toGeminiContents(messages),
+          generationConfig: { maxOutputTokens: 2048 },
+        }),
+      },
+    );
+    if (res.status === 429) return json({ error: "busy" }, 429);
+    if (!res.ok) {
+      console.error("[asc-agent] Gemini error", res.status, (await res.text()).slice(0, 500));
       return json({ error: "agent_failed" }, 502);
     }
+    const data = await res.json();
+    return json(fromGeminiResponse(data));
+  } catch (err) {
     console.error("[asc-agent]", err);
     return json({ error: "agent_failed" }, 502);
   }

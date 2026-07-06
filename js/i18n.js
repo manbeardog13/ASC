@@ -85,7 +85,7 @@ const DICT = {
     "ag.suggest1": "How many sets are in storage?",
     "ag.suggest2": "Who is due for pickup this week?",
     "ag.suggest3": "Store a new set for a customer",
-    "ag.setup": "The assistant isn't set up yet — deploy the asc-agent function and set the ANTHROPIC_API_KEY secret (see supabase/functions/asc-agent).",
+    "ag.setup": "The assistant isn't set up yet — deploy the asc-agent function and set the free GEMINI_API_KEY secret (see supabase/functions/asc-agent).",
     "ag.error": "The assistant hit a problem — please try again.",
     "conn.online": "Online", "conn.offline": "Offline", "conn.syncing": "Syncing {n}", "conn.queued": " · {n} queued",
     // setup / login
@@ -256,7 +256,7 @@ const DICT = {
     "ag.suggest1": "Koliko je setova na skladištu?",
     "ag.suggest2": "Tko je za preuzimanje ovaj tjedan?",
     "ag.suggest3": "Zaprimi novi set za kupca",
-    "ag.setup": "Pomoćnik još nije postavljen — postavite funkciju asc-agent i tajni ključ ANTHROPIC_API_KEY (upute: supabase/functions/asc-agent).",
+    "ag.setup": "Pomoćnik još nije postavljen — postavite funkciju asc-agent i besplatni tajni ključ GEMINI_API_KEY (upute: supabase/functions/asc-agent).",
     "ag.error": "Pomoćnik je naišao na problem — pokušajte ponovno.",
     "conn.online": "Na mreži", "conn.offline": "Bez mreže", "conn.syncing": "Sinkronizacija {n}", "conn.queued": " · {n} u redu",
     "setup.body": "Aplikacija još nije povezana s bazom. Unesite Supabase podatke u js/config.js, zatim osvježite. Cijeli postupak je u SETUP.md.",

@@ -710,6 +710,15 @@ details.disclose > .disclose-body { padding: 0 2px 16px; }
   animation: authBgIn 1.5s var(--ease-out) both;
 }
 .auth-bg i { position: absolute; display: block; }
+/* Blend the top edge into the iOS status-bar strip. In a standalone web app
+   iOS paints that strip with theme-color (#edf0f5) and DARK text; the only
+   way to paint beneath it (black-translucent) forces unreadable WHITE status
+   text on our light canvas. So instead the backdrop fades to exactly the
+   strip's color at the top — one continuous surface, no seam. */
+.auth-bg::after {
+  content: ""; position: absolute; top: 0; left: 0; right: 0; height: 170px;
+  background: linear-gradient(to bottom, var(--bg) 0, var(--bg) 12px, rgba(237,240,245,0) 100%);
+}
 @keyframes authBgIn { from { opacity: 0; filter: blur(28px); } to { opacity: 1; filter: blur(0); } }
 
 /* Grainy Lava bloom anchored top-left (the palette-card gradient, lightened) */
