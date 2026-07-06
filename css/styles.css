@@ -1071,6 +1071,11 @@ a.u-row:active, button.u-row:active { transform: scale(.99); transition-duration
 .ws-title { display: inline-flex; align-items: center; gap: 10px; font-size: 30px; }
 .ws-exit { min-height: 52px; padding: 0 22px; font-size: 16px; }
 
+/* Dashboard launch pair — ASC Agent + Radionica, side by side on wide screens */
+.dash-launch { display: grid; grid-template-columns: 1fr; gap: 10px; margin-bottom: 20px; }
+@media (min-width: 560px) { .dash-launch { grid-template-columns: 1fr 1fr; } }
+.dash-launch .ws-enter { margin-bottom: 0; }
+
 /* Dashboard entry — dark Black Core bar with a Lava orb */
 .ws-enter {
   display: flex; align-items: center; gap: 14px; margin-bottom: 20px; padding: 14px 18px;
@@ -1161,6 +1166,9 @@ a.u-row:active, button.u-row:active { transform: scale(.99); transition-duration
 .ag-msg.is-err { color: var(--danger); }
 @keyframes agPulse { 0%,100% { opacity: .55; } 50% { opacity: 1; } }
 .ag-chips { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+/* Print-label offer row that appears in the chat after the agent creates a set */
+.ag-print { align-self: flex-start; max-width: 82%; border-color: rgba(255,78,27,.35); }
+.ag-print .ic { color: var(--brand-ink); }
 .ag-chips .u-row { min-height: 44px; font-weight: 600; color: var(--ink-2); }
 .ag-inputrow {
   position: sticky; bottom: calc(var(--nav-h) + 10px); display: flex; gap: 8px; align-items: center;

@@ -109,7 +109,11 @@ export async function render(main) {
     try {
       const reply = await runTurn(history, {
         onToolUse: (name) => { thinking.textContent = t("ag.working"); },
-        onDraftReview: (draft) => reviewDraft(draft),
+        onDraftReview: async (draft) => {
+          const res = await reviewDraft(draft);
+          if (res.confirmed) addPrintRow(res.code);   // the label offer lives in the chat
+          return res;
+        },
       });
       thinking.remove();
       const clean = stripMd(reply);
@@ -189,6 +193,25 @@ export async function render(main) {
     agOnIdle = () => { if (!session) setState("idle", t("ag.hold")); };
   }
 
+  // A persistent print offer in the chat log right after a set is created —
+  // one tap prints the QR label (the toast offers it too, but toasts vanish).
+  function addPrintRow(code) {
+    const row = document.createElement("button");
+    row.type = "button";
+    row.className = "u-row ag-print";
+    row.innerHTML = `${icon("printer", 17)} <span>${esc(t("ci.printLabel"))}</span><span class="u-row-end tnum">${esc(code)}</span>`;
+    row.onclick = async () => {
+      row.disabled = true;
+      try {
+        const { printLabel } = await import("../qrlabel.js");
+        printLabel(await db.loadStorageSet(code));
+      } catch (err) { toast(err.message, "err"); }
+      row.disabled = false;
+    };
+    log.appendChild(row);
+    log.scrollTop = log.scrollHeight;
+  }
+
   // ---- The review card: agent's draft → human confirms → DB write -------------
   function reviewDraft(draft) {
     return new Promise((resolve) => {
@@ -201,6 +224,7 @@ export async function render(main) {
         [t("ci.season"), seasonLabel(form.set.season)],
         [t("ci.qty"), String(form.set.quantity)],
         [t("tire.size"), form.tires[0]?.size],
+        [t("tire.brand"), form.tires[0]?.brand],
         [t("ci.location"), [form.set.zone, form.set.rack, form.set.shelf, form.set.slot].filter(Boolean).join(" · ")],
         [t("ci.expectedPickup"), form.set.expected_out_date],
         [t("ci.fee"), form.set.fee != null ? String(form.set.fee) : ""],
@@ -230,7 +254,10 @@ export async function render(main) {
         busy(e.currentTarget, true);
         try {
           const code = await db.createStorageSet(form);
-          toast(t("ci.stored", { code }));
+          toast(t("ci.stored", { code }), { actionLabel: t("ci.printLabel"), onAction: async () => {
+            const { printLabel } = await import("../qrlabel.js");
+            printLabel(await db.loadStorageSet(code));
+          }});
           done({ confirmed: true, code });
         } catch (err) {
           toast(err.message, "err");

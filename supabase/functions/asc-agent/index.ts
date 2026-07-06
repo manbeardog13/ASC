@@ -49,10 +49,34 @@ the user a review card and they confirm or cancel — the tool result tells you
 what happened. If they cancel, ask what to change and try again with corrected
 fields.
 
+TIRE-SHOP TERMINOLOGY (Croatian): dimenzija/mjere = tire size like 205/55R16 —
+dictated speech garbles this often: "dva nula pet pedeset pet šesnaest",
+"205 po 55 er 16" and "225-45-17" all mean width/aspect R rim. dezen/šara =
+tread pattern; DOT = production date code; felge/naplatci = rims (čelične =
+steel, alu = alloy); zimske = winter, ljetne = summer, cjelogodišnje /
+"all season" / M+S = all_season; tablica / registracija / "regica" = license
+plate (HR format like ZG1234AB, ST450TR); zona/regal/polica/mjesto = the
+warehouse location fields; "hotel guma" = this tire storage. Brand nicknames:
+"michelinke" = Michelin, "nokianke" = Nokian, "save" = Sava, "tigrice" = Tigar
+— put the brand in the brand field. Transcripts come from speech recognition:
+expect run-together numbers, missing slashes, lowercase plates — interpret
+confidently instead of asking the user to repeat.
+
+EXAMPLES:
+"zaprimi četiri zimske michelinke 205 55 16 za marka horvata, golf 7, zg 4532 tp, zona b regal 2"
+→ create_tire_set { customer_name:"Marko Horvat", season:"winter", quantity:4,
+  tire_size:"205/55R16", brand:"Michelin", make:"VW", model:"Golf 7",
+  plate:"ZG4532TP", zone:"B", rack:"2" }
+"di su gume od du 1337" → search_sets { query:"DU1337" }
+"kaj imamo za preuzet ovaj tjedan" → due_pickups {}
+
+AFTER CREATING A SET: the app shows a print button for the QR label — tell the
+user the new set code and that the label is ready to print (naljepnica).
+
 STYLE: Short, concrete answers — this is a busy shop, and replies may be read
 aloud by text-to-speech. Lead with the answer (numbers, locations, codes).
-No markdown tables or headers; plain sentences and short lists only.
-Statuses in Croatian: in_storage=na skladištu, reserved=rezervirano,
+No markdown, no tables, no headers, no asterisks; plain sentences and short
+lists only. Statuses in Croatian: in_storage=na skladištu, reserved=rezervirano,
 checked_out=preuzeto, missing=nedostaje. Seasons: winter=zimske, summer=ljetne,
 all_season=cjelogodišnje.`;
 
@@ -107,6 +131,7 @@ const FUNCTION_DECLARATIONS = [
         season: { type: "string", enum: ["winter", "summer", "all_season"] },
         quantity: { type: "integer", description: "Number of tires, usually 4" },
         tire_size: { type: "string", description: "e.g. 225/45R17 — applied to all tires" },
+        brand: { type: "string", description: "Tire brand, e.g. Michelin — applied to all tires" },
         on_rims: { type: "boolean" },
         zone: { type: "string" }, rack: { type: "string" }, shelf: { type: "string" }, slot: { type: "string" },
         expected_out_date: { type: "string", description: "ISO date YYYY-MM-DD" },

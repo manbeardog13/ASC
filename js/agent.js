@@ -90,7 +90,7 @@ export function draftToForm(d) {
       notes: (d.notes || "").trim(),
     },
     tires: Array.from({ length: qty }, (_, i) => ({
-      position: ["FL", "FR", "RL", "RR"][i] || "", size, brand: "", model: "",
+      position: ["FL", "FR", "RL", "RR"][i] || "", size, brand: (d.brand || "").trim(), model: "",
       tread_mm: null, dot_code: "", studded: false, condition_notes: "",
     })),
   };
