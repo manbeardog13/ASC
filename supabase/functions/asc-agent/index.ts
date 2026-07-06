@@ -22,6 +22,9 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const MODEL = Deno.env.get("GEMINI_MODEL") || "gemini-flash-latest";
+// Separate free-tier quota bucket — keeps the agent alive when the primary
+// model's daily allowance runs out (each has its own RPD on the free tier).
+const FALLBACK_MODEL = Deno.env.get("GEMINI_FALLBACK_MODEL") || "gemini-flash-lite-latest";
 const BLOCKED_ROLES = ["readonly"];
 const MAX_MESSAGES = 40;          // conversation window the client may send
 const MAX_BODY_BYTES = 200_000;   // hard cap on request size
@@ -263,8 +266,8 @@ Deno.serve(async (req) => {
 
   // -- Gemini ------------------------------------------------------------------
   try {
-    const callGemini = () => fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`,
+    const callGemini = (model: string) => fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
@@ -277,11 +280,17 @@ Deno.serve(async (req) => {
         }),
       },
     );
-    let res = await callGemini();
+    let res = await callGemini(MODEL);
     if (res.status === 429) {
       // Free-tier RPM burst — one polite retry usually clears it.
       await new Promise((r) => setTimeout(r, 1600));
-      res = await callGemini();
+      res = await callGemini(MODEL);
+    }
+    if (res.status === 429 && FALLBACK_MODEL !== MODEL) {
+      // Persistent 429 = the model's DAILY free allowance is spent. The log
+      // line keeps the quota reason findable; the fallback keeps us alive.
+      console.error("[asc-agent] 429 on", MODEL, (await res.text()).slice(0, 300), "→ trying", FALLBACK_MODEL);
+      res = await callGemini(FALLBACK_MODEL);
     }
     if (res.status === 429) return json({ error: "busy" }, 429);
     if (!res.ok) {
