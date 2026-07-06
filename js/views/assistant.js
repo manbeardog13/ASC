@@ -13,6 +13,14 @@ import { voiceSupported, listenHold, stopListening, ttsSupported, speak, stopSpe
 import { runTurn, draftToForm } from "../agent.js";
 
 let history = [];        // Anthropic messages[] — survives view remounts in-session
+
+// Bubbles are plain text (and get read aloud) — strip the light markdown the
+// model sometimes emits despite instructions (**bold**, headers, bullets).
+function stripMd(s) {
+  return (s || "")
+    .replace(/\*\*(.+?)\*\*/g, "$1").replace(/__(.+?)__/g, "$1")
+    .replace(/^#{1,4}\s+/gm, "").replace(/^\s*[*•]\s+/gm, "– ");
+}
 let ttsOn = (() => { try { return localStorage.getItem("asc.agentTts") !== "0"; } catch { return true; } })();
 
 export function allowedAgent(profile) {
@@ -72,7 +80,7 @@ export async function render(main) {
     if (m.role === "user" && typeof m.content === "string") bubble("me", m.content);
     if (m.role === "assistant" && Array.isArray(m.content)) {
       const txt = m.content.filter((b) => b.type === "text").map((b) => b.text).join("\n").trim();
-      if (txt) bubble("bot", txt);
+      if (txt) bubble("bot", stripMd(txt));
     }
   }
 
@@ -104,8 +112,9 @@ export async function render(main) {
         onDraftReview: (draft) => reviewDraft(draft),
       });
       thinking.remove();
-      bubble("bot", reply || "…");
-      if (ttsOn) speak(reply);
+      const clean = stripMd(reply);
+      bubble("bot", clean || "…");
+      if (ttsOn) speak(clean);
     } catch (err) {
       // Drop the failed user turn so a retry doesn't double it.
       while (history.length && history[history.length - 1].role !== "user") history.pop();
