@@ -9,7 +9,7 @@ import { getState } from "../store.js";
 import { icon, esc, toast, busy } from "../ui.js";
 import { t } from "../i18n.js";
 import { seasonLabel } from "../domain.js";
-import { voiceSupported, listenOnce, stopListening, ttsSupported, speak, stopSpeaking } from "../voice.js";
+import { voiceSupported, listenHold, stopListening, ttsSupported, speak, stopSpeaking } from "../voice.js";
 import { runTurn, draftToForm } from "../agent.js";
 
 let history = [];        // Anthropic messages[] — survives view remounts in-session
@@ -38,8 +38,16 @@ export async function render(main) {
         <button class="u-row" data-chip>${esc(t("ag.suggest2"))}</button>
         <button class="u-row" data-chip>${esc(t("ag.suggest3"))}</button>
       </div>
+      ${mic ? `
+      <div class="ag-ptt-zone">
+        <div id="agPttStatus" class="ag-ptt-status" aria-live="polite">${esc(t("ag.hold"))}</div>
+        <button type="button" id="agPtt" class="ag-ptt" aria-label="${esc(t("ag.hold"))}">
+          <span class="ag-ptt-halo" aria-hidden="true"></span>
+          ${icon("mic", 44)}
+          <span class="ag-ptt-lab">${esc(t("ag.holdShort"))}</span>
+        </button>
+      </div>` : ""}
       <form id="agForm" class="ag-inputrow" autocomplete="off">
-        ${mic ? `<button type="button" id="agMic" class="ag-mic" aria-label="${esc(t("ws.voiceFind"))}">${icon("mic", 20)}</button>` : ""}
         <input id="agInput" placeholder="${esc(t("ag.placeholder"))}" autocomplete="off">
         <button type="submit" id="agSend" class="btn btn-primary">${t("ag.send")}</button>
       </form>
@@ -69,6 +77,17 @@ export async function render(main) {
   }
 
   let running = false;
+  let alive = true;        // false after teardown — a mid-hold nav must not ghost-send
+  let agOnIdle = null;     // PTT orb reset, assigned below when the orb exists
+  const teardown = () => {
+    alive = false;
+    stopListening();
+    window.removeEventListener("hashchange", teardown);
+    window.removeEventListener("asc:teardown", teardown);
+  };
+  window.addEventListener("hashchange", teardown);
+  window.addEventListener("asc:teardown", teardown);
+
   const send = async (text) => {
     const msg = (text || "").trim();
     if (!msg || running) return;
@@ -95,6 +114,7 @@ export async function render(main) {
       bubble("bot", err.message, "is-err");
     } finally {
       running = false;
+      agOnIdle?.();
     }
   };
 
@@ -111,18 +131,54 @@ export async function render(main) {
     ttsBtn.innerHTML = `${icon("sound", 18)} ${ttsOn ? t("ag.speakOn") : t("ag.speakOff")}`;
   };
 
-  const micBtn = main.querySelector("#agMic");
-  if (micBtn) micBtn.onclick = async () => {
-    if (micBtn.classList.contains("is-listening")) { stopListening(); return; }
-    micBtn.classList.add("is-listening");
-    const old = input.placeholder;
-    input.placeholder = t("voice.listening");
-    try {
-      const heard = await listenOnce({ onInterim: (s) => { input.value = s; } });
-      if (heard) send(heard);
-    } catch (err) { toast(err.message, "err"); }
-    finally { micBtn.classList.remove("is-listening"); input.placeholder = old; }
-  };
+  // ---- Walkie-talkie: press & HOLD the glass orb to talk, release to send ----
+  const ptt = main.querySelector("#agPtt");
+  const pttStatus = main.querySelector("#agPttStatus");
+  if (ptt) {
+    let session = null;      // the live listenHold handle while the button is held
+
+    const setState = (state, text) => {
+      ptt.classList.toggle("is-live", state === "live");
+      ptt.classList.toggle("is-think", state === "think");
+      pttStatus.textContent = text;
+      pttStatus.classList.toggle("is-live", state === "live");
+    };
+
+    const startHold = () => {
+      if (session || running) return;
+      stopSpeaking();                       // holding the button interrupts TTS
+      session = listenHold({ onInterim: (s) => { if (s) pttStatus.textContent = s; } });
+      if (!session) return;                 // engine busy — ignore this press
+      setState("live", t("voice.listening"));
+      session.done
+        .then((text) => {
+          session = null;
+          if (!alive) return;               // navigated away mid-hold
+          if (text) { setState("think", t("ag.thinking")); send(text); }
+          else setState("idle", t("ag.hold"));   // tap or silence — nothing captured
+        })
+        .catch((err) => { session = null; if (!alive) return; setState("idle", t("ag.hold")); toast(err.message, "err"); });
+    };
+    const endHold = () => { session?.release(); };
+
+    ptt.addEventListener("pointerdown", (e) => {
+      e.preventDefault();
+      ptt.setPointerCapture?.(e.pointerId);
+      startHold();
+    });
+    ptt.addEventListener("pointerup", endHold);
+    ptt.addEventListener("pointercancel", endHold);
+    ptt.addEventListener("contextmenu", (e) => e.preventDefault());   // mobile long-press menu
+    // Keyboard walkie-talkie: hold Space/Enter on the focused orb
+    ptt.addEventListener("keydown", (e) => {
+      if ((e.key === " " || e.key === "Enter") && !e.repeat) { e.preventDefault(); startHold(); }
+    });
+    ptt.addEventListener("keyup", (e) => {
+      if (e.key === " " || e.key === "Enter") { e.preventDefault(); endHold(); }
+    });
+    // Reset the orb when a turn finishes (send() flips `running` back)
+    agOnIdle = () => { if (!session) setState("idle", t("ag.hold")); };
+  }
 
   // ---- The review card: agent's draft → human confirms → DB write -------------
   function reviewDraft(draft) {

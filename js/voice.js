@@ -93,6 +93,59 @@ export function listenOnce({ onInterim } = {}) {
     listenOnce._active = rec;
   });
 }
+// ---- Push-to-talk (walkie-talkie) ----------------------------------------------
+// Hold-to-speak needs different mechanics than tap-to-talk: CONTINUOUS
+// recognition that accumulates finals for as long as the button is held, and a
+// release() that FINALIZES (stop, never abort — the whole point is committing
+// what was said). Returns { done, release }: `done` resolves with the full
+// transcript once the recognizer drains after release (or on silence timeout).
+export function listenHold({ onInterim } = {}) {
+  if (!SR || listenOnce._active) return null;
+  const rec = new SR();
+  rec.lang = speechLang();
+  rec.interimResults = true;
+  rec.maxAlternatives = 1;
+  rec.continuous = true;
+
+  let finalText = "";
+  let settled = false;
+  let settleFn = null;
+  const done = new Promise((resolve, reject) => {
+    settleFn = { resolve, reject };
+  });
+  const settle = (ok, val) => {
+    if (settled) return;
+    settled = true;
+    if (listenOnce._active === rec) listenOnce._active = null;
+    ok ? settleFn.resolve(val) : settleFn.reject(val);
+  };
+
+  rec.onresult = (e) => {
+    let interim = "";
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      const txt = e.results[i][0].transcript;
+      if (e.results[i].isFinal) finalText += txt + " ";
+      else interim += txt;
+    }
+    if (onInterim) onInterim((finalText + interim).trim());
+  };
+  rec.onerror = (e) => {
+    if (e.error === "no-speech" || e.error === "aborted") return settle(true, finalText.trim());
+    if (e.error === "not-allowed" || e.error === "service-not-allowed") {
+      return settle(false, new Error(t("voice.micDenied")));
+    }
+    settle(false, new Error(t("voice.error")));
+  };
+  rec.onend = () => settle(true, finalText.trim());
+
+  try { rec.start(); } catch { return null; }
+  listenOnce._active = rec;
+  return {
+    done,
+    release() { try { rec.stop(); } catch { /* already stopped */ } },
+  };
+}
+
 export function isListening() {
   return Boolean(listenOnce._active);
 }
