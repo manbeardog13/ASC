@@ -259,7 +259,7 @@ Deno.serve(async (req) => {
 
   // -- Gemini ------------------------------------------------------------------
   try {
-    const res = await fetch(
+    const callGemini = () => fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`,
       {
         method: "POST",
@@ -273,6 +273,12 @@ Deno.serve(async (req) => {
         }),
       },
     );
+    let res = await callGemini();
+    if (res.status === 429) {
+      // Free-tier RPM burst — one polite retry usually clears it.
+      await new Promise((r) => setTimeout(r, 1600));
+      res = await callGemini();
+    }
     if (res.status === 429) return json({ error: "busy" }, 429);
     if (!res.ok) {
       console.error("[asc-agent] Gemini error", res.status, (await res.text()).slice(0, 500));

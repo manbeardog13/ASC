@@ -96,21 +96,41 @@ export function draftToForm(d) {
   };
 }
 
+// Keep the conversation under the server's message/byte caps: retain only the
+// most recent exchanges, cutting at a plain-text user turn so tool_use /
+// tool_result pairs are never orphaned. Without this a long shop session
+// eventually hits the cap and EVERY further question fails.
+const KEEP_MESSAGES = 16;
+export function trimHistory(history) {
+  if (history.length <= KEEP_MESSAGES) return;
+  let cut = history.length - KEEP_MESSAGES;
+  while (cut < history.length && !(history[cut].role === "user" && typeof history[cut].content === "string")) cut++;
+  if (cut > 0 && cut < history.length) history.splice(0, cut);
+}
+
 // ---- The loop ------------------------------------------------------------------
 // runTurn(history, callbacks) drives one user turn to completion. `history` is
 // the messages array (mutated in place: assistant turns + tool results are
 // appended). Returns the assistant's final text.
 export async function runTurn(history, { onToolUse, onDraftReview } = {}) {
+  trimHistory(history);
   for (let round = 0; round <= MAX_TOOL_ROUNDS; round++) {
     const { data, error } = await supabase.functions.invoke("asc-agent", { body: { messages: history } });
     if (error) {
-      // Function missing / not deployed → a setup notice, not a crash.
+      // Surface the REAL reason — the generic message hid rate limits and
+      // over-long conversations and read as "the agent is broken".
       const status = error?.context?.status;
       if (status === 404 || /not found|Failed to send/i.test(error.message || "")) throw new Error(t("ag.setup"));
       if (status === 503) throw new Error(t("ag.setup"));
+      if (status === 429) throw new Error(t("ag.busy"));
+      if (status === 413) throw new Error(t("ag.tooLong"));
       throw new Error(t("ag.error"));
     }
-    if (data?.error) throw new Error(data.error === "agent_not_configured" ? t("ag.setup") : t("ag.error"));
+    if (data?.error) {
+      if (data.error === "agent_not_configured") throw new Error(t("ag.setup"));
+      if (data.error === "busy") throw new Error(t("ag.busy"));
+      throw new Error(t("ag.error"));
+    }
 
     const content = data?.content || [];
     history.push({ role: "assistant", content });
