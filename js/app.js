@@ -212,7 +212,7 @@ function openMenu() {
   const canWorkshop = db.isAdminRole(role) || role === "employee";
   pop.innerHTML = `
     ${canWorkshop ? item("/workshop", "box", t("menu.workshop")) : ""}
-    ${item("/assistant", "scan", t("menu.assistant"))}
+    ${item("/assistant", "agent", t("menu.assistant"))}
     <a href="#/users" role="menuitem" class="btn btn-ghost" style="justify-content:flex-start;width:100%">${icon("people", 18)}${t("menu.users")}${pending ? `<span class="nav-badge" style="margin-left:auto">${pending}</span>` : ""}</a>
     ${item("/reminders", "clock", t("menu.reminders"))}
     ${item("/recycle", "trash", t("menu.recycle"))}

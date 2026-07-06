@@ -19,7 +19,7 @@ export async function render(main) {
   const recent = getState().recentLocations || [];
   main.innerHTML = `
     <div class="row-between" style="margin-bottom:14px"><h1>${t("ci.title")}</h1>
-      ${voiceSupported() ? `<button type="button" id="voiceFill" class="btn voice-cta">${icon("phone", 18)} ${t("voice.fill")}</button>` : ""}
+      ${voiceSupported() ? `<button type="button" id="voiceFill" class="btn voice-cta">${icon("mic", 18)} ${t("voice.fill")}</button>` : ""}
     </div>
     <form id="ci" novalidate>
       <div class="card stack">

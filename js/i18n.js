@@ -74,8 +74,8 @@ const DICT = {
     "voice.micDenied": "Microphone access was denied — allow it in the browser settings.",
     "voice.error": "Speech recognition failed — please try again.",
     // In-app AI assistant
-    "menu.assistant": "Assistant",
-    "ag.title": "Assistant", "ag.send": "Send", "ag.newChat": "New conversation",
+    "menu.assistant": "ASC Agent",
+    "ag.title": "ASC Agent", "ag.send": "Send", "ag.newChat": "New conversation",
     "ag.placeholder": "Ask about sets, customers… or dictate a new set",
     "ag.hello": "Hi! Ask me anything about the warehouse — or tell me a new tire set to store and I'll fill it in for you.",
     "ag.thinking": "Thinking…", "ag.working": "Checking the database…",
@@ -245,8 +245,8 @@ const DICT = {
     "voice.micDenied": "Pristup mikrofonu je odbijen — dopustite ga u postavkama preglednika.",
     "voice.error": "Prepoznavanje govora nije uspjelo — pokušajte ponovno.",
     // AI pomoćnik u aplikaciji
-    "menu.assistant": "Pomoćnik",
-    "ag.title": "Pomoćnik", "ag.send": "Pošalji", "ag.newChat": "Novi razgovor",
+    "menu.assistant": "ASC Agent",
+    "ag.title": "ASC Agent", "ag.send": "Pošalji", "ag.newChat": "Novi razgovor",
     "ag.placeholder": "Pitajte o setovima, kupcima… ili izdiktirajte novi set",
     "ag.hello": "Bok! Pitajte me bilo što o skladištu — ili mi recite podatke novog seta guma i ispunit ću ih umjesto vas.",
     "ag.thinking": "Razmišljam…", "ag.working": "Provjeravam bazu…",

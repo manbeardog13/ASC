@@ -26,9 +26,9 @@ export async function render(main) {
   main.innerHTML = `
     <div class="ag">
       <div class="ws-head">
-        <h1 class="ws-title">${icon("scan", 24)} ${t("ag.title")}</h1>
+        <h1 class="ws-title">${icon("agent", 24)} ${t("ag.title")}</h1>
         <div class="ag-head-actions">
-          ${ttsSupported() ? `<button id="agTts" class="btn btn-ghost" aria-pressed="${ttsOn}" title="${esc(t("ag.speakToggle"))}">${icon("phone", 18)} ${ttsOn ? t("ag.speakOn") : t("ag.speakOff")}</button>` : ""}
+          ${ttsSupported() ? `<button id="agTts" class="btn btn-ghost" aria-pressed="${ttsOn}" title="${esc(t("ag.speakToggle"))}">${icon("sound", 18)} ${ttsOn ? t("ag.speakOn") : t("ag.speakOff")}</button>` : ""}
           <button id="agReset" class="btn btn-ghost" title="${esc(t("ag.newChat"))}">${icon("trash", 18)}</button>
         </div>
       </div>
@@ -39,7 +39,7 @@ export async function render(main) {
         <button class="u-row" data-chip>${esc(t("ag.suggest3"))}</button>
       </div>
       <form id="agForm" class="ag-inputrow" autocomplete="off">
-        ${mic ? `<button type="button" id="agMic" class="ag-mic" aria-label="${esc(t("ws.voiceFind"))}">${icon("phone", 20)}</button>` : ""}
+        ${mic ? `<button type="button" id="agMic" class="ag-mic" aria-label="${esc(t("ws.voiceFind"))}">${icon("mic", 20)}</button>` : ""}
         <input id="agInput" placeholder="${esc(t("ag.placeholder"))}" autocomplete="off">
         <button type="submit" id="agSend" class="btn btn-primary">${t("ag.send")}</button>
       </form>
@@ -108,7 +108,7 @@ export async function render(main) {
     if (!ttsOn) stopSpeaking();
     try { localStorage.setItem("asc.agentTts", ttsOn ? "1" : "0"); } catch { /* private mode */ }
     ttsBtn.setAttribute("aria-pressed", String(ttsOn));
-    ttsBtn.innerHTML = `${icon("phone", 18)} ${ttsOn ? t("ag.speakOn") : t("ag.speakOff")}`;
+    ttsBtn.innerHTML = `${icon("sound", 18)} ${ttsOn ? t("ag.speakOn") : t("ag.speakOff")}`;
   };
 
   const micBtn = main.querySelector("#agMic");

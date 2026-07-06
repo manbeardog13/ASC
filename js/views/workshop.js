@@ -32,7 +32,7 @@ export async function render(main) {
 
       ${mic ? `
       <button id="wsMic" class="ws-mic">
-        <span class="ws-mic-orb">${icon("phone", 30)}</span>
+        <span class="ws-mic-orb">${icon("mic", 30)}</span>
         <span class="ws-mic-txt">
           <b>${t("ws.voiceFind")}</b>
           <span id="wsMicSub">${t("ws.sayIt")}</span>
@@ -50,7 +50,7 @@ export async function render(main) {
         <a class="ws-btn is-accent" href="#/scan">${icon("scan", 34)}<span>${t("nav.scan")}</span></a>
         <a class="ws-btn" href="#/checkin">${icon("plus", 34)}<span>${t("nav.checkin")}</span></a>
         <a class="ws-btn" href="#/warehouse">${icon("map", 34)}<span>${t("nav.warehouse")}</span></a>
-        <a class="ws-btn" href="#/assistant">${icon("phone", 34)}<span>${t("ag.title")}</span></a>
+        <a class="ws-btn" href="#/assistant">${icon("agent", 34)}<span>${t("ag.title")}</span></a>
         <a class="ws-btn is-dark" href="#/reminders">${icon("clock", 34)}<span>${t("ws.due")}</span><b id="wsDue" class="ws-btn-num tnum"></b></a>
       </div>
     </div>`;

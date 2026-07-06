@@ -154,7 +154,7 @@ export async function voiceFillForm(fields, { onDone } = {}) {
     <div class="voice-card" role="dialog" aria-label="${t("voice.fill")}" tabindex="-1">
       <div class="voice-top">
         <span class="voice-step tnum" id="vStep"></span>
-        <span class="voice-live" id="vLive">${icon("phone", 15)} ${t("voice.listening")}</span>
+        <span class="voice-live" id="vLive">${icon("mic", 15)} ${t("voice.listening")}</span>
       </div>
       <div aria-live="polite">
         <div class="voice-label" id="vLabel"></div>

@@ -18,33 +18,41 @@ export function esc(value) {
 }
 
 // ---- Icons (inline SVG, stroke follows currentColor) ----------------------------
+// One drawing language across the set: rounded geometric silhouettes, generous
+// corner radii, deliberate stroke gaps, and tiny "node" dots (status LEDs, scan
+// endpoints, list bullets) for a quiet futuristic feel. Dots are drawn as
+// zero-length paths — round linecaps render them as perfect points.
 const ICON_PATHS = {
-  box:      '<path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3.3 8.3L12 13l8.7-4.7"/><path d="M12 13v8"/>',
-  clock:    '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
-  check:    '<path d="M20 6L9 17l-5-5"/>',
-  alert:    '<path d="M12 3l10 18H2L12 3z"/><path d="M12 10v4"/><path d="M12 17.5v.5"/>',
-  snow:     '<path d="M12 2v20M4 6l16 12M20 6L4 18"/>',
-  sun:      '<circle cx="12" cy="12" r="4.5"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.5 4.5l2 2M17.5 17.5l2 2M19.5 4.5l-2 2M6.5 17.5l-2 2"/>',
-  circle:   '<circle cx="12" cy="12" r="8.5"/>',
-  scan:     '<path d="M3 8V5a2 2 0 012-2h3M16 3h3a2 2 0 012 2v3M21 16v3a2 2 0 01-2 2h-3M8 21H5a2 2 0 01-2-2v-3"/><path d="M7 12h10"/>',
-  plus:     '<path d="M12 5v14M5 12h14"/>',
-  search:   '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.5-4.5"/>',
-  home:     '<path d="M3 10.5L12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/>',
-  printer:  '<path d="M7 8V3h10v5"/><rect x="3" y="8" width="18" height="9" rx="2"/><path d="M7 14h10v7H7z"/>',
-  camera:   '<path d="M3 8a2 2 0 012-2h2l2-3h6l2 3h2a2 2 0 012 2v11a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"/><circle cx="12" cy="13" r="4"/>',
-  pencil:   '<path d="M17 3l4 4L8 20l-5 1 1-5L17 3z"/>',
-  trash:    '<path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14"/>',
-  back:     '<path d="M15 5l-7 7 7 7"/>',
-  move:     '<path d="M12 3v18M12 3l-4 4M12 3l4 4M12 21l-4-4M12 21l4-4"/>',
-  map:      '<path d="M12 21s-7-5.6-7-11a7 7 0 0114 0c0 5.4-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/>',
-  people:   '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0113 0"/><path d="M16 5a3.5 3.5 0 010 7M15.5 14.5a6.5 6.5 0 016 5.5"/>',
-  car:      '<path d="M4 15l1.5-6A2 2 0 017.4 7h9.2a2 2 0 011.9 2L20 15"/><rect x="3" y="15" width="18" height="4" rx="1.5"/><circle cx="7.5" cy="19" r="1"/><circle cx="16.5" cy="19" r="1"/>',
-  phone:    '<path d="M5 3h4l2 5-2.5 1.5a12 12 0 006 6L16 13l5 2v4a2 2 0 01-2 2A16 16 0 013 5a2 2 0 012-2z"/>',
-  download: '<path d="M12 3v12M12 15l-4-4M12 15l4-4"/><path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/>',
-  list:     '<path d="M8 6h13M8 12h13M8 18h13"/><path d="M3.5 6h.5M3.5 12h.5M3.5 18h.5"/>',
-  wifiOff:  '<path d="M2 2l20 20"/><path d="M5 10a12 12 0 016.5-3M16.5 8.5A12 12 0 0119 10M8.5 13.5a7 7 0 013-1.5M15.5 13.5l.5.5"/><path d="M12 18h.01"/>',
-  logout:   '<path d="M15 4h4a1 1 0 011 1v14a1 1 0 01-1 1h-4"/><path d="M10 17l5-5-5-5M15 12H3"/>',
-  qr:       '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14h1M14 20h1M18 18h3v3h-3z"/>',
+  box:      '<path d="M12 2.8l8.6 4.7v9L12 21.2l-8.6-4.7v-9L12 2.8z"/><path d="M3.7 7.8L12 12.3l8.3-4.5"/><path d="M12 12.3V21"/>',
+  clock:    '<circle cx="12" cy="12" r="8.6"/><path d="M12 7.2V12l3.2 2"/>',
+  check:    '<path d="M4.5 12.8l5 5L19.5 6.6"/>',
+  alert:    '<path d="M10.3 4.2L2.9 17a2 2 0 001.7 3h14.8a2 2 0 001.7-3L13.7 4.2a2 2 0 00-3.4 0z"/><path d="M12 9.5v4.2"/><path d="M12 17.1v.01"/>',
+  snow:     '<path d="M12 2.8v18.4M4 7.4l16 9.2M20 7.4L4 16.6"/>',
+  sun:      '<circle cx="12" cy="12" r="4.2"/><path d="M12 2.8v2.4M12 18.8v2.4M2.8 12h2.4M18.8 12h2.4M5.5 5.5l1.7 1.7M16.8 16.8l1.7 1.7M18.5 5.5l-1.7 1.7M7.2 16.8l-1.7 1.7"/>',
+  circle:   '<circle cx="12" cy="12" r="8.6"/>',
+  scan:     '<path d="M4 8.2V6.4A2.4 2.4 0 016.4 4h1.8M15.8 4h1.8A2.4 2.4 0 0120 6.4v1.8M20 15.8v1.8a2.4 2.4 0 01-2.4 2.4h-1.8M8.2 20H6.4A2.4 2.4 0 014 17.6v-1.8"/><path d="M7.2 12h6.6"/><path d="M16.8 12h.01"/>',
+  plus:     '<path d="M12 5.4v13.2M5.4 12h13.2"/>',
+  search:   '<circle cx="11" cy="11" r="6.8"/><path d="M20.6 20.6L16 16"/><path d="M8.2 11a2.8 2.8 0 012.8-2.8"/>',
+  home:     '<path d="M4.2 10.6L12 4l7.8 6.6"/><path d="M5.8 9.4V19a2 2 0 002 2h8.4a2 2 0 002-2V9.4"/><path d="M12 21v-4.2"/>',
+  printer:  '<path d="M7.4 8V4.4h9.2V8"/><rect x="3.4" y="8" width="17.2" height="8.6" rx="2.2"/><path d="M7.4 14h9.2v6.6H7.4z"/><path d="M17.2 11.2h.01"/>',
+  camera:   '<path d="M3.4 8.6a2.2 2.2 0 012.2-2.2h2l1.8-2.6h5.2l1.8 2.6h2a2.2 2.2 0 012.2 2.2V18a2.2 2.2 0 01-2.2 2.2H5.6A2.2 2.2 0 013.4 18V8.6z"/><circle cx="12" cy="13" r="3.6"/><path d="M17.8 9.2h.01"/>',
+  pencil:   '<path d="M16.8 3.6l3.6 3.6L8.6 19 4 20l1-4.6L16.8 3.6z"/><path d="M14.6 5.8l3.6 3.6"/>',
+  trash:    '<path d="M4 7h16"/><path d="M9.4 7V4.6h5.2V7"/><path d="M6 7l.8 12a2 2 0 002 1.9h6.4a2 2 0 002-1.9L18 7"/><path d="M10 11v6M14 11v6"/>',
+  back:     '<path d="M14.6 5.4L8 12l6.6 6.6"/>',
+  move:     '<path d="M12 3.4v17.2M8.6 6.4L12 3.4l3.4 3M8.6 17.6l3.4 3 3.4-3"/>',
+  map:      '<path d="M12 21.2s-7-5.5-7-11a7 7 0 0114 0c0 5.5-7 11-7 11z"/><circle cx="12" cy="10" r="2.4"/>',
+  people:   '<circle cx="9" cy="7.8" r="3.6"/><path d="M2.8 20.2a6.6 6.6 0 0112.4 0"/><path d="M15.8 4.6a3.6 3.6 0 010 6.6M16.4 14.4a6.6 6.6 0 014.8 5.8"/>',
+  car:      '<path d="M4.6 14.6l1.4-5.2a2 2 0 011.9-1.5h8.2a2 2 0 011.9 1.5l1.4 5.2"/><rect x="3.4" y="14.6" width="17.2" height="4.2" rx="1.8"/><path d="M7.4 18.8v1.4M16.6 18.8v1.4"/><path d="M7.6 16.7h.01M16.4 16.7h.01"/>',
+  phone:    '<path d="M5.2 3.4h3.4l1.8 4.6-2.3 1.5a11.8 11.8 0 005.4 5.4l1.5-2.3 4.6 1.8v3.4a2 2 0 01-2.2 2A15.8 15.8 0 013.2 5.6a2 2 0 012-2.2z"/>',
+  download: '<path d="M12 3.4v11.2M7.8 10.6l4.2 4 4.2-4"/><path d="M4 17v1.6A2.4 2.4 0 006.4 21h11.2a2.4 2.4 0 002.4-2.4V17"/>',
+  list:     '<path d="M8.6 6.4H21M8.6 12H21M8.6 17.6H21"/><path d="M3.6 6.4h.01M3.6 12h.01M3.6 17.6h.01"/>',
+  wifiOff:  '<path d="M3 3l18 18"/><path d="M5.4 9.8a12 12 0 016-2.8M16.2 8.4a12 12 0 012.4 1.4M8.6 13.2a7.4 7.4 0 013-1.4M14.8 13l.6.4"/><path d="M12 17.8h.01"/>',
+  logout:   '<path d="M14.6 4.4h3a2 2 0 012 2v11.2a2 2 0 01-2 2h-3"/><path d="M10.2 16.4L5.8 12l4.4-4.4M5.8 12h9.6"/>',
+  qr:       '<rect x="3.4" y="3.4" width="6.6" height="6.6" rx="1.6"/><rect x="14" y="3.4" width="6.6" height="6.6" rx="1.6"/><rect x="3.4" y="14" width="6.6" height="6.6" rx="1.6"/><path d="M14 14h2.8v2.8H14zM20.6 14.2v.01M14.2 20.6v.01M17.8 17.8h2.8v2.8h-2.8z"/>',
+  // The ASC Agent — the AI sparkle, with a companion node.
+  agent:    '<path d="M12 3.4Q13.4 9.6 20.6 12 13.4 14.4 12 20.6 10.6 14.4 3.4 12 10.6 9.6 12 3.4Z"/><path d="M19 4.4v.01"/>',
+  mic:      '<rect x="8.8" y="3.2" width="6.4" height="11" rx="3.2"/><path d="M5.4 11.6a6.6 6.6 0 0013.2 0"/><path d="M12 18.2v2.6"/>',
+  sound:    '<path d="M11.6 5.6L7.4 9.2H5a1 1 0 00-1 1v3.6a1 1 0 001 1h2.4l4.2 3.6V5.6z"/><path d="M15.4 9.2a4 4 0 010 5.6"/><path d="M18.2 6.6a8 8 0 010 10.8"/>',
 };
 
 export function icon(name, size = 20) {
