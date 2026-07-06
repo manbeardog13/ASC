@@ -3,63 +3,69 @@
    Mobile-first / warehouse-first. 8-pt spacing. One accent (ASC orange).
    ============================================================================ */
 :root {
-  /* Warm light system — cream canvas, warm-white floating surfaces, matte warm
-     grays, space-black ink. Depth comes from soft light + shadow, not lines.
-     The ASC orange→red is the single hot accent, used sparingly. */
-  --bg: #f3eee5;             /* warm cream canvas */
-  --bg-2: #ede6da;
-  --surface: #fdfbf7;        /* warm-white floating card (not pure white) */
-  --surface-2: #f3ede2;      /* nested / inset (matte warm gray) */
-  --surface-3: #ece4d6;      /* raised control */
-  --ink: #241f19;            /* space black (warm) */
-  --ink-2: #574f44;
-  --muted: #8a8172;
-  --faint: #b0a794;
-  --line: rgba(60,42,20,.10);
-  --line-strong: rgba(60,42,20,.17);
-  --hover: rgba(60,42,20,.05);
-  --control: #ebe3d5;        /* default button / segmented track */
+  /* Palette (locked to 4): Cloud Ash canvas, Black Core ink, Lava Rush accent,
+     Gunmetal dark accent. Cool neutrals are tints/shades of these. Light base,
+     white floating cards, occasional Black-Core/Gunmetal dark accent panels. */
+  --bg: #edf0f5;             /* Cloud Ash canvas */
+  --bg-2: #e6eaf1;
+  --surface: #ffffff;        /* white floating card */
+  --surface-2: #f2f4f8;      /* nested tile / inset (cool) */
+  --surface-3: #e7ebf1;      /* raised control / segmented track */
+  --ink: #020305;            /* Black Core text */
+  --ink-2: #3a3c40;
+  --muted: #6a6e77;
+  --faint: #a2a7b1;
+  --line: rgba(2,3,5,.10);
+  --line-strong: rgba(2,3,5,.17);
+  --hover: rgba(2,3,5,.05);
+  --control: #e7ebf1;
   --input-bg: #ffffff;
 
-  /* Brand — the logo's orange→red. Fills use the gradient / --brand; small TEXT
-     uses the deeper --brand-ink for AA contrast on cream. Used sparingly. */
-  --brand: #e85d17;
-  --brand-2: #d92d16;        /* red end of the gradient */
-  --brand-strong: #e03a12;
-  --brand-press: #bf3410;
-  --brand-ink: #c4400c;      /* accent text / links on light */
-  --brand-tint: rgba(232,74,20,.10);
-  --brand-ring: rgba(232,90,20,.30);
-  --grad-brand: linear-gradient(140deg, #f2701e, #e03a12 55%, #d31f16);
+  /* Dark accent surfaces (Black Core / Gunmetal) for the occasional dark card */
+  --dark: #020305;
+  --dark-2: #2e2f31;
+  --on-dark: #edf0f5;        /* Cloud Ash text on a dark card */
+  --on-dark-2: rgba(237,240,245,.6);
+  --line-dark: rgba(237,240,245,.12);
 
-  /* Semantic — restrained; foregrounds tuned for AA on light, low-alpha fills */
-  --ok: #12945a;  --ok-tint: rgba(18,148,90,.12);
-  --info: #2563eb; --info-tint: rgba(37,99,235,.10);
-  --warn: #b45309; --warn-tint: rgba(217,140,20,.15);
-  --danger: #dc2626; --danger-tint: rgba(220,38,38,.10);
+  /* Accent — Lava Rush #FF4E1B. Fills use --brand / --grad-brand; small TEXT on
+     the light canvas uses the deeper --brand-ink for AA contrast. */
+  --brand: #ff4e1b;
+  --brand-2: #ef3f0f;
+  --brand-strong: #f0430f;
+  --brand-press: #d6390c;
+  --brand-ink: #cc3a0e;
+  --brand-tint: rgba(255,78,27,.11);
+  --brand-ring: rgba(255,78,27,.30);
+  --grad-brand: linear-gradient(140deg, #ff6234, #ff4e1b 55%, #ef3d0e);
 
-  --season-winter: #2f7fd6;
-  --season-summer: #e85d17;
-  --season-all_season: #7c5cd6;
+  /* Semantic — palette-first; a couple of MUTED functional hints only */
+  --ok: #3f9d6b;  --ok-tint: rgba(63,157,107,.13);        /* paid / ok */
+  --info: #4f7fa8; --info-tint: rgba(79,127,168,.12);
+  --warn: #ff4e1b; --warn-tint: rgba(255,78,27,.12);       /* attention = accent */
+  --danger: #d24b3e; --danger-tint: rgba(210,75,62,.12);   /* danger / overdue */
 
-  /* Rounded, pill-friendly geometry */
-  --radius-sm: 10px;
-  --radius: 14px;
-  --radius-lg: 20px;
-  --radius-xl: 26px;
+  --season-winter: #4f7fa8;
+  --season-summer: #ff4e1b;
+  --season-all_season: #6a6e77;
+
+  /* Geometry — bigger, softer arcs; pill controls (per the references) */
+  --radius-sm: 12px;
+  --radius: 16px;
+  --radius-lg: 22px;
+  --radius-xl: 28px;
   --radius-pill: 999px;
 
-  /* Elevation — soft, diffuse, warm; a white top highlight reads as "lit from
-     above". Everything appears illuminated rather than painted. */
-  --hi: inset 0 1px 0 rgba(255,255,255,.7);
-  --shadow-1: 0 1px 2px rgba(63,45,22,.05), 0 5px 14px rgba(63,45,22,.07);
-  --shadow-2: 0 2px 6px rgba(63,45,22,.06), 0 16px 36px rgba(63,45,22,.10);
-  --shadow-lift: 0 8px 22px rgba(63,45,22,.10), 0 28px 64px rgba(63,45,22,.14);
-  --shadow-pop: 0 12px 34px rgba(50,35,18,.16), 0 34px 76px rgba(50,35,18,.20);
+  /* Elevation — cool, soft, floating; cards + pill buttons lift off the canvas */
+  --hi: inset 0 1px 0 rgba(255,255,255,.85);
+  --shadow-1: 0 1px 2px rgba(18,22,38,.05), 0 6px 16px rgba(18,22,38,.07);
+  --shadow-2: 0 2px 6px rgba(18,22,38,.06), 0 16px 38px rgba(18,22,38,.10);
+  --shadow-lift: 0 10px 26px rgba(18,22,38,.11), 0 30px 66px rgba(18,22,38,.15);
+  --shadow-pop: 0 14px 40px rgba(12,15,28,.18), 0 40px 84px rgba(12,15,28,.22);
 
   /* Glass — light, translucent, faint edge highlight */
-  --glass-bg: rgba(253,251,247,.72);
-  --glass-line: rgba(60,42,20,.09);
+  --glass-bg: rgba(237,240,245,.72);
+  --glass-line: rgba(2,3,5,.08);
   --glass-blur: 20px;
 
   --tap: 44px;
@@ -102,16 +108,16 @@ body {
 body::before {
   content: ""; position: fixed; inset: 0; z-index: -2; pointer-events: none;
   background:
-    radial-gradient(78% 62% at 12% -6%, rgba(242,120,40,.10), transparent 56%),
-    radial-gradient(66% 58% at 100% 106%, rgba(217,58,38,.06), transparent 60%),
-    radial-gradient(52% 46% at 56% 42%, rgba(255,255,255,.5), transparent 66%),
+    radial-gradient(78% 62% at 12% -6%, rgba(255,78,27,.07), transparent 56%),
+    radial-gradient(66% 58% at 100% 106%, rgba(46,47,49,.06), transparent 60%),
+    radial-gradient(52% 46% at 56% 42%, rgba(255,255,255,.55), transparent 66%),
     var(--bg);
 }
 body::after {
   content: ""; position: fixed; inset: -25%; z-index: -1; pointer-events: none;
   background:
-    radial-gradient(34% 30% at 30% 28%, rgba(242,120,40,.09), transparent 60%),
-    radial-gradient(40% 34% at 72% 70%, rgba(217,70,50,.06), transparent 62%);
+    radial-gradient(34% 30% at 30% 28%, rgba(255,78,27,.055), transparent 60%),
+    radial-gradient(40% 34% at 72% 70%, rgba(79,127,168,.05), transparent 62%);
   filter: blur(30px) saturate(1.04);
   animation: ambientDrift 20s ease-in-out infinite alternate;
   will-change: transform, filter, opacity;
@@ -263,7 +269,7 @@ main {
   transition: transform var(--dur) var(--ease-spring), background var(--dur) var(--ease), border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease), filter var(--dur) var(--ease);
   -webkit-tap-highlight-color: transparent; user-select: none;
 }
-.btn:hover { background: #e4dbca; border-color: var(--line-strong); transform: translateY(-1px); box-shadow: var(--shadow-2), var(--hi); }
+.btn:hover { background: #f4f6f9; border-color: var(--line-strong); transform: translateY(-1px); box-shadow: var(--shadow-2), var(--hi); }
 .btn:active { transform: scale(.96); box-shadow: var(--shadow-1); transition-duration: 90ms; }
 .btn:disabled { opacity: .45; cursor: default; transform: none; box-shadow: none; }
 .btn-primary { background: var(--grad-brand); border-color: transparent; color: #fff; box-shadow: 0 4px 16px var(--brand-ring), var(--hi); }
@@ -298,14 +304,14 @@ main {
 .chip {
   display: inline-flex; align-items: center; gap: 5px;
   height: 25px; padding: 0 11px; border-radius: var(--radius-pill);
-  font-size: 12px; font-weight: 650; white-space: nowrap; background: rgba(60,42,20,.06); color: var(--ink-2);
+  font-size: 12px; font-weight: 650; white-space: nowrap; background: rgba(2,3,5,.06); color: var(--ink-2);
 }
 .chip .ic { margin-left: -1px; }
 .chip.tone-ok { background: var(--ok-tint); color: var(--ok); }
 .chip.tone-info { background: var(--info-tint); color: var(--info); }
 .chip.tone-warn { background: var(--warn-tint); color: var(--warn); }
 .chip.tone-danger { background: var(--danger-tint); color: var(--danger); }
-.chip.tone-neutral { background: rgba(60,42,20,.06); color: var(--ink-2); }
+.chip.tone-neutral { background: rgba(2,3,5,.06); color: var(--ink-2); }
 .chip.season-winter { background: var(--info-tint); color: var(--season-winter); }
 .chip.season-summer { background: var(--brand-tint); color: var(--season-summer); }
 .chip.season-all_season { background: rgba(183,155,255,.14); color: var(--season-all_season); }
@@ -334,7 +340,7 @@ input, select, textarea {
   width: 100%; min-height: var(--tap); padding: 11px 14px;
   font-family: inherit; font-size: 16px; color: var(--ink);
   background: var(--input-bg); border: 1px solid var(--line-strong); border-radius: var(--radius-sm);
-  box-shadow: inset 0 1px 2px rgba(60,42,20,.05);
+  box-shadow: inset 0 1px 2px rgba(2,3,5,.05);
   transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease), background var(--dur) var(--ease);
 }
 select { color: var(--ink); }
@@ -343,7 +349,7 @@ textarea { min-height: 76px; resize: vertical; }
 input:focus, select:focus, textarea:focus {
   outline: none; border-color: var(--brand-ink);
   background: var(--input-bg);
-  box-shadow: 0 0 0 4px var(--brand-ring), inset 0 1px 2px rgba(60,42,20,.04);
+  box-shadow: 0 0 0 4px var(--brand-ring), inset 0 1px 2px rgba(2,3,5,.04);
 }
 input::placeholder, textarea::placeholder { color: var(--faint); }
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -355,7 +361,7 @@ fieldset + fieldset { margin-top: 22px; }
 .switch input { width: auto; min-height: 0; accent-color: var(--brand-strong); }
 
 /* Segmented control (season, etc.) */
-.segmented { display: inline-flex; background: var(--surface-2); border-radius: var(--radius-pill); padding: 3px; gap: 3px; width: 100%; box-shadow: inset 0 1px 2px rgba(60,42,20,.05); }
+.segmented { display: inline-flex; background: var(--surface-2); border-radius: var(--radius-pill); padding: 3px; gap: 3px; width: 100%; box-shadow: inset 0 1px 2px rgba(2,3,5,.05); }
 .segmented button {
   flex: 1; min-height: 38px; border: none; background: transparent; border-radius: 5px;
   font-family: inherit; font-weight: 650; font-size: 14px; color: var(--ink-2); cursor: pointer;
@@ -415,8 +421,12 @@ fieldset + fieldset { margin-top: 22px; }
 .tile .tlabel { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--muted); font-weight: 600; }
 .tile .tval { font-size: 30px; font-weight: 800; margin-top: 7px; letter-spacing: -0.03em; font-family: var(--font-display); }
 .tile .tsub { font-size: 12px; color: var(--faint); }
-.tile.tile-accent { background: var(--brand-tint); border-color: rgba(251,139,60,.3); }
-.tile.tile-accent .tval { color: var(--brand-ink); }
+/* Dark accent card (Black Core) with a Lava Rush figure — the light+dark pairing
+   from the Buttons reference. */
+.tile.tile-accent { background: var(--dark); border-color: transparent; color: var(--on-dark); box-shadow: var(--shadow-2); }
+.tile.tile-accent .tlabel { color: var(--on-dark-2); }
+.tile.tile-accent .tval { color: var(--brand); }
+.tile.tile-accent .tsub { color: var(--on-dark-2); }
 /* Clickable stat tiles — spring lift; tap to filter the inventory list below */
 .tile[role="button"] { cursor: pointer; -webkit-tap-highlight-color: transparent;
   transition: border-color var(--dur) var(--ease), background var(--dur) var(--ease), transform var(--dur-2) var(--ease-spring), box-shadow var(--dur-2) var(--ease); }
@@ -509,7 +519,7 @@ details.disclose > .disclose-body { padding: 0 2px 16px; }
 .toast {
   pointer-events: auto; display: flex; align-items: center; gap: 10px;
   max-width: 440px; padding: 11px 14px; border-radius: 8px;
-  background: rgba(34,29,23,.94); color: #fff; border: 1px solid rgba(255,255,255,.1); box-shadow: var(--shadow-pop);
+  background: rgba(2,3,5,.95); color: var(--on-dark); border: 1px solid rgba(237,240,245,.12); box-shadow: var(--shadow-pop);
   backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
   font-size: 14px; font-weight: 600; opacity: 0; transform: translateY(10px); transition: opacity var(--dur), transform var(--dur) var(--ease);
 }
@@ -522,7 +532,7 @@ details.disclose > .disclose-body { padding: 0 2px 16px; }
 .toast .toast-action:hover { background: rgba(255,255,255,.26); }
 
 /* ---------------------------------------------------------------- Bottom sheet (confirm) */
-.sheet-backdrop { position: fixed; inset: 0; z-index: 70; background: rgba(40,28,14,.4); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); display: flex; align-items: flex-end; justify-content: center; animation: fade var(--dur) var(--ease); }
+.sheet-backdrop { position: fixed; inset: 0; z-index: 70; background: rgba(2,3,5,.42); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); display: flex; align-items: flex-end; justify-content: center; animation: fade var(--dur) var(--ease); }
 @media (min-width: 720px) { .sheet-backdrop { align-items: center; } }
 @keyframes fade { from { opacity: 0; } }
 .sheet {
@@ -538,7 +548,7 @@ details.disclose > .disclose-body { padding: 0 2px 16px; }
 
 /* ---------------------------------------------------------------- Skeletons */
 .skel-group { display: flex; flex-direction: column; gap: 12px; }
-.skel { height: 13px; border-radius: 6px; background: linear-gradient(90deg, #ece4d6 25%, #f7f2e9 50%, #ece4d6 75%); background-size: 200% 100%; animation: shimmer 1.3s ease-in-out infinite; }
+.skel { height: 13px; border-radius: 8px; background: linear-gradient(90deg, #e3e8ef 25%, #f3f6fa 50%, #e3e8ef 75%); background-size: 200% 100%; animation: shimmer 1.3s ease-in-out infinite; }
 .skel-title { height: 22px; }
 .skel-row { display: flex; gap: 12px; align-items: center; padding: 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
 .skel-row .skel { flex: none; }
@@ -582,14 +592,14 @@ details.disclose > .disclose-body { padding: 0 2px 16px; }
   animation: appFadeIn 640ms ease both;
   /* Warm cream canvas with a soft orange→red glow — calm, grounded. */
   background:
-    radial-gradient(88% 55% at 22% -8%, rgba(242,120,40,.16), transparent 54%),
-    radial-gradient(64% 48% at 98% 8%, rgba(217,58,38,.09), transparent 56%),
+    radial-gradient(88% 55% at 22% -8%, rgba(255,78,27,.14), transparent 54%),
+    radial-gradient(64% 48% at 98% 8%, rgba(46,47,49,.08), transparent 56%),
     var(--bg);
 }
 .login-stage { display: flex; flex-direction: column; align-items: center; gap: 20px; width: 100%; max-width: 300px; position: relative; z-index: 1; }
 .login-logo {
   width: 200px; max-width: 74%; height: auto;
-  filter: drop-shadow(0 10px 24px rgba(226,74,20,.24));
+  filter: drop-shadow(0 10px 24px rgba(255,78,27,.22));
   animation: splashFade 800ms ease both;
 }
 
@@ -614,27 +624,27 @@ details.disclose > .disclose-body { padding: 0 2px 16px; }
 .glass-card input {
   background: var(--input-bg); border: 1px solid var(--line-strong);
   border-radius: var(--radius-sm); color: var(--ink); padding: 11px 14px; min-height: 46px;
-  box-shadow: inset 0 1px 2px rgba(60,42,20,.05);
+  box-shadow: inset 0 1px 2px rgba(2,3,5,.05);
   transition: border-color 200ms ease, box-shadow 200ms ease, background 200ms ease;
 }
 .glass-card input::placeholder { color: var(--faint); }
 .glass-card input:focus {
   outline: none; background: var(--input-bg); border-color: var(--brand-ink);
-  box-shadow: 0 0 0 4px var(--brand-ring), inset 0 1px 2px rgba(60,42,20,.04);
+  box-shadow: 0 0 0 4px var(--brand-ring), inset 0 1px 2px rgba(2,3,5,.04);
 }
 /* Glassy orange: frosted, semi-transparent, blurs what's behind it. */
 .btn-sunset {
   width: 100%; min-height: 48px; margin-top: 4px; border-radius: 12px; cursor: pointer;
   font-family: inherit; font-size: 15.5px; font-weight: 700; letter-spacing: .2px; color: #fff;
-  background: linear-gradient(180deg, rgba(251,146,60,.52), rgba(226,86,12,.40));
+  background: var(--grad-brand);
   border: 1px solid rgba(255,176,120,.55);
   backdrop-filter: blur(12px) saturate(1.6);
   -webkit-backdrop-filter: blur(12px) saturate(1.6);
-  box-shadow: 0 10px 26px -10px rgba(234,88,12,.5), inset 0 1px 0 rgba(255,255,255,.28);
+  box-shadow: 0 10px 26px -10px rgba(255,78,27,.45), inset 0 1px 0 rgba(255,255,255,.28);
   text-shadow: 0 1px 2px rgba(120,40,0,.4);
   transition: transform 200ms ease, box-shadow 200ms ease, background 200ms ease;
 }
-.btn-sunset:hover { transform: scale(1.015); background: linear-gradient(180deg, rgba(251,146,60,.64), rgba(226,86,12,.50)); box-shadow: 0 14px 32px -10px rgba(234,88,12,.6); }
+.btn-sunset:hover { transform: scale(1.015); filter: brightness(1.05); box-shadow: 0 14px 32px -10px rgba(255,78,27,.55); }
 .btn-sunset:active { transform: scale(.99); }
 .btn-sunset:disabled { opacity: .65; cursor: default; transform: none; }
 .btn-sunset.is-busy { color: transparent; position: relative; pointer-events: none; }
@@ -669,7 +679,7 @@ details.disclose > .disclose-body { padding: 0 2px 16px; }
 .flag-face { position: absolute; inset: 0; opacity: 0; }
 .flag-swap[data-cur="hr"] .flag-face[data-face="hr"],
 .flag-swap[data-cur="en"] .flag-face[data-face="en"] { opacity: 1; }
-.flag { display: block; width: 16px; height: auto; border-radius: 2.5px; box-shadow: 0 1px 3px rgba(60,42,20,.28); }
+.flag { display: block; width: 16px; height: auto; border-radius: 2.5px; box-shadow: 0 1px 3px rgba(2,3,5,.28); }
 
 /* Login / gate: flag pinned to the top-right corner in a glass pill. */
 .login-langs-top {
@@ -682,7 +692,7 @@ details.disclose > .disclose-body { padding: 0 2px 16px; }
   background: transparent; border: none; box-shadow: none;
   backdrop-filter: none; -webkit-backdrop-filter: none;
 }
-.login-langs-top .flag { box-shadow: 0 1px 4px rgba(60,42,20,.3); }
+.login-langs-top .flag { box-shadow: 0 1px 4px rgba(2,3,5,.3); }
 
 /* Compact flag in the app top bar */
 .topbar .flag-swap { padding: 6px; }
@@ -818,7 +828,7 @@ details.disclose > .disclose-body { padding: 0 2px 16px; }
    Users / access management
    ============================================================================ */
 .chip.role-admin { background: var(--brand-tint); color: var(--brand-ink); }
-.chip.role-user  { background: rgba(60,42,20,.06); color: var(--ink-2); }
+.chip.role-user  { background: rgba(2,3,5,.06); color: var(--ink-2); }
 
 .user-row { align-items: center; }
 .user-row .body { display: flex; flex-direction: column; gap: 3px; }
@@ -830,7 +840,7 @@ details.disclose > .disclose-body { padding: 0 2px 16px; }
   font-size: 11px; font-weight: 700; letter-spacing: .2px;
 }
 .badge-owner   { background: var(--brand-strong); color: #fff; }
-.badge-you     { background: rgba(60,42,20,.08); color: var(--ink-2); }
+.badge-you     { background: rgba(2,3,5,.08); color: var(--ink-2); }
 .badge-pending { background: var(--warn-tint); color: var(--warn); }
 
 /* Pending-approval badge (Users nav) + dot (⋮ menu) */
@@ -892,7 +902,7 @@ details.disclose > .disclose-body { padding: 0 2px 16px; }
 .dash-search input { height: 52px; border-radius: var(--radius-pill); background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow-1), var(--hi); transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease); }
 .dash-search input:focus { border-color: var(--brand); box-shadow: 0 0 0 4px var(--brand-ring), var(--shadow-1); }
 .dash-pulse .tile { background: var(--surface-2); box-shadow: none; border-color: var(--line); }
-.dash-pulse .tile.tile-accent { background: var(--brand-tint); }
+.dash-pulse .tile.tile-accent { background: var(--dark); box-shadow: var(--shadow-2); }
 .dash-pulse .tile[role="button"]:hover { transform: translateY(-2px); box-shadow: var(--shadow-1), var(--hi); background: var(--surface); }
 .dash-pulse .tile.is-active { box-shadow: inset 0 0 0 1px var(--brand); background: var(--surface); }
 .dash-health { display: flex; flex-wrap: wrap; gap: 8px 10px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
@@ -919,7 +929,7 @@ details.disclose > .disclose-body { padding: 0 2px 16px; }
 .wh-stats .u-stat { align-items: center; text-align: center; box-shadow: none; border: none; border-radius: 0; background: transparent; border-right: 1px solid var(--line); gap: 3px; }
 .wh-stats .u-stat:last-child { border-right: none; }
 .wh-stat-num { font-size: 26px; font-weight: 800; font-family: var(--font-display); letter-spacing: -.02em; color: var(--ink); }
-.wh-meter { height: 8px; border-radius: var(--radius-pill); background: var(--surface-2); overflow: hidden; box-shadow: inset 0 1px 2px rgba(60,42,20,.06); }
+.wh-meter { height: 8px; border-radius: var(--radius-pill); background: var(--surface-2); overflow: hidden; box-shadow: inset 0 1px 2px rgba(2,3,5,.06); }
 .wh-meter > i { display: block; height: 100%; background: var(--grad-brand); border-radius: inherit; transition: width var(--dur-3) var(--ease-spring); }
 .wh-zonebar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
 .wh-zonepill { cursor: pointer; height: 34px; padding: 0 6px 0 13px; font-weight: 650; transition: transform var(--dur) var(--ease-spring), background var(--dur) var(--ease); }
@@ -939,6 +949,6 @@ details.disclose > .disclose-body { padding: 0 2px 16px; }
 .wh-shelf { display: flex; gap: 10px; align-items: center; margin-bottom: 8px; }
 .wh-shelf-lab { color: var(--muted); font-size: 12px; font-weight: 650; min-width: 56px; }
 .slot { transition: transform var(--dur) var(--ease-spring), box-shadow var(--dur) var(--ease), border-color var(--dur) var(--ease); }
-.slot.filled { background: var(--brand-tint); border-color: rgba(232,74,20,.28); color: var(--brand-ink); cursor: pointer; }
+.slot.filled { background: var(--brand-tint); border-color: rgba(255,78,27,.28); color: var(--brand-ink); cursor: pointer; }
 .slot.filled:hover, .slot.reserved:hover { transform: translateY(-2px); box-shadow: var(--shadow-1); }
 .slot.reserved { background: var(--surface-2); border: 1px dashed var(--warn); color: var(--warn); cursor: pointer; }
