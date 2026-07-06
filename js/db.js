@@ -28,7 +28,7 @@ export async function getSession() {
   return data.session;
 }
 export function onAuthChange(callback) {
-  return supabase.auth.onAuthStateChange((_event, session) => callback(session));
+  return supabase.auth.onAuthStateChange((event, session) => callback(event, session));
 }
 export async function signIn(email, password) {
   const { error } = await supabase.auth.signInWithPassword({ email, password });

@@ -8,7 +8,7 @@ import * as db from "../db.js";
 import { getState, setViewRefresh } from "../store.js";
 import { matchesQuery, isDueSoon, statusLabel, hasLocation, locationLine } from "../domain.js";
 import { icon, esc, toast, go } from "../ui.js";
-import { t } from "../i18n.js";
+import { t, noun } from "../i18n.js";
 import { voiceSupported, listenOnce, stopListening } from "../voice.js";
 
 export function allowedInWorkshop(profile) {
@@ -20,6 +20,7 @@ let allSets = [];
 
 export async function render(main) {
   if (!allowedInWorkshop(getState().profile)) { toast(t("ws.denied"), "err"); go("/"); return; }
+  allSets = [];   // never search the PREVIOUS session's cached data
 
   const mic = voiceSupported();
   main.innerHTML = `
@@ -42,6 +43,7 @@ export async function render(main) {
         ${icon("search", 22)}
         <input id="wsSearch" type="search" placeholder="${esc(t("dash.search"))}" autocomplete="off" aria-label="${esc(t("dash.search"))}">
       </div>
+      <span id="wsCount" class="sr-only" aria-live="polite"></span>
       <div id="wsResults" class="ws-results"></div>
 
       <div class="ws-grid">
@@ -55,22 +57,29 @@ export async function render(main) {
 
   const results = main.querySelector("#wsResults");
   const input = main.querySelector("#wsSearch");
+  const count = main.querySelector("#wsCount");
   const paint = (q) => {
     const query = (q || "").trim();
-    if (!query) { results.innerHTML = ""; return; }
+    if (!query) { results.innerHTML = ""; count.textContent = ""; return; }
     const rows = allSets.filter((s) => matchesQuery(s, query)).slice(0, 8);
     results.innerHTML = rows.length
       ? rows.map(bigRow).join("")
       : `<div class="ws-none">${icon("search", 20)} ${t("ws.noResults", { q: esc(query) })}</div>`;
+    count.textContent = rows.length
+      ? t("dash.setsN", { n: rows.length, sets: noun(rows.length, "sets") })
+      : t("ws.noResults", { q: query });
   };
   input.addEventListener("input", () => paint(input.value));
 
   if (mic) {
     const btn = main.querySelector("#wsMic");
     const sub = main.querySelector("#wsMicSub");
+    sub.setAttribute("aria-live", "polite");
+    btn.setAttribute("aria-pressed", "false");
     btn.onclick = async () => {
       if (btn.classList.contains("is-listening")) { stopListening(); return; }
       btn.classList.add("is-listening");
+      btn.setAttribute("aria-pressed", "true");
       sub.textContent = t("voice.listening");
       try {
         const heard = await listenOnce({ onInterim: (s) => { if (s) sub.textContent = s; } });
@@ -80,8 +89,18 @@ export async function render(main) {
         sub.textContent = err.message;
       } finally {
         btn.classList.remove("is-listening");
+        btn.setAttribute("aria-pressed", "false");
       }
     };
+    // Kill the mic when the user leaves the screen by ANY path (nav tab,
+    // sign-out, language change) — not just hashchange.
+    const cleanup = () => {
+      stopListening();
+      window.removeEventListener("hashchange", cleanup);
+      window.removeEventListener("asc:teardown", cleanup);
+    };
+    window.addEventListener("hashchange", cleanup);
+    window.addEventListener("asc:teardown", cleanup);
   }
 
   setViewRefresh(() => load(main));
@@ -97,7 +116,9 @@ async function load(main) {
     const el = main.querySelector("#wsDue");
     if (el) el.textContent = due || "";
   } catch (err) {
-    main.querySelector("#wsResults").innerHTML = `<div class="banner banner-danger">${icon("alert", 18)}${esc(err.message)}</div>`;
+    allSets = [];   // never leave a previous session's data searchable after a failed load
+    const box = main.querySelector("#wsResults");
+    if (box) box.innerHTML = `<div class="banner banner-danger">${icon("alert", 18)}${esc(err.message)}</div>`;
   }
 }
 

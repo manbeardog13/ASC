@@ -241,7 +241,7 @@ function miniLoc(loc) {
 async function loadPhotos(main, set) {
   const box = main.querySelector("#photoBox");
   const photos = (set.photos || []).slice().sort((a, b) => (a.created_at < b.created_at ? -1 : 1));
-  const uploader = `<label class="btn" for="addPhoto" style="min-height:38px">${icon("camera", 18)} ${t("sd.addPhoto")}</label>
+  const uploader = `<button type="button" id="addPhotoBtn" class="btn" style="min-height:38px">${icon("camera", 18)} ${t("sd.addPhoto")}</button>
     <input id="addPhoto" type="file" accept="image/*" capture="environment" hidden>`;
   if (!photos.length) { box.innerHTML = `<p class="muted" style="font-size:13px;margin-bottom:10px">${t("sd.noPhotos")}</p>${uploader}`; wireAddPhoto(main, set); return; }
   box.innerHTML = `<div class="photos" id="photoGrid"><p class="muted" style="font-size:13px">${t("common.loading")}</p></div><div style="margin-top:12px">${uploader}</div>`;
@@ -263,13 +263,16 @@ async function loadPhotos(main, set) {
 function wireAddPhoto(main, set) {
   const input = main.querySelector("#addPhoto");
   if (!input) return;
+  const btn = main.querySelector("#addPhotoBtn");
+  btn.onclick = () => input.click();
   input.onchange = async (e) => {
     const file = e.target.files?.[0];
+    e.target.value = "";
     if (!file) return;
-    const label = main.querySelector('label[for="addPhoto"]');
-    label.innerHTML = `${icon("clock", 18)} ${t("sd.uploading")}`;
+    btn.disabled = true;
+    btn.innerHTML = `${icon("clock", 18)} ${t("sd.uploading")}`;
     try { await db.addPhoto(set.id, file); toast(t("sd.photoAdded")); await render(main, { params: [set.public_code] }); }
-    catch (err) { toast(err.message, "err"); label.innerHTML = `${icon("camera", 18)} ${t("sd.addPhoto")}`; }
+    catch (err) { toast(err.message, "err"); btn.disabled = false; btn.innerHTML = `${icon("camera", 18)} ${t("sd.addPhoto")}`; }
   };
 }
 

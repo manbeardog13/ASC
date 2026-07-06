@@ -6,6 +6,7 @@
 import { parseScan } from "./qr.js";
 
 let active = null;
+let starting = null;   // camera warm-up in flight — stop() must wait for it
 
 export { parseScan };
 
@@ -17,21 +18,26 @@ export async function start(elementId, onResult, onError) {
     onError?.(new Error("Scanner didn't load. Check your connection, then use a photo instead."));
     return;
   }
-  active = new Html5Qrcode(elementId, { verbose: false });
-  try {
-    await active.start(
-      { facingMode: "environment" },
-      { fps: 12, qrbox: { width: 240, height: 240 } },
-      (decodedText) => {
-        const parsed = parseScan(decodedText);
-        stop();
-        onResult(parsed);
-      },
-      () => {} // per-frame decode misses are normal; ignore
-    );
-  } catch (err) {
-    onError?.(err);
-  }
+  const inst = new Html5Qrcode(elementId, { verbose: false });
+  active = inst;
+  starting = (async () => {
+    try {
+      await inst.start(
+        { facingMode: "environment" },
+        { fps: 12, qrbox: { width: 240, height: 240 } },
+        (decodedText) => {
+          const parsed = parseScan(decodedText);
+          stop();
+          onResult(parsed);
+        },
+        () => {} // per-frame decode misses are normal; ignore
+      );
+    } catch (err) {
+      onError?.(err);
+    }
+  })();
+  await starting;
+  starting = null;
 }
 
 // Decode a QR from a photo (native camera → works even where live camera is blocked).
@@ -53,10 +59,14 @@ export async function scanFile(file) {
 }
 
 export async function stop() {
+  // A stop issued mid-warm-up used to lose the stream handle and leave the
+  // camera light on — wait for the start to finish, THEN tear it down.
+  if (starting) { try { await starting; } catch { /* start failed — fine */ } }
   if (!active) return;
-  try {
-    await active.stop();
-    await active.clear();
-  } catch { /* already stopped */ }
+  const inst = active;
   active = null;
+  try {
+    await inst.stop();
+    await inst.clear();
+  } catch { /* already stopped */ }
 }

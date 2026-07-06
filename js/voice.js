@@ -86,15 +86,23 @@ export function listenOnce({ onInterim } = {}) {
       }
       settle(reject, new Error(t("voice.error")));
     };
-    rec.onend = () => settle(resolve, finalText.trim());
+    rec.onend = () => { if (listenOnce._active === rec) listenOnce._active = null; settle(resolve, finalText.trim()); };
 
     try { rec.start(); } catch { settle(reject, new Error(t("voice.error"))); }
     // Expose a stopper so the overlay's buttons can cut a listen short.
     listenOnce._active = rec;
   });
 }
+export function isListening() {
+  return Boolean(listenOnce._active);
+}
 export function stopListening() {
   try { listenOnce._active?.stop(); } catch { /* already stopped */ }
+}
+// abort() discards whatever was heard (stop() would FINALIZE it) — this is
+// what "skip" needs: never commit audio the user is trying to throw away.
+export function abortListening() {
+  try { listenOnce._active?.abort(); } catch { /* already stopped */ }
 }
 
 // ---- Normalizers ----------------------------------------------------------------
@@ -135,18 +143,23 @@ export const normalizers = {
 // normalizers key (default "text"), `apply` an optional custom setter.
 // The overlay shows the current field BIG, streams what it hears, and moves on
 // by itself. Buttons: redo, skip, finish. Returns when done/cancelled.
+let fillActive = false;      // re-entrancy guard — one guided session at a time
 export async function voiceFillForm(fields, { onDone } = {}) {
-  if (!SR || !fields.length) return;
+  if (!SR || !fields.length || fillActive) return;
+  fillActive = true;
+  const returnFocus = document.activeElement;
   const overlay = document.createElement("div");
   overlay.className = "voice-sheet";
   overlay.innerHTML = `
-    <div class="voice-card">
+    <div class="voice-card" role="dialog" aria-label="${t("voice.fill")}" tabindex="-1">
       <div class="voice-top">
         <span class="voice-step tnum" id="vStep"></span>
         <span class="voice-live" id="vLive">${icon("phone", 15)} ${t("voice.listening")}</span>
       </div>
-      <div class="voice-label" id="vLabel"></div>
-      <div class="voice-heard" id="vHeard">…</div>
+      <div aria-live="polite">
+        <div class="voice-label" id="vLabel"></div>
+        <div class="voice-heard" id="vHeard">…</div>
+      </div>
       <div class="voice-actions">
         <button class="btn" id="vRedo">${icon("back", 18)} ${t("voice.repeat")}</button>
         <button class="btn" id="vSkip">${t("voice.skip")} ${icon("move", 18)}</button>
@@ -155,16 +168,25 @@ export async function voiceFillForm(fields, { onDone } = {}) {
     </div>`;
   document.body.appendChild(overlay);
   const $ = (id) => overlay.querySelector("#" + id);
+  overlay.querySelector(".voice-card").focus({ preventScroll: true });
 
   let idx = 0;
   let cancelled = false;
   let redo = false;
-  const finish = () => { cancelled = true; stopListening(); };
+  let skipped = false;
+  const finish = () => { cancelled = true; abortListening(); };
   $("vDone").onclick = finish;
-  $("vSkip").onclick = () => stopListening();                  // "" result → advance
-  $("vRedo").onclick = () => { redo = true; stopListening(); };
+  // Skip must DISCARD what was heard — abort(), never stop() (stop finalizes
+  // the captured audio and the misheard value would land in the field).
+  $("vSkip").onclick = () => { if (isListening()) { skipped = true; abortListening(); } };
+  $("vRedo").onclick = () => { if (isListening()) { redo = true; abortListening(); } };
   const onHash = () => finish();
+  // Escape closes the overlay only — without this it bubbles to the app's
+  // global handler, which navigates back and destroys the half-filled form.
+  const onKey = (e) => { if (e.key === "Escape") { e.stopPropagation(); e.preventDefault(); finish(); } };
   window.addEventListener("hashchange", onHash);
+  window.addEventListener("asc:teardown", onHash);
+  document.addEventListener("keydown", onKey, true);
 
   try {
     while (!cancelled && idx < fields.length) {
@@ -188,7 +210,8 @@ export async function voiceFillForm(fields, { onDone } = {}) {
       $("vLive").classList.remove("is-on");
       f.el?.classList.remove("voice-target");
       if (cancelled) break;
-      if (redo) { redo = false; continue; }                     // same field again
+      if (redo) { redo = false; skipped = false; continue; }    // same field again
+      if (skipped) { skipped = false; idx++; continue; }        // advance WITHOUT applying
 
       if (text) {
         const norm = normalizers[f.norm || "text"] || normalizers.text;
@@ -203,12 +226,16 @@ export async function voiceFillForm(fields, { onDone } = {}) {
         f.el?.animate?.([{ background: "var(--brand-tint)" }, { background: "transparent" }], { duration: 900, easing: "ease" });
         await new Promise((r) => setTimeout(r, 350));           // let the user see it landed
       }
-      idx++;                                                    // silence/skip also advances
+      idx++;                                                    // silence also advances
     }
   } finally {
     window.removeEventListener("hashchange", onHash);
+    window.removeEventListener("asc:teardown", onHash);
+    document.removeEventListener("keydown", onKey, true);
     overlay.remove();
-    stopListening();
+    abortListening();
+    fillActive = false;
+    if (returnFocus?.focus && document.contains(returnFocus)) returnFocus.focus({ preventScroll: true });
     if (onDone) onDone();
   }
 }

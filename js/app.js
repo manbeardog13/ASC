@@ -241,17 +241,32 @@ function openMenu() {
   pop.addEventListener("click", (e) => { if (e.target.closest("a[role=menuitem]")) closeMenu(); });
   pop.querySelector("#signOutBtn").onclick = async () => { closeMenu(); await db.signOut(); };
   pop.querySelector("#exportBtn").onclick = async (e) => {
-    const { exportInventoryCsv } = await import("./views/export.js");
-    busy(e.currentTarget, true);
-    try { await exportInventoryCsv(); } catch (err) { toast(err.message, "err"); }
+    const btn = e.currentTarget;         // currentTarget is null after any await
+    if (btn.disabled) return;
+    busy(btn, true);
+    try {
+      const { exportInventoryCsv } = await import("./views/export.js");
+      await exportInventoryCsv();
+    } catch (err) { toast(err.message, "err"); }
+    busy(btn, false);
     closeMenu();
   };
 }
 
 // ---- Router -------------------------------------------------------------------
+// Each navigation gets a sequence number; a route() run that finished after a
+// newer one started must not touch the DOM (slow view loads used to clobber
+// the screen the user had already navigated to).
+let navSeq = 0;
 async function route() {
+  const seq = ++navSeq;
+  const stale = () => seq !== navSeq;
   const path = (location.hash.replace(/^#/, "") || "/");
   setViewRefresh(null);
+  // Views with live resources (camera, mic, timers) listen for this and shut
+  // them down — it fires on EVERY view swap, including ones with no hashchange
+  // (sign-out, access gate, language change).
+  window.dispatchEvent(new Event("asc:teardown"));
   setState({ route: path });
 
   if (!isConfigured()) return renderSetup();
@@ -279,10 +294,13 @@ async function route() {
   window.scrollTo(0, 0);
   try {
     const mod = await match.r.load();
+    if (stale()) return;                 // user already navigated elsewhere
     await mod.render(main, { params: match.m.slice(1), mode: match.r.mode, go });
+    if (stale()) return;
     // Replay the view-enter transition so every navigation glides in.
     main.classList.remove("view-enter"); void main.offsetWidth; main.classList.add("view-enter");
   } catch (err) {
+    if (stale()) return;                 // never overwrite the NEWER view with an error card
     console.error(err);
     main.innerHTML = `<div class="card"><h2>Something went wrong</h2><p class="muted">${esc(err.message || "Please try again.")}</p>
       <button class="btn" onclick="location.reload()">Reload</button></div>`;
@@ -586,7 +604,7 @@ document.addEventListener("click", (e) => {
   setTimeout(() => setLang(target), 1000);
 });
 onLangChange(() => {
-  document.getElementById("menuPop")?.remove();
+  closeMenu();                 // also tears down the menu's document/window listeners
   root.innerHTML = "";
   boot();
 });
@@ -594,6 +612,17 @@ onLangChange(() => {
 if (isConfigured()) {
   loadRecentLocations();
   initOffline(db.executeQueuedMutation);
-  db.onAuthChange(() => boot());
+  // Only reboot the UI on a REAL auth transition. Supabase re-fires events all
+  // session long (TOKEN_REFRESHED ~hourly, SIGNED_IN on tab refocus,
+  // INITIAL_SESSION…); rebooting on those re-rendered the active view and wiped
+  // any form the user was in the middle of.
+  let lastAuthUid;   // undefined = no event seen yet
+  db.onAuthChange((event, session) => {
+    if (event === "TOKEN_REFRESHED" || event === "USER_UPDATED") return;
+    const uid = session?.user?.id ?? null;
+    if (lastAuthUid !== undefined && uid === lastAuthUid) return;  // same signed-in state
+    lastAuthUid = uid;
+    boot();
+  });
 }
 boot();

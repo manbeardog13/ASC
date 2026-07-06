@@ -32,33 +32,35 @@ function loadTesseract() {
   return tesseractLoading;
 }
 
-let worker = null;
+let workerPromise = null;
 let progressCb = null;
-async function getWorker() {
-  if (worker) return worker;
-  const Tesseract = await loadTesseract();
-  try {
-    worker = await Tesseract.createWorker("eng", 1, {
-      logger: (m) => progressCb && progressCb(m),
-    });
-  } catch (err) {
-    // WASM/worker start-up failures surface as cryptic runtime errors —
-    // translate them; keep the original for diagnosis.
-    console.error("[ocr] worker start failed:", err);
-    throw new Error(t("ci.ocrEngine"));
-  }
-  return worker;
+function getWorker() {
+  // Cache the PROMISE so two concurrent first calls share one worker (and one
+  // WASM + model download) instead of leaking a duplicate.
+  workerPromise ||= (async () => {
+    const Tesseract = await loadTesseract();
+    try {
+      return await Tesseract.createWorker("eng", 1, {
+        logger: (m) => progressCb && progressCb(m),
+      });
+    } catch (err) {
+      // WASM/worker start-up failures surface as cryptic runtime errors —
+      // translate them; keep the original for diagnosis.
+      console.error("[ocr] worker start failed:", err);
+      workerPromise = null;   // allow a retry
+      throw new Error(t("ci.ocrEngine"));
+    }
+  })();
+  return workerPromise;
 }
 
 function fileToImage(file) {
   return new Promise((resolve, reject) => {
     const img = new Image();
-    img.onload = () => {
-      URL.revokeObjectURL(img.src);
-      resolve(img);
-    };
-    img.onerror = () => reject(new Error(t("ci.ocrFail")));
-    img.src = URL.createObjectURL(file);
+    const url = URL.createObjectURL(file);
+    img.onload = () => { URL.revokeObjectURL(url); resolve(img); };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error(t("ci.ocrFail"))); };
+    img.src = url;
   });
 }
 
@@ -176,7 +178,16 @@ export function parseSidewall(text) {
 
 // Main entry: OCR a sidewall photo. onProgress receives Tesseract-style
 // {status, progress} where progress is the OVERALL fraction across passes.
-export async function scanSidewall(file, onProgress) {
+// Scans are SERIALIZED: the worker is shared, so a second photo picked
+// mid-scan would otherwise interleave setParameters/recognize calls and
+// clobber the first scan's progress callback.
+let scanQueue = Promise.resolve();
+export function scanSidewall(file, onProgress) {
+  const run = scanQueue.then(() => doScan(file, onProgress));
+  scanQueue = run.catch(() => {});
+  return run;
+}
+async function doScan(file, onProgress) {
   const img = await fileToImage(file);
   const base = toGray(img);
 

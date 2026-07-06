@@ -15,6 +15,7 @@ let season = defaultIncomingSeason();
 let dupTimer = null;
 
 export async function render(main) {
+  clearTimeout(dupTimer);   // a pending duplicate-check from a previous mount
   const recent = getState().recentLocations || [];
   main.innerHTML = `
     <div class="row-between" style="margin-bottom:14px"><h1>${t("ci.title")}</h1>
@@ -88,7 +89,7 @@ export async function render(main) {
           <legend>${t("ci.tires")}</legend>
           <div class="row-between" style="margin-bottom:10px">
             <span class="muted" style="font-size:13px">${t("ci.tiresHint")}</span>
-            <label class="btn" for="ss_photo" style="min-height:38px">${icon("camera", 18)} ${t("ci.scanSidewall")}</label>
+            <button type="button" id="ss_photoBtn" class="btn" style="min-height:38px">${icon("camera", 18)} ${t("ci.scanSidewall")}</button>
             <input id="ss_photo" type="file" accept="image/*" capture="environment" hidden>
           </div>
           <p id="ocrStatus" class="banner banner-info hidden"></p>
@@ -133,7 +134,12 @@ function wire(main) {
   }));
   ["s_zone", "s_rack", "s_shelf", "s_slot"].forEach((id) => $(id).addEventListener("change", () => checkLocation(main)));
 
-  $("ss_photo").onchange = (e) => runOcr(main, e.target.files?.[0]);
+  $("ss_photoBtn").onclick = () => $("ss_photo").click();   // real button = keyboard-reachable
+  $("ss_photo").onchange = (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";   // so re-picking the SAME photo still fires change (retry path)
+    runOcr(main, file);
+  };
   main.querySelector("#ci").onsubmit = (e) => { e.preventDefault(); submit(main); };
 
   // Guided voice fill (hr-HR/en-US): listens per field, fills, auto-advances.
@@ -160,7 +166,9 @@ function wire(main) {
 }
 
 async function checkDuplicates(main) {
-  const plate = main.querySelector("#v_plate").value.trim();
+  const plateEl = main.querySelector("#v_plate");
+  if (!plateEl) return;   // debounce fired after the view was swapped out
+  const plate = plateEl.value.trim();
   const phone = main.querySelector("#c_phone").value.trim();
   const box = main.querySelector("#dupWarn");
   if (!plate && !phone) { box.innerHTML = ""; return; }
@@ -172,6 +180,7 @@ async function checkDuplicates(main) {
 }
 
 async function checkLocation(main) {
+  if (!main.querySelector("#s_zone")) return;   // view already swapped out
   const loc = readLocation(main);
   const box = main.querySelector("#locWarn");
   if (!loc.zone && !loc.rack && !loc.shelf && !loc.slot) { box.innerHTML = ""; return; }

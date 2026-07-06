@@ -139,7 +139,7 @@ function paintList(main) {
   if (!rows.length) {
     list.innerHTML = (filter && !query)
       ? emptyState({ iconName: "box", title: t("dash.noneHere"), body: t("dash.noneHereBody") })
-      : emptyState({ iconName: "search", title: t("dash.noMatchTitle"), body: t("dash.noMatchBody", { q: esc(query) }) });
+      : emptyState({ iconName: "search", title: t("dash.noMatchTitle"), body: t("dash.noMatchBody", { q: query }) });
     return;
   }
   list.innerHTML = `<div class="set-list">${rows.map(setRow).join("")}</div>`;

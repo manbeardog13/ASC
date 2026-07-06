@@ -13,8 +13,8 @@
   --surface-3: #e7ebf1;      /* raised control / segmented track */
   --ink: #020305;            /* Black Core text */
   --ink-2: #3a3c40;
-  --muted: #6a6e77;
-  --faint: #a2a7b1;
+  --muted: #63676f;          /* AA (≥4.5:1) even directly on the Cloud Ash canvas */
+  --faint: #a2a7b1;          /* decorative marks ONLY — never informational text */
   --line: rgba(2,3,5,.08);
   --line-strong: rgba(2,3,5,.14);
   --hover: rgba(2,3,5,.05);
@@ -34,16 +34,17 @@
   --brand-2: #ef3f0f;
   --brand-strong: #f0430f;
   --brand-press: #d6390c;
-  --brand-ink: #cc3a0e;
+  --brand-ink: #c0360d;      /* AA for small text on white AND on --brand-tint */
   --brand-tint: rgba(255,78,27,.11);
   --brand-ring: rgba(255,78,27,.30);
   --grad-brand: linear-gradient(140deg, #ff6234, #ff4e1b 55%, #ef3d0e);
 
-  /* Semantic — palette-first; a couple of MUTED functional hints only */
-  --ok: #3f9d6b;  --ok-tint: rgba(63,157,107,.13);        /* paid / ok */
-  --info: #4f7fa8; --info-tint: rgba(79,127,168,.12);
+  /* Semantic — palette-first; a couple of MUTED functional hints only.
+     -ink variants are the TEXT-safe (AA on the matching tint) shades. */
+  --ok: #3f9d6b;  --ok-tint: rgba(63,157,107,.13);  --ok-ink: #2e7a52;   /* paid / ok */
+  --info: #4f7fa8; --info-tint: rgba(79,127,168,.12); --info-ink: #3d6485;
   --warn: #ff4e1b; --warn-tint: rgba(255,78,27,.12);       /* attention = accent */
-  --danger: #d24b3e; --danger-tint: rgba(210,75,62,.12);   /* danger / overdue */
+  --danger: #d24b3e; --danger-tint: rgba(210,75,62,.12); --danger-ink: #ab3427;  /* danger / overdue */
 
   --season-winter: #4f7fa8;
   --season-summer: #ff4e1b;
@@ -90,7 +91,9 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  * { animation-duration: .001ms !important; animation-delay: 0s !important; transition-duration: .001ms !important; scroll-behavior: auto !important; }
+  /* iteration-count 1 is essential: without it, infinite animations (mic pulse)
+     replay their .001ms frame forever and flicker. */
+  * { animation-duration: .001ms !important; animation-delay: 0s !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; scroll-behavior: auto !important; }
 }
 
 * { box-sizing: border-box; }
@@ -125,7 +128,9 @@ b, strong { font-weight: 650; }
 .tnum { font-variant-numeric: tabular-nums; }
 .muted { color: var(--muted); }
 .faint { color: var(--faint); }
-:focus-visible { outline: 2.5px solid var(--brand); outline-offset: 2px; border-radius: 5px; }
+:focus-visible { outline: 2.5px solid var(--brand-ink); outline-offset: 2px; border-radius: 5px; }
+/* Visually hidden but announced by screen readers (live regions, counts) */
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 
 /* ---------------------------------------------------------------- App shell */
 #app-root { min-height: 100%; display: flex; flex-direction: column; }
@@ -338,7 +343,7 @@ input:focus, select:focus, textarea:focus {
   background: var(--input-bg);
   box-shadow: 0 0 0 3px var(--brand-ring);
 }
-input::placeholder, textarea::placeholder { color: var(--faint); }
+input::placeholder, textarea::placeholder { color: var(--muted); }
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
 fieldset { border: none; margin: 0; padding: 0; }
@@ -407,7 +412,7 @@ fieldset + fieldset { margin-top: 22px; }
 }
 .tile .tlabel { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--muted); font-weight: 600; }
 .tile .tval { font-size: 30px; font-weight: 800; margin-top: 7px; letter-spacing: -0.03em; font-family: var(--font-display); }
-.tile .tsub { font-size: 12px; color: var(--faint); }
+.tile .tsub { font-size: 12px; color: var(--muted); }
 /* Dark accent card (Black Core) with a Lava Rush figure — the light+dark pairing
    from the Buttons reference. */
 .tile.tile-accent { background: var(--dark); border-color: transparent; color: var(--on-dark); box-shadow: var(--shadow-2); }
@@ -551,9 +556,11 @@ details.disclose > .disclose-body { padding: 0 2px 16px; }
 
 /* ---------------------------------------------------------------- Banners */
 .banner { display: flex; align-items: center; gap: 10px; padding: 11px 14px; border-radius: var(--radius-sm); font-size: 13.5px; font-weight: 600; margin-bottom: 14px; }
-.banner-warn { background: var(--warn-tint); color: var(--warn); }
-.banner-danger { background: var(--danger-tint); color: var(--danger); }
-.banner-info { background: var(--info-tint); color: var(--info); }
+/* Banner TEXT uses the -ink shades (AA on the tints); the bright semantic
+   colors stay for icons/fills where contrast rules are looser. */
+.banner-warn { background: var(--warn-tint); color: var(--brand-ink); }
+.banner-danger { background: var(--danger-tint); color: var(--danger-ink); }
+.banner-info { background: var(--info-tint); color: var(--info-ink); }
 
 /* ---------------------------------------------------------------- Utility */
 .stack > * + * { margin-top: 14px; }
