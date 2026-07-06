@@ -22,11 +22,18 @@ const TILE_FILTERS = {
 };
 
 export async function render(main) {
+  const role = getState().profile?.role;
+  const canWorkshop = !role || role === "employee" || db.isAdminRole(role);
   main.innerHTML = `
     <div class="search-wrap dash-search">
       ${icon("search", 20)}
       <input id="search" type="search" placeholder="${esc(t("dash.search"))}" autocomplete="off" value="${esc(query)}" aria-label="${esc(t("dash.search"))}">
     </div>
+    ${canWorkshop ? `<a class="ws-enter" href="#/workshop">
+      <span class="ws-enter-orb">${icon("box", 22)}</span>
+      <span class="ws-enter-txt"><b>${t("ws.enter")}</b><span>${t("ws.enterSub")}</span></span>
+      <span class="ws-enter-go">${icon("back", 20)}</span>
+    </a>` : ""}
     <section class="card u-module dash-pulse">
       <div id="tiles" class="tiles u-rise"></div>
     </section>

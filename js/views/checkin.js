@@ -9,6 +9,7 @@ import { SEASON_ORDER, SEASONS, seasonLabel, defaultIncomingSeason, locationLine
 import { icon, esc, toast, busy, go } from "../ui.js";
 import { t } from "../i18n.js";
 import { tireRowsHtml, collectTires, fillNextTireRow } from "./shared.js";
+import { voiceSupported, voiceFillForm } from "../voice.js";
 
 let season = defaultIncomingSeason();
 let dupTimer = null;
@@ -16,7 +17,9 @@ let dupTimer = null;
 export async function render(main) {
   const recent = getState().recentLocations || [];
   main.innerHTML = `
-    <div class="row-between" style="margin-bottom:14px"><h1>${t("ci.title")}</h1></div>
+    <div class="row-between" style="margin-bottom:14px"><h1>${t("ci.title")}</h1>
+      ${voiceSupported() ? `<button type="button" id="voiceFill" class="btn voice-cta">${icon("phone", 18)} ${t("voice.fill")}</button>` : ""}
+    </div>
     <form id="ci" novalidate>
       <div class="card stack">
         <span class="u-corner is-num" aria-hidden="true">01</span>
@@ -132,6 +135,28 @@ function wire(main) {
 
   $("ss_photo").onchange = (e) => runOcr(main, e.target.files?.[0]);
   main.querySelector("#ci").onsubmit = (e) => { e.preventDefault(); submit(main); };
+
+  // Guided voice fill (hr-HR/en-US): listens per field, fills, auto-advances.
+  const vf = main.querySelector("#voiceFill");
+  if (vf) vf.onclick = () => {
+    const fields = [
+      { el: $("c_name"),  label: t("ci.name"),  norm: "name" },
+      { el: $("c_phone"), label: t("ci.phone"), norm: "phone" },
+      { el: $("v_plate"), label: t("ci.plate"), norm: "plate" },
+      { el: $("v_make"),  label: t("ci.make"),  norm: "name" },
+      { el: $("v_model"), label: t("ci.model"), norm: "text" },
+      {
+        el: main.querySelector('#tires [data-t="size"]'),
+        label: t("tire.size"), norm: "size",
+        // One spoken size fills every tire row — sets are almost always uniform.
+        apply: (value) => main.querySelectorAll('#tires [data-t="size"]').forEach((inp) => {
+          inp.value = value;
+          inp.dispatchEvent(new Event("input", { bubbles: true }));
+        }),
+      },
+    ].filter((f) => f.el);
+    voiceFillForm(fields, { onDone: () => toast(t("voice.done")) });
+  };
 }
 
 async function checkDuplicates(main) {

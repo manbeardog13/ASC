@@ -53,6 +53,7 @@ let pendingAuthError = (() => {
 // ---- Routes (each view module exports `render(main, ctx)`) --------------------
 const ROUTES = [
   { pattern: /^\/?$/,                     load: () => import("./views/dashboard.js") },
+  { pattern: /^\/workshop$/,              load: () => import("./views/workshop.js") },
   { pattern: /^\/checkin$/,               load: () => import("./views/checkin.js") },
   { pattern: /^\/scan$/,                  load: () => import("./views/scan.js") },
   { pattern: /^\/warehouse$/,             load: () => import("./views/warehouse.js") },
@@ -207,7 +208,9 @@ function openMenu() {
   const item = (route, iconName, label) =>
     `<a href="#${route}" role="menuitem" class="btn btn-ghost" style="justify-content:flex-start;width:100%">${icon(iconName, 18)}${label}</a>`;
   const pending = getState().pendingApprovals || 0;
+  const canWorkshop = db.isAdminRole(role) || role === "employee";
   pop.innerHTML = `
+    ${canWorkshop ? item("/workshop", "box", t("menu.workshop")) : ""}
     <a href="#/users" role="menuitem" class="btn btn-ghost" style="justify-content:flex-start;width:100%">${icon("people", 18)}${t("menu.users")}${pending ? `<span class="nav-badge" style="margin-left:auto">${pending}</span>` : ""}</a>
     ${item("/reminders", "clock", t("menu.reminders"))}
     ${item("/recycle", "trash", t("menu.recycle"))}

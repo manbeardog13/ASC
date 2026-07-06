@@ -1014,3 +1014,113 @@ a.u-row:active, button.u-row:active { transform: scale(.99); transition-duration
 .scan-view #reader { max-width: 320px; margin: 0 auto; border-radius: var(--radius-sm); overflow: hidden; background: var(--dark); min-height: 120px; }
 .scan-view video { display: block; border-radius: var(--radius-sm); }
 .scan-hint { color: var(--on-dark-2); font-size: 12.5px; font-weight: 600; margin-top: 10px; }
+
+/* ============================================================================
+   Workshop mode — the shop-floor UI. Everything oversized: readable at arm's
+   length with gloves on. Same 4-color language, bigger bones.
+   ============================================================================ */
+.ws { font-size: 17px; }
+.ws-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
+.ws-title { display: inline-flex; align-items: center; gap: 10px; font-size: 30px; }
+.ws-exit { min-height: 52px; padding: 0 22px; font-size: 16px; }
+
+/* Dashboard entry — dark Black Core bar with a Lava orb */
+.ws-enter {
+  display: flex; align-items: center; gap: 14px; margin-bottom: 20px; padding: 14px 18px;
+  background: var(--dark); color: var(--on-dark); border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-2); -webkit-tap-highlight-color: transparent;
+  transition: transform var(--dur-2) var(--ease-spring), box-shadow var(--dur-2) var(--ease);
+}
+.ws-enter:hover { transform: translateY(-2px); box-shadow: var(--shadow-lift); }
+.ws-enter:active { transform: scale(.99); }
+.ws-enter-orb {
+  width: 46px; height: 46px; border-radius: var(--radius-pill); flex: none;
+  background: var(--grad-brand); color: #fff; display: inline-flex; align-items: center; justify-content: center;
+  box-shadow: 0 6px 18px var(--brand-ring);
+}
+.ws-enter-txt { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.ws-enter-txt b { font-size: 16.5px; font-weight: 800; font-family: var(--font-display); }
+.ws-enter-txt span { font-size: 13px; color: var(--on-dark-2); }
+.ws-enter-go { margin-left: auto; color: var(--on-dark-2); transform: rotate(180deg); }
+
+/* Voice search — one huge tap-to-talk bar */
+.ws-mic {
+  display: flex; align-items: center; gap: 16px; width: 100%; padding: 16px 18px; margin-bottom: 14px;
+  border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface);
+  font-family: inherit; text-align: left; cursor: pointer; box-shadow: var(--shadow-1), var(--hi);
+  transition: transform var(--dur-2) var(--ease-spring), box-shadow var(--dur-2) var(--ease);
+}
+.ws-mic:hover { transform: translateY(-2px); box-shadow: var(--shadow-2), var(--hi); }
+.ws-mic:active { transform: scale(.99); }
+.ws-mic-orb {
+  width: 62px; height: 62px; border-radius: var(--radius-pill); flex: none;
+  background: var(--grad-brand); color: #fff; display: inline-flex; align-items: center; justify-content: center;
+  box-shadow: 0 8px 22px var(--brand-ring), var(--hi);
+}
+.ws-mic.is-listening .ws-mic-orb { animation: micPulse 1.1s ease-in-out infinite; }
+@keyframes micPulse { 0%,100% { box-shadow: 0 0 0 0 var(--brand-ring); } 50% { box-shadow: 0 0 0 14px rgba(255,78,27,0); } }
+.ws-mic-txt { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ws-mic-txt b { font-size: 19px; font-weight: 800; font-family: var(--font-display); }
+.ws-mic-txt span { font-size: 14px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ws-search input { height: 58px; font-size: 17px; }
+
+/* Big result rows */
+.ws-results { display: flex; flex-direction: column; gap: 10px; margin: 14px 0 4px; }
+.ws-row {
+  display: flex; align-items: center; gap: 14px; padding: 16px 18px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-1), var(--hi); cursor: pointer;
+  transition: transform var(--dur-2) var(--ease-spring), box-shadow var(--dur-2) var(--ease);
+}
+.ws-row:hover { transform: translateY(-2px); box-shadow: var(--shadow-lift), var(--hi); }
+.ws-row-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.ws-row-body b { font-size: 20px; font-weight: 800; letter-spacing: .3px; }
+.ws-row-body span { font-size: 16px; font-weight: 650; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ws-row-body small { font-size: 13px; color: var(--muted); font-weight: 600; }
+.ws-row-loc { flex: none; max-width: 44%; text-align: right; font-size: 15px; font-weight: 750; color: var(--brand-ink); padding-left: 14px; border-left: 1px solid var(--line); }
+.ws-none { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 15px; font-weight: 600; padding: 14px 4px; }
+
+/* The big-button grid */
+.ws-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 18px; }
+.ws-btn {
+  position: relative; display: flex; flex-direction: column; align-items: flex-start; justify-content: space-between; gap: 14px;
+  min-height: 128px; padding: 18px; border-radius: var(--radius-lg);
+  background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow-1), var(--hi);
+  font-size: 19px; font-weight: 800; font-family: var(--font-display); color: var(--ink);
+  -webkit-tap-highlight-color: transparent;
+  transition: transform var(--dur-2) var(--ease-spring), box-shadow var(--dur-2) var(--ease);
+}
+.ws-btn:hover { transform: translateY(-3px); box-shadow: var(--shadow-lift), var(--hi); }
+.ws-btn:active { transform: translateY(-1px) scale(.985); }
+.ws-btn .ic { color: var(--brand-ink); }
+.ws-btn.is-accent { background: var(--grad-brand); border-color: transparent; color: #fff; box-shadow: 0 8px 26px var(--brand-ring), var(--hi); }
+.ws-btn.is-accent .ic { color: #fff; }
+.ws-btn.is-dark { background: var(--dark); border-color: transparent; color: var(--on-dark); box-shadow: var(--shadow-2); }
+.ws-btn.is-dark .ic { color: var(--brand); }
+.ws-btn-num { position: absolute; top: 14px; right: 16px; font-size: 30px; color: var(--brand); font-family: var(--font-display); }
+@media (min-width: 720px) { .ws-grid { grid-template-columns: repeat(4, 1fr); } }
+
+/* ---- Voice-fill overlay (guided dictation over any form) ---- */
+.voice-cta { min-height: 40px; }
+.voice-sheet {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 80; padding: 12px;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom));
+  display: flex; justify-content: center; pointer-events: none;
+}
+.voice-card {
+  pointer-events: auto; width: 100%; max-width: 480px; padding: 18px 18px 14px;
+  background: var(--dark); color: var(--on-dark); border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-pop); border: 1px solid var(--line-dark);
+  animation: sheet-up var(--dur-2) var(--ease-out);
+}
+.voice-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.voice-step { font-size: 13px; font-weight: 700; color: var(--on-dark-2); }
+.voice-live { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 700; color: var(--on-dark-2); }
+.voice-live.is-on { color: var(--brand); }
+.voice-live.is-on .ic { animation: micPulse 1.1s ease-in-out infinite; border-radius: 50%; }
+.voice-label { font-size: 24px; font-weight: 800; font-family: var(--font-display); }
+.voice-heard { min-height: 30px; margin: 8px 0 12px; font-size: 17px; color: var(--on-dark-2); font-weight: 600; overflow-wrap: anywhere; }
+.voice-actions { display: flex; gap: 8px; }
+.voice-actions .btn { flex: 1; min-height: 48px; font-size: 14.5px; }
+.voice-actions .btn:not(.btn-primary) { background: var(--dark-2); border-color: var(--line-dark); color: var(--on-dark); box-shadow: none; }
+.voice-target { outline: 3px solid var(--brand) !important; outline-offset: 2px; border-radius: var(--radius-sm); }
