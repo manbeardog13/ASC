@@ -394,6 +394,12 @@ function renderLogin(mode = "signin") {
   if (document.getElementById("loginBody")) return;
   root.innerHTML = `
     <div class="login-canvas auth">
+      <div class="auth-bg" aria-hidden="true">
+        <i class="ab-bloom"></i>
+        <i class="ab-sash"></i>
+        <i class="ab-arc"></i>
+        <i class="ab-grain"></i>
+      </div>
       <div class="login-langs-top">${langToggle(true)}</div>
       <div class="auth-col">
         <img class="auth-logo" src="assets/asc-logo.png" alt="ASC — Auto Servisni Centar d.o.o.">

@@ -691,6 +691,50 @@ details.disclose > .disclose-body { padding: 0 2px 16px; }
   display: flex; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 0;
   font-family: "Sora", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
+
+/* ---- Stylised login backdrop -------------------------------------------------
+   A "picture" composed from the locked palette instead of a photo (photos cost
+   load time and drift off-brand): a grainy Lava bloom, a diagonal Lava sash
+   band, a huge Gunmetal arc, and a fine grain wash. The whole backdrop FADES
+   IN while resolving from heavy blur to sharp; the sash also sweeps in along
+   its own diagonal. Zero network weight — gradients + one inline-SVG noise. */
+.auth-bg {
+  position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none;
+  animation: authBgIn 1.5s var(--ease-out) both;
+}
+.auth-bg i { position: absolute; display: block; }
+@keyframes authBgIn { from { opacity: 0; filter: blur(28px); } to { opacity: 1; filter: blur(0); } }
+
+/* Grainy Lava bloom anchored top-left (the palette-card gradient, lightened) */
+.ab-bloom {
+  inset: -25% 40% 40% -25%;
+  background: radial-gradient(56% 56% at 34% 34%, rgba(255,78,27,.15), rgba(255,78,27,.05) 55%, transparent 72%);
+}
+/* The sash — a soft diagonal Lava band sweeping behind the form */
+.ab-sash {
+  left: -18%; right: -18%; top: 16%; height: 24vh; border-radius: 999px;
+  background: linear-gradient(90deg, transparent 4%, rgba(255,78,27,.10) 28%, rgba(239,61,14,.18) 52%, rgba(255,78,27,.08) 78%, transparent 96%);
+  filter: blur(18px);
+  transform: rotate(-16deg);
+  animation: sashIn 1.7s var(--ease-out) .12s both;
+}
+@keyframes sashIn {
+  from { transform: rotate(-16deg) translateX(-7%); opacity: 0; }
+  to   { transform: rotate(-16deg) translateX(0);   opacity: 1; }
+}
+/* A huge quiet Gunmetal arc, bottom-right — the shape language, barely there */
+.ab-arc {
+  right: -34vmax; bottom: -46vmax; width: 88vmax; height: 88vmax; border-radius: 50%;
+  border: 1.5px solid rgba(46,47,49,.14);
+  box-shadow: inset 0 0 0 1px rgba(46,47,49,.05);
+  background: radial-gradient(closest-side, transparent 82%, rgba(46,47,49,.05) 96%, transparent 100%);
+}
+/* Fine grain wash — ties the layers together like printed matter */
+.ab-grain {
+  inset: 0; opacity: .05;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='160' height='160' filter='url(%23n)'/></svg>");
+}
+@media (prefers-reduced-motion: reduce) { .auth-bg, .ab-sash { animation: none; } }
 /* Whole login scaled to 90% (zoom reflows, so it stays centered + scrollable). */
 .auth-col { position: relative; z-index: 1; margin: auto; width: min(340px, 100% - 44px); padding: 48px 0 44px; display: flex; flex-direction: column; zoom: 0.9; }
 
