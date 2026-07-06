@@ -22,6 +22,37 @@ function speechLang() {
   return lang() === "hr" ? "hr-HR" : "en-US";
 }
 
+// ---- Text-to-speech ------------------------------------------------------------
+// speechSynthesis ships with a Croatian voice on Windows (Matej), Android
+// (Google hr-HR) and iOS (Lana). We pick the best match for the app language;
+// if the platform has no matching voice we stay silent rather than mangle
+// Croatian with an English voice.
+export function ttsSupported() {
+  return "speechSynthesis" in window;
+}
+function pickVoice(langCode) {
+  const voices = window.speechSynthesis?.getVoices?.() || [];
+  const short = langCode.slice(0, 2);
+  return voices.find((v) => v.lang === langCode)
+      || voices.find((v) => v.lang?.toLowerCase().startsWith(short))
+      || null;
+}
+export function speak(text) {
+  if (!ttsSupported() || !text) return;
+  const langCode = speechLang();
+  const utter = new SpeechSynthesisUtterance(text);
+  const voice = pickVoice(langCode);
+  if (!voice && lang() === "hr") return;   // no Croatian voice → don't butcher it
+  if (voice) utter.voice = voice;
+  utter.lang = langCode;
+  utter.rate = 1.04;
+  window.speechSynthesis.cancel();
+  window.speechSynthesis.speak(utter);
+}
+export function stopSpeaking() {
+  if (ttsSupported()) window.speechSynthesis.cancel();
+}
+
 // ---- One utterance ------------------------------------------------------------
 // Resolves with the final transcript ("" on silence). Rejects only on hard
 // errors (mic denied / no engine). `onInterim` streams live partial text.
