@@ -549,6 +549,10 @@ function onKey(e) {
 }
 
 // ---- Boot ---------------------------------------------------------------------
+let justSignedIn = false;   // set on a real sign-in; consumed when the profile loads
+export function firstName(profile) {
+  return (profile?.full_name || "").trim().split(/\s+/)[0] || "";
+}
 async function boot() {
   if (!isConfigured()) { renderSetup(); return; }
   const session = await db.getSession();
@@ -562,6 +566,12 @@ async function boot() {
         .then((profile) => {
           setState({ profile });
           if (profile && profile.role === "readonly") { route(); return; }
+          // The personal hello — only on a real login, not every reload.
+          if (justSignedIn) {
+            justSignedIn = false;
+            const name = firstName(profile);
+            if (name) toast(t("hello.signin", { name }));
+          }
           // Admins: fetch the pending-approval count for the Users badge.
           if (profile && db.isAdminRole(profile.role)) {
             db.countPendingApprovals().then((n) => setState({ pendingApprovals: n })).catch(() => {});
@@ -621,6 +631,9 @@ if (isConfigured()) {
     if (event === "TOKEN_REFRESHED" || event === "USER_UPDATED") return;
     const uid = session?.user?.id ?? null;
     if (lastAuthUid !== undefined && uid === lastAuthUid) return;  // same signed-in state
+    // A REAL login this session (was signed out, now signed in) → greet by name
+    // once the profile arrives (boot loads it in the background).
+    if (lastAuthUid === null && uid) justSignedIn = true;
     lastAuthUid = uid;
     boot();
   });

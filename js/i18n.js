@@ -81,6 +81,10 @@ const DICT = {
     "ag.thinking": "Thinking…", "ag.working": "Checking the database…",
     "ag.hold": "Press & hold to talk — release to send", "ag.holdShort": "HOLD TO TALK",
     "ag.enterSub": "Ask anything — or dictate a new set",
+    "ag.helloName": "Hi {name}! Ask me anything about the warehouse — or dictate a new tire set and I'll fill it in for you.",
+    // Personal greetings
+    "hello.morning": "Good morning", "hello.day": "Good afternoon", "hello.evening": "Good evening",
+    "hello.signin": "Hi, {name}! Good to see you.",
     "ag.speakToggle": "Read answers aloud", "ag.speakOn": "Voice on", "ag.speakOff": "Voice off",
     "ag.reviewTitle": "New tire set — please confirm",
     "ag.confirmCreate": "Create set",
@@ -249,11 +253,15 @@ const DICT = {
     // AI pomoćnik u aplikaciji
     "menu.assistant": "ASC Agent",
     "ag.title": "ASC Agent", "ag.send": "Pošalji", "ag.newChat": "Novi razgovor",
-    "ag.placeholder": "Pitajte o setovima, kupcima… ili izdiktirajte novi set",
-    "ag.hello": "Bok! Pitajte me bilo što o skladištu — ili mi recite podatke novog seta guma i ispunit ću ih umjesto vas.",
+    "ag.placeholder": "Pitaj o setovima, kupcima… ili izdiktiraj novi set",
+    "ag.hello": "Bok! Pitaj me bilo što o skladištu — ili mi izdiktiraj novi set guma i ispunit ću ga umjesto tebe.",
     "ag.thinking": "Razmišljam…", "ag.working": "Provjeravam bazu…",
     "ag.hold": "Pritisnite i držite za govor — pustite za slanje", "ag.holdShort": "DRŽI I GOVORI",
     "ag.enterSub": "Pitajte bilo što — ili izdiktirajte novi set",
+    "ag.helloName": "Bok {name}! Pitaj me bilo što o skladištu — ili mi izdiktiraj novi set guma i ispunit ću ga umjesto tebe.",
+    // Osobni pozdravi
+    "hello.morning": "Dobro jutro", "hello.day": "Dobar dan", "hello.evening": "Dobra večer",
+    "hello.signin": "Bok, {name}! Lijepo te vidjeti.",
     "ag.speakToggle": "Čitaj odgovore naglas", "ag.speakOn": "Glas uključen", "ag.speakOff": "Glas isključen",
     "ag.reviewTitle": "Novi set guma — molimo potvrdite",
     "ag.confirmCreate": "Kreiraj set",

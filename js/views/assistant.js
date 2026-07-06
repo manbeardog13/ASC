@@ -74,8 +74,10 @@ export async function render(main) {
     return el;
   };
 
-  // Replay a conversation that's already in progress; otherwise greet.
-  if (!history.length) bubble("bot", t("ag.hello"));
+  // Replay a conversation that's already in progress; otherwise greet — by
+  // name when we know it (the personal bond starts at hello).
+  const myName = (getState().profile?.full_name || "").trim().split(/\s+/)[0];
+  if (!history.length) bubble("bot", myName ? t("ag.helloName", { name: myName }) : t("ag.hello"));
   else for (const m of history) {
     if (m.role === "user" && typeof m.content === "string") bubble("me", m.content);
     if (m.role === "assistant" && Array.isArray(m.content)) {

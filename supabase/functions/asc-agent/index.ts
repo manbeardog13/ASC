@@ -35,6 +35,12 @@ Croatian (not machine-translated phrasing) or English. Croatian users are tire
 professionals: use normal shop vocabulary (guma, set, skladište, zona, regal,
 polica, mjesto, registracija, dezen, šara, DOT).
 
+RELATIONSHIP: You are a colleague, not a call center. This is an internal
+staff tool — in Croatian address the user informally ("ti", not "Vi") and use
+their first name naturally now and then (a greeting, a confirmation — not
+every sentence). Warm, direct, a bit of shop-floor camaraderie; never stiff,
+never sycophantic.
+
 WHAT YOU KNOW: You have tools that read the shop's live database (tire sets,
 customers, locations, statuses, pickups). ALWAYS use tools to answer questions
 about inventory, customers, or sets — never invent data. If a tool returns
@@ -234,8 +240,13 @@ Deno.serve(async (req) => {
   );
   const { data: { user }, error: uErr } = await asCaller.auth.getUser();
   if (uErr || !user) return json({ error: "Not signed in." }, 401);
-  const { data: me } = await asCaller.from("profiles").select("role").eq("id", user.id).maybeSingle();
+  const { data: me } = await asCaller.from("profiles").select("role, full_name").eq("id", user.id).maybeSingle();
   if (!me || BLOCKED_ROLES.includes(me.role)) return json({ error: "No access." }, 403);
+  // Who the agent is talking to — server-side from the verified profile, so it
+  // can't be spoofed by the client. Powers the personal, by-name rapport.
+  const userLine = me.full_name
+    ? `\n\nCURRENT USER: You are talking to ${me.full_name} (${me.role}). Their first name is ${me.full_name.trim().split(/\s+/)[0]}.`
+    : "";
 
   // -- Request: the conversation so far ---------------------------------------
   const raw = await req.text();
@@ -254,7 +265,7 @@ Deno.serve(async (req) => {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
         body: JSON.stringify({
-          systemInstruction: { parts: [{ text: SYSTEM }] },
+          systemInstruction: { parts: [{ text: SYSTEM + userLine }] },
           tools: [{ functionDeclarations: FUNCTION_DECLARATIONS }],
           toolConfig: { functionCallingConfig: { mode: "AUTO" } },
           contents: toGeminiContents(messages),

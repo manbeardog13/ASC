@@ -3,7 +3,7 @@
 // soon, one search bar across everything, and the live inventory list.
 // ============================================================================
 import * as db from "../db.js";
-import { getState, setViewRefresh } from "../store.js";
+import { getState, setViewRefresh, on } from "../store.js";
 import { matchesQuery, isDueSoon } from "../domain.js";
 import { icon, esc, skeletonRows, emptyState } from "../ui.js";
 import { t, noun } from "../i18n.js";
@@ -21,10 +21,20 @@ const TILE_FILTERS = {
   dueSoon:        (s) => isDueSoon(s),
 };
 
+// Time-of-day greeting key: jutro / dan / večer.
+function helloKey() {
+  const h = new Date().getHours();
+  return h < 12 ? "hello.morning" : h < 18 ? "hello.day" : "hello.evening";
+}
+function firstName(profile) {
+  return (profile?.full_name || "").trim().split(/\s+/)[0] || "";
+}
+
 export async function render(main) {
   const role = getState().profile?.role;
   const canWorkshop = !role || role === "employee" || db.isAdminRole(role);
   main.innerHTML = `
+    <div class="dash-hello" id="dashHello"></div>
     <div class="search-wrap dash-search">
       ${icon("search", 20)}
       <input id="search" type="search" placeholder="${esc(t("dash.search"))}" autocomplete="off" value="${esc(query)}" aria-label="${esc(t("dash.search"))}">
@@ -47,6 +57,18 @@ export async function render(main) {
     <div id="dueSoon"></div>
     <div class="section-title"><h2>${t("dash.inventory")}</h2><span id="listCount" class="u-meta"></span></div>
     <div id="list">${skeletonRows(5)}</div>`;
+
+  // The personal hello — paints now, and re-paints when the background profile
+  // fetch lands (first visit after boot often races it). Unsubscribes on swap.
+  const paintHello = () => {
+    const el = main.querySelector("#dashHello");
+    if (!el) return;
+    const name = firstName(getState().profile);
+    el.innerHTML = `${t(helloKey())}${name ? `, <b>${esc(name)}</b>` : ""}`;
+  };
+  paintHello();
+  const offHello = on("change", paintHello);
+  window.addEventListener("asc:teardown", () => offHello(), { once: true });
 
   main.querySelector("#search").addEventListener("input", (e) => { query = e.target.value; paintList(main); });
   setViewRefresh(() => load(main));

@@ -945,6 +945,8 @@ details.disclose > .disclose-body { padding: 0 2px 16px; }
 @keyframes uRise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 
 /* ---- Dashboard ---- */
+.dash-hello { font-size: 15px; color: var(--muted); margin: 2px 4px 12px; font-weight: 600; }
+.dash-hello b { color: var(--ink); font-family: var(--font-display); font-weight: 800; font-size: 17px; }
 .dash-search { margin-bottom: 20px; }
 .dash-search input { height: 52px; border-radius: var(--radius-pill); background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow-1), var(--hi); transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease); }
 .dash-search input:focus { border-color: var(--brand); box-shadow: 0 0 0 4px var(--brand-ring), var(--shadow-1); }
