@@ -151,8 +151,10 @@ function toGeminiContents(messages: any[]): unknown[] {
       }
     } else if (m?.role === "assistant" && Array.isArray(m.content)) {
       const parts = m.content.map((b: any) =>
-        b?.type === "text" ? { text: b.text }
-        : b?.type === "tool_use" ? { functionCall: { name: b.name, args: b.input || {} } }
+        b?.type === "text" ? (b._sig ? { text: b.text, thoughtSignature: b._sig } : { text: b.text })
+        // Gemini 3 REQUIRES the thoughtSignature captured at call time to be
+        // echoed on the functionCall part, or the follow-up request is rejected.
+        : b?.type === "tool_use" ? { functionCall: { name: b.name, args: b.input || {} }, ...(b._sig ? { thoughtSignature: b._sig } : {}) }
         : null
       ).filter(Boolean);
       if (parts.length) contents.push({ role: "model", parts });
@@ -166,10 +168,17 @@ function fromGeminiResponse(data: any) {
   const content: unknown[] = [];
   let hasCall = false;
   parts.forEach((p: any, i: number) => {
-    if (typeof p?.text === "string" && p.text) content.push({ type: "text", text: p.text });
+    if (typeof p?.text === "string" && p.text) {
+      content.push({ type: "text", text: p.text, ...(p.thoughtSignature ? { _sig: p.thoughtSignature } : {}) });
+    }
     if (p?.functionCall?.name) {
       hasCall = true;
-      content.push({ type: "tool_use", id: `fc_${Date.now()}_${i}`, name: p.functionCall.name, input: p.functionCall.args || {} });
+      content.push({
+        type: "tool_use", id: `fc_${Date.now()}_${i}`,
+        name: p.functionCall.name, input: p.functionCall.args || {},
+        // opaque signature — the client stores blocks verbatim, so it round-trips
+        ...(p.thoughtSignature ? { _sig: p.thoughtSignature } : {}),
+      });
     }
   });
   return { content, stop_reason: hasCall ? "tool_use" : "end_turn" };
