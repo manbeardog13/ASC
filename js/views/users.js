@@ -76,7 +76,9 @@ async function load(main) {
 // Approval queue: people who signed in but have no role yet.
 function awaitingSectionHtml(awaiting) {
   return `<div class="approve-card">
-    <div class="approve-head">${icon("clock", 16)} <b>${t("users.awaitingTitle")}</b> <span class="approve-count">${awaiting.length}</span></div>
+    <div class="u-module-head" style="margin-bottom:2px">
+      <h3 class="u-module-title">${icon("clock", 14)} ${t("users.awaitingTitle")}<span class="u-count-chip">${awaiting.length}</span></h3>
+    </div>
     <p class="muted" style="font-size:12.5px;margin:2px 0 12px">${t("users.awaitingSub")}</p>
     ${awaiting.map(approveRowHtml).join("")}
   </div>`;
@@ -144,8 +146,8 @@ function rowHtml(u, me, isAdmin) {
 }
 
 function addFormHtml() {
-  return `<div class="card" style="margin-bottom:16px">
-    <h3 style="margin-bottom:12px">${icon("plus", 18)} ${t("users.add")}</h3>
+  return `<div class="card u-module" style="margin-bottom:16px">
+    <div class="u-module-head"><h3 class="u-module-title">${icon("plus", 14)} ${t("users.add")}</h3></div>
     <form id="addUserForm" novalidate>
       <label class="field"><span class="label">${t("users.fullName")}</span>
         <input id="uName" type="text" autocomplete="name" required></label>

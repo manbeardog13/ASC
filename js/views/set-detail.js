@@ -298,32 +298,37 @@ function renderEdit(main, set) {
   main.innerHTML = `
     <a class="btn btn-ghost" href="#/set/${esc(set.public_code)}" style="margin-bottom:10px;min-height:38px">${icon("back", 18)} ${t("common.cancel")}</a>
     <form id="ed">
-      <div class="card stack">
-        <fieldset><legend>${t("ci.customer")}</legend>
-          <label class="field"><span class="label">${t("ci.name")}</span><input id="c_name" value="${v(customer.name)}" required></label>
-          <div class="grid-2">
-            <label class="field"><span class="label">${t("ci.phone")}</span><input id="c_phone" value="${v(customer.phone)}"></label>
-            <label class="field"><span class="label">${t("ci.email")}</span><input id="c_email" value="${v(customer.email)}"></label>
-          </div>
-        </fieldset>
-        <fieldset><legend>${t("ci.vehicle")}</legend>
-          <div class="grid-2">
-            <label class="field"><span class="label">${t("ci.make")}</span><input id="v_make" value="${v(vehicle.make)}"></label>
-            <label class="field"><span class="label">${t("ci.model")}</span><input id="v_model" value="${v(vehicle.model)}"></label>
-            <label class="field"><span class="label">${t("ci.year")}</span><input id="v_year" type="number" value="${v(vehicle.year)}"></label>
-            <label class="field"><span class="label">${t("ci.plate")}</span><input id="v_plate" value="${v(vehicle.plate)}"></label>
-          </div>
-        </fieldset>
-        <fieldset><legend>${t("ci.details")}</legend>
-          <div class="grid-2">
-            <label class="field"><span class="label">${t("ci.qty")}</span><input id="s_qty" type="number" min="1" max="8" value="${set.quantity}"></label>
-            <label class="field"><span class="label">${t("ci.expectedPickup")}</span><input id="s_out" type="date" value="${v(set.expected_out_date)}"></label>
-            <label class="field"><span class="label">${t("ci.fee")}</span><input id="s_fee" type="number" step="0.01" value="${v(set.fee)}"></label>
-          </div>
-          <label class="field"><span class="label">${t("ci.notes")}</span><textarea id="s_notes" rows="2">${v(set.notes)}</textarea></label>
-        </fieldset>
-        <fieldset><legend>${t("ci.tires")}</legend><div id="tires">${tireRowsHtml(set.quantity, set.tires)}</div></fieldset>
-      </div>
+      <section class="card u-module">
+        <span class="u-corner tnum">${esc(set.public_code)}</span>
+        <div class="u-module-head"><h3 class="u-module-title">${t("ci.customer")}</h3></div>
+        <label class="field"><span class="label">${t("ci.name")}</span><input id="c_name" value="${v(customer.name)}" required></label>
+        <div class="grid-2">
+          <label class="field"><span class="label">${t("ci.phone")}</span><input id="c_phone" value="${v(customer.phone)}"></label>
+          <label class="field"><span class="label">${t("ci.email")}</span><input id="c_email" value="${v(customer.email)}"></label>
+        </div>
+      </section>
+      <section class="card u-module">
+        <div class="u-module-head"><h3 class="u-module-title">${t("ci.vehicle")}</h3></div>
+        <div class="grid-2">
+          <label class="field"><span class="label">${t("ci.make")}</span><input id="v_make" value="${v(vehicle.make)}"></label>
+          <label class="field"><span class="label">${t("ci.model")}</span><input id="v_model" value="${v(vehicle.model)}"></label>
+          <label class="field"><span class="label">${t("ci.year")}</span><input id="v_year" type="number" value="${v(vehicle.year)}"></label>
+          <label class="field"><span class="label">${t("ci.plate")}</span><input id="v_plate" value="${v(vehicle.plate)}"></label>
+        </div>
+      </section>
+      <section class="card u-module">
+        <div class="u-module-head"><h3 class="u-module-title">${t("ci.details")}</h3></div>
+        <div class="grid-2">
+          <label class="field"><span class="label">${t("ci.qty")}</span><input id="s_qty" type="number" min="1" max="8" value="${set.quantity}"></label>
+          <label class="field"><span class="label">${t("ci.expectedPickup")}</span><input id="s_out" type="date" value="${v(set.expected_out_date)}"></label>
+          <label class="field"><span class="label">${t("ci.fee")}</span><input id="s_fee" type="number" step="0.01" value="${v(set.fee)}"></label>
+        </div>
+        <label class="field"><span class="label">${t("ci.notes")}</span><textarea id="s_notes" rows="2">${v(set.notes)}</textarea></label>
+      </section>
+      <section class="card u-module">
+        <div class="u-module-head"><h3 class="u-module-title">${t("ci.tires")}</h3></div>
+        <div id="tires">${tireRowsHtml(set.quantity, set.tires)}</div>
+      </section>
       <p id="edErr" class="inline-err hidden"></p>
       <div class="action-bar">
         <a class="btn" href="#/set/${esc(set.public_code)}">${t("common.cancel")}</a>

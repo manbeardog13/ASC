@@ -952,3 +952,65 @@ details.disclose > .disclose-body { padding: 0 2px 16px; }
 .slot.filled { background: var(--brand-tint); border-color: rgba(255,78,27,.28); color: var(--brand-ink); cursor: pointer; }
 .slot.filled:hover, .slot.reserved:hover { transform: translateY(-2px); box-shadow: var(--shadow-1); }
 .slot.reserved { background: var(--surface-2); border: 1px dashed var(--warn); color: var(--warn); cursor: pointer; }
+
+/* ============================================================================
+   Phase 2b — remaining screens (customers / users / check-in / reminders /
+   recycle / scan) + two shapes lifted from the reference shots:
+   • .u-corner — the small pill tab pinned to a card corner ("Beige"/"Darkness")
+   • .u-rows / .u-row — the bordered meta/action row stack, with an occasional
+     dark filled row (the "Contact Me" move: light rows, one Black Core row)
+   ============================================================================ */
+.u-corner {
+  position: absolute; top: 14px; right: 14px; z-index: 1;
+  display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 11px;
+  border-radius: var(--radius-pill); background: var(--surface-2); border: 1px solid var(--line);
+  font-size: 12px; font-weight: 700; color: var(--muted); letter-spacing: .2px; white-space: nowrap;
+}
+.u-corner.is-accent { background: var(--brand-tint); border-color: transparent; color: var(--brand-ink); }
+.u-corner.is-dark { background: var(--dark); border-color: transparent; color: var(--on-dark); }
+.u-corner.is-num { font-family: var(--font-display); font-weight: 800; }
+
+.u-rows { display: flex; flex-direction: column; gap: 8px; }
+.u-row {
+  display: flex; align-items: center; gap: 10px; width: 100%; min-height: 50px; padding: 6px 16px;
+  border-radius: var(--radius); border: 1px solid var(--line); background: var(--surface);
+  font-family: inherit; font-size: 14.5px; font-weight: 650; color: var(--ink); text-align: left;
+  box-shadow: var(--shadow-1), var(--hi); -webkit-tap-highlight-color: transparent;
+  transition: transform var(--dur-2) var(--ease-spring), box-shadow var(--dur-2) var(--ease), border-color var(--dur) var(--ease);
+}
+a.u-row, button.u-row { cursor: pointer; }
+a.u-row:hover, button.u-row:hover { transform: translateY(-2px); box-shadow: var(--shadow-2), var(--hi); border-color: var(--line-strong); }
+a.u-row:active, button.u-row:active { transform: scale(.99); transition-duration: 100ms; }
+.u-row .ic { color: var(--muted); }
+.u-row-end { margin-left: auto; display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: 13px; font-weight: 600; }
+.u-row-end .ic { color: var(--faint); }
+.u-row.is-dark { background: var(--dark); border-color: transparent; color: var(--on-dark); box-shadow: var(--shadow-2); }
+.u-row.is-dark .ic, .u-row.is-dark .u-row-end { color: var(--on-dark-2); }
+.u-row.is-dark:hover { border-color: transparent; }
+.u-row.is-disabled { opacity: .45; pointer-events: none; }
+
+/* ---- Customers ---- */
+.cust-hero .who { font-size: 22px; font-weight: 800; font-family: var(--font-display); }
+.cust-hero .u-rows { margin-top: 16px; }
+
+/* ---- Reminders ---- */
+.rem-card { padding: 18px; margin-bottom: 14px; }
+.rem-card .rem-who { font-size: 18px; font-weight: 800; font-family: var(--font-display); margin-top: 2px; padding-right: 130px; }
+.rem-card .rem-code { display: inline-block; font-size: 13px; font-weight: 700; color: var(--muted); letter-spacing: .3px; max-width: calc(100% - 140px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rem-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-size: 13px; color: var(--muted); margin: 8px 0 14px; }
+.rem-meta .ok { color: var(--ok); font-weight: 650; }
+
+/* ---- Recycle bin ---- */
+.rec-row { border-left: 2.5px solid var(--danger); }
+.rec-actions { display: flex; flex-direction: column; gap: 6px; align-self: center; flex: none; }
+.rec-actions .btn { min-height: 38px; font-size: 13.5px; }
+@media (max-width: 480px) { .rec-row { flex-wrap: wrap; } .rec-actions { flex-direction: row; width: 100%; } .rec-actions .btn { flex: 1; } }
+
+/* ---- Scan — dark Gunmetal viewfinder panel (the light+dark card pairing) ---- */
+.scan-view {
+  background: var(--dark-2); border-radius: var(--radius); padding: 14px;
+  margin: 18px auto 6px; max-width: 348px; box-shadow: var(--shadow-2);
+}
+.scan-view #reader { max-width: 320px; margin: 0 auto; border-radius: var(--radius-sm); overflow: hidden; background: var(--dark); min-height: 120px; }
+.scan-view video { display: block; border-radius: var(--radius-sm); }
+.scan-hint { color: var(--on-dark-2); font-size: 12.5px; font-weight: 600; margin-top: 10px; }

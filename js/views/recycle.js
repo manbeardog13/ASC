@@ -29,20 +29,24 @@ async function load(main) {
     return;
   }
   const isManager = (getState().profile?.role ?? "manager") === "manager";
-  main.querySelector("#bin").innerHTML = `<div class="set-list">${rows.map((s) => {
-    const c = s.vehicle?.customer || {};
-    return `<div class="set-row" style="cursor:default">
-      <div class="body">
-        <div class="toprow"><span class="code tnum">${esc(s.public_code)}</span>${statusChip(s.status)}${seasonChip(s.season)}</div>
-        <div class="who">${esc(c.name || "—")}</div>
-        <div class="spec">${t("rec.deletedOn", { date: fmtDate(s.deleted_at) })}</div>
-      </div>
-      <div style="display:flex;flex-direction:column;gap:6px;align-self:center">
-        <button class="btn" data-restore="${esc(s.id)}" style="min-height:38px">${icon("back", 16)} ${t("rec.restore")}</button>
-        ${isManager ? `<button class="btn btn-danger" data-purge="${esc(s.id)}" data-code="${esc(s.public_code)}" style="min-height:38px">${icon("trash", 16)} ${t("rec.delete")}</button>` : ""}
-      </div>
-    </div>`;
-  }).join("")}</div>`;
+  main.querySelector("#bin").innerHTML = `
+    <section class="card u-module">
+      <div class="u-module-head"><h3 class="u-module-title">${icon("trash", 14)} ${t("rec.title")}<span class="u-count-chip">${rows.length}</span></h3></div>
+      <div class="set-list">${rows.map((s) => {
+        const c = s.vehicle?.customer || {};
+        return `<div class="set-row rec-row" style="cursor:default">
+          <div class="body">
+            <div class="toprow"><span class="code tnum">${esc(s.public_code)}</span>${statusChip(s.status)}${seasonChip(s.season)}</div>
+            <div class="who">${esc(c.name || "—")}</div>
+            <div class="spec">${t("rec.deletedOn", { date: fmtDate(s.deleted_at) })}</div>
+          </div>
+          <div class="rec-actions">
+            <button class="btn" data-restore="${esc(s.id)}">${icon("back", 16)} ${t("rec.restore")}</button>
+            ${isManager ? `<button class="btn btn-danger" data-purge="${esc(s.id)}" data-code="${esc(s.public_code)}">${icon("trash", 16)} ${t("rec.delete")}</button>` : ""}
+          </div>
+        </div>`;
+      }).join("")}</div>
+    </section>`;
 
   main.querySelectorAll("[data-restore]").forEach((btn) => btn.onclick = async () => {
     try { await db.restoreSet(btn.dataset.restore); toast(t("rec.restored")); await load(main); }

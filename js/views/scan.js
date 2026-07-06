@@ -11,20 +11,22 @@ export async function render(main) {
     <div class="card center-narrow" style="text-align:center">
       <h1>${t("scan.title")}</h1>
       <p class="muted" style="margin-top:6px">${t("scan.point")}</p>
-      <div id="reader" style="max-width:320px;margin:16px auto;border-radius:14px;overflow:hidden"></div>
+      <div class="scan-view">
+        <div id="reader"></div>
+        <p class="scan-hint">${t("scan.tip")}</p>
+      </div>
       <p id="scanErr" class="inline-err hidden" style="justify-content:center"></p>
 
-      <div style="margin:8px 0 4px">
+      <div style="margin:12px 0 4px">
         <label class="btn" for="photo" style="min-height:44px">${icon("camera", 18)} ${t("scan.takePhoto")}</label>
         <input id="photo" type="file" accept="image/*" capture="environment" hidden>
       </div>
 
-      <div class="search-wrap" style="margin-top:14px">
+      <div class="search-wrap dash-search" style="margin:14px 0 0">
         ${icon("qr", 20)}
         <input id="manual" placeholder="${esc(t("scan.orType"))}" autocomplete="off" style="padding-left:42px">
       </div>
       <button id="openManual" class="btn btn-block" style="margin-top:10px">${t("scan.open")}</button>
-      <p class="muted" style="font-size:12.5px;margin-top:14px">${t("scan.tip")}</p>
     </div>`;
 
   const showErr = (msg) => { const p = main.querySelector("#scanErr"); p.textContent = msg; p.classList.remove("hidden"); };

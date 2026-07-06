@@ -19,6 +19,7 @@ export async function render(main) {
     <div class="row-between" style="margin-bottom:14px"><h1>${t("ci.title")}</h1></div>
     <form id="ci" novalidate>
       <div class="card stack">
+        <span class="u-corner is-num" aria-hidden="true">01</span>
         <fieldset>
           <legend>${t("ci.customer")}</legend>
           <label class="field"><span class="label">${t("ci.name")}</span><input id="c_name" autocomplete="off" required></label>
@@ -40,6 +41,7 @@ export async function render(main) {
       </div>
 
       <div class="card stack" style="margin-top:14px">
+        <span class="u-corner is-num" aria-hidden="true">02</span>
         <fieldset>
           <legend>${t("ci.season")}</legend>
           <div class="segmented" role="group" aria-label="${esc(t("ci.season"))}">
@@ -78,6 +80,7 @@ export async function render(main) {
       </div>
 
       <div class="card stack" style="margin-top:14px">
+        <span class="u-corner is-num" aria-hidden="true">03</span>
         <fieldset>
           <legend>${t("ci.tires")}</legend>
           <div class="row-between" style="margin-bottom:10px">
