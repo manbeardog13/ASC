@@ -23,13 +23,15 @@ const TILE_FILTERS = {
 
 export async function render(main) {
   main.innerHTML = `
-    <div class="search-wrap" style="margin-bottom:16px">
+    <div class="search-wrap dash-search">
       ${icon("search", 20)}
       <input id="search" type="search" placeholder="${esc(t("dash.search"))}" autocomplete="off" value="${esc(query)}" aria-label="${esc(t("dash.search"))}">
     </div>
-    <div id="tiles" class="tiles"></div>
+    <section class="card u-module dash-pulse">
+      <div id="tiles" class="tiles u-rise"></div>
+    </section>
     <div id="dueSoon"></div>
-    <div class="section-title"><h2>${t("dash.inventory")}</h2><span id="listCount" class="muted" style="font-size:13px"></span></div>
+    <div class="section-title"><h2>${t("dash.inventory")}</h2><span id="listCount" class="u-meta"></span></div>
     <div id="list">${skeletonRows(5)}</div>`;
 
   main.querySelector("#search").addEventListener("input", (e) => { query = e.target.value; paintList(main); });
@@ -85,17 +87,13 @@ function paintTiles(main, health, counts) {
   if (!strip) {
     strip = document.createElement("div");
     strip.id = "healthStrip";
-    strip.className = "card";
-    strip.style.marginTop = "12px";
-    main.querySelector("#tiles").after(strip);
+    strip.className = "dash-health";
+    main.querySelector(".dash-pulse").appendChild(strip);
   }
   strip.innerHTML = `
-    <div class="health-row"><span class="k">${icon("wifiOff", 16)}${t("dash.connection")}</span>
-      <span class="v" style="color:${online ? "var(--ok)" : "var(--warn)"}">${online ? t("conn.online") : t("conn.offline")}</span></div>
-    <div class="health-row"><span class="k">${icon("clock", 16)}${t("dash.pendingSync")}</span>
-      <span class="v">${syncPending || 0}</span></div>
-    <div class="health-row"><span class="k">${icon("download", 16)}${t("dash.lastBackup")}</span>
-      <span class="v">${esc(backup)}</span></div>`;
+    <span class="hstat"><span class="u-dot ${online ? "is-ok" : "is-warn"}"></span><span class="hk">${t("dash.connection")}</span><span class="hv">${online ? t("conn.online") : t("conn.offline")}</span></span>
+    <span class="hstat">${icon("clock", 14)}<span class="hk">${t("dash.pendingSync")}</span><span class="hv">${syncPending || 0}</span></span>
+    <span class="hstat">${icon("download", 14)}<span class="hk">${t("dash.lastBackup")}</span><span class="hv">${esc(backup)}</span></span>`;
 }
 
 function paintDueSoon(main) {
@@ -103,8 +101,8 @@ function paintDueSoon(main) {
   const box = main.querySelector("#dueSoon");
   if (!due.length) { box.innerHTML = ""; return; }
   box.innerHTML = `
-    <div class="section-title"><h2>${t("dash.dueForPickup")}</h2><a class="link" href="#/reminders">${t("dash.remind")}</a></div>
-    <div class="set-list">${due.slice(0, 5).map(setRow).join("")}</div>`;
+    <div class="section-title"><h2>${t("dash.dueForPickup")}<span class="u-count-chip">${due.length}</span></h2><a class="link" href="#/reminders">${t("dash.remind")}</a></div>
+    <div class="set-list dash-due">${due.slice(0, 5).map(setRow).join("")}</div>`;
 }
 
 function paintList(main) {

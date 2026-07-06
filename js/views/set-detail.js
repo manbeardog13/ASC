@@ -6,7 +6,7 @@
 // ============================================================================
 import * as db from "../db.js";
 import { setViewRefresh } from "../store.js";
-import { statusLabel, nextStatusAction, treadTone } from "../domain.js";
+import { statusLabel, nextStatusAction, treadTone, hasLocation, locationLine, isDueSoon } from "../domain.js";
 import {
   icon, esc, statusChip, seasonChip, paymentChip, locationBlock, toast, busy, confirmSheet, go, skeletonDetail,
 } from "../ui.js";
@@ -37,9 +37,9 @@ function renderDetail(main, set) {
   const rim = set.rim_type === "steel" ? t("ci.steel") : set.rim_type === "alloy" ? t("ci.alloy") : t("sd.rimsWord");
 
   main.innerHTML = `
-    <a class="btn btn-ghost" href="#/" style="margin-bottom:10px;min-height:38px">${icon("back", 18)} ${t("common.home")}</a>
+    <a class="btn btn-ghost sd-back" href="#/" style="margin-bottom:12px;min-height:38px">${icon("back", 18)} ${t("common.home")}</a>
 
-    <div class="card">
+    <div class="card sd-hero">
       <div class="detail-head">
         <div>
           <div class="code tnum">${esc(set.public_code)}</div>
@@ -48,28 +48,34 @@ function renderDetail(main, set) {
         <a class="btn btn-ghost" href="#/set/${esc(set.public_code)}/edit" aria-label="${esc(t("sd.edit"))}">${icon("pencil", 20)}</a>
       </div>
       <div class="detail-chips">${statusChip(set.status)}${seasonChip(set.season)}${paymentChip(set)}</div>
-
-      <div class="row-between" style="margin:16px 0 8px"><h3 style="font-size:14px;color:var(--muted)">${t("loc.title")}</h3>
-        <button id="moveBtn" class="btn btn-ghost" style="min-height:34px;font-size:13px">${icon("move", 16)} ${t("sd.move")}</button></div>
-      ${locationBlock(set)}
-      <div id="moveArea"></div>
+      ${next
+        ? `<button id="statusBtn" class="btn btn-primary btn-lg sd-primary" data-to="${next.to}">${icon("check", 18)} ${esc(next.label)}</button>`
+        : `<div class="sd-state-note">${icon("check", 16)} ${esc(statusLabel(set.status))}</div>`}
     </div>
 
-    ${next ? `<button id="statusBtn" class="btn btn-primary btn-lg" style="margin-top:14px" data-to="${next.to}">${icon("check", 18)} ${esc(next.label)}</button>` : ""}
+    <div class="u-stats u-rise" style="margin-bottom:14px">${insightCells(set)}</div>
 
-    <div class="card" style="margin-top:14px">
+    <section class="card u-module" data-module="location">
+      <div class="u-module-head"><h3 class="u-module-title">${t("loc.title")}</h3>
+        <button id="moveBtn" class="btn btn-ghost u-module-action">${icon("move", 16)} ${t("sd.move")}</button></div>
+      ${locationBlock(set)}
+      <div id="moveArea"></div>
+    </section>
+
+    <section class="card u-module">
+      <div class="u-module-head"><h3 class="u-module-title">${t("ci.details")}</h3></div>
       <div class="kv">
         <div><span class="k">${t("sd.vehicle")}</span><span class="v">${esc(vehicleLine)}</span></div>
         <div><span class="k">${t("sd.plate")}</span><span class="v tnum">${esc(vehicle.plate || "—")}</span></div>
         <div><span class="k">${t("sd.phone")}</span><span class="v">${customer.phone ? `<a href="tel:${esc(customer.phone)}">${esc(customer.phone)}</a>` : "—"}</span></div>
         <div><span class="k">${t("sd.tires")}</span><span class="v">${set.on_rims ? t("sd.qtyOnRims", { qty: set.quantity, rim }) : set.quantity}</span></div>
         <div><span class="k">${t("sd.checkedIn")}</span><span class="v">${fmtDate(set.check_in_date)}</span></div>
-        <div><span class="k">${t("sd.expectedOut")}</span><span class="v">${fmtDate(set.expected_out_date)}</span></div>
+        <div><span class="k">${t("sd.expectedOut")}</span><span class="v">${isDueSoon(set) ? `<span class="sd-due">${icon("clock", 14)} ${fmtDate(set.expected_out_date)}</span>` : fmtDate(set.expected_out_date)}</span></div>
       </div>
-      ${set.notes ? `<div class="banner banner-info" style="margin:14px 0 0">${icon("pencil", 16)} ${esc(set.notes)}</div>` : ""}
-    </div>
+      ${set.notes ? `<div class="sd-note">${icon("pencil", 15)} ${esc(set.notes)}</div>` : ""}
+    </section>
 
-    <div class="card" style="margin-top:14px;padding-top:4px">
+    <div class="card u-module sd-more">
       ${disclosure("tires", t("sd.tiresTread"), tiresHtml(set))}
       ${disclosure("payment", t("sd.payment"), paymentHtml(set))}
       ${disclosure("photos", t("sd.photos"), `<div id="photoBox"><p class="muted" style="font-size:13px">${t("sd.openToLoad")}</p></div>`)}
@@ -113,6 +119,25 @@ function paymentHtml(set) {
       ? `<button id="payBtn" class="btn ${set.paid ? "" : "btn-primary"}">${icon(set.paid ? "check" : "alert", 18)} ${set.paid ? t("sd.paidUndo") : t("sd.markPaid")}</button>`
       : `<span class="muted" style="font-size:13px">${t("sd.noFee")}</span>`}
   </div>`;
+}
+
+// Read-only insight strip: location, payment status, worst tread. No handlers.
+function insightCells(set) {
+  const cells = [
+    `<div class="u-stat"><span class="u-stat-l">${t("loc.title")}</span><span class="u-stat-v">${icon("map", 14)}${hasLocation(set) ? esc(locationLine(set)) : "—"}</span></div>`,
+  ];
+  if (set.fee != null) {
+    const tone = set.paid ? "is-ok" : "is-warn";
+    cells.push(`<div class="u-stat ${tone}"><span class="u-stat-l">${t("sd.payment")}</span><span class="u-stat-v tnum"><span class="u-dot ${tone}"></span>${esc(set.fee)}</span></div>`);
+  }
+  const treads = (set.tires || []).map((x) => x.tread_mm).filter((x) => x != null);
+  if (treads.length) {
+    const min = Math.min(...treads);
+    const tone = treadTone(min);
+    const cls = tone === "danger" ? "is-danger" : tone === "warn" ? "is-warn" : "is-ok";
+    cells.push(`<div class="u-stat ${cls}"><span class="u-stat-l">${t("sd.tread")}</span><span class="u-stat-v tnum">${esc(min)} mm</span></div>`);
+  }
+  return cells.join("");
 }
 
 function wireDetail(main, set) {

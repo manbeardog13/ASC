@@ -175,7 +175,7 @@ const DICT = {
     // warehouse
     "wh.title": "Warehouse", "wh.emptyTitle": "No located sets yet",
     "wh.emptyBody": "Give a set a Zone / Rack / Shelf / Slot when you check it in, and it appears on the map here.",
-    "wh.zone": "Zone {z}", "wh.rack": "Rack {r}", "wh.shelf": "Shelf {s}", "wh.setsN": "{n} {sets}", "wh.filledN": "{n} filled",
+    "wh.zone": "Zone {z}", "wh.rack": "Rack {r}", "wh.shelf": "Shelf {s}", "wh.setsN": "{n} {sets}", "wh.filledN": "{n} filled", "wh.zones": "Zones",
     // customers
     "cust.title": "Customers", "cust.search": "Search name or phone…", "cust.emptyTitle": "No customers yet",
     "cust.emptyBody": "They're created automatically when you store a set.", "cust.noPhone": "No phone",
@@ -301,7 +301,7 @@ const DICT = {
     "scan.photoFail": "Nije moguće očitati fotografiju: {err}",
     "wh.title": "Skladište", "wh.emptyTitle": "Još nema smještenih kompleta",
     "wh.emptyBody": "Dodijelite kompletu Zonu / Regal / Policu / Mjesto pri zaprimanju i pojavit će se na karti.",
-    "wh.zone": "Zona {z}", "wh.rack": "Regal {r}", "wh.shelf": "Polica {s}", "wh.setsN": "{n} {sets}", "wh.filledN": "{n} zauzeto",
+    "wh.zone": "Zona {z}", "wh.rack": "Regal {r}", "wh.shelf": "Polica {s}", "wh.setsN": "{n} {sets}", "wh.filledN": "{n} zauzeto", "wh.zones": "Zone",
     "cust.title": "Kupci", "cust.search": "Traži ime ili telefon…", "cust.emptyTitle": "Još nema kupaca",
     "cust.emptyBody": "Stvaraju se automatski kad spremite komplet.", "cust.noPhone": "Bez telefona",
     "cust.setsN": "{n} {sets}", "cust.vehicles": "Vozila", "cust.storedSets": "Spremljeni kompleti",

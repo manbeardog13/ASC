@@ -4,15 +4,19 @@
 // ============================================================================
 import * as db from "../db.js";
 import { setViewRefresh } from "../store.js";
+import { statusLabel } from "../domain.js";
 import { icon, esc, skeletonRows, emptyState } from "../ui.js";
 import { t, noun } from "../i18n.js";
 
 export async function render(main) {
-  main.innerHTML = `<div class="row-between" style="margin-bottom:14px"><h1>${t("wh.title")}</h1></div>
+  main.innerHTML = `<div class="row-between wh-topbar"><h1>${t("wh.title")}</h1><span class="u-meta" id="whMeta"></span></div>
     <div id="map">${skeletonRows(4)}</div>`;
   setViewRefresh(() => load(main));
   await load(main);
 }
+
+const zoneTotal = (racks) => [...racks.values()].reduce((n, sh) => n + [...sh.values()].reduce((m, arr) => m + arr.length, 0), 0);
+const rackTotal = (shelves) => [...shelves.values()].reduce((m, arr) => m + arr.length, 0);
 
 async function load(main) {
   let sets;
@@ -39,28 +43,59 @@ async function load(main) {
   }
 
   const sortKeys = (a, b) => String(a).localeCompare(String(b), undefined, { numeric: true });
-  main.querySelector("#map").innerHTML = [...zones.keys()].sort(sortKeys).map((z) => {
-    const racks = zones.get(z);
-    const zoneCount = [...racks.values()].reduce((n, sh) => n + [...sh.values()].reduce((m, arr) => m + arr.length, 0), 0);
-    return `<div class="zone-block">
-      <div class="zone-head"><span class="ic" style="color:var(--brand-strong)">${icon("map", 18)}</span>
-        <span class="zname">${t("wh.zone", { z: esc(z) })}</span><span class="zfill muted">${t("wh.setsN", { n: zoneCount, sets: noun(zoneCount, "sets") })}</span></div>
-      ${[...racks.keys()].sort(sortKeys).map((r) => {
-        const shelves = racks.get(r);
-        return `<div class="rack">
-          <div class="rack-head">${t("wh.rack", { r: esc(r) })}<span class="rfill">${t("wh.filledN", { n: [...shelves.values()].reduce((m, arr) => m + arr.length, 0) })}</span></div>
-          ${[...shelves.keys()].sort(sortKeys).map((sh) => `
-            <div style="display:flex;gap:8px;align-items:center;margin-bottom:7px">
-              <span class="muted" style="font-size:12px;min-width:54px">${t("wh.shelf", { s: esc(sh) })}</span>
-              <div class="slots">${shelves.get(sh).sort((a, b) => sortKeys(a.slot, b.slot)).map((set) => slotCell(set)).join("")}</div>
-            </div>`).join("")}
-        </div>`;
-      }).join("")}
+  const zoneKeys = [...zones.keys()].sort(sortKeys);
+
+  let stored = 0, reserved = 0;
+  for (const s of sets) { if (s.status === "reserved") reserved++; else stored++; }
+  const total = sets.length;
+  const meta = main.querySelector("#whMeta");
+  if (meta) meta.textContent = t("wh.setsN", { n: total, sets: noun(total, "sets") });
+
+  const overview = `
+    <div class="card u-module wh-overview">
+      <div class="wh-stats u-rise">
+        <div class="u-stat"><span class="wh-stat-num tnum">${stored}</span><span class="u-stat-l">${esc(statusLabel("in_storage"))}</span></div>
+        <div class="u-stat"><span class="wh-stat-num tnum">${reserved}</span><span class="u-stat-l">${esc(statusLabel("reserved"))}</span></div>
+        <div class="u-stat"><span class="wh-stat-num tnum">${zones.size}</span><span class="u-stat-l">${t("wh.zones")}</span></div>
+      </div>
+      <div class="wh-meter" aria-hidden="true"><i style="width:${total ? Math.round(stored / total * 100) : 0}%"></i></div>
     </div>`;
+
+  const navbar = zoneKeys.length > 1 ? `<div class="wh-zonebar">${zoneKeys.map((z, i) =>
+    `<span class="chip wh-zonepill" data-z="zone-${i}" role="button" tabindex="0">${t("wh.zone", { z: esc(z) })}<span class="u-count-chip">${zoneTotal(zones.get(z))}</span></span>`).join("")}</div>` : "";
+
+  const zonesHtml = zoneKeys.map((z, i) => {
+    const racks = zones.get(z);
+    const zc = zoneTotal(racks);
+    return `<details class="card u-module wh-zone" id="zone-${i}" open>
+      <summary><span class="wh-zone-badge">${icon("map", 16)}</span><span class="wh-zone-name">${esc(z)}</span>
+        <span class="wh-zone-fill">${t("wh.setsN", { n: zc, sets: noun(zc, "sets") })}</span><span class="wh-chev">${icon("back", 16)}</span></summary>
+      <div class="wh-zone-body">
+        ${[...racks.keys()].sort(sortKeys).map((r) => {
+          const shelves = racks.get(r);
+          return `<div class="wh-rack">
+            <div class="wh-rack-head">${t("wh.rack", { r: esc(r) })}<span class="rfill">${t("wh.filledN", { n: rackTotal(shelves) })}</span></div>
+            ${[...shelves.keys()].sort(sortKeys).map((sh) => `
+              <div class="wh-shelf">
+                <span class="wh-shelf-lab">${t("wh.shelf", { s: esc(sh) })}</span>
+                <div class="slots">${shelves.get(sh).sort((a, b) => sortKeys(a.slot, b.slot)).map((set) => slotCell(set)).join("")}</div>
+              </div>`).join("")}
+          </div>`;
+        }).join("")}
+      </div>
+    </details>`;
   }).join("");
+
+  main.querySelector("#map").innerHTML = overview + navbar + zonesHtml;
 
   main.querySelectorAll(".slot.filled, .slot.reserved").forEach((el) =>
     el.addEventListener("click", () => location.hash = `#/set/${el.dataset.code}`));
+
+  main.querySelectorAll(".wh-zonepill").forEach((p) => {
+    const open = () => { const el = main.querySelector("#" + p.dataset.z); if (el) { el.open = true; el.scrollIntoView({ behavior: "smooth", block: "start" }); } };
+    p.addEventListener("click", open);
+    p.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(); } });
+  });
 }
 
 function slotCell(set) {
