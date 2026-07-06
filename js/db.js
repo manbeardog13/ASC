@@ -62,8 +62,14 @@ export async function updatePassword(newPassword) {
   const { error } = await supabase.auth.updateUser({ password: newPassword });
   if (error) throw new Error(error.message);
 }
-export async function signUp(email, password) {
-  const { data, error } = await supabase.auth.signUp({ email: email.trim().toLowerCase(), password });
+export async function signUp(email, password, fullName) {
+  const { data, error } = await supabase.auth.signUp({
+    email: email.trim().toLowerCase(),
+    password,
+    // Lands in auth metadata; handle_new_user() copies it into the profile so
+    // the app knows who this is from the very first session.
+    options: { data: { full_name: (fullName || "").trim() || undefined } },
+  });
   if (error) {
     throw new Error(/already registered|already exists/i.test(error.message)
       ? "That email already has an account — sign in instead."
@@ -111,14 +117,41 @@ export function maskEmail(email) {
 export async function listUsers() {
   const rpc = await supabase.rpc("list_users");
   if (!rpc.error && Array.isArray(rpc.data)) {
+    // v4 returns `email` (full, admins only — null otherwise); v3 didn't.
     return rpc.data.map((u) => ({ ...u, pending: false }));
   }
   const { data, error } = await supabase.from("profiles").select("id, full_name, role, email");
   if (error) throw fail(error, "load the user list");
   return (data ?? []).map((u) => ({
-    id: u.id, full_name: u.full_name, role: u.role,
+    id: u.id, full_name: u.full_name, role: u.role, email: u.email,
     email_masked: maskEmail(u.email), is_owner: isOwnerEmail(u.email), pending: false,
   }));
+}
+
+// Set MY display name (the "state your first and last name" gate + self-edit).
+// The RPC works for every role; direct table update is the pre-migration fallback
+// (admins only under RLS).
+export async function setMyName(fullName) {
+  const clean = (fullName || "").trim();
+  if (!clean) throw new Error("Name is required.");
+  const rpc = await supabase.rpc("set_my_name", { new_name: clean });
+  if (!rpc.error) return;
+  const session = await getSession();
+  const { error } = await supabase.from("profiles").update({ full_name: clean }).eq("id", session.user.id);
+  if (error) throw fail(error, "save your name");
+}
+
+// Admin: rename any user (pending invites live in allowed_emails).
+export async function updateUserName(row, fullName) {
+  const clean = (fullName || "").trim();
+  if (!clean) throw new Error("Name is required.");
+  if (row.pending) {
+    const { error } = await supabase.from("allowed_emails").update({ full_name: clean }).eq("email", row.email);
+    if (error) throw fail(error, "rename the user");
+    return;
+  }
+  const { error } = await supabase.from("profiles").update({ full_name: clean }).eq("id", row.id);
+  if (error) throw fail(error, "rename the user");
 }
 
 // Invited-but-not-yet-signed-up users (admin-only table). Returns [] when the

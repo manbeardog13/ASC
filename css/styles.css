@@ -916,6 +916,16 @@ details.disclose > .disclose-body { padding: 0 2px 16px; }
   .user-actions .segmented { flex: 1; }
 }
 
+/* Inline rename editor inside a user row (opened by the pencil button). */
+.user-edit { flex-basis: 100%; display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap;
+  padding-top: 12px; margin-top: 12px; border-top: 1px solid var(--line); }
+.user-edit-actions { display: flex; gap: 8px; }
+.user-edit-actions .btn { min-height: 40px; }
+
+/* Signup: first + last name side by side (stack on narrow phones). */
+.auth-names { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+@media (max-width: 380px) { .auth-names { grid-template-columns: 1fr; gap: 0; } }
+
 /* ============================================================================
    Phase 2 — shared dashboard vocabulary (dashboard / set-detail / warehouse).
    One "insight card / module frame / meta / count-chip / status-dot" language,

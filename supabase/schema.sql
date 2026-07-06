@@ -603,4 +603,99 @@ begin
 exception when others then raise notice 'storage photo policies skipped: %', sqlerrm;
 end $$;
 
+-- ----------------------------------------------------------------------------
+-- v4 — user management upgrades (idempotent, safe to re-run).
+-- 1. Signups carry the person's name: the signup form and Google both put it in
+--    auth metadata; handle_new_user() now reads it (allowlist name still wins).
+-- 2. Admins see FULL emails in the directory (list_users gains an `email` column
+--    that is null for non-admins; the masked column stays for them).
+-- 3. Everyone can state/correct their OWN display name (and nothing else) via
+--    set_my_name() — profile writes are otherwise admin-only under RLS.
+-- ----------------------------------------------------------------------------
+create or replace function handle_new_user() returns trigger as $$
+declare
+  v_email   text := lower(coalesce(new.email, ''));
+  v_pending public.allowed_emails%rowtype;
+  v_role    text;
+  v_name    text;
+  first_user boolean;
+begin
+  select count(*) = 0 into first_user from public.profiles;
+
+  if v_email = lower(public.asc_owner_email()) then
+    v_role := 'admin';
+  else
+    select * into v_pending from public.allowed_emails where email = v_email;
+    if found then
+      v_role := coalesce(v_pending.role, 'employee');
+      v_name := v_pending.full_name;
+    elsif first_user then
+      v_role := 'admin';
+    else
+      v_role := 'readonly';
+    end if;
+  end if;
+
+  -- The signup form / Google supply the name in auth metadata.
+  v_name := coalesce(v_name,
+    nullif(trim(coalesce(new.raw_user_meta_data->>'full_name',
+                         new.raw_user_meta_data->>'name', '')), ''));
+
+  -- Never let a profile-write problem abort the auth-user insert (see v3 note).
+  begin
+    insert into public.profiles (id, email, full_name, role)
+      values (new.id, new.email, v_name, v_role)
+      on conflict (id) do nothing;
+    delete from public.allowed_emails where email = v_email;
+  exception when others then
+    raise notice 'handle_new_user: profile write skipped for %: %', v_email, sqlerrm;
+  end;
+
+  return new;
+end;
+$$ language plpgsql security definer set search_path = public, pg_temp;
+
+-- Return type changes (new `email` column), so the old function must go first.
+drop function if exists public.list_users();
+create function public.list_users()
+returns table (id uuid, full_name text, role text, email text, email_masked text, is_owner boolean) as $$
+  select
+    p.id,
+    p.full_name,
+    p.role,
+    case when asc_is_admin() then p.email else null end as email,
+    case when coalesce(p.email,'') = '' then ''
+         else left(p.email, 1)
+              || repeat('*', greatest(char_length(split_part(p.email,'@',1)) - 1, 0))
+              || case when position('@' in p.email) > 0 then '@' || split_part(p.email,'@',2) else '' end
+    end as email_masked,
+    lower(coalesce(p.email,'')) = lower(public.asc_owner_email()) as is_owner
+  from public.profiles p
+  where asc_role() <> 'readonly'
+  order by (lower(coalesce(p.email,'')) = lower(public.asc_owner_email())) desc,
+           p.full_name nulls last, p.email;
+$$ language sql stable security definer set search_path = public, pg_temp;
+
+grant execute on function list_users() to authenticated;
+
+-- "State your name": any signed-in user may set their own full_name — nothing
+-- else. SECURITY DEFINER because profile writes are admin-only under RLS; the
+-- function body is the entire privilege.
+create or replace function public.set_my_name(new_name text) returns void as $$
+declare v text := left(trim(coalesce(new_name, '')), 120);
+begin
+  if auth.uid() is null then raise exception 'Not signed in.'; end if;
+  if v = '' then raise exception 'Name is required.'; end if;
+  update public.profiles set full_name = v where id = auth.uid();
+  if not found then
+    insert into public.profiles (id, email, full_name, role)
+      values (auth.uid(), (select u.email from auth.users u where u.id = auth.uid()), v, 'readonly')
+      on conflict (id) do update set full_name = excluded.full_name;
+  end if;
+end;
+$$ language plpgsql security definer set search_path = public, pg_temp;
+
+revoke execute on function public.set_my_name(text) from public, anon;
+grant execute on function public.set_my_name(text) to authenticated;
+
 -- Done. Next: Authentication -> Users -> add your shop login (first user = admin).

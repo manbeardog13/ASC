@@ -282,6 +282,9 @@ async function route() {
   // fetch: on a slow phone that left a logged-in reload showing nothing at all.
   const profile = getState().profile;
   if (profile && profile.role === "readonly") return renderAccessGate();
+  // Everyone must have stated their first + last name before using the app —
+  // the greeting, the agent and the user directory all build on it.
+  if (profile && !(profile.full_name || "").trim()) return renderNameGate();
 
   mountFrame();
   setActiveNav(path);
@@ -349,6 +352,53 @@ function renderAccessGate() {
   document.getElementById("gateOut").onclick = async () => { setState({ profile: null }); await db.signOut(); };
 }
 
+// Signed in but nameless (older account, or a provider that sent no name):
+// ask once for first + last name before letting them in.
+function renderNameGate() {
+  stopRealtime();
+  root.innerHTML = `
+    <div class="login-canvas">
+      <div class="login-langs-top">${langToggle(true)}</div>
+      <div class="login-stage">
+        <img class="login-logo" src="assets/asc-logo.png" alt="ASC">
+        <div class="glass-card login-card">
+          <div class="login-tagline">${t("namegate.title")}</div>
+          <p class="muted" style="text-align:center;font-size:13.5px;margin:-8px 0 16px">${t("namegate.body")}</p>
+          <form id="nameForm" novalidate>
+            <label class="field"><span class="label">${t("login.firstName")}</span>
+              <input id="ngFirst" type="text" autocomplete="given-name" required></label>
+            <label class="field"><span class="label">${t("login.lastName")}</span>
+              <input id="ngLast" type="text" autocomplete="family-name" required></label>
+            <button class="btn-sunset" type="submit">${t("namegate.submit")}</button>
+            <p id="ngErr" class="login-err hidden"></p>
+          </form>
+        </div>
+      </div>
+    </div>`;
+  const form = document.getElementById("nameForm");
+  const err = document.getElementById("ngErr");
+  setTimeout(() => document.getElementById("ngFirst")?.focus({ preventScroll: true }), 80);
+  form.onsubmit = async (e) => {
+    e.preventDefault();
+    const first = document.getElementById("ngFirst").value.trim();
+    const last = document.getElementById("ngLast").value.trim();
+    err.classList.add("hidden");
+    if (!first || !last) { err.textContent = t("login.nameRequired"); err.classList.remove("hidden"); return; }
+    const btn = form.querySelector("button[type=submit]");
+    busy(btn, true);
+    try {
+      const full = `${first} ${last}`;
+      await db.setMyName(full);
+      setState({ profile: { ...getState().profile, full_name: full } });
+      toast(t("hello.signin", { name: first }));
+      route();
+    } catch (e2) {
+      err.textContent = e2.message; err.classList.remove("hidden");
+      busy(btn, false);
+    }
+  };
+}
+
 // After an emailed invite / reset link: the user is signed in but must choose a
 // password before using the app.
 function renderSetPassword() {
@@ -404,6 +454,7 @@ const A_EYE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke
 const A_EYE_OFF = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4l16 16"/><path d="M9.6 5.8A10.7 10.7 0 0 1 12 5.5c6.4 0 10 6.5 10 6.5a17.6 17.6 0 0 1-3.3 4M6.4 7.7A17.3 17.3 0 0 0 2 12s3.6 6.5 10 6.5c1 0 2-.1 2.9-.4"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>';
 const A_GOOGLE = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="#4285F4" d="M23.52 12.27c0-.79-.07-1.54-.2-2.27H12v4.51h6.47c-.28 1.48-1.13 2.73-2.41 3.58v2.97h3.9c2.28-2.1 3.56-5.19 3.56-8.79z"/><path fill="#34A853" d="M12 24c3.24 0 5.96-1.07 7.95-2.91l-3.9-2.97c-1.08.72-2.45 1.15-4.05 1.15-3.12 0-5.76-2.11-6.71-4.94H1.28v3.06C3.26 21.3 7.31 24 12 24z"/><path fill="#FBBC05" d="M5.29 14.33c-.24-.72-.38-1.49-.38-2.28s.14-1.56.38-2.28V6.71H1.28C.47 8.31 0 10.1 0 12s.47 3.69 1.28 5.29l4.01-3.06z"/><path fill="#EA4335" d="M12 4.75c1.76 0 3.34.61 4.58 1.79l3.44-3.44C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.28 6.71l4.01 3.06C6.24 6.86 8.88 4.75 12 4.75z"/></svg>';
 const A_CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg>';
+const A_USER = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.6"/><path d="M5 20c.8-3.6 3.6-5.5 7-5.5s6.2 1.9 7 5.5"/></svg>';
 
 // Minimal auth screen (dark, card-less): logo, form, language flag top-right.
 // `mode` is "signin" (default) or "signup"; the toggle swaps only the form body.
@@ -442,9 +493,17 @@ function paintLogin(mode) {
   const googleBtn = `<button type="button" class="btn-google" id="googleBtn">${A_GOOGLE}<span>${t("login.google")}</span></button>`;
   const status = `<p id="loginErr" class="auth-err hidden"></p><p id="loginOk" class="auth-ok hidden"></p>`;
 
+  // Everyone must state who they are — first and last name, asked up front.
+  const nameFields = `<div class="auth-names">
+      <label class="fieldx"><span class="fx-icon">${A_USER}</span>
+        <input id="firstName" type="text" placeholder="${t("login.firstName")}" autocomplete="given-name" required></label>
+      <label class="fieldx"><span class="fx-icon">${A_USER}</span>
+        <input id="lastName" type="text" placeholder="${t("login.lastName")}" autocomplete="family-name" required></label>
+    </div>`;
+
   body.innerHTML = signup
     ? `<form id="loginForm" class="auth-form" novalidate>
-        ${emailField}${passField}
+        ${nameFields}${emailField}${passField}
         <button class="btn-amber" type="submit">${t("login.signupCta")}</button>
         ${status}
         <div class="auth-divider"><span>${t("login.or")}</span></div>
@@ -518,6 +577,9 @@ function paintLogin(mode) {
     const email = body.querySelector("#email").value.trim();
     const password = pwInput.value;
     clearMsg();
+    const first = body.querySelector("#firstName")?.value.trim() || "";
+    const last = body.querySelector("#lastName")?.value.trim() || "";
+    if (signup && (!first || !last)) return showErr(t("login.nameRequired"));
     if (signup && password.length < 6) return showErr(t("login.minPass"));
     if (!signup && remember) {
       try { remember.checked ? localStorage.setItem("asc.rememberEmail", email) : localStorage.removeItem("asc.rememberEmail"); } catch { /* ignore */ }
@@ -525,7 +587,7 @@ function paintLogin(mode) {
     busy(btn, true);
     try {
       if (signup) {
-        const { needsConfirm } = await db.signUp(email, password);
+        const { needsConfirm } = await db.signUp(email, password, `${first} ${last}`);
         if (needsConfirm) { showOk(t("login.signupDone")); busy(btn, false); }
         // confirmation off → session exists → onAuthChange → boot()
       } else {
@@ -566,6 +628,8 @@ async function boot() {
         .then((profile) => {
           setState({ profile });
           if (profile && profile.role === "readonly") { route(); return; }
+          // Nameless account → re-route into the name gate (it says hello after).
+          if (profile && !(profile.full_name || "").trim()) { route(); return; }
           // The personal hello — only on a real login, not every reload.
           if (justSignedIn) {
             justSignedIn = false;

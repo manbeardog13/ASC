@@ -109,6 +109,11 @@ const DICT = {
     "login.forgotSent": "Reset link sent — check your email.", "login.forgotNeedEmail": "Enter your email first.",
     // access gate (signed in but no role yet / removed)
     "gate.title": "Access pending", "gate.body": "Your account doesn't have access yet. Ask an admin to grant you a role, then sign in again.",
+    // name gate + signup name fields
+    "login.firstName": "First name", "login.lastName": "Last name",
+    "login.nameRequired": "Enter your first and last name.",
+    "namegate.title": "Introduce yourself", "namegate.body": "Tell us your first and last name so the team knows who's who.",
+    "namegate.submit": "Continue",
     // users / access management
     "users.title": "Users", "users.sub": "Everyone with access to ASC.",
     "users.add": "Add user", "users.fullName": "Full name", "users.email": "Email", "users.role": "Role",
@@ -122,6 +127,7 @@ const DICT = {
     "users.remove": "Remove", "users.removeQ": "Remove {name}?",
     "users.removeBody": "They lose access immediately. You can add them again later.",
     "users.removed": "{name} removed", "users.roleChanged": "Role updated",
+    "users.edit": "Edit", "users.nameUpdated": "Name updated.",
     "users.makeAdmin": "Make admin", "users.makeUser": "Make user",
     "users.emptyTitle": "No users yet", "users.emptyBody": "Add your first teammate to get started.",
     "users.nameRequired": "Full name is required.", "users.emailInvalid": "Enter a valid email address.",
@@ -286,6 +292,10 @@ const DICT = {
     "login.showPw": "Prikaži lozinku", "login.hidePw": "Sakrij lozinku",
     "login.forgotSent": "Poveznica za ponovno postavljanje poslana — provjerite e-poštu.", "login.forgotNeedEmail": "Najprije unesite e-poštu.",
     "gate.title": "Pristup na čekanju", "gate.body": "Vaš račun još nema pristup. Zatražite od administratora da vam dodijeli ulogu, zatim se ponovno prijavite.",
+    "login.firstName": "Ime", "login.lastName": "Prezime",
+    "login.nameRequired": "Unesite ime i prezime.",
+    "namegate.title": "Predstavite se", "namegate.body": "Recite nam svoje ime i prezime kako bi tim znao tko je tko.",
+    "namegate.submit": "Nastavi",
     "users.title": "Korisnici", "users.sub": "Svi koji imaju pristup ASC-u.",
     "users.add": "Dodaj korisnika", "users.fullName": "Ime i prezime", "users.email": "E-pošta", "users.role": "Uloga",
     "users.roleAdmin": "Administrator", "users.roleUser": "Korisnik",
@@ -298,6 +308,7 @@ const DICT = {
     "users.remove": "Ukloni", "users.removeQ": "Ukloniti {name}?",
     "users.removeBody": "Odmah gube pristup. Možete ih ponovno dodati kasnije.",
     "users.removed": "{name} uklonjen/a", "users.roleChanged": "Uloga ažurirana",
+    "users.edit": "Uredi", "users.nameUpdated": "Ime je ažurirano.",
     "users.makeAdmin": "Postavi za administratora", "users.makeUser": "Postavi za korisnika",
     "users.emptyTitle": "Još nema korisnika", "users.emptyBody": "Dodajte prvog člana tima za početak.",
     "users.nameRequired": "Ime i prezime je obavezno.", "users.emailInvalid": "Unesite ispravnu e-poštu.",

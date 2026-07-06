@@ -86,7 +86,7 @@ function awaitingSectionHtml(awaiting) {
 function approveRowHtml(u) {
   const name = esc(u.full_name || t("users.noName"));
   return `<div class="approve-row" data-row="${esc(u.id)}">
-    <div class="body"><div class="who">${name}</div><div class="user-mail tnum">${esc(u.email_masked || "")}</div></div>
+    <div class="body"><div class="who">${name}</div><div class="user-mail tnum">${esc(u.email || u.email_masked || "")}</div></div>
     <div class="approve-actions">
       <button class="btn btn-primary" data-approve="${esc(u.id)}" data-role="employee" data-name="${name}">${t("users.approveUser")}</button>
       <button class="btn" data-approve="${esc(u.id)}" data-role="admin" data-name="${name}">${t("users.approveAdmin")}</button>
@@ -124,24 +124,39 @@ function rowHtml(u, me, isAdmin) {
     isSelf ? `<span class="user-badge badge-you">${t("users.you")}</span>` : "",
     u.pending ? `<span class="user-badge badge-pending">${t("users.pending")}</span>` : "",
   ].join("");
-  // Owner and your own row are not editable here (prevents self-lockout).
+  // Owner and your own row keep their ROLE locked (prevents self-lockout) —
+  // but every row's name stays editable.
   const locked = u.is_owner || isSelf;
-  const controls = (isAdmin && !locked) ? `
+  const controls = isAdmin ? `
     <div class="user-actions">
+      ${!locked ? `
       <div class="segmented user-role" role="group" aria-label="${t("users.role")}">
         <button type="button" data-role="admin" data-id="${esc(u.id)}" aria-pressed="${db.isAdminRole(u.role)}">${t("users.roleAdmin")}</button>
         <button type="button" data-role="employee" data-id="${esc(u.id)}" aria-pressed="${!db.isAdminRole(u.role)}">${t("users.roleUser")}</button>
-      </div>
-      <button class="btn btn-danger" data-remove="${esc(u.id)}" data-name="${name}" style="min-height:38px">${icon("trash", 16)} ${t("users.remove")}</button>
+      </div>` : ""}
+      <button class="btn" data-edit="${esc(u.id)}" style="min-height:38px">${icon("pencil", 16)} ${t("users.edit")}</button>
+      ${!locked ? `<button class="btn btn-danger" data-remove="${esc(u.id)}" data-name="${name}" style="min-height:38px">${icon("trash", 16)} ${t("users.remove")}</button>` : ""}
     </div>` : "";
 
-  return `<div class="set-row user-row" style="cursor:default" data-row="${esc(u.id)}">
+  // Hidden inline editor — data-edit toggles it open.
+  const editor = isAdmin ? `
+    <form class="user-edit hidden" data-editor="${esc(u.id)}">
+      <label class="field" style="margin:0;flex:1;min-width:200px"><span class="label">${t("users.fullName")}</span>
+        <input type="text" name="fullName" value="${esc(u.full_name || "")}" autocomplete="off" required></label>
+      <div class="user-edit-actions">
+        <button class="btn btn-primary" type="submit" data-save="${esc(u.id)}">${t("common.save")}</button>
+        <button class="btn btn-ghost" type="button" data-cancel="${esc(u.id)}">${t("common.cancel")}</button>
+      </div>
+    </form>` : "";
+
+  return `<div class="set-row user-row" style="cursor:default;flex-wrap:wrap" data-row="${esc(u.id)}">
     <div class="body">
       <div class="toprow"><span class="who">${name}</span>${roleChip(u.role)}${badges}</div>
-      <div class="user-mail tnum">${esc(u.email_masked || "")}</div>
+      <div class="user-mail tnum">${esc(u.email || u.email_masked || "")}</div>
       ${(isAdmin && locked && u.is_owner) ? `<div class="user-locked">${icon("check", 13)} ${t("users.ownerLocked")}</div>` : ""}
     </div>
     ${controls}
+    ${editor}
   </div>`;
 }
 
@@ -230,6 +245,35 @@ function wireRowActions(main) {
       await load(main);
     } catch (err) {
       toast(err.message, "err");
+    }
+  });
+
+  // Inline name editing: pencil opens the editor, Save renames, Cancel closes.
+  main.querySelectorAll("[data-edit]").forEach((btn) => btn.onclick = () => {
+    const ed = main.querySelector(`[data-editor="${CSS.escape(btn.dataset.edit)}"]`);
+    if (!ed) return;
+    ed.classList.toggle("hidden");
+    if (!ed.classList.contains("hidden")) ed.querySelector("input")?.focus();
+  });
+  main.querySelectorAll("[data-cancel]").forEach((btn) => btn.onclick = () => {
+    btn.closest(".user-edit")?.classList.add("hidden");
+  });
+  main.querySelectorAll("form.user-edit").forEach((form) => form.onsubmit = async (e) => {
+    e.preventDefault();
+    const id = form.dataset.editor;
+    const name = form.querySelector("input[name=fullName]").value.trim();
+    if (!name) { toast(t("users.nameRequired"), "err"); return; }
+    form.querySelectorAll("button").forEach((b) => b.disabled = true);
+    try {
+      await db.updateUserName({ id, pending: id.startsWith("pending:"), email: id.replace(/^pending:/, "") }, name);
+      // Renaming yourself should update the greeting + agent immediately.
+      const me = getState().profile;
+      if (me && me.id === id) setState({ profile: { ...me, full_name: name } });
+      toast(t("users.nameUpdated"));
+      await load(main);
+    } catch (err) {
+      toast(err.message, "err");
+      form.querySelectorAll("button").forEach((b) => b.disabled = false);
     }
   });
 }
