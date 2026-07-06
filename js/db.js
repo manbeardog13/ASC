@@ -76,9 +76,18 @@ export async function loadMyProfile() {
   const session = await getSession();
   if (!session) return null;
   const { data } = await supabase.from("profiles").select("id, email, full_name, role").eq("id", session.user.id).maybeSingle();
+  // Google sign-ins carry the person's name in auth metadata while the profiles
+  // row starts empty — adopt it so greetings and the agent know who this is,
+  // and persist it (best-effort; ignored if RLS says no).
+  const meta = session.user.user_metadata || {};
+  const metaName = String(meta.full_name || meta.name || "").trim();
+  if (data && !data.full_name && metaName) {
+    data.full_name = metaName;
+    supabase.from("profiles").update({ full_name: metaName }).eq("id", session.user.id).then(() => {}, () => {});
+  }
   // No profile row => least-privilege 'readonly', matching asc_role(). The shop
   // owner is forced to 'admin' by schema.sql.
-  return data ?? { id: session.user.id, email: session.user.email, role: "readonly", full_name: null };
+  return data ?? { id: session.user.id, email: session.user.email, role: "readonly", full_name: metaName || null };
 }
 
 // ---- Access management (admins) ------------------------------------------------

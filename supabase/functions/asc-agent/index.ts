@@ -243,9 +243,13 @@ Deno.serve(async (req) => {
   const { data: me } = await asCaller.from("profiles").select("role, full_name").eq("id", user.id).maybeSingle();
   if (!me || BLOCKED_ROLES.includes(me.role)) return json({ error: "No access." }, 403);
   // Who the agent is talking to — server-side from the verified profile, so it
-  // can't be spoofed by the client. Powers the personal, by-name rapport.
-  const userLine = me.full_name
-    ? `\n\nCURRENT USER: You are talking to ${me.full_name} (${me.role}). Their first name is ${me.full_name.trim().split(/\s+/)[0]}.`
+  // can't be spoofed by the client. Google sign-ins often have an empty
+  // profiles.full_name but carry the real name in auth metadata — use it.
+  const myName = String(
+    me.full_name || user.user_metadata?.full_name || user.user_metadata?.name || "",
+  ).trim();
+  const userLine = myName
+    ? `\n\nCURRENT USER: You are talking to ${myName} (${me.role}). Their first name is ${myName.split(/\s+/)[0]}.`
     : "";
 
   // -- Request: the conversation so far ---------------------------------------
