@@ -1912,3 +1912,6 @@ body:has(#main.v2wide) { padding-top: 14px; }
 /* page edges beyond the trapped fixed canvas (view-transition containing block) */
 body.v6-dark { background:#020305; }
 body.v6-dark::before { background:#020305; }
+
+/* corner tab must stay absolute — the stage z-index blanket was flowing it */
+.v6stage > .v6tab { position:absolute; }
