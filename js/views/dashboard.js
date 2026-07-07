@@ -106,7 +106,10 @@ export async function render(main) {
   // transform (containing-block rule), so the page edges are painted here.
   document.body.classList.toggle("v6-dark", themeDark);
   setThemeColor(themeDark);
-  window.addEventListener("asc:teardown", () => document.body.classList.remove("v6-dark"), { once: true });
+  window.addEventListener("asc:teardown", () => {
+    document.body.classList.remove("v6-dark");
+    setThemeColor(false);   // unported views are always light
+  }, { once: true });
   main.querySelector("#v6mode").addEventListener("click", () => {
     const rootEl = main.querySelector("#v6root");
     const dark = rootEl.classList.toggle("dark");
