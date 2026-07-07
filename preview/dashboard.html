@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ASC — Ploča (preview)</title>
+<meta name="theme-color" content="#edf0f5">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;650;700;800&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+<!--
+  ASC dashboard — CLEAN-ROOM REBUILD (isolated preview).
+  Self-contained: every style lives in this file. It shares NOTHING with the app's
+  css/styles.css, so no legacy rule can bleed in. Refines the approved v6 "Hanssen"
+  look and adds ONE self-contained navigation that is identical on phone and desktop
+  (in-shell pill on wide screens, dark-glass bottom dock with center scan on phones)
+  — there is no second/legacy menu here to revert to. Numbers are illustrative
+  placeholders for the preview; the live port reads real Supabase data.
+-->
+<style>
+/* ============================================================================
+   Tokens — locked palette only. Twin themes.
+   ============================================================================ */
+:root{
+  --bg:#edf0f5; --shell:rgba(255,255,255,.42); --shell-solid:rgba(255,255,255,.66);
+  --panel:#f2f4f8; --panel-2:#ffffff;
+  --ink:#020305; --ink-2:#3a3c40; --muted:#63676f;
+  --lava:#ff4e1b; --lava-2:#ff8a5c; --lava-ink:#c0360d; --lava-tint:rgba(255,78,27,.11); --lava-ring:rgba(255,78,27,.30);
+  --gun:#2e2f31; --hairline:rgba(2,3,5,.07); --line:rgba(2,3,5,.10);
+  --stage-1:#0b0c0e; --stage-2:#17181b; --on-stage:#f4f5f7; --on-stage-2:rgba(244,245,247,.6);
+  --rim-top:rgba(255,255,255,.75); --rim:rgba(255,255,255,.42);
+  --ok:#3f9d6b; --ok-ink:#2e7a52; --green:#2fbf5b;
+  --smooth:cubic-bezier(.25,1,.5,1);
+  --tap:44px; --dock-h:64px;
+}
+html.dark{
+  --bg:#020305; --shell:rgba(23,24,28,.55); --shell-solid:rgba(23,24,28,.86);
+  --panel:#1d1e22; --panel-2:#26272b;
+  --ink:#f4f5f7; --ink-2:#d6d8dc; --muted:rgba(244,245,247,.62);
+  --hairline:rgba(244,245,247,.09); --line:rgba(244,245,247,.12);
+  --lava-ink:#ff8a5c; --ok-ink:#7cc9a2;
+  --stage-1:#07080a; --stage-2:#101114;
+  --rim-top:rgba(255,255,255,.16); --rim:rgba(255,255,255,.08);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{min-height:100%}
+body{font-family:"Inter",system-ui,sans-serif;color:var(--ink);background:var(--bg);
+  padding:26px 22px calc(var(--dock-h) + env(safe-area-inset-bottom,0px) + 26px);
+  -webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums;
+  transition:background 380ms var(--smooth),color 380ms var(--smooth)}
+@media(min-width:1021px){ body{ padding:30px 26px } }
+
+/* ambient palette blooms (no imagery) */
+.canvas{position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:
+    radial-gradient(58vmax 54vmax at 10% -12%,rgba(255,78,27,.16),transparent 62%),
+    radial-gradient(50vmax 46vmax at 92% 112%,rgba(255,78,27,.13),transparent 58%),
+    radial-gradient(44vmax 40vmax at 84% -8%,rgba(46,47,49,.22),transparent 60%);
+  transition:opacity 380ms var(--smooth)}
+html.dark .canvas{
+  background:
+    radial-gradient(58vmax 54vmax at 10% -12%,rgba(255,78,27,.10),transparent 60%),
+    radial-gradient(50vmax 46vmax at 92% 112%,rgba(255,78,27,.08),transparent 56%),
+    radial-gradient(44vmax 40vmax at 84% -8%,rgba(244,245,247,.05),transparent 60%)}
+.grain{position:fixed;inset:0;z-index:60;pointer-events:none;opacity:.04;mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E")}
+
+/* preview ribbon */
+.preview-tag{position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:70;
+  font:700 10px Inter;letter-spacing:.14em;text-transform:uppercase;
+  background:var(--gun);color:#f4f5f7;padding:4px 12px;border-radius:0 0 10px 10px;opacity:.9}
+
+/* ============================================================================
+   Glass shell
+   ============================================================================ */
+.shell{max-width:1220px;margin:0 auto;border-radius:34px;position:relative;
+  background:var(--shell-solid);
+  border:1px solid var(--rim);border-top-color:var(--rim-top);
+  box-shadow:0 25px 50px rgba(2,3,5,.22);
+  padding:16px;animation:sheetIn 550ms var(--smooth) both;
+  transition:background 380ms var(--smooth)}
+@media(min-width:1021px){ .shell{ padding:18px } }
+@supports ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  .shell{background:var(--shell);
+    -webkit-backdrop-filter:blur(30px) saturate(150%) brightness(108%);
+    backdrop-filter:blur(30px) saturate(150%) brightness(108%)}
+}
+@media(prefers-reduced-transparency:reduce){
+  .shell{background:var(--panel-2)!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+  .canvas{display:none}
+}
+@keyframes sheetIn{from{opacity:0;transform:translateY(24px) scale(.985)}}
+@keyframes rise{from{opacity:0;transform:translateY(12px)}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition-property:opacity,color,background-color!important}}
+
+/* ---- top bar: brand + in-shell pill nav (wide) / compact (phone) ---- */
+.top{display:flex;align-items:center;gap:12px;margin-bottom:14px;padding:2px 4px}
+.brand{display:flex;align-items:center;gap:9px;font:700 15px Sora;letter-spacing:.02em;color:var(--ink)}
+.brand .mark{width:24px;height:24px;border-radius:50%;
+  background:radial-gradient(circle at 32% 30%,var(--lava-2),var(--lava) 60%,#d6390c);
+  box-shadow:0 0 10px rgba(255,78,27,.5)}
+.pill{margin-left:auto;display:flex;align-items:center;gap:2px;
+  background:rgba(2,3,5,.88);color:#f4f5f7;border-radius:20px;padding:6px 8px;font:500 12.5px Inter;
+  border-top:1px solid rgba(255,255,255,.14)}
+html.dark .pill{background:rgba(244,245,247,.10)}
+.pill a{position:relative;color:#f4f5f7;opacity:.62;padding:6px 11px;border-radius:13px;text-decoration:none;
+  transition:opacity 160ms ease,background 160ms ease}
+.pill a.on{opacity:1;background:rgba(244,245,247,.14)}
+@media(hover:hover) and (pointer:fine){ .pill a:hover{opacity:1} }
+.mode{border:0;cursor:pointer;width:var(--tap);height:var(--tap);border-radius:50%;flex:none;
+  background:var(--panel);display:grid;place-items:center;position:relative;
+  transition:transform 380ms var(--smooth),background 380ms var(--smooth)}
+@media(hover:hover) and (pointer:fine){ .mode:hover{transform:rotate(40deg)} }
+.mode i{width:12px;height:12px;border-radius:50%;background:var(--ink);display:block;
+  transition:background 380ms ease,box-shadow 380ms ease}
+html.dark .mode i{background:transparent;box-shadow:inset 0 0 0 2.5px #f4f5f7}
+.pill-links{display:contents}
+
+/* ============================================================================
+   Grid: stage | middle | rail  (collapses to one column on phone/tablet)
+   ============================================================================ */
+.grid{display:grid;grid-template-columns:1.35fr 1fr .8fr;gap:14px}
+@media(max-width:1020px){ .grid{grid-template-columns:1fr;gap:12px} }
+
+.tab{position:absolute;z-index:3;font:500 10.5px Inter;letter-spacing:.04em;color:var(--muted);
+  background:var(--shell-solid);padding:7px 13px 8px}
+.tab.tl{top:0;left:0;border-radius:0 0 14px 0}
+.tab.br{bottom:0;right:0;border-radius:14px 0 0 0}
+
+/* ---- stage ---- */
+.stage{position:relative;border-radius:24px;overflow:hidden;min-height:560px;
+  background:
+    radial-gradient(120% 90% at 82% -10%,rgba(255,78,27,.28),transparent 55%),
+    radial-gradient(90% 70% at -10% 110%,rgba(255,78,27,.14),transparent 55%),
+    linear-gradient(175deg,var(--stage-1) 0%,var(--stage-2) 100%);
+  color:var(--on-stage);padding:60px 28px 40px;display:flex;flex-direction:column;
+  border-top:1px solid rgba(255,255,255,.10);
+  animation:rise 550ms var(--smooth) 120ms both}
+@media(max-width:1020px){ .stage{min-height:auto;padding:44px 22px 34px} }
+.stage .aura{position:absolute;width:70%;height:55%;right:-16%;top:-14%;border-radius:50%;
+  background:radial-gradient(closest-side,rgba(255,78,27,.34),transparent 70%);
+  filter:blur(30px);animation:drift 16s ease-in-out infinite alternate}
+@keyframes drift{to{transform:translate(-9%,12%) scale(1.12)}}
+.stage>*{position:relative;z-index:2}
+.k{font:600 11px Inter;letter-spacing:.08em;text-transform:uppercase;color:var(--on-stage-2)}
+.hero{font-family:Sora;font-weight:400;font-size:clamp(58px,7vw,96px);line-height:1;letter-spacing:-.03em;margin:10px 0 4px}
+.hero em{font-style:normal;font:500 14px Inter;letter-spacing:.06em;text-transform:uppercase;color:var(--on-stage-2);margin-left:8px}
+.cap{font-size:13.5px;color:var(--on-stage-2)}
+.meter{margin-top:16px;height:8px;border-radius:4px;background:rgba(244,245,247,.14);overflow:hidden;max-width:440px}
+.meter i{display:block;height:100%;width:86%;border-radius:4px;background:linear-gradient(90deg,var(--lava-2),var(--lava))}
+.space{flex:1;min-height:22px}
+.spills{display:flex;gap:8px;margin-bottom:16px;max-width:480px}
+.spill{flex:1;background:rgba(244,245,247,.08);border-radius:14px;padding:11px 12px;border-top:1px solid rgba(255,255,255,.09);
+  transition:transform 200ms var(--smooth),background 200ms ease;cursor:pointer}
+@media(hover:hover) and (pointer:fine){ .spill:hover{transform:translateY(-2px);background:rgba(244,245,247,.13)} }
+.spill b{display:block;font-family:Sora;font-weight:500;font-size:22px}
+.spill span{font-size:11px;color:var(--on-stage-2)}
+.cta{display:flex;align-items:center;justify-content:center;gap:10px;min-height:50px;max-width:480px;
+  border-radius:25px;background:rgba(244,245,247,.94);color:#020305;text-decoration:none;font:600 14px Inter;
+  transition:transform 200ms var(--smooth);position:relative}
+@media(hover:hover) and (pointer:fine){ .cta:hover{transform:translateY(-1px)} }
+.cta:active{transform:scale(.97);transition-duration:100ms}
+.cta .dot{width:9px;height:9px;border-radius:50%;background:var(--lava);box-shadow:0 0 8px 2px var(--lava-ring);animation:breathe 2.4s ease-in-out infinite}
+@keyframes breathe{50%{transform:scale(1.3);opacity:.8}}
+
+/* ---- middle column ---- */
+.mid{display:flex;flex-direction:column;gap:12px}
+.profile{background:var(--panel);border-radius:24px;padding:22px;animation:rise 550ms var(--smooth) 160ms both;transition:background 380ms var(--smooth)}
+.row1{display:flex;align-items:center;gap:13px;margin-bottom:12px}
+.pavatar{width:46px;height:46px;border-radius:50%;flex:none;
+  background:radial-gradient(circle at 32% 30%,var(--lava-2),var(--lava) 62%,#d6390c);
+  color:#fff;display:grid;place-items:center;font:650 14px Inter;box-shadow:0 6px 16px rgba(255,78,27,.35)}
+.profile h1{font-family:Sora;font-weight:600;font-size:19px;letter-spacing:-.01em}
+.profile .sub{font-size:12.5px;color:var(--muted)}
+.profile p{font-size:13.5px;line-height:1.55;color:var(--ink-2)}
+.health{display:flex;gap:8px;margin-top:14px;padding-top:13px;border-top:1px solid var(--hairline)}
+.hstat{flex:1;background:var(--panel-2);border-radius:12px;padding:9px 10px;font-size:11px;color:var(--muted)}
+html.dark .hstat{background:rgba(244,245,247,.05)}
+.hstat b{display:block;font:700 14px Inter;color:var(--ink);margin-top:2px}
+.hstat .g{color:var(--green)}
+
+.panel{position:relative;background:var(--panel);border-radius:24px;padding:32px 20px 18px;flex:1;
+  animation:rise 550ms var(--smooth) both;transition:background 380ms var(--smooth)}
+.panel.p2{background:
+    radial-gradient(120% 100% at 90% -20%,rgba(255,78,27,.20),transparent 55%),
+    linear-gradient(175deg,var(--stage-1),var(--stage-2));color:var(--on-stage)}
+.panel h3{font-family:Sora;font-weight:600;font-size:15px;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.count{margin-left:auto;font:800 12px Inter;min-width:20px;height:20px;padding:0 6px;border-radius:999px;
+  background:var(--lava);color:#fff;display:inline-flex;align-items:center;justify-content:center}
+.obar{margin-bottom:11px}
+.obar .t{display:flex;justify-content:space-between;align-items:baseline;font-size:12px;color:var(--muted);margin-bottom:5px}
+.obar .t b{color:var(--ink);font:600 13.5px Inter}
+.obar .bar{height:5px;border-radius:3px;background:rgba(2,3,5,.08);overflow:hidden}
+html.dark .obar .bar{background:rgba(244,245,247,.10)}
+.obar .bar i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,var(--lava-2),var(--lava))}
+.mini{display:flex;align-items:baseline;gap:10px;padding:9px 2px;border-bottom:1px solid rgba(244,245,247,.09);font-size:13px}
+.mini:last-child{border-bottom:0}
+.mini time{font:600 12.5px Inter;color:var(--lava-2);min-width:52px}
+.panel.p2 .mini span{color:var(--on-stage-2)}
+.mini.overdue time{color:#ff8f7e}
+
+/* ---- rail ---- */
+.rail{display:flex;flex-direction:column;gap:8px}
+@media(max-width:1020px){ .rail{display:grid;grid-template-columns:1fr 1fr;gap:8px} .rail .hero,.rail .foot{grid-column:1/-1} }
+.rrow{position:relative;display:flex;align-items:center;justify-content:space-between;min-height:54px;padding:0 16px;border-radius:16px;
+  background:var(--panel);color:var(--ink);text-decoration:none;font:550 13.5px Inter;
+  transition:transform 200ms var(--smooth),background 200ms ease;animation:rise 550ms var(--smooth) both}
+@media(hover:hover) and (pointer:fine){ .rrow:hover{transform:translateX(3px)} }
+.rrow:active{transform:scale(.98);transition-duration:100ms}
+.rrow .v{color:var(--muted);font:600 12px Inter;display:flex;align-items:center;gap:8px}
+.rrow .badge{font:800 11px Inter;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:var(--lava);color:#fff;display:inline-flex;align-items:center;justify-content:center}
+.rrow.hero{background:linear-gradient(175deg,var(--stage-1),var(--stage-2));color:var(--on-stage);border-top:1px solid rgba(255,255,255,.10);min-height:58px}
+.rrow.hero .v{color:var(--lava-2)}
+.rrow.hero .gdot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px 2px rgba(47,191,91,.4);animation:breathe 2.4s ease-in-out infinite}
+.foot{margin-top:6px;padding:10px 6px 2px;font-size:11.5px;color:var(--muted);text-align:right}
+
+:focus-visible{outline:2px solid var(--lava-ink);outline-offset:2px;border-radius:10px}
+
+/* ============================================================================
+   Bottom dock — the ONE mobile nav. Dark glass, center scan orb. Self-contained;
+   there is no legacy topbar anywhere on this page to revert to.
+   ============================================================================ */
+.dock{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:50;
+  display:flex;align-items:center;gap:2px;width:auto;max-width:calc(100vw - 24px);
+  background:rgba(2,3,5,.9);border-radius:24px;border-top:1px solid rgba(255,255,255,.14);
+  box-shadow:0 16px 40px -12px rgba(2,3,5,.6);padding:7px 10px;
+  -webkit-backdrop-filter:blur(14px) saturate(150%);backdrop-filter:blur(14px) saturate(150%)}
+.dock a{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:58px;min-height:var(--tap);
+  padding:6px 8px;border-radius:14px;color:#f4f5f7;opacity:.6;text-decoration:none;font:600 10.5px Inter;
+  transition:opacity 160ms ease,background 160ms ease,transform 120ms ease}
+.dock a.on{opacity:1;background:rgba(244,245,247,.14)}
+.dock a:active{transform:scale(.94)}
+.dock a svg{width:22px;height:22px}
+.dock .scan{min-width:0;padding:0}
+.dock .scan .orb{width:52px;height:52px;border-radius:50%;display:grid;place-items:center;color:#fff;margin-top:-22px;
+  background:radial-gradient(circle at 40% 32%,var(--lava-2),var(--lava) 62%,#d6390c);
+  box-shadow:0 10px 24px -6px rgba(255,78,27,.7),0 0 0 5px var(--shell-solid)}
+.dock .scan svg{width:26px;height:26px}
+@media(min-width:1021px){ .dock{display:none} }
+@media(max-width:1020px){ .pill-links{display:none} .pill{background:transparent;border:0;padding:0;margin-left:auto} }
+</style>
+</head>
+<body>
+<div class="canvas" aria-hidden="true"></div>
+<div class="grain" aria-hidden="true"></div>
+<span class="preview-tag">Preview · nije uživo</span>
+
+<main class="shell">
+  <header class="top">
+    <span class="brand"><span class="mark" aria-hidden="true"></span>ASC</span>
+    <nav class="pill" aria-label="Glavna navigacija">
+      <span class="pill-links">
+        <a class="on" href="#">Ploča</a><a href="#">Zaprimi</a><a href="#">Skladište</a><a href="#">Kupci</a>
+      </span>
+      <button class="mode" id="mode" aria-label="Promijeni temu"><i></i></button>
+    </nav>
+  </header>
+
+  <div class="grid">
+    <!-- STAGE -->
+    <section class="stage">
+      <i class="aura" aria-hidden="true"></i>
+      <span class="k">Skladište · Hotel za gume · Dubrovnik</span>
+      <div class="hero"><span id="scBig">248</span><em>setova</em></div>
+      <div class="cap">na čuvanju · 0 rezervirano · 92 % ostaje</div>
+      <div class="meter"><i style="width:92%"></i></div>
+      <div class="space"></div>
+      <div class="spills">
+        <div class="spill"><b>4</b><span>zaprimljeno danas</span></div>
+        <div class="spill"><b>2</b><span>preuzeto danas</span></div>
+        <div class="spill"><b>17</b><span>uskoro van</span></div>
+      </div>
+      <a class="cta" href="#"><span class="dot"></span>Pitaj ASC Agenta</a>
+      <span class="tab br">hotel za gume · est. 2019</span>
+    </section>
+
+    <!-- MIDDLE -->
+    <div class="mid">
+      <section class="profile">
+        <div class="row1">
+          <span class="pavatar">TJ</span>
+          <div>
+            <h1>Dobra večer, Toni</h1>
+            <div class="sub">Ponedjeljak, 7. srpnja · Dubrovnik</div>
+          </div>
+        </div>
+        <p>Sve spremno za smjenu — 248 kompleta u sustavu, 3 podsjetnika čekaju danas.</p>
+        <div class="health">
+          <div class="hstat">Veza<b class="g">Na mreži</b></div>
+          <div class="hstat">Za sinkr.<b>0</b></div>
+          <div class="hstat">Kopija<b>prije 5 h</b></div>
+        </div>
+      </section>
+
+      <section class="panel p1">
+        <span class="tab tl">zauzeće</span>
+        <h3>Po sezoni</h3>
+        <div class="obar"><div class="t"><span>Zimske</span><b>141</b></div><div class="bar"><i style="width:78%"></i></div></div>
+        <div class="obar"><div class="t"><span>Ljetne</span><b>89</b></div><div class="bar"><i style="width:49%"></i></div></div>
+        <div class="obar"><div class="t"><span>Cjelogodišnje</span><b>18</b></div><div class="bar"><i style="width:10%;opacity:.45"></i></div></div>
+      </section>
+
+      <section class="panel p2">
+        <span class="tab tl">podsjetnici</span>
+        <h3>Za preuzimanje <span class="count">3</span></h3>
+        <div class="mini overdue"><time>Kasni</time><b>Josip Horvat</b><span>· zimske · DU-234-AB</span></div>
+        <div class="mini"><time>Danas</time><b>Ana Kovačević</b><span>· ljetne · DU-881-KL</span></div>
+        <div class="mini"><time>7. srp</time><b>Marko Babić</b><span>· zimske · DU-455-MN</span></div>
+      </section>
+    </div>
+
+    <!-- RAIL -->
+    <aside class="rail">
+      <a class="rrow" href="#">Zaprimi novi set<span class="v">→</span></a>
+      <a class="rrow" href="#">Skeniraj QR<span class="v">→</span></a>
+      <a class="rrow" href="#">Radionica<span class="v">→</span></a>
+      <a class="rrow" href="#">Podsjetnici<span class="v"><span class="badge">3</span>→</span></a>
+      <a class="rrow hero" href="#">Pitaj ASC Agenta<span class="v"><span class="gdot"></span>online</span></a>
+      <div class="foot">ASC · Auto servisni centar d.o.o.</div>
+    </aside>
+  </div>
+</main>
+
+<!-- ONE mobile navigation, part of this page. No legacy menu exists to revert to. -->
+<nav class="dock" aria-label="Sekcije">
+  <a class="on" href="#" aria-label="Početna"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.2 10.6L12 4l7.8 6.6"/><path d="M5.8 9.4V19a2 2 0 002 2h8.4a2 2 0 002-2V9.4"/></svg>Ploča</a>
+  <a href="#" aria-label="Zaprimi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5.4v13.2M5.4 12h13.2"/></svg>Zaprimi</a>
+  <a class="scan" href="#" aria-label="Skeniraj"><span class="orb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.2V6.4A2.4 2.4 0 016.4 4h1.8M15.8 4h1.8A2.4 2.4 0 0120 6.4v1.8M20 15.8v1.8a2.4 2.4 0 01-2.4 2.4h-1.8M8.2 20H6.4A2.4 2.4 0 014 17.6v-1.8"/><path d="M7.2 12h9.6"/></svg></span></a>
+  <a href="#" aria-label="Skladište"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21.2s-7-5.5-7-11a7 7 0 0114 0c0 5.5-7 11-7 11z"/><circle cx="12" cy="10" r="2.4"/></svg>Skladište</a>
+  <a href="#" aria-label="Više"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8.6 6.4H21M8.6 12H21M8.6 17.6H21"/><path d="M3.6 6.4h.01M3.6 12h.01M3.6 17.6h.01"/></svg>Više</a>
+</nav>
+
+<script>
+  // Theme: default light (HR shop), remembered, and the iOS notch/status surround
+  // tint follows it — same behaviour the app uses (asc.theme).
+  const root = document.documentElement;
+  const meta = document.querySelector('meta[name="theme-color"]');
+  try { if (localStorage.getItem('asc.theme') === 'dark') root.classList.add('dark'); } catch(e){}
+  const paintTheme = () => { meta.setAttribute('content', root.classList.contains('dark') ? '#020305' : '#edf0f5'); };
+  paintTheme();
+  document.getElementById('mode').addEventListener('click', () => {
+    const dark = root.classList.toggle('dark');
+    try { localStorage.setItem('asc.theme', dark ? 'dark' : 'light'); } catch(e){}
+    paintTheme();
+  });
+</script>
+</body>
+</html>
