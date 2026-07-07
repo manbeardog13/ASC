@@ -1954,50 +1954,46 @@ body.v6-dark::before { background:#020305; }
   .auth-side { padding: 24px 22px 32px; justify-content: flex-start; }
   .auth-title + .auth-form, .auth-sub + .auth-form { margin-top: 18px; }
 }
-@media (max-width: 1020px) {
-  /* ---- v6 dashboard: old frame OFF, v6 dock ON ---- */
+/* ---- Unified navigation (fixes the two-dock split) -------------------------
+   ONE floating menu app-wide: the standard bottom .tabbar (with its center scan
+   orb, no brand dot). The dashboard's .v6nav pill is DESKTOP-ONLY, in-shell.
+   Single breakpoint = 720px, matching the tabbar's own. */
+
+/* Desktop/tablet dashboard: own shell chrome, standard topbar off (v6nav pill
+   is the nav; tabbar is already hidden >=720 by its base rule). */
+@media (min-width: 720px) {
   body:has(#main.v2wide) .topbar { display: none; }
-  body:has(#main.v2wide) .tabbar { display: none; }
-  body:has(#main.v2wide) #main { padding-bottom: 0; }
-  .v6 { padding-bottom: 86px; }
-  /* entrance transform would trap the fixed dock (containing-block rule) */
-  .v6shell { animation: none; padding: 12px; border-radius: 28px; }
-  .v6nav { position: fixed; top: auto; bottom: 14px; left: 50%;
-    transform: translateX(-50%); z-index: 60; animation: none;
-    box-shadow: 0 16px 40px -12px rgba(2,3,5,.6);
-    max-width: calc(100vw - 20px); }
-  .v6nav a { display: inline-block !important; padding: 8px 11px; white-space: nowrap; font-size: 12.5px; }
+}
+@media (min-width: 720px) and (max-width: 1020px) {
+  .v6grid { grid-template-columns: 1fr; }
+}
+
+/* Phone dashboard: standard topbar + bottom tabbar (center scan), NO v6nav pill. */
+@media (max-width: 719.5px) {
+  .v6nav { display: none; }
+  body:has(#main.v2wide) .topbar { display: flex; }
+  body:has(#main.v2wide) #main { padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px)); }
+  .v6 { padding-bottom: 12px; }
+  .v6shell { padding: 12px; border-radius: 28px; }
   .v6grid { grid-template-columns: 1fr; gap: 10px; }
-  .v6stage { min-height: 380px; padding: 20px 20px 52px; }
+  .v6stage { min-height: 360px; padding: 20px 20px 52px; }
   .v6hero { font-size: 56px; }
-  .v6spills { max-width: none; }
-  .v6cta { max-width: none; }
-  .v6profile, .v6panel { padding: 30px 18px 16px; }
+  .v6spills, .v6cta { max-width: none; }
+  .v6profile, .v6panel { padding: 26px 18px 16px; }
   .v6profile { padding-top: 18px; }
   .v6list { padding: 16px 14px; }
 }
 
-/* Release the v6 root from the view-enter filled transform — a filled
-   animation makes it a containing block, trapping the fixed bottom dock.
-   v6 runs its own entrance choreography, so nothing is lost. */
+/* Release the v6 root from the view-enter filled transform (v6 runs its own
+   entrance, and a filled transform would become a containing block). */
 #main.view-enter > .v6 { animation: none; }
-/* The dock replaces the app tabbar on the dashboard (mobile) */
-@media (max-width: 1020px) {
-  body:has(#main.v2wide) .tabbar { display: none; }
-}
-/* portaled dock: theme via body class (nav may live outside .v6) */
-body.v6-dark .v6mode i { background:transparent; box-shadow:inset 0 0 0 2.5px #f4f5f7; }
-/* dock: one clean row, always */
-@media (max-width:1020px) {
-  .v6nav { flex-wrap:nowrap; width:max-content; max-width:calc(100vw - 24px); }
-  .v6nav a, .v6nav a:not(.on) { padding:6px 8px; font-size:12px; white-space:nowrap; }
-}
-@media (max-width: 1020px) {
-  .v6nav { flex-wrap: nowrap; padding: 6px 8px; gap: 0; }
-  .v6nav .v6mark { width: 18px; height: 18px; margin-right: 4px; }
-  .v6nav a { padding: 8px 9px !important; font-size: 12px; }
-  .v6mode { width: 24px; height: 24px; margin-left: 2px; }
-}
+
+/* Theme toggle relocated into the profile card — dark dot on the light card,
+   ring on dark. (Its old home was the removed floating pill.) */
+.v6prow .v6mode { margin-left: auto; flex: none; background: var(--surface); }
+.v6prow .v6mode i { background: var(--ink); }
+.v6.dark .v6prow .v6mode { background: rgba(244,245,247,.10); }
+.v6.dark .v6prow .v6mode i, body.v6-dark .v6prow .v6mode i { background: transparent; box-shadow: inset 0 0 0 2.5px #f4f5f7; }
 
 /* ---- phone login: fit the viewport (no scroll under the island) ---------- */
 @media (max-width: 759.5px) {

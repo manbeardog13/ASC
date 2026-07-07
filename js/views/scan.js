@@ -8,6 +8,7 @@ import { t } from "../i18n.js";
 
 export async function render(main) {
   main.innerHTML = `
+    <a class="btn btn-ghost scan-back" href="#/" style="margin-bottom:12px;min-height:44px">${icon("back", 18)} ${t("common.menu")}</a>
     <div class="card center-narrow" style="text-align:center">
       <h1>${t("scan.title")}</h1>
       <p class="muted" style="margin-top:6px">${t("scan.point")}</p>

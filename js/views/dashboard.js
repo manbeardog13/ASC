@@ -45,12 +45,10 @@ export async function render(main) {
     <i class="v6canvas" aria-hidden="true"></i>
     <div class="v6shell">
       <nav class="v6nav" aria-label="Primary">
-        <span class="v6mark" aria-hidden="true"></span>
         <a href="#/" class="on">${t("nav.home")}</a>
         <a href="#/checkin">${t("nav.checkin")}</a>
         <a href="#/warehouse">${t("nav.warehouse")}</a>
         <a href="#/customers">${t("nav.customers")}</a>
-        <button type="button" class="v6mode" id="v6mode" aria-label="Tema / Theme"><i></i></button>
       </nav>
       <div class="v6grid">
         <section class="v6stage">
@@ -69,6 +67,7 @@ export async function render(main) {
             <div class="v6prow">
               <span class="v6avatar" id="v6avatar">${esc(initials)}</span>
               <div><h1 id="helloTitle"></h1><div class="v6sub" id="helloSub"></div></div>
+              <button type="button" class="v6mode" id="v6mode" aria-label="Tema / Theme"><i></i></button>
             </div>
             <p class="v6status" id="dashStatus"></p>
           </section>
@@ -117,20 +116,9 @@ export async function render(main) {
     setThemeColor(dark);
     try { localStorage.setItem("asc.theme", dark ? "dark" : "light"); } catch { /* ignore */ }
   });
-  // Phone dock: #main's view-transition transform traps position:fixed, so the
-  // nav is PORTALED to <body> on small screens (and returned on desktop).
-  const navEl = main.querySelector(".v6nav");
-  const dockMq = window.matchMedia("(max-width: 1020px)");
-  const dockPortal = () => {
-    if (dockMq.matches && navEl.parentElement !== document.body) document.body.appendChild(navEl);
-    else if (!dockMq.matches && navEl.parentElement === document.body) main.querySelector(".v6shell")?.prepend(navEl);
-  };
-  dockPortal();
-  dockMq.addEventListener?.("change", dockPortal);
-  window.addEventListener("asc:teardown", () => {
-    dockMq.removeEventListener?.("change", dockPortal);
-    if (navEl.parentElement === document.body) navEl.remove();
-  }, { once: true });
+  // On phones the dashboard uses the standard app frame (topbar + bottom tabbar
+  // with the center scan button) like every other view — one consistent nav, no
+  // separate floating pill. The .v6nav pill is desktop-only (CSS). No portal.
 
   // The personal hello — paints now, and re-paints when the background profile
   // fetch lands (first visit after boot often races it). Unsubscribes on swap.

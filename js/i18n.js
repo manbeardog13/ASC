@@ -170,7 +170,7 @@ const DICT = {
     // payment
     "pay.paid": "Paid", "pay.unpaid": "Unpaid",
     // common
-    "common.back": "Back", "common.home": "Home", "common.cancel": "Cancel", "common.confirm": "Confirm",
+    "common.back": "Back", "common.home": "Home", "common.menu": "Menu", "common.cancel": "Cancel", "common.confirm": "Confirm",
     "common.loading": "Loading…", "common.save": "Save", "common.notFound": "Not found",
     "time.now": "just now", "time.min": "{n}m ago", "time.hour": "{n}h ago",
     // dashboard
@@ -362,7 +362,7 @@ const DICT = {
     "loc.zone": "Zona", "loc.rack": "Regal", "loc.shelf": "Polica", "loc.slot": "Mjesto",
     "loc.none": "Još bez lokacije", "loc.noneShort": "Bez lokacije", "loc.title": "Lokacija", "sd.rimsWord": "naplacima",
     "pay.paid": "Plaćeno", "pay.unpaid": "Neplaćeno",
-    "common.back": "Natrag", "common.home": "Početna", "common.cancel": "Odustani", "common.confirm": "Potvrdi",
+    "common.back": "Natrag", "common.home": "Početna", "common.menu": "Izbornik", "common.cancel": "Odustani", "common.confirm": "Potvrdi",
     "common.loading": "Učitavanje…", "common.save": "Spremi", "common.notFound": "Nije pronađeno",
     "time.now": "upravo sad", "time.min": "prije {n} min", "time.hour": "prije {n} h",
     "dash.search": "Traži ime, registraciju, dimenziju, DOT, lokaciju…",
