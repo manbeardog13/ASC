@@ -121,6 +121,7 @@ const DICT = {
     "dash.dueTitle": "Pickups due", "dash.estTab": "tire hotel · Dubrovnik",
     "dash.statusLine": "All set for the shift — {total} sets in the system, {due} pickups coming up.", "dash.reminders": "Reminders",
     "dash.scopeAll": "All", "dash.scopeToday": "Today", "dash.scopeSoon": "Soon",
+    "view.ctx": "Tire hotel · Dubrovnik",
     // access gate (signed in but no role yet / removed)
     "gate.title": "Access pending", "gate.body": "Your account doesn't have access yet. Ask an admin to grant you a role, then sign in again.",
     // name gate + signup name fields
@@ -317,6 +318,7 @@ const DICT = {
     "dash.helloTail": "— sve spremno za smjenu.",
     "dash.capLine": "na čuvanju · {n} rezervirano", "dash.newSet": "Novi set na čuvanje",
     "dash.scopeAll": "Svi", "dash.scopeToday": "Danas", "dash.scopeSoon": "Uskoro",
+    "view.ctx": "Hotel za gume · Dubrovnik",
     "dash.setsUnit": "setova", "dash.bySeason": "Po sezoni", "dash.dueTitle": "Za preuzimanje",
     "dash.estTab": "hotel za gume · Dubrovnik",
     "dash.statusLine": "Sve spremno za smjenu — {total} kompleta u sustavu, {due} za preuzimanje uskoro.", "dash.reminders": "Podsjetnici",

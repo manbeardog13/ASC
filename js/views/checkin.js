@@ -18,9 +18,10 @@ export async function render(main) {
   clearTimeout(dupTimer);   // a pending duplicate-check from a previous mount
   const recent = getState().recentLocations || [];
   main.innerHTML = `
-    <div class="row-between" style="margin-bottom:14px"><h1>${t("ci.title")}</h1>
+    <header class="view-stage">
+      <div><span class="vs-k">${t("view.ctx")}</span><h1>${t("ci.title")}</h1></div>
       ${voiceSupported() ? `<button type="button" id="voiceFill" class="btn voice-cta">${icon("mic", 18)} ${t("voice.fill")}</button>` : ""}
-    </div>
+    </header>
     <form id="ci" novalidate>
       <div class="card stack">
         <span class="u-corner is-num" aria-hidden="true">01</span>

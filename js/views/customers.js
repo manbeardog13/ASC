@@ -13,7 +13,7 @@ let query = "";
 export async function render(main, { params }) {
   if (params && params[0]) return renderDetail(main, params[0]);
   main.innerHTML = `
-    <div class="section-title" style="margin-top:0"><h1>${t("cust.title")}</h1><span id="custCount" class="u-meta"></span></div>
+    <header class="view-stage"><div><span class="vs-k">${t("view.ctx")}</span><h1>${t("cust.title")}</h1></div><span id="custCount" class="u-meta"></span></header>
     <div class="search-wrap dash-search">${icon("search", 20)}
       <input id="search" type="search" placeholder="${esc(t("cust.search"))}" value="${esc(query)}" autocomplete="off" aria-label="${esc(t("cust.search"))}"></div>
     <div id="clist">${skeletonRows(5)}</div>`;

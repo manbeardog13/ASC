@@ -12,7 +12,7 @@ import { t } from "../i18n.js";
 export async function render(main) {
   main.innerHTML = `
     <a class="btn btn-ghost" href="#/" style="margin-bottom:10px;min-height:38px">${icon("back", 18)} ${t("common.home")}</a>
-    <div class="row-between" style="margin-bottom:4px"><h1>${t("users.title")}</h1></div>
+    <header class="view-stage"><div><span class="vs-k">${t("view.ctx")}</span><h1>${t("users.title")}</h1></div></header>
     <p class="muted" style="font-size:13px;margin-bottom:14px">${t("users.sub")}</p>
     <div id="addSlot"></div>
     <div id="userList">${skeletonRows(3)}</div>`;

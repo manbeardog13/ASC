@@ -9,7 +9,7 @@ import { icon, esc, skeletonRows, emptyState } from "../ui.js";
 import { t, noun } from "../i18n.js";
 
 export async function render(main) {
-  main.innerHTML = `<div class="row-between wh-topbar"><h1>${t("wh.title")}</h1><span class="u-meta" id="whMeta"></span></div>
+  main.innerHTML = `<header class="view-stage wh-topbar"><div><span class="vs-k">${t("view.ctx")}</span><h1>${t("wh.title")}</h1></div><span class="u-meta" id="whMeta"></span></header>
     <div id="map">${skeletonRows(4)}</div>`;
   setViewRefresh(() => load(main));
   await load(main);

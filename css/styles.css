@@ -2168,3 +2168,43 @@ fieldset legend::before { content: ""; width: 6px; height: 6px; border-radius: 5
 .switch input { accent-color: var(--brand); }
 /* voice CTA on view headers → v6 capsule with breathing dot handled by icon; keep pill */
 .voice-cta { border-radius: var(--radius-pill); }
+
+/* ============================================================================
+   v6 VIEW STAGE — the visible dark hero banner every inner view leads with,
+   matching the login/dashboard stage language. Houses the title + subtitle +
+   the view's existing right-side control (voice CTA / meta / count).
+   ============================================================================ */
+.view-stage {
+  position: relative; overflow: hidden;
+  display: flex; align-items: flex-end; justify-content: space-between; gap: 16px;
+  border-radius: var(--radius-xl); margin-bottom: 16px;
+  padding: 22px 24px;
+  color: #f4f5f7;
+  background:
+    radial-gradient(120% 120% at 88% -20%, rgba(255,78,27,.30), transparent 55%),
+    linear-gradient(175deg, #0b0c0e 0%, #17181b 100%);
+  border-top: 1px solid rgba(255,255,255,.10);
+  animation: v6rise 550ms var(--v6-smooth, cubic-bezier(.25,1,.5,1)) both;
+}
+.view-stage::before {   /* slow ember */
+  content: ""; position: absolute; right: -60px; top: -60px; width: 200px; height: 200px;
+  border-radius: 50%; background: radial-gradient(closest-side, rgba(255,78,27,.32), transparent 72%);
+  filter: blur(12px); pointer-events: none; animation: segBreathe 6s ease-in-out infinite;
+}
+.view-stage > * { position: relative; z-index: 2; }
+.view-stage .vs-k { font: 600 11px var(--font); letter-spacing: .08em; text-transform: uppercase; color: rgba(244,245,247,.6); display: block; }
+.view-stage h1 { font-family: var(--font-display); font-weight: 600; letter-spacing: -.02em; font-size: clamp(24px, 4vw, 34px); color: #f4f5f7; margin: 8px 0 0; line-height: 1.05; }
+.view-stage p, .view-stage .vs-sub { margin: 6px 0 0; font-size: 13px; color: rgba(244,245,247,.6); }
+.view-stage .u-meta { color: rgba(244,245,247,.6); }
+/* right-side control on the dark stage: light glass capsule */
+.view-stage .btn, .view-stage .voice-cta {
+  background: rgba(244,245,247,.94); color: #020305; border: 0; box-shadow: none; flex: none;
+}
+.view-stage .btn:active { transform: scale(.97); }
+/* ws-head (workshop/assistant) reuses the same stage look */
+.ws-head { border-radius: var(--radius-xl); margin-bottom: 16px; padding: 22px 24px;
+  color: #f4f5f7; overflow: hidden; position: relative;
+  background: radial-gradient(120% 120% at 88% -20%, rgba(255,78,27,.30), transparent 55%), linear-gradient(175deg,#0b0c0e,#17181b);
+  border-top: 1px solid rgba(255,255,255,.10); }
+.ws-head .ws-title { color: #f4f5f7; font-family: var(--font-display); }
+.ws-head .btn { background: rgba(244,245,247,.94); color: #020305; border: 0; }
