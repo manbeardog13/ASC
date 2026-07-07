@@ -4,7 +4,7 @@
 // ============================================================================
 import * as db from "../db.js";
 import { getState, setViewRefresh, on } from "../store.js";
-import { matchesQuery, isDueSoon } from "../domain.js";
+import { matchesQuery, isDueSoon, nudgeCount } from "../domain.js";
 import { icon, esc, skeletonRows, emptyState, setThemeColor } from "../ui.js";
 import { t, noun, lang } from "../i18n.js";
 import { setRow, timeAgo } from "./shared.js";
@@ -86,7 +86,7 @@ export async function render(main) {
           <a class="v6row" href="#/checkin">${t("dash.newSet")}<span class="v">→</span></a>
           <a class="v6row" href="#/scan">${t("dash.scanQr")}<span class="v">→</span></a>
           ${canWorkshop ? `<a class="v6row" href="#/workshop">${t("ws.enter")}<span class="v">→</span></a>` : ""}
-          <a class="v6row" href="#/reminders">${t("dash.reminders")}<span class="v">→</span></a>
+          <a class="v6row" href="#/reminders">${t("dash.reminders")}<span class="v"><span id="remindBadge" class="rem-badge" hidden></span>→</span></a>
           <a class="v6row hero" href="#/assistant">${t("ag.title")}<span class="v"><span class="v6dot"></span>online</span></a>
         </aside>
       </div>
@@ -233,6 +233,14 @@ function paintDueSoon(main) {
   }
   const box = main.querySelector("#dueSoon");
   if (box) box.innerHTML = "";
+  // Morning signal: how many due sets still need a nudge (not reminded recently).
+  const badge = main.querySelector("#remindBadge");
+  if (badge) {
+    const n = nudgeCount(allSets);
+    badge.textContent = n;
+    badge.hidden = n === 0;
+    badge.setAttribute("aria-label", t("rem.summary", { n }));
+  }
 }
 
 // Occupancy bars — stored sets by season, real proportions.

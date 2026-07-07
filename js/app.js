@@ -466,7 +466,7 @@ const A_USER = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strok
 // Minimal auth screen (dark, card-less): logo, form, language flag top-right.
 // `mode` is "signin" (default) or "signup"; the toggle swaps only the form body.
 // Keep in sync with service-worker CACHE version on every ship.
-const APP_V = "v78";
+const APP_V = "v79";
 
 // Stage chips: real cached counts from the last dashboard visit (written by
 // views/dashboard.js) — never fake numbers. Falls back to feature labels on

@@ -101,13 +101,13 @@ export function matchesQuery(set, query) {
 // `occupant` is the conflicting set (if any) found by db.findSetAtLocation.
 export function locationConflictMessage(occupant) {
   if (!occupant) return null;
-  return `${occupant.public_code} is already at this location`;
+  return t("sd.alreadyThere", { code: occupant.public_code });
 }
 
 // ---- Payment ----------------------------------------------------------------
 export function paymentLabel(set) {
   if (set?.fee == null) return null; // no fee agreed — nothing to show
-  return set.paid ? "Paid" : "Unpaid";
+  return set.paid ? t("pay.paid") : t("pay.unpaid");
 }
 
 // ---- Pickup planning ----------------------------------------------------------
@@ -118,6 +118,52 @@ export function isDueSoon(set, days = 7, today = new Date()) {
   const horizon = new Date(today);
   horizon.setDate(horizon.getDate() + days);
   return due <= horizon;
+}
+
+// How urgent is this set's pickup relative to `today`? Same window as isDueSoon
+// (≤7 days out, not yet picked up), but TIERED so the morning briefing can lead
+// with what's actually slipping. Returns null when nothing needs attention.
+export function reminderUrgency(set, today = new Date()) {
+  if (!set?.expected_out_date) return null;
+  if (set.status === "checked_out") return null;
+  const due = new Date(set.expected_out_date + "T00:00:00");
+  const base = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const days = Math.round((due - base) / 86400000);
+  if (days < 0) return "overdue";
+  if (days === 0) return "today";
+  if (days <= 7) return "soon";
+  return null;
+}
+
+// "Does this set need a nudge today?" — it's due AND the customer hasn't been
+// reminded within the cooldown. This is what makes the morning count meaningful:
+// a set reminded yesterday is resting, not nagged again.
+export function needsNudge(set, today = new Date(), cooldownDays = 3) {
+  if (!reminderUrgency(set, today)) return false;
+  if (!set.reminded_at) return true;
+  const sinceDays = (today - new Date(set.reminded_at)) / 86400000;
+  return sinceDays >= cooldownDays;
+}
+
+// The morning briefing: urgency buckets for the sets that need a nudge, plus a
+// "resting" bucket for due sets already reminded recently. Pure and
+// date-injectable, so it's unit-testable. Each bucket is date-sorted.
+export function partitionDue(sets, today = new Date(), cooldownDays = 3) {
+  const out = { overdue: [], today: [], soon: [], resting: [] };
+  for (const set of sets || []) {
+    const urgency = reminderUrgency(set, today);
+    if (!urgency) continue;
+    if (needsNudge(set, today, cooldownDays)) out[urgency].push(set);
+    else out.resting.push(set);
+  }
+  const byDate = (a, b) => (a.expected_out_date || "").localeCompare(b.expected_out_date || "");
+  for (const key in out) out[key].sort(byDate);
+  return out;
+}
+
+// Count of sets needing a nudge right now — the dashboard's morning signal.
+export function nudgeCount(sets, today = new Date(), cooldownDays = 3) {
+  return (sets || []).filter((set) => needsNudge(set, today, cooldownDays)).length;
 }
 
 // Friendly, prefilled reminder text for SMS/email (customer's first name only).

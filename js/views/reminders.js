@@ -5,7 +5,7 @@
 // ============================================================================
 import * as db from "../db.js";
 import { setViewRefresh } from "../store.js";
-import { isDueSoon, reminderMessage } from "../domain.js";
+import { partitionDue, reminderMessage } from "../domain.js";
 import { icon, esc, toast, seasonChip, skeletonRows, emptyState } from "../ui.js";
 import { t } from "../i18n.js";
 import { fmtDate, timeAgo } from "./shared.js";
@@ -25,13 +25,35 @@ async function load(main) {
   try { sets = await db.listStorageSets(); }
   catch (err) { main.querySelector("#rem").innerHTML = `<div class="banner banner-danger">${icon("alert", 18)}${esc(err.message)}</div>`; return; }
 
-  const due = sets.filter(isDueSoon)
-    .sort((a, b) => (a.expected_out_date || "").localeCompare(b.expected_out_date || ""));
-  if (!due.length) {
-    main.querySelector("#rem").innerHTML = emptyState({ iconName: "check", title: t("rem.allCaught"), body: t("rem.allCaughtBody") });
+  const groups = partitionDue(sets);
+  const active = groups.overdue.length + groups.today.length + groups.soon.length;
+  const box = main.querySelector("#rem");
+  if (!active && !groups.resting.length) {
+    box.innerHTML = emptyState({ iconName: "check", title: t("rem.allCaught"), body: t("rem.allCaughtBody") });
     return;
   }
-  main.querySelector("#rem").innerHTML = due.map(card).join("");
+
+  const section = (key, tone, list) => list.length ? `
+    <section class="rem-section rem-${tone}">
+      <h2 class="rem-section-head">${t(key)}<span class="rem-count tnum">${list.length}</span></h2>
+      ${list.map(card).join("")}
+    </section>` : "";
+
+  box.innerHTML =
+    (active ? `<p class="rem-brief">${esc(t("rem.summary", { n: active }))}</p>` : "") +
+    section("rem.overdue", "overdue", groups.overdue) +
+    section("rem.dueToday", "today", groups.today) +
+    section("rem.dueWeek", "soon", groups.soon) +
+    (groups.resting.length ? `
+      <details class="rem-section rem-resting">
+        <summary class="rem-section-head">${t("rem.resting")}<span class="rem-count tnum">${groups.resting.length}</span></summary>
+        ${groups.resting.map(card).join("")}
+      </details>` : "");
+
+  wireRemindButtons(main);
+}
+
+function wireRemindButtons(main) {
   main.querySelectorAll("[data-remind]").forEach((btn) => btn.onclick = async () => {
     btn.disabled = true;
     try { await db.markReminded(btn.dataset.remind); toast(t("rem.marked")); await load(main); }

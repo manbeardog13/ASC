@@ -1,0 +1,28 @@
+name: i18n guard
+
+# Tripwire for the "English leaks into the Croatian UI" bug class: fails the run
+# if any UI template renders a hardcoded text node instead of going through t().
+# Runs the guard's own self-test first, so a weakened lexer can't go silently
+# toothless. Pure Node, no secrets, no network.
+on:
+  push:
+    paths: ["js/**", "scripts/i18n-guard*.mjs", ".github/workflows/i18n-guard.yml"]
+  pull_request:
+    paths: ["js/**", "scripts/i18n-guard*.mjs", ".github/workflows/i18n-guard.yml"]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Self-test the guard (teeth + discipline)
+        run: node scripts/i18n-guard.test.mjs
+      - name: Scan UI for hardcoded strings
+        run: node scripts/i18n-guard.mjs

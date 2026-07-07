@@ -485,7 +485,9 @@ details.disclose > .disclose-body { padding: 0 2px 16px; }
 .photos { display: flex; flex-wrap: wrap; gap: 10px; }
 .photo { position: relative; width: 104px; height: 104px; border-radius: var(--radius-sm); overflow: hidden; border: 1px solid var(--line); background: var(--surface-2); }
 .photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.photo .del { position: absolute; top: 5px; right: 5px; width: 26px; height: 26px; border-radius: 6px; border: none; background: rgba(0,0,0,.66); color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.photo .del { position: absolute; top: 5px; right: 5px; width: 26px; height: 26px; border-radius: 6px; border: none; background: rgba(2,3,5,.66); color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+/* 26px is the visible dot; ::before extends the hit area to a 44px thumb target. */
+.photo .del::before { content: ""; position: absolute; inset: -9px; }
 .photo .del:hover { background: var(--danger); }
 
 /* ---------------------------------------------------------------- Warehouse viz */
@@ -2265,5 +2267,26 @@ fieldset legend::before { content: ""; width: 6px; height: 6px; border-radius: 5
 .approve-card { background: var(--brand-tint); border: 1px solid var(--line); border-radius: var(--radius-xl); }
 /* AA contrast: informational text must not use --faint / raw semantic hues */
 .conn-online { color: var(--ok-ink); }
+
+/* ============================================================================
+   B1 — morning pickup briefing: reminders tiering + dashboard nudge badge.
+   ============================================================================ */
+.rem-brief { font-size: 13px; font-weight: 650; color: var(--ink-2); margin: 0 0 12px; }
+.rem-section { margin-bottom: 18px; }
+.rem-section-head { display: flex; align-items: center; gap: 8px; margin: 0 2px 10px;
+  font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.rem-section-head .rem-count { margin-left: auto; font-weight: 800; color: var(--ink-2); }
+.rem-overdue .rem-section-head, .rem-overdue .rem-section-head .rem-count { color: var(--danger-ink); }
+.rem-today   .rem-section-head, .rem-today   .rem-section-head .rem-count { color: var(--brand-ink); }
+/* Resting = due but reminded recently: present, quiet, collapsed by default. */
+.rem-resting { border-top: 1px solid var(--line); padding-top: 14px; }
+.rem-resting > summary { cursor: pointer; list-style: none; }
+.rem-resting > summary::-webkit-details-marker { display: none; }
+.rem-resting[open] > summary { margin-bottom: 10px; }
+/* Dashboard reminders-row badge — the morning signal. */
+.rem-badge { display: inline-flex; align-items: center; justify-content: center;
+  min-width: 18px; height: 18px; padding: 0 5px; margin-right: 6px; border-radius: 999px;
+  background: var(--brand); color: #fff; font-size: 11px; font-weight: 800; line-height: 1; }
+.rem-badge[hidden] { display: none; }
 .conn-offline { color: var(--danger-ink); }
 .tl-item .tl-time, .loc-empty-mini { color: var(--muted); }

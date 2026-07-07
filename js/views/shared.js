@@ -75,7 +75,7 @@ export function fillNextTireRow(container, size, dot) {
   const target = rows.find((r) => !r.querySelector('[data-t="size"]').value.trim()) || rows[rows.length - 1];
   if (size) target.querySelector('[data-t="size"]').value = size;
   if (dot) target.querySelector('[data-t="dot_code"]').value = dot;
-  target.animate?.([{ background: "#fff3c9" }, { background: "transparent" }], { duration: 1200, easing: "ease" });
+  target.animate?.([{ background: "rgba(255,78,27,.16)" }, { background: "transparent" }], { duration: 1200, easing: "ease" });
   return rows.indexOf(target) + 1;
 }
 

@@ -76,17 +76,17 @@ export function seasonChip(season) {
 export function paymentChip(set) {
   if (set?.fee == null) return "";
   return set.paid
-    ? `<span class="chip tone-ok">${icon("check", 14)}Paid</span>`
-    : `<span class="chip tone-warn">${icon("alert", 14)}Unpaid</span>`;
+    ? `<span class="chip tone-ok">${icon("check", 14)}${esc(t("pay.paid"))}</span>`
+    : `<span class="chip tone-warn">${icon("alert", 14)}${esc(t("pay.unpaid"))}</span>`;
 }
 
 // ---- Warehouse location -----------------------------------------------------------
 // Full structured block: four labeled cells. Used on detail / move / labels.
 export function locationBlock(set) {
   if (!hasLocation(set)) {
-    return `<div class="loc-block loc-empty">${icon("map", 18)}<span>No location yet</span></div>`;
+    return `<div class="loc-block loc-empty">${icon("map", 18)}<span>${esc(t("loc.none"))}</span></div>`;
   }
-  return `<div class="loc-block" role="group" aria-label="Warehouse location: ${esc(locationLine(set))}">
+  return `<div class="loc-block" role="group" aria-label="${esc(t("loc.title"))}: ${esc(locationLine(set))}">
     ${locationParts(set).map(({ label, value }) => `
       <div class="loc-cell${value ? "" : " loc-cell-empty"}">
         <span class="loc-label">${label}</span>
@@ -97,7 +97,7 @@ export function locationBlock(set) {
 
 // Compact two-line variant for list rows: structure preserved, space respected.
 export function locationMini(set) {
-  if (!hasLocation(set)) return `<div class="loc-mini loc-empty-mini">No location</div>`;
+  if (!hasLocation(set)) return `<div class="loc-mini loc-empty-mini">${esc(t("loc.noneShort"))}</div>`;
   const parts = locationParts(set).filter((p) => p.value);
   const [first, ...rest] = parts;
   return `<div class="loc-mini" aria-label="${esc(locationLine(set))}">
@@ -142,7 +142,7 @@ export function toast(message, options = {}) {
   if (actionLabel) {
     el.querySelector(".toast-action").onclick = async () => {
       dismiss();
-      try { await onAction?.(); } catch (err) { toast(err.message || "Action failed", "err"); }
+      try { await onAction?.(); } catch (err) { toast(err.message || t("common.actionFailed"), "err"); }
     };
   }
   requestAnimationFrame(() => el.classList.add("toast-in"));
