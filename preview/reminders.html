@@ -69,11 +69,11 @@ html.dark .rem-sec .count-badge.win{background:rgba(244,245,247,.16);color:#f4f5
 .rr-code{margin-left:auto;font:700 12px Inter;color:var(--ink-2);text-decoration:none;letter-spacing:.01em}
 @media(hover:hover){ .rr-code:hover{color:var(--lava-ink)} }
 .rr-id{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
-.rr-name{font:600 15px Sora;letter-spacing:-.01em;color:var(--ink)}
+.rr-name{font:650 15px Inter;letter-spacing:-.01em;color:var(--ink)}
 .rr-plate{font:600 11.5px Inter;color:var(--muted);background:var(--panel);padding:2px 8px;border-radius:7px;border:1px solid var(--hairline)}
 .rr-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:9px}
 .rr-meta .chip{margin-top:0}
-.rr-ok{display:inline-flex;align-items:center;gap:5px;font:600 11px Inter;color:var(--green)}
+.rr-ok{display:inline-flex;align-items:center;gap:5px;font:600 11px Inter;color:var(--green-ink)}
 .rr-ok svg{width:13px;height:13px}
 
 /* Action bar: 3 ghost actions + one wide primary (Black Core; lava when overdue) */
@@ -88,7 +88,7 @@ html.dark .rem-sec .count-badge.win{background:rgba(244,245,247,.16);color:#f4f5
 .ract.is-disabled{opacity:.38;pointer-events:none}
 .ract.wide{width:100%;margin-top:7px;color:#f4f5f7;border-color:transparent;
   background:linear-gradient(175deg,var(--stage-2),var(--stage-1))}
-@media(hover:hover){ .ract.wide:hover{background:linear-gradient(175deg,#20222b,#101114);box-shadow:0 10px 24px -12px rgba(2,3,5,.7)} }
+@media(hover:hover){ .ract.wide:hover{background:linear-gradient(175deg,var(--stage-2),var(--stage-1));box-shadow:0 10px 24px -12px rgba(2,3,5,.7)} }
 .rr-overdue .ract.wide{background:linear-gradient(175deg,var(--lava-2),var(--lava))}
 @media(hover:hover){ .rr-overdue .ract.wide:hover{box-shadow:0 10px 24px -10px var(--lava-ring)} }
 .ract.wide.again{color:var(--ink);background:var(--panel);border:1px solid var(--line)}
@@ -107,6 +107,18 @@ html.dark .rem-sec .count-badge.win{background:rgba(244,245,247,.16);color:#f4f5
 .rr-rest .rr-name{font-weight:600}
 
 @media(prefers-reduced-motion:reduce){ .rem-rested summary .chev{transition:none} }
+
+/* Lightweight toast + row-leave (mirrors recycle interactions; app.js has none) */
+.rem-toast{position:fixed;left:50%;bottom:calc(var(--dock-h) + 22px + env(safe-area-inset-bottom,0px));
+  transform:translate(-50%,14px);z-index:80;display:flex;align-items:center;gap:9px;
+  padding:11px 16px;border-radius:14px;background:var(--gun);color:#f4f5f7;
+  font:600 12.5px Inter;box-shadow:0 12px 30px -10px rgba(2,3,5,.5);
+  opacity:0;pointer-events:none;transition:opacity 220ms var(--smooth),transform 220ms var(--smooth)}
+.rem-toast.show{opacity:1;transform:translate(-50%,0)}
+.rem-toast svg{width:16px;height:16px}
+@media(min-width:1021px){ .rem-toast{bottom:26px} }
+.rr.leaving{opacity:0;transform:translateX(14px);transition:opacity 300ms var(--smooth),transform 300ms var(--smooth)}
+@media(prefers-reduced-motion:reduce){ .rr.leaving{transition:none} }
 </style>
 </head>
 <body>
@@ -118,7 +130,7 @@ html.dark .rem-sec .count-badge.win{background:rgba(244,245,247,.16);color:#f4f5
   <header class="top">
     <img class="logo" src="assets/logo.png" alt="ASC — Auto servisni centar">
     <nav class="pill" aria-label="Glavna navigacija">
-      <span class="pill-links"><a href="dashboard.html">Ploča</a><a class="on" href="#" aria-current="page">Podsjetnici</a><a href="#">Skladište</a><a href="#">Kupci</a></span>
+      <span class="pill-links"><a href="dashboard.html">Ploča</a><a href="#">Zaprimi</a><a href="#">Skladište</a><a href="#">Kupci</a></span>
       <button class="mode" id="mode" aria-label="Promijeni temu"><i></i></button>
     </nav>
   </header>
@@ -307,8 +319,13 @@ html.dark .rem-sec .count-badge.win{background:rgba(244,245,247,.16);color:#f4f5
   </div>
 </main>
 
+<div class="rem-toast" id="toast" role="status" aria-live="polite">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+  <span id="toastMsg"></span>
+</div>
+
 <nav class="dock" aria-label="Sekcije">
-  <a class="dtab" href="dashboard.html" aria-label="Početna"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.2 10.6L12 4l7.8 6.6"/><path d="M5.8 9.4V19a2 2 0 002 2h8.4a2 2 0 002-2V9.4"/></svg>Ploča</a>
+  <a class="dtab" href="dashboard.html" aria-label="Ploča"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.2 10.6L12 4l7.8 6.6"/><path d="M5.8 9.4V19a2 2 0 002 2h8.4a2 2 0 002-2V9.4"/></svg>Ploča</a>
   <a class="dtab" href="#" aria-label="Zaprimi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5.4v13.2M5.4 12h13.2"/></svg>Zaprimi</a>
   <a class="dtab" href="#" aria-label="Skeniraj"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.2V6.4A2.4 2.4 0 016.4 4h1.8M15.8 4h1.8A2.4 2.4 0 0120 6.4v1.8M20 15.8v1.8a2.4 2.4 0 01-2.4 2.4h-1.8M8.2 20H6.4A2.4 2.4 0 014 17.6v-1.8"/><path d="M7.2 12h9.6"/></svg>Skeniraj</a>
   <a class="dtab" href="#" aria-label="Skladište"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21.2s-7-5.5-7-11a7 7 0 0114 0c0 5.5-7 11-7 11z"/><circle cx="12" cy="10" r="2.4"/></svg>Skladište</a>
@@ -316,5 +333,64 @@ html.dark .rem-sec .count-badge.win{background:rgba(244,245,247,.16);color:#f4f5
 </nav>
 
 <script src="app.js"></script>
+<script>
+/* ---- Reminders interactions: mark-reminded fades a row into "Već podsjećeno" ---- */
+(function(){
+  const reduce = matchMedia('(prefers-reduced-motion:reduce)').matches;
+  const rested = document.querySelector('.rem-rested');
+  const restedList = rested && rested.querySelector('.rr-list');
+  const restedBadge = rested && rested.querySelector('.count-badge');
+  const toast = document.getElementById('toast');
+  const toastMsg = document.getElementById('toastMsg');
+  let toastTimer;
+
+  function showToast(msg){
+    toastMsg.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove('show'), 2200);
+  }
+  function bump(badge, delta){
+    if (!badge) return;
+    badge.textContent = Math.max(0, (parseInt(badge.textContent, 10) || 0) + delta);
+  }
+  function toRested(row){
+    row.classList.remove('rr-overdue','rr-today');
+    row.classList.add('rr-rest');
+    const btn = row.querySelector('[data-remind]');
+    if (btn){
+      btn.classList.add('again');
+      btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4.5 4.5L19 7"/></svg>Podsjećeno — označi ponovno';
+    }
+    const meta = row.querySelector('.rr-meta');
+    if (meta && !meta.querySelector('.rr-ok')){
+      const ok = document.createElement('span');
+      ok.className = 'rr-ok';
+      ok.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4.5 4.5L19 7"/></svg>podsjećeno upravo';
+      meta.appendChild(ok);
+    }
+    restedList.appendChild(row);
+    row.classList.remove('leaving');
+  }
+
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-remind]');
+    if (!btn) return;
+    const row = btn.closest('.rr');
+    if (!row || !restedList) return;
+    // Rows already in "Već podsjećeno" just re-acknowledge the tap.
+    if (row.closest('.rem-rested')){ showToast('Ponovno podsjećeno'); return; }
+    const sec = row.closest('.rem-sec');
+    const badge = sec && sec.querySelector('.count-badge');
+    row.classList.add('leaving');
+    const done = () => { bump(badge, -1); bump(restedBadge, +1); toRested(row); };
+    if (reduce){ done(); } else { setTimeout(done, 300); }
+    showToast('Označeno kao podsjećeno');
+  });
+
+  const cta = document.querySelector('.rem-stage .cta');
+  if (cta){ cta.addEventListener('click', (e) => { e.preventDefault(); showToast('Podsjetnici poslani preostalima'); }); }
+})();
+</script>
 </body>
 </html>

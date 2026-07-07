@@ -70,6 +70,7 @@ html.dark .card.stack legend{color:var(--lava-2)}
 html.dark .field input,html.dark .field select,html.dark .field textarea,html.dark .tire-grid input,html.dark .tire-grid select{background:rgba(244,245,247,.05)}
 .field textarea{min-height:64px;resize:vertical;line-height:1.5}
 .field select,.tire-grid select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%2363676f' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M2.5 4.5L6 8l3.5-3.5'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px}
+html.dark .field select,html.dark .tire-grid select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%23a0a4ad' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M2.5 4.5L6 8l3.5-3.5'/%3E%3C/svg%3E")}
 .field input::placeholder,.tire-grid input::placeholder{color:var(--muted);opacity:.75}
 .field input:focus,.field select:focus,.field textarea:focus,.tire-grid input:focus,.tire-grid select:focus{
   outline:0;border-color:var(--lava);box-shadow:0 0 0 3px var(--lava-tint)}
@@ -80,8 +81,8 @@ html.dark .field input,html.dark .field select,html.dark .field textarea,html.da
 /* Segmented control (season) */
 .segmented{display:flex;gap:6px;background:var(--panel-2);padding:5px;border-radius:15px;border:1px solid var(--hairline)}
 html.dark .segmented{background:rgba(244,245,247,.05)}
-.segmented button{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:40px;border:0;border-radius:11px;
-  background:transparent;color:var(--muted);font:600 13px Inter;cursor:pointer;transition:background .18s var(--snap),color .18s var(--snap),transform .12s var(--snap)}
+.segmented button{flex:1 1 0;min-width:0;display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:40px;border:0;border-radius:11px;
+  background:transparent;color:var(--muted);font:600 12px Inter;cursor:pointer;transition:background .18s var(--snap),color .18s var(--snap),transform .12s var(--snap)}
 .segmented button svg{width:16px;height:16px}
 .segmented button:active{transform:scale(.96)}
 .segmented button[aria-pressed="true"]{background:var(--lava-tint);color:var(--lava-ink);box-shadow:inset 0 0 0 1px var(--lava-ring)}
@@ -113,7 +114,7 @@ html.dark .sugg{background:rgba(244,245,247,.05)}
 html.dark .tire-edit-row{background:rgba(244,245,247,.04)}
 .tire-edit-row:last-child{margin-bottom:0}
 .tire-grid{display:grid;grid-template-columns:78px 1.5fr 1fr 1fr 1.1fr auto;gap:8px;align-items:center}
-.tire-grid input,.tire-grid select{min-height:40px;padding:9px 11px;font-size:13px}
+.tire-grid input,.tire-grid select{min-height:40px;padding:9px 11px;font-size:13px;min-width:0}
 .tire-stud{justify-self:end;white-space:nowrap;gap:8px;font-size:12px}
 .tire-stud input{width:40px;height:24px}
 .tire-stud input::after{width:18px;height:18px;top:3px;left:3px}
@@ -130,8 +131,8 @@ html.dark .tire-edit-row{background:rgba(244,245,247,.04)}
 .banner svg{flex:none;width:18px;height:18px}
 .banner-info{background:var(--lava-tint);color:var(--lava-ink);border:1px solid var(--lava-ring)}
 html.dark .banner-info{color:var(--lava-2)}
-.banner-ok{background:rgba(47,191,91,.12);color:#1f8f45;border:1px solid rgba(47,191,91,.3)}
-html.dark .banner-ok{color:var(--green)}
+.banner-ok{background:rgba(47,191,91,.12);color:var(--green-ink);border:1px solid rgba(47,191,91,.3)}
+html.dark .banner-ok{color:var(--green-ink)}
 .is-hidden{display:none}
 
 /* Buttons + action bar */
@@ -169,7 +170,7 @@ html.dark .btn-primary{background:linear-gradient(180deg,var(--lava-2),var(--lav
   <header class="top">
     <img class="logo" src="assets/logo.png" alt="ASC — Auto servisni centar">
     <nav class="pill" aria-label="Glavna navigacija">
-      <span class="pill-links"><a href="dashboard.html">Ploča</a><a class="on" href="#">Zaprimi</a><a href="#">Skladište</a><a href="#">Kupci</a></span>
+      <span class="pill-links"><a href="dashboard.html">Ploča</a><a href="#">Zaprimi</a><a href="#">Skladište</a><a href="#">Kupci</a></span>
       <button class="mode" id="mode" aria-label="Promijeni temu"><i></i></button>
     </nav>
   </header>
@@ -297,7 +298,7 @@ html.dark .btn-primary{background:linear-gradient(180deg,var(--lava-2),var(--lav
 <div class="toast" id="toast" role="status" aria-live="polite"><span class="dot"></span><span id="toastMsg"></span></div>
 
 <nav class="dock" aria-label="Sekcije">
-  <a class="dtab" href="dashboard.html" aria-label="Početna"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.2 10.6L12 4l7.8 6.6"/><path d="M5.8 9.4V19a2 2 0 002 2h8.4a2 2 0 002-2V9.4"/></svg>Ploča</a>
+  <a class="dtab" href="dashboard.html" aria-label="Ploča"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.2 10.6L12 4l7.8 6.6"/><path d="M5.8 9.4V19a2 2 0 002 2h8.4a2 2 0 002-2V9.4"/></svg>Ploča</a>
   <a class="dtab on" href="#" aria-label="Zaprimi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5.4v13.2M5.4 12h13.2"/></svg>Zaprimi</a>
   <a class="dtab" href="#" aria-label="Skeniraj"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.2V6.4A2.4 2.4 0 016.4 4h1.8M15.8 4h1.8A2.4 2.4 0 0120 6.4v1.8M20 15.8v1.8a2.4 2.4 0 01-2.4 2.4h-1.8M8.2 20H6.4A2.4 2.4 0 014 17.6v-1.8"/><path d="M7.2 12h9.6"/></svg>Skeniraj</a>
   <a class="dtab" href="#" aria-label="Skladište"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21.2s-7-5.5-7-11a7 7 0 0114 0c0 5.5-7 11-7 11z"/><circle cx="12" cy="10" r="2.4"/></svg>Skladište</a>

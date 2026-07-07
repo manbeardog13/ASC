@@ -41,7 +41,7 @@
 
 /* Customer + set rows — the reference "set-row" look, rebuilt on app.css tokens */
 .clist{display:flex;flex-direction:column;gap:10px}
-.crow{display:flex;gap:12px;align-items:stretch;padding:13px 14px;text-decoration:none;color:var(--ink);
+.crow{display:flex;gap:10px;align-items:stretch;padding:13px 14px;text-decoration:none;color:var(--ink);
   background:var(--panel-2);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow-card);cursor:pointer;
   -webkit-tap-highlight-color:transparent;transition:transform 160ms var(--snap),box-shadow 200ms var(--snap),border-color 150ms var(--snap),background 380ms var(--smooth)}
 @media(hover:hover){ .crow:hover{transform:translateY(-2px);box-shadow:0 16px 30px -18px rgba(2,3,5,.5);border-color:var(--lava-ring)} }
@@ -50,7 +50,7 @@
 .crow .cav{width:40px;height:40px;border-radius:50%;flex:none;align-self:center;display:grid;place-items:center;
   font:650 13px Inter;color:#fff;background:radial-gradient(circle at 32% 30%,var(--lava-2),var(--lava) 62%,#d6390c);box-shadow:0 5px 14px rgba(255,78,27,.3)}
 .crow .body{flex:1;min-width:0}
-.crow .who{font:650 15px Inter;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.crow .who{font:650 14.5px Inter;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .crow .spec{font:500 12.5px Inter;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .crow .cnt{flex:none;align-self:center;text-align:right;padding-left:12px;border-left:1px solid var(--line);line-height:1.15}
 .crow .cnt b{display:block;font:500 17px Sora;color:var(--ink)}
@@ -73,7 +73,7 @@ a.inforow:hover{transform:translateY(-2px);box-shadow:var(--shadow-card);border-
 a.inforow:active{transform:scale(.99);transition-duration:90ms}
 .inforow .ic{color:var(--muted);display:grid;place-items:center;flex:none}
 .inforow .lbl{font:500 13px Inter;color:var(--muted)}
-.inforow .val{margin-left:auto;font:600 13.5px Inter;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:60%;text-align:right}
+.inforow .val{margin-left:auto;min-width:0;font:600 13.5px Inter;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:right}
 .cstats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
 .cstat{background:var(--panel-2);border:1px solid var(--line);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:4px;min-width:0}
 .cstat .l{font:600 10.5px Inter;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
@@ -110,7 +110,7 @@ html.dark .cstat .v .ic{color:var(--lava-2)}
   <header class="top">
     <img class="logo" src="assets/logo.png" alt="ASC — Auto servisni centar">
     <nav class="pill" aria-label="Glavna navigacija">
-      <span class="pill-links"><a href="dashboard.html">Ploča</a><a href="#">Zaprimi</a><a href="#">Skladište</a><a class="on" href="#">Kupci</a></span>
+      <span class="pill-links"><a href="dashboard.html">Ploča</a><a href="#">Zaprimi</a><a href="#">Skladište</a><a href="#">Kupci</a></span>
       <button class="mode" id="mode" aria-label="Promijeni temu"><i></i></button>
     </nav>
   </header>
@@ -147,7 +147,7 @@ html.dark .cstat .v .ic{color:var(--lava-2)}
 </main>
 
 <nav class="dock" aria-label="Sekcije">
-  <a class="dtab" href="dashboard.html" aria-label="Početna"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.2 10.6L12 4l7.8 6.6"/><path d="M5.8 9.4V19a2 2 0 002 2h8.4a2 2 0 002-2V9.4"/></svg>Ploča</a>
+  <a class="dtab" href="dashboard.html" aria-label="Ploča"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.2 10.6L12 4l7.8 6.6"/><path d="M5.8 9.4V19a2 2 0 002 2h8.4a2 2 0 002-2V9.4"/></svg>Ploča</a>
   <a class="dtab" href="#" aria-label="Zaprimi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5.4v13.2M5.4 12h13.2"/></svg>Zaprimi</a>
   <a class="dtab" href="#" aria-label="Skeniraj"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.2V6.4A2.4 2.4 0 016.4 4h1.8M15.8 4h1.8A2.4 2.4 0 0120 6.4v1.8M20 15.8v1.8a2.4 2.4 0 01-2.4 2.4h-1.8M8.2 20H6.4A2.4 2.4 0 014 17.6v-1.8"/><path d="M7.2 12h9.6"/></svg>Skeniraj</a>
   <a class="dtab" href="#" aria-label="Skladište"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21.2s-7-5.5-7-11a7 7 0 0114 0c0 5.5-7 11-7 11z"/><circle cx="12" cy="10" r="2.4"/></svg>Skladište</a>
@@ -207,9 +207,14 @@ html.dark .cstat .v .ic{color:var(--lava-2)}
 
   function activeSets(c){ return c.sets.filter(function(s){ return s.status !== 'checked_out'; }); }
 
+  function filteredCustomers(){
+    var q = query.toLowerCase().trim();
+    return CUSTOMERS.filter(function(c){ return !q || (c.name+' '+c.phone).toLowerCase().indexOf(q) !== -1; });
+  }
+
   function renderList(){
     var q = query.toLowerCase().trim();
-    var rows = CUSTOMERS.filter(function(c){ return !q || (c.name+' '+c.phone).toLowerCase().indexOf(q) !== -1; });
+    var rows = filteredCustomers();
     countEl.textContent = q ? (rows.length + ' od ' + CUSTOMERS.length) : String(CUSTOMERS.length);
 
     if(!rows.length){
@@ -230,14 +235,18 @@ html.dark .cstat .v .ic{color:var(--lava-2)}
   function statusChip(kind){ var m=STATUS[kind]; return '<span class="stt '+m.c+'">'+m.l+'</span>'; }
 
   function renderDetail(){
-    var c = CUSTOMERS.filter(function(x){ return x.id===selectedId; })[0];
-    if(!c) return;
+    var c = filteredCustomers().filter(function(x){ return x.id===selectedId; })[0];
+    if(!c){
+      detailEl.innerHTML = '<span class="tab-tl">karton</span>'
+        + '<div class="cempty"><div class="ei"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.4"/><path d="M5.5 20a6.5 6.5 0 0113 0"/></svg></div><p>Odaberite kupca s popisa</p></div>';
+      return;
+    }
     var phoneRow = c.phone
       ? '<a class="inforow" href="tel:'+esc(c.phone.replace(/\s/g,''))+'"><span class="ic"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5C4 4.7 4.7 4 5.5 4H8l1.6 4L7.8 9.6a12 12 0 006.6 6.6L16 14.4 20 16v2.5c0 .8-.7 1.5-1.5 1.5A15.5 15.5 0 014 5.5z"/></svg></span><span class="lbl">Telefon</span><span class="val">'+esc(c.phone)+'</span></a>'
       : '<div class="inforow"><span class="ic"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5C4 4.7 4.7 4 5.5 4H8l1.6 4L7.8 9.6a12 12 0 006.6 6.6L16 14.4 20 16v2.5c0 .8-.7 1.5-1.5 1.5A15.5 15.5 0 014 5.5z"/></svg></span><span class="lbl">Telefon</span><span class="val">—</span></div>';
     var emailRow = c.email
       ? '<a class="inforow" href="mailto:'+esc(c.email)+'"><span class="ic"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2.4"/><path d="M3.6 6.5L12 12l8.4-5.5"/></svg></span><span class="lbl">E-pošta</span><span class="val">'+esc(c.email)+'</span></a>'
-      : '<div class="inforow"><span class="lbl">E-pošta</span><span class="val">—</span></div>';
+      : '<div class="inforow"><span class="ic"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2.4"/><path d="M3.6 6.5L12 12l8.4-5.5"/></svg></span><span class="lbl">E-pošta</span><span class="val">—</span></div>';
 
     var sets = c.sets;
     var setsHtml = sets.length
@@ -265,7 +274,7 @@ html.dark .cstat .v .ic{color:var(--lava-2)}
     renderList(); renderDetail();
     if(window.matchMedia('(max-width:900px)').matches) detailEl.scrollIntoView({behavior:reduce?'auto':'smooth',block:'start'});
   });
-  searchEl.addEventListener('input', function(e){ query = e.target.value; renderList(); });
+  searchEl.addEventListener('input', function(e){ query = e.target.value; renderList(); renderDetail(); });
 
   renderList();
   renderDetail();

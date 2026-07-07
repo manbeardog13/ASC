@@ -15,7 +15,7 @@
   --gun:#2e2f31; --hairline:rgba(2,3,5,.07); --line:rgba(2,3,5,.10);
   --stage-1:#0b0c0e; --stage-2:#17181b; --on-stage:#f4f5f7; --on-stage-2:rgba(244,245,247,.72); --tab-surf:rgba(255,255,255,.86);
   --rim-top:rgba(255,255,255,.75); --rim:rgba(255,255,255,.42);
-  --green:#2fbf5b;
+  --green:#2fbf5b; --green-ink:#1c894a;
   --smooth:cubic-bezier(.25,1,.5,1); --snap:cubic-bezier(.22,1,.36,1);
   --shadow-card:0 10px 30px -14px rgba(2,3,5,.35);
   --gap:14px; --pad:20px; --radius:22px;
@@ -26,7 +26,7 @@ html.dark{
   --panel:#1d1e22; --panel-2:#26272b;
   --ink:#f4f5f7; --ink-2:#d6d8dc; --muted:rgba(244,245,247,.62);
   --hairline:rgba(244,245,247,.09); --line:rgba(244,245,247,.12);
-  --lava-ink:#ff8a5c; --tab-surf:rgba(30,31,36,.92);
+  --lava-ink:#ff8a5c; --tab-surf:rgba(30,31,36,.92); --green-ink:#57d484;
   --stage-1:#07080a; --stage-2:#101114;
   --rim-top:rgba(255,255,255,.16); --rim:rgba(255,255,255,.08);
   --shadow-card:0 12px 34px -14px rgba(0,0,0,.6);
@@ -161,7 +161,7 @@ html.dark .card.dark{background:radial-gradient(120% 100% at 90% -20%,rgba(255,7
 .hstat{background:var(--panel-2);border-radius:12px;padding:9px 10px;font-size:10.5px;color:var(--muted);display:flex;flex-direction:column;gap:2px;min-width:0}
 html.dark .hstat{background:rgba(244,245,247,.05)}
 .hstat b{font:700 12px Inter;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.hstat .g{color:var(--green)}
+.hstat .g{color:var(--green-ink)}
 
 /* season bars */
 .obar{margin-bottom:12px}

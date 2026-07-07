@@ -83,24 +83,21 @@
 .ag-chip:active{transform:scale(.97)}
 .ag-chips[hidden]{display:none}
 
-/* walkie-talkie press-and-hold voice orb */
-.ag-ptt-zone{display:flex;flex-direction:column;align-items:center;gap:12px;margin:18px 0 6px}
-.ag-ptt-status{font:600 11px Inter;letter-spacing:.06em;text-transform:uppercase;color:var(--on-stage-2);
-  min-height:14px;text-align:center;transition:color 200ms var(--snap)}
-.ag-ptt-status.is-live{color:var(--lava-2)}
-.ag-ptt{position:relative;width:104px;height:104px;border-radius:50%;border:0;cursor:pointer;touch-action:none;
-  background:radial-gradient(circle at 32% 28%,var(--lava-2),var(--lava) 58%,#d6390c);color:#fff;
+/* walkie-talkie affordance, demoted to an inline press-and-hold mic button that
+   lives inside the input row so it no longer dominates the card height */
+.ag-mic{position:relative;flex:none;width:48px;height:48px;border-radius:50%;cursor:pointer;touch-action:none;
+  border:1px solid rgba(255,255,255,.12);background:rgba(244,245,247,.07);color:var(--on-stage-2);
   display:grid;place-items:center;
-  box-shadow:0 14px 34px -10px var(--lava-ring),inset 0 2px 7px rgba(255,255,255,.38);
-  transition:transform 160ms var(--snap),box-shadow 220ms var(--snap)}
-.ag-ptt svg{width:44px;height:44px}
-.ag-ptt .halo{position:absolute;inset:0;border-radius:50%;border:2px solid var(--lava-2);opacity:0;pointer-events:none}
-.ag-ptt:active{transform:scale(.95)}
-.ag-ptt.is-live{box-shadow:0 0 0 12px rgba(255,78,27,.12),0 14px 40px -6px var(--lava-ring)}
-.ag-ptt.is-live .halo{animation:ping 1.5s var(--smooth) infinite}
-.ag-ptt.is-think{box-shadow:0 0 0 6px rgba(255,78,27,.10),0 14px 34px -10px var(--lava-ring)}
+  transition:transform 160ms var(--snap),background 160ms var(--snap),color 160ms var(--snap),box-shadow 220ms var(--snap)}
+.ag-mic svg{width:20px;height:20px}
+.ag-mic .halo{position:absolute;inset:0;border-radius:50%;border:2px solid var(--lava-2);opacity:0;pointer-events:none}
+@media(hover:hover){ .ag-mic:hover{background:rgba(244,245,247,.14);color:var(--on-stage)} }
+.ag-mic:active{transform:scale(.94)}
+.ag-mic.is-live{background:radial-gradient(circle at 32% 28%,var(--lava-2),var(--lava) 58%,#d6390c);color:#fff;
+  border-color:var(--lava-ring);box-shadow:0 0 0 8px rgba(255,78,27,.12),0 10px 22px -10px var(--lava-ring)}
+.ag-mic.is-live .halo{animation:ping 1.5s var(--smooth) infinite}
+.ag-mic.is-think{background:var(--lava-tint);border-color:var(--lava-ring);color:var(--lava-2)}
 @keyframes ping{0%{transform:scale(1);opacity:.7}100%{transform:scale(1.55);opacity:0}}
-.ag-ptt-lab{font:700 10px Inter;letter-spacing:.14em;text-transform:uppercase;color:var(--on-stage-2)}
 
 /* bottom input row */
 .ag-inputrow{display:flex;gap:9px;margin-top:14px;align-items:center}
@@ -130,7 +127,7 @@
   <header class="top">
     <img class="logo" src="assets/logo.png" alt="ASC — Auto servisni centar">
     <nav class="pill" aria-label="Glavna navigacija">
-      <span class="pill-links"><a href="#">Ploča</a><a href="#">Zaprimi</a><a href="#">Skladište</a><a href="#">Kupci</a></span>
+      <span class="pill-links"><a href="dashboard.html">Ploča</a><a href="#">Zaprimi</a><a href="#">Skladište</a><a href="#">Kupci</a></span>
       <button class="mode" id="mode" aria-label="Promijeni temu"><i></i></button>
     </nav>
   </header>
@@ -179,16 +176,11 @@
         <button type="button" class="ag-chip" data-chip>Zaprimi novi set za kupca</button>
       </div>
 
-      <div class="ag-ptt-zone">
-        <div id="agPttStatus" class="ag-ptt-status">Pritisnite i držite za govor — pustite za slanje</div>
-        <button type="button" id="agPtt" class="ag-ptt" aria-label="Pritisnite i držite za govor — pustite za slanje">
+      <form id="agForm" class="ag-inputrow" autocomplete="off">
+        <button type="button" id="agPtt" class="ag-mic" aria-label="Pritisnite i držite za govor — pustite za slanje" title="Pritisnite i držite za govor — pustite za slanje">
           <span class="halo" aria-hidden="true"></span>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M6 11a6 6 0 0012 0M12 17v3.5M9 20.5h6"/></svg>
         </button>
-        <span class="ag-ptt-lab">DRŽI I GOVORI</span>
-      </div>
-
-      <form id="agForm" class="ag-inputrow" autocomplete="off">
         <input id="agInput" class="ag-input" placeholder="Pitaj o setovima, kupcima… ili izdiktiraj novi set" autocomplete="off" aria-label="Poruka agentu">
         <button type="submit" class="ag-send">
           <span>Pošalji</span>
@@ -200,7 +192,7 @@
 </main>
 
 <nav class="dock" aria-label="Sekcije">
-  <a class="dtab" href="#" aria-label="Ploča"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.2 10.6L12 4l7.8 6.6"/><path d="M5.8 9.4V19a2 2 0 002 2h8.4a2 2 0 002-2V9.4"/></svg>Ploča</a>
+  <a class="dtab" href="dashboard.html" aria-label="Ploča"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.2 10.6L12 4l7.8 6.6"/><path d="M5.8 9.4V19a2 2 0 002 2h8.4a2 2 0 002-2V9.4"/></svg>Ploča</a>
   <a class="dtab" href="#" aria-label="Zaprimi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5.4v13.2M5.4 12h13.2"/></svg>Zaprimi</a>
   <a class="dtab" href="#" aria-label="Skeniraj"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.2V6.4A2.4 2.4 0 016.4 4h1.8M15.8 4h1.8A2.4 2.4 0 0120 6.4v1.8M20 15.8v1.8a2.4 2.4 0 01-2.4 2.4h-1.8M8.2 20H6.4A2.4 2.4 0 014 17.6v-1.8"/><path d="M7.2 12h9.6"/></svg>Skeniraj</a>
   <a class="dtab" href="#" aria-label="Skladište"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21.2s-7-5.5-7-11a7 7 0 0114 0c0 5.5-7 11-7 11z"/><circle cx="12" cy="10" r="2.4"/></svg>Skladište</a>
@@ -280,17 +272,18 @@
     ttsLab.textContent = on ? 'Glas uključen' : 'Glas isključen';
   });
 
-  // ---- Walkie-talkie: press & HOLD the orb to talk, release to send ----
+  // ---- Walkie-talkie: press & HOLD the inline mic to talk, release to send ----
   const ptt = document.getElementById('agPtt');
-  const pttStatus = document.getElementById('agPttStatus');
-  const HOLD = 'Pritisnite i držite za govor — pustite za slanje';
+  const HOLD = 'Pritisni i drži mikrofon za govor — pusti za slanje';
+  const basePlaceholder = input.getAttribute('placeholder');
   let holding = false, heldAt = 0;
 
   function setState(state, text) {
     ptt.classList.toggle('is-live', state === 'live');
     ptt.classList.toggle('is-think', state === 'think');
-    pttStatus.textContent = text;
-    pttStatus.classList.toggle('is-live', state === 'live');
+    // Status feedback moves into the text field's placeholder now that the
+    // walkie-talkie is an inline control rather than a standalone status zone.
+    input.setAttribute('placeholder', state === 'idle' ? basePlaceholder : text);
   }
   function startHold() {
     if (holding || running) return;

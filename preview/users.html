@@ -84,13 +84,13 @@ html.dark .u-row{background:rgba(244,245,247,.04)}
 html.dark .u-row.self{background:rgba(255,78,27,.10)}
 .uav{width:42px;height:42px;border-radius:50%;flex:none;display:grid;place-items:center;font:650 14px Inter;color:#fff;
   background:radial-gradient(circle at 32% 30%,var(--lava-2),var(--lava) 62%,#d6390c);box-shadow:0 6px 16px rgba(255,78,27,.32)}
-.uav.user{background:linear-gradient(160deg,#4a4c50,#2b2c2e);box-shadow:0 6px 16px rgba(2,3,5,.24);color:#f2f3f5}
+.uav.user{background:linear-gradient(160deg,color-mix(in srgb,var(--gun) 84%,#fff),var(--gun));box-shadow:0 6px 16px rgba(2,3,5,.24);color:var(--on-stage)}
 .u-body{flex:1 1 190px;min-width:0}
 .u-toprow{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .u-name{font:600 14.5px Inter;color:var(--ink);letter-spacing:-.005em}
 .u-mail{font:500 12.5px Inter;color:var(--muted);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
 .u-locked{display:inline-flex;align-items:center;gap:6px;font:500 11.5px Inter;color:var(--muted);margin-top:8px}
-.u-locked svg{width:13px;height:13px;color:var(--green)}
+.u-locked svg{width:13px;height:13px;color:var(--green-ink)}
 .u-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;width:100%;margin-top:12px;padding-top:12px;border-top:1px solid var(--hairline)}
 .u-actions .spacer{flex:1}
 
@@ -131,7 +131,7 @@ html.dark .toast{background:#26272b;border:1px solid var(--line)}
   <header class="top">
     <img class="logo" src="assets/logo.png" alt="ASC — Auto servisni centar">
     <nav class="pill" aria-label="Glavna navigacija">
-      <span class="pill-links"><a class="on" href="#">Ploča</a><a href="#">Zaprimi</a><a href="#">Skladište</a><a href="#">Kupci</a></span>
+      <span class="pill-links"><a href="dashboard.html">Ploča</a><a href="#">Zaprimi</a><a href="#">Skladište</a><a href="#">Kupci</a></span>
       <button class="mode" id="mode" aria-label="Promijeni temu"><i></i></button>
     </nav>
   </header>
@@ -283,7 +283,7 @@ html.dark .toast{background:#26272b;border:1px solid var(--line)}
             <div class="u-body">
               <div class="u-toprow">
                 <span class="u-name">Marko Babić</span>
-                <span class="chip all">Korisnik</span>
+                <span class="chip win">Korisnik</span>
               </div>
               <div class="u-mail">marko.babic@asc.hr</div>
             </div>
@@ -310,7 +310,7 @@ html.dark .toast{background:#26272b;border:1px solid var(--line)}
             <div class="u-body">
               <div class="u-toprow">
                 <span class="u-name">Ivan Perić</span>
-                <span class="chip all">Korisnik</span>
+                <span class="chip win">Korisnik</span>
               </div>
               <div class="u-mail">ivan.peric@asc.hr</div>
             </div>
@@ -337,7 +337,7 @@ html.dark .toast{background:#26272b;border:1px solid var(--line)}
             <div class="u-body">
               <div class="u-toprow">
                 <span class="u-name">Petra Novak</span>
-                <span class="chip all">Korisnik</span>
+                <span class="chip win">Korisnik</span>
                 <span class="tag tag-pending">Na čekanju — još se nije prijavila</span>
               </div>
               <div class="u-mail">petra.novak@gmail.com</div>
@@ -366,7 +366,7 @@ html.dark .toast{background:#26272b;border:1px solid var(--line)}
 </main>
 
 <nav class="dock" aria-label="Sekcije">
-  <a class="dtab" href="#" aria-label="Početna"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.2 10.6L12 4l7.8 6.6"/><path d="M5.8 9.4V19a2 2 0 002 2h8.4a2 2 0 002-2V9.4"/></svg>Ploča</a>
+  <a class="dtab" href="dashboard.html" aria-label="Ploča"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.2 10.6L12 4l7.8 6.6"/><path d="M5.8 9.4V19a2 2 0 002 2h8.4a2 2 0 002-2V9.4"/></svg>Ploča</a>
   <a class="dtab" href="#" aria-label="Zaprimi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5.4v13.2M5.4 12h13.2"/></svg>Zaprimi</a>
   <a class="dtab" href="#" aria-label="Skeniraj"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.2V6.4A2.4 2.4 0 016.4 4h1.8M15.8 4h1.8A2.4 2.4 0 0120 6.4v1.8M20 15.8v1.8a2.4 2.4 0 01-2.4 2.4h-1.8M8.2 20H6.4A2.4 2.4 0 014 17.6v-1.8"/><path d="M7.2 12h9.6"/></svg>Skeniraj</a>
   <a class="dtab" href="#" aria-label="Skladište"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21.2s-7-5.5-7-11a7 7 0 0114 0c0 5.5-7 11-7 11z"/><circle cx="12" cy="10" r="2.4"/></svg>Skladište</a>
@@ -392,6 +392,14 @@ html.dark .toast{background:#26272b;border:1px solid var(--line)}
     b.textContent = n; return n;
   };
 
+  // When the awaiting queue empties, hide the whole card rather than
+  // leaving "Čeka odobrenje 0" hanging over an empty body.
+  const hideAwaitIfEmpty = (count) => {
+    if (count > 0) return;
+    const card = document.getElementById('awaitCard');
+    if (card) card.style.display = 'none';
+  };
+
   // Segmented role toggles (add form + per-row) — aria-pressed only.
   document.querySelectorAll('.seg').forEach((seg) => {
     const btns = [...seg.querySelectorAll('button')];
@@ -404,7 +412,7 @@ html.dark .toast{background:#26272b;border:1px solid var(--line)}
         const chip = row && row.querySelector('.chip');
         if (chip) {
           const admin = b.dataset.role === 'admin';
-          chip.classList.toggle('all', !admin);
+          chip.classList.toggle('win', !admin);
           chip.innerHTML = admin
             ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12.5l5 5 10-11"/></svg>Administrator'
             : 'Korisnik';
@@ -429,13 +437,13 @@ html.dark .toast{background:#26272b;border:1px solid var(--line)}
   document.querySelectorAll('[data-approve]').forEach((btn) => btn.addEventListener('click', () => {
     const row = btn.closest('.appr-row'); if (!row) return;
     row.querySelectorAll('button').forEach((b) => b.disabled = true);
-    dropRow(row, () => { setBadge('awaitCount', -1); setBadge('teamCount', +1); });
+    dropRow(row, () => { hideAwaitIfEmpty(setBadge('awaitCount', -1)); setBadge('teamCount', +1); });
     toast(btn.dataset.name + ' odobren/a');
   }));
   document.querySelectorAll('[data-reject]').forEach((btn) => btn.addEventListener('click', () => {
     const row = btn.closest('.appr-row'); if (!row) return;
     row.querySelectorAll('button').forEach((b) => b.disabled = true);
-    dropRow(row, () => setBadge('awaitCount', -1));
+    dropRow(row, () => hideAwaitIfEmpty(setBadge('awaitCount', -1)));
     toast(btn.dataset.name + ' odbijen/a');
   }));
 
