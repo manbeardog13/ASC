@@ -2204,3 +2204,38 @@ fieldset legend::before { content: ""; width: 6px; height: 6px; border-radius: 5
   border-top: 1px solid rgba(255,255,255,.10); }
 .ws-head .ws-title { color: #f4f5f7; font-family: var(--font-display); }
 .ws-head .btn { background: rgba(244,245,247,.94); color: #020305; border: 0; }
+
+/* ---- set-detail: "more options" dropdown + edit-below-primary --------------
+   Edit moved below the status button; the hero's top-right is now a ⋮ menu
+   holding Print label + Delete (the old bottom action-bar is retired). */
+.sd-menu-wrap { position: relative; flex: none; }
+.sd-menu-btn { min-height: 40px; padding: 0 12px; }
+.sd-menu-pop {
+  position: absolute; right: 0; top: calc(100% + 6px); z-index: 30;
+  min-width: 210px; padding: 6px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 16px;
+  box-shadow: var(--shadow-pop);
+  display: flex; flex-direction: column;
+  animation: sdMenuIn 140ms var(--ease-out) both;
+}
+@keyframes sdMenuIn { from { opacity: 0; transform: translateY(-6px) scale(.98); } }
+.sd-menu-item {
+  display: flex; align-items: center; gap: 11px;
+  padding: 12px 12px; min-height: 44px;
+  border: 0; background: transparent; border-radius: 12px;
+  font: inherit; font-size: 14.5px; font-weight: 600; color: var(--ink);
+  text-align: left; cursor: pointer; width: 100%;
+  transition: background var(--dur) var(--ease);
+}
+@media (hover:hover) and (pointer:fine) { .sd-menu-item:hover { background: var(--hover); } }
+.sd-menu-item:active { transform: scale(.98); }
+.sd-menu-item.danger { color: var(--danger-ink); }
+.sd-menu-item .ic { flex: none; opacity: .8; }
+.sd-edit { margin-top: 10px; width: 100%; }
+
+/* ---- agent online status: green + pulsating (was lava) -------------------- */
+:root { --online: #2fbf5b; --online-ring: rgba(47,191,91,.38); }
+.v6row.hero .v6dot, .v6cta .v6dot, .stage-cta .orbdot {
+  background: var(--online); box-shadow: 0 0 8px 2px var(--online-ring);
+}
+.v6row.hero .v { color: #7fe0a3; }   /* "online" label to match the green dot */

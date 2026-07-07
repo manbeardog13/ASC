@@ -45,12 +45,19 @@ function renderDetail(main, set) {
           <div class="code tnum">${esc(set.public_code)}</div>
           <div class="who">${esc(customer.name || "—")}</div>
         </div>
-        <a class="btn btn-ghost" href="#/set/${esc(set.public_code)}/edit" aria-label="${esc(t("sd.edit"))}">${icon("pencil", 20)}</a>
+        <div class="sd-menu-wrap">
+          <button type="button" class="btn btn-ghost sd-menu-btn" id="sdMenu" aria-haspopup="menu" aria-expanded="false" aria-label="${esc(t("common.menu"))}">${icon("list", 20)}</button>
+          <div class="sd-menu-pop" id="sdMenuPop" role="menu" hidden>
+            <button type="button" id="printBtn" class="sd-menu-item" role="menuitem">${icon("printer", 18)} ${t("sd.label")}</button>
+            <button type="button" id="delBtn" class="sd-menu-item danger" role="menuitem">${icon("trash", 18)} ${t("sd.delete")}</button>
+          </div>
+        </div>
       </div>
       <div class="detail-chips">${statusChip(set.status)}${seasonChip(set.season)}${paymentChip(set)}</div>
       ${next
         ? `<button id="statusBtn" class="btn btn-primary btn-lg sd-primary" data-to="${next.to}">${icon("check", 18)} ${esc(next.label)}</button>`
         : `<div class="sd-state-note">${icon("check", 16)} ${esc(statusLabel(set.status))}</div>`}
+      <a class="btn btn-ghost sd-edit" href="#/set/${esc(set.public_code)}/edit">${icon("pencil", 18)} ${t("sd.edit")}</a>
     </div>
 
     <div class="u-stats u-rise" style="margin-bottom:14px">${insightCells(set)}</div>
@@ -82,10 +89,7 @@ function renderDetail(main, set) {
       ${disclosure("history", t("sd.history"), `<div id="histBox"><p class="muted" style="font-size:13px">${t("sd.openToLoad")}</p></div>`)}
     </div>
 
-    <div class="action-bar">
-      <button id="printBtn" class="btn">${icon("printer", 18)} ${t("sd.label")}</button>
-      <button id="delBtn" class="btn btn-danger">${icon("trash", 18)} ${t("sd.delete")}</button>
-    </div>`;
+    `;
 
   wireDetail(main, set);
 }
@@ -142,6 +146,24 @@ function insightCells(set) {
 
 function wireDetail(main, set) {
   const $ = (id) => main.querySelector("#" + id);
+
+  // "More options" dropdown (holds Print label + Delete). Toggles a small pop;
+  // closes on outside-click / Escape; cleans its document listeners on teardown.
+  const menuBtn = $("sdMenu");
+  const pop = $("sdMenuPop");
+  if (menuBtn && pop) {
+    const setOpen = (open) => { pop.hidden = !open; menuBtn.setAttribute("aria-expanded", String(open)); };
+    menuBtn.addEventListener("click", (e) => { e.stopPropagation(); setOpen(pop.hidden); });
+    pop.addEventListener("click", () => setOpen(false));   // any item closes it
+    const onDocClick = (e) => { if (!pop.hidden && !pop.contains(e.target) && !menuBtn.contains(e.target)) setOpen(false); };
+    const onKey = (e) => { if (e.key === "Escape") setOpen(false); };
+    document.addEventListener("click", onDocClick);
+    document.addEventListener("keydown", onKey);
+    window.addEventListener("asc:teardown", () => {
+      document.removeEventListener("click", onDocClick);
+      document.removeEventListener("keydown", onKey);
+    }, { once: true });
+  }
 
   $("statusBtn")?.addEventListener("click", async (e) => {
     const to = e.currentTarget.dataset.to;
