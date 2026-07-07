@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>ASC — Ploča (preview)</title>
 <meta name="theme-color" content="#edf0f5">
+<script>try{if(localStorage.getItem('asc.theme')==='dark'){document.documentElement.classList.add('dark');document.querySelector('meta[name="theme-color"]').content='#020305';}}catch(e){}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;650;700;800&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -24,7 +25,7 @@
   --ink:#020305; --ink-2:#3a3c40; --muted:#63676f;
   --lava:#ff4e1b; --lava-2:#ff8a5c; --lava-ink:#c0360d; --lava-tint:rgba(255,78,27,.11); --lava-ring:rgba(255,78,27,.30);
   --gun:#2e2f31; --hairline:rgba(2,3,5,.07); --line:rgba(2,3,5,.10);
-  --stage-1:#0b0c0e; --stage-2:#17181b; --on-stage:#f4f5f7; --on-stage-2:rgba(244,245,247,.6);
+  --stage-1:#0b0c0e; --stage-2:#17181b; --on-stage:#f4f5f7; --on-stage-2:rgba(244,245,247,.72); --tab-surf:rgba(255,255,255,.86);
   --rim-top:rgba(255,255,255,.75); --rim:rgba(255,255,255,.42);
   --green:#2fbf5b;
   --smooth:cubic-bezier(.25,1,.5,1); --snap:cubic-bezier(.22,1,.36,1);
@@ -37,7 +38,7 @@ html.dark{
   --panel:#1d1e22; --panel-2:#26272b;
   --ink:#f4f5f7; --ink-2:#d6d8dc; --muted:rgba(244,245,247,.62);
   --hairline:rgba(244,245,247,.09); --line:rgba(244,245,247,.12);
-  --lava-ink:#ff8a5c;
+  --lava-ink:#ff8a5c; --tab-surf:rgba(30,31,36,.92);
   --stage-1:#07080a; --stage-2:#101114;
   --rim-top:rgba(255,255,255,.16); --rim:rgba(255,255,255,.08);
   --shadow-card:0 12px 34px -14px rgba(0,0,0,.6);
@@ -45,7 +46,7 @@ html.dark{
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{min-height:100%}
 body{font-family:"Inter",system-ui,sans-serif;color:var(--ink);background:var(--bg);
-  padding:24px 18px calc(var(--dock-h) + env(safe-area-inset-bottom,0px) + 24px);
+  padding:24px 18px calc(var(--dock-h) + env(safe-area-inset-bottom,0px) + 40px);
   -webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums;
   transition:background 380ms var(--smooth),color 380ms var(--smooth)}
 @media(min-width:1021px){ body{padding:30px 26px} }
@@ -86,7 +87,7 @@ html.dark .pill{background:rgba(244,245,247,.10)}
 .pill a.on{opacity:1;background:rgba(244,245,247,.14)}
 @media(hover:hover){ .pill a:hover{opacity:1} }
 .mode{border:0;cursor:pointer;width:38px;height:38px;border-radius:50%;flex:none;background:var(--panel);display:grid;place-items:center;position:relative;transition:transform 380ms var(--smooth),background 380ms var(--smooth)}
-@media(hover:hover){ .mode:hover{transform:rotate(40deg)} }
+@media(hover:hover){ .mode:hover{background:var(--panel-2)} }
 .mode:active{transform:scale(.92)}
 .mode i{width:12px;height:12px;border-radius:50%;background:var(--ink);display:block;transition:background 380ms ease,box-shadow 380ms ease}
 html.dark .mode i{background:transparent;box-shadow:inset 0 0 0 2.5px #f4f5f7}
@@ -101,42 +102,41 @@ html.dark .mode i{background:transparent;box-shadow:inset 0 0 0 2.5px #f4f5f7}
 /* Hanssen notched corner tabs — the label nests INTO the card corner, and the
    inter-card gap curves around it via inverse-rounded notches (the ::before /
    ::after radial-gradients paint the gap colour back in). */
-.tab-corner,.tab-tl{position:absolute;z-index:4;font:500 10.5px Inter;letter-spacing:.04em;color:var(--muted);background:var(--shell-solid);padding:7px 13px 8px;white-space:nowrap}
+.tab-corner,.tab-tl{position:absolute;z-index:4;font:600 10.5px Inter;letter-spacing:.04em;color:var(--ink-2);background:var(--tab-surf);padding:7px 13px 8px;white-space:nowrap}
 .tab-corner{bottom:0;right:0;border-radius:14px 0 0 0}
 .tab-tl{top:0;left:0;border-radius:0 0 14px 0}
 .tab-corner::before,.tab-corner::after,.tab-tl::before,.tab-tl::after{content:"";position:absolute;width:14px;height:14px}
-.tab-corner::after{left:-14px;bottom:0;background:radial-gradient(circle at 0 0,transparent 14px,var(--shell-solid) 14.5px)}
-.tab-corner::before{right:0;top:-14px;background:radial-gradient(circle at 0 0,transparent 14px,var(--shell-solid) 14.5px)}
-.tab-tl::after{right:-14px;top:0;background:radial-gradient(circle at 100% 100%,transparent 14px,var(--shell-solid) 14.5px)}
-.tab-tl::before{left:0;bottom:-14px;background:radial-gradient(circle at 100% 100%,transparent 14px,var(--shell-solid) 14.5px)}
+.tab-corner::after{left:-14px;bottom:0;background:radial-gradient(circle at 0 0,transparent 14px,var(--tab-surf) 14.5px)}
+.tab-corner::before{right:0;top:-14px;background:radial-gradient(circle at 0 0,transparent 14px,var(--tab-surf) 14.5px)}
+.tab-tl::after{right:-14px;top:0;background:radial-gradient(circle at 100% 100%,transparent 14px,var(--tab-surf) 14.5px)}
+.tab-tl::before{left:0;bottom:-14px;background:radial-gradient(circle at 100% 100%,transparent 14px,var(--tab-surf) 14.5px)}
 
 /* ---- stage ---- */
-.stage{position:relative;border-radius:24px;overflow:hidden;min-height:452px;
+.stage{position:relative;border-radius:var(--radius);overflow:hidden;min-height:452px;
   background:linear-gradient(175deg,var(--stage-1) 0%,var(--stage-2) 100%);
   color:var(--on-stage);padding:32px 28px 28px;display:flex;flex-direction:column;border-top:1px solid rgba(255,255,255,.10)}
 @media(max-width:900px){ .stage{min-height:auto;padding:30px 22px 26px} }
 /* cinematic tire hero: photo + a scrim that keeps the left/bottom dark for text */
-.stage .photo{position:absolute;inset:0;z-index:0;background:url('assets/hero.jpg') center right/cover;transform:scale(1.03);transition:transform 8s var(--smooth)}
-.stage:hover .photo{transform:scale(1.07)}
+.stage .photo{position:absolute;inset:0;z-index:0;background:url('assets/hero.jpg') center right/cover;transform:scale(1.03)}
 .stage .scrim{position:absolute;inset:0;z-index:1;background:
   linear-gradient(102deg, var(--stage-1) 20%, rgba(7,8,10,.80) 34%, rgba(7,8,10,.34) 60%, rgba(7,8,10,.05) 81%, rgba(7,8,10,.42) 100%),
   linear-gradient(0deg, var(--stage-1) 3%, rgba(7,8,10,.88) 14%, transparent 46%),
   radial-gradient(120% 80% at 88% -8%, rgba(255,78,27,.22), transparent 50%)}
 .stage>*{position:relative;z-index:2}
-.k{font:600 11px Inter;letter-spacing:.08em;text-transform:uppercase;color:var(--on-stage-2)}
+.k{font-family:Inter;font-weight:600;font-size:clamp(9.5px,2.6vw,11px);line-height:1.35;letter-spacing:.06em;text-transform:uppercase;color:var(--on-stage-2)}
 .hero-num{font-family:Sora;font-weight:400;font-size:clamp(56px,6.6vw,88px);line-height:.98;letter-spacing:-.03em;margin:10px 0 4px}
 .hero-num em{font-style:normal;font:500 14px Inter;letter-spacing:.06em;text-transform:uppercase;color:var(--on-stage-2);margin-left:8px;vertical-align:baseline}
 .cap{font-size:13.5px;color:var(--on-stage-2)}
-.stage .k,.stage .hero-num,.stage .cap{text-shadow:0 1px 12px rgba(2,3,5,.62)}
+.stage .k,.stage .hero-num,.stage .cap,.stage .spill span{text-shadow:0 1px 4px rgba(2,3,5,.82)}
 .meter{margin-top:15px;height:8px;border-radius:4px;background:rgba(244,245,247,.14);overflow:hidden;max-width:460px}
 .meter i{display:block;height:100%;width:0;border-radius:4px;background:linear-gradient(90deg,var(--lava-2),var(--lava));transition:width 1100ms var(--smooth)}
 .space{flex:1;min-height:18px}
 .spills{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
-.spill{text-align:left;background:rgba(244,245,247,.08);border:0;border-radius:14px;padding:12px;border-top:1px solid rgba(255,255,255,.09);color:var(--on-stage);transition:transform 150ms var(--snap),background 150ms var(--snap);cursor:pointer}
+.spill{text-align:left;background:rgba(244,245,247,.08);border:0;border-radius:14px;padding:12px 10px;border-top:1px solid rgba(255,255,255,.09);color:var(--on-stage);transition:transform 150ms var(--snap),background 150ms var(--snap);cursor:pointer}
 @media(hover:hover){ .spill:hover{transform:translateY(-2px);background:rgba(244,245,247,.14)} }
 .spill:active{transform:scale(.97);transition-duration:80ms}
-.spill b{display:block;font-family:Sora;font-weight:500;font-size:24px;line-height:1}
-.spill span{font-size:11px;color:var(--on-stage-2);display:block;margin-top:4px}
+.spill b{display:block;font-family:Sora;font-weight:500;font-size:21px;line-height:1}
+.spill span{font-size:10px;color:var(--on-stage-2);display:block;margin-top:4px}
 .cta{display:flex;align-items:center;justify-content:center;gap:10px;min-height:50px;border-radius:25px;background:rgba(244,245,247,.94);color:#020305;text-decoration:none;font:600 14px Inter;transition:transform 150ms var(--snap),box-shadow 200ms var(--snap);position:relative}
 @media(hover:hover){ .cta:hover{transform:translateY(-2px);box-shadow:0 12px 26px -10px rgba(0,0,0,.5)} }
 .cta:active{transform:scale(.98);transition-duration:80ms}
@@ -167,6 +167,7 @@ html.dark .mode i{background:transparent;box-shadow:inset 0 0 0 2.5px #f4f5f7}
 .card h3{font-family:Sora;font-weight:600;font-size:15px;margin-bottom:12px;display:flex;align-items:center;gap:8px}
 .count-badge{margin-left:auto;font:800 12px Inter;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:var(--lava);color:#fff;display:inline-flex;align-items:center;justify-content:center}
 .card.dark{background:radial-gradient(120% 100% at 90% -20%,rgba(255,78,27,.20),transparent 55%),linear-gradient(175deg,var(--stage-1),var(--stage-2));color:var(--on-stage)}
+html.dark .card.dark{background:radial-gradient(120% 100% at 90% -20%,rgba(255,78,27,.16),transparent 55%),linear-gradient(175deg,#24252a,#1a1b1f)}
 
 /* profile card */
 .row1{display:flex;align-items:center;gap:13px;margin-bottom:12px}
@@ -177,14 +178,14 @@ html.dark .mode i{background:transparent;box-shadow:inset 0 0 0 2.5px #f4f5f7}
 .health{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:14px;padding-top:13px;border-top:1px solid var(--hairline)}
 .hstat{background:var(--panel-2);border-radius:12px;padding:9px 10px;font-size:10.5px;color:var(--muted);display:flex;flex-direction:column;gap:2px;min-width:0}
 html.dark .hstat{background:rgba(244,245,247,.05)}
-.hstat b{font:700 13px Inter;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hstat b{font:700 12px Inter;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .hstat .g{color:var(--green)}
 
 /* season bars */
 .obar{margin-bottom:12px}
 .obar:last-child{margin-bottom:0}
 .obar .t{display:flex;justify-content:space-between;align-items:baseline;font-size:12px;color:var(--muted);margin-bottom:6px}
-.obar .t b{color:var(--ink);font:600 13.5px Inter}
+.obar .t b{color:var(--ink);font:500 14px Sora}
 .obar .bar{height:6px;border-radius:3px;background:rgba(2,3,5,.08);overflow:hidden}
 html.dark .obar .bar{background:rgba(244,245,247,.10)}
 .obar .bar i{display:block;height:100%;width:0;border-radius:3px;background:linear-gradient(90deg,var(--lava-2),var(--lava));transition:width 1100ms var(--smooth)}
@@ -194,10 +195,10 @@ html.dark .obar .bar{background:rgba(244,245,247,.10)}
 .mini:last-child{border-bottom:0}
 @media(hover:hover){ .mini:hover{background:rgba(244,245,247,.08);transform:translateX(3px)} }
 .mini:active{transform:scale(.99);transition-duration:80ms}
-.mini time{font:600 11px Inter;color:var(--lava-2);min-width:46px;flex:none}
-.mini b{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mini time{font:600 11px Inter;color:var(--on-stage-2);min-width:46px;flex:none}
+.mini b{min-width:0;flex:1 1 auto;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mini .pl{margin-left:auto;font:600 11px Inter;color:var(--on-stage-2);flex:none}
-.mini.overdue time{color:#ff8f7e}
+.mini.overdue time{color:var(--lava-2);font-weight:700}
 
 /* ============================== Recent-sets slider ====================== */
 .recent{margin-top:var(--gap)}
@@ -214,7 +215,7 @@ html.dark .obar .bar{background:rgba(244,245,247,.10)}
 .slide .code{font:700 12.5px Inter}
 .slide .who{font:500 12px Inter;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .chip{display:inline-flex;align-items:center;margin-top:8px;padding:3px 9px;border-radius:999px;font:600 10.5px Inter;background:var(--lava-tint);color:var(--lava-ink)}
-.chip.win{background:rgba(79,127,168,.14);color:#3d6485} html.dark .chip.win{color:#8fb8d9}
+.chip.win{background:rgba(46,47,49,.12);color:var(--gun)} html.dark .chip.win{background:rgba(244,245,247,.10);color:#c9ccd2}
 .chip.all{background:rgba(99,103,111,.16);color:var(--muted)}
 
 /* ============================== Dock — redesigned, sliding indicator ==== */
@@ -223,7 +224,7 @@ html.dark .obar .bar{background:rgba(244,245,247,.10)}
   box-shadow:0 18px 44px -14px rgba(2,3,5,.7);padding:8px;-webkit-backdrop-filter:blur(16px) saturate(160%);backdrop-filter:blur(16px) saturate(160%)}
 .dock .ind{position:absolute;top:8px;bottom:8px;left:0;border-radius:16px;background:var(--lava-tint);border:1px solid var(--lava-ring);z-index:0;transition:transform 340ms var(--snap),width 340ms var(--snap);pointer-events:none}
 html.dark .dock .ind{background:rgba(255,78,27,.18)}
-.dock a{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:60px;min-height:var(--tap);padding:7px 8px;border-radius:16px;color:#f4f5f7;opacity:.55;text-decoration:none;font:600 10.5px Inter;transition:opacity 200ms var(--snap),color 200ms var(--snap),transform 120ms var(--snap)}
+.dock a{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:56px;min-height:var(--tap);padding:7px 8px;border-radius:16px;color:#f4f5f7;opacity:.55;text-decoration:none;font:600 10px Inter;transition:opacity 200ms var(--snap),color 200ms var(--snap),transform 120ms var(--snap)}
 .dock a.on{opacity:1;color:var(--lava-2)}
 .dock a:active{transform:scale(.94)}
 .dock a svg{width:22px;height:22px}
@@ -235,6 +236,7 @@ html.dark .dock .ind{background:rgba(255,78,27,.18)}
 @media(max-width:1020px){ .pill-links{display:none} .pill{background:transparent;border:0;padding:0;margin-left:auto} }
 
 :focus-visible{outline:2px solid var(--lava-ink);outline-offset:2px;border-radius:10px}
+.stage :focus-visible,.act :focus-visible,.dock :focus-visible,.card.dark :focus-visible{outline-color:var(--lava-2);box-shadow:0 0 0 4px rgba(2,3,5,.55)}
 @media(prefers-reduced-motion:reduce){ *{animation:none!important;transition-property:background-color,color,opacity!important} .act .bg{transform:none!important} }
 </style>
 </head>
@@ -263,9 +265,9 @@ html.dark .dock .ind{background:rgba(255,78,27,.18)}
       <div class="meter"><i data-w="92"></i></div>
       <div class="space"></div>
       <div class="spills">
-        <button class="spill"><b data-count="4">0</b><span>Zaprimljeno</span></button>
-        <button class="spill"><b data-count="2">0</b><span>Preuzeto</span></button>
-        <button class="spill"><b data-count="17">0</b><span>Uskoro</span></button>
+        <button type="button" class="spill"><b data-count="4">0</b><span>Zaprimljeno</span></button>
+        <button type="button" class="spill"><b data-count="2">0</b><span>Preuzeto</span></button>
+        <button type="button" class="spill"><b data-count="17">0</b><span>Uskoro</span></button>
       </div>
       <a class="cta" href="#"><span class="dot"></span>Pitaj ASC Agenta</a>
       <span class="tab-corner">danas · Dubrovnik</span>
@@ -373,8 +375,9 @@ html.dark .dock .ind{background:rgba(255,78,27,.18)}
   dtabs.forEach(t => t.addEventListener('click', e => { e.preventDefault(); dtabs.forEach(x => x.classList.remove('on')); t.classList.add('on'); moveInd(t); }));
   addEventListener('resize', () => { const cur = dock.querySelector('.dtab.on'); if(cur) moveInd(cur); });
 
-  if (document.readyState !== 'loading'){ animate(); initDock(); }
-  else addEventListener('DOMContentLoaded', () => { animate(); initDock(); });
+  const boot = () => { animate(); initDock(); };
+  if (document.readyState !== 'loading') boot(); else addEventListener('DOMContentLoaded', boot);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(initDock);   // re-measure the dock indicator once Inter/Sora swap in
 </script>
 </body>
 </html>
