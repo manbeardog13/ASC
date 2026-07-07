@@ -49,7 +49,12 @@
 @keyframes streamMove{to{transform:translateX(-50%)}}
 @media(hover:hover){ .stream:hover .stream-track{animation-play-state:paused} }
 @media(prefers-reduced-motion:reduce){ .stream-track{animation:none} .stream{overflow-x:auto;-webkit-mask-image:none;mask-image:none} }
-.stream .slide .new{position:absolute;top:8px;left:8px;z-index:2;font:700 8.5px Inter;letter-spacing:.08em;text-transform:uppercase;color:#fff;background:var(--lava);padding:3px 7px;border-radius:6px;box-shadow:0 3px 9px -2px rgba(255,78,27,.6)}
+/* Each streamed set shows its acquisition photo with the printed QR label stuck
+   on it; the set number rides in a notched corner tab (top-left). */
+.stream .slide .thumb{position:relative}
+.stream .qr-sticker{position:absolute;right:8px;bottom:8px;z-index:2;background:#fbfbfb;padding:4px;border-radius:6px;transform:rotate(-5deg);box-shadow:0 4px 12px -3px rgba(0,0,0,.55);border:1px solid rgba(0,0,0,.06)}
+.stream .qr-sticker img{display:block;width:38px;height:38px;image-rendering:pixelated;border-radius:2px}
+.stream .slide .tab-tl{font-size:10px;padding:5px 9px 6px}
 
 /* ===== ASC Agent card — rotating hook, expands to a shimmer input bubble ===== */
 .agent-card{position:relative;margin-top:var(--gap);border-radius:24px;overflow:hidden;
@@ -194,18 +199,18 @@
     <div class="head"><h3>Nedavno zaprimljeno</h3><span class="live"><span class="ld"></span>uživo · 24 h</span></div>
     <div class="stream" aria-label="Nedavno zaprimljeni setovi — stream uživo">
       <div class="stream-track" id="streamTrack">
-        <a class="slide" href="#"><span class="new">Novo</span><span class="thumb" style="background-image:url('assets/set-1.jpg')"></span><div class="meta"><div class="code">ASC-2026-0248</div><div class="who">Ivan Perić</div><span class="chip win">Zimske</span></div></a>
-        <a class="slide" href="#"><span class="thumb" style="background-image:url('assets/set-2.jpg')"></span><div class="meta"><div class="code">ASC-2026-0247</div><div class="who">Ana Kovačević</div><span class="chip">Ljetne</span></div></a>
-        <a class="slide" href="#"><span class="thumb" style="background-image:url('assets/set-3.jpg')"></span><div class="meta"><div class="code">ASC-2026-0246</div><div class="who">Marko Babić</div><span class="chip win">Zimske</span></div></a>
-        <a class="slide" href="#"><span class="thumb" style="background-image:url('assets/set-4.jpg')"></span><div class="meta"><div class="code">ASC-2026-0245</div><div class="who">Petra Novak</div><span class="chip all">Cjelogodišnje</span></div></a>
-        <a class="slide" href="#"><span class="thumb" style="background-image:url('assets/set-5.jpg')"></span><div class="meta"><div class="code">ASC-2026-0244</div><div class="who">Luka Marić</div><span class="chip">Ljetne</span></div></a>
-        <a class="slide" href="#"><span class="thumb" style="background-image:url('assets/set-6.jpg')"></span><div class="meta"><div class="code">ASC-2026-0243</div><div class="who">Josip Horvat</div><span class="chip win">Zimske</span></div></a>
-        <a class="slide" aria-hidden="true" tabindex="-1" href="#"><span class="new">Novo</span><span class="thumb" style="background-image:url('assets/set-1.jpg')"></span><div class="meta"><div class="code">ASC-2026-0248</div><div class="who">Ivan Perić</div><span class="chip win">Zimske</span></div></a>
-        <a class="slide" aria-hidden="true" tabindex="-1" href="#"><span class="thumb" style="background-image:url('assets/set-2.jpg')"></span><div class="meta"><div class="code">ASC-2026-0247</div><div class="who">Ana Kovačević</div><span class="chip">Ljetne</span></div></a>
-        <a class="slide" aria-hidden="true" tabindex="-1" href="#"><span class="thumb" style="background-image:url('assets/set-3.jpg')"></span><div class="meta"><div class="code">ASC-2026-0246</div><div class="who">Marko Babić</div><span class="chip win">Zimske</span></div></a>
-        <a class="slide" aria-hidden="true" tabindex="-1" href="#"><span class="thumb" style="background-image:url('assets/set-4.jpg')"></span><div class="meta"><div class="code">ASC-2026-0245</div><div class="who">Petra Novak</div><span class="chip all">Cjelogodišnje</span></div></a>
-        <a class="slide" aria-hidden="true" tabindex="-1" href="#"><span class="thumb" style="background-image:url('assets/set-5.jpg')"></span><div class="meta"><div class="code">ASC-2026-0244</div><div class="who">Luka Marić</div><span class="chip">Ljetne</span></div></a>
-        <a class="slide" aria-hidden="true" tabindex="-1" href="#"><span class="thumb" style="background-image:url('assets/set-6.jpg')"></span><div class="meta"><div class="code">ASC-2026-0243</div><div class="who">Josip Horvat</div><span class="chip win">Zimske</span></div></a>
+        <a class="slide" href="#"><span class="tab-tl">0248</span><span class="thumb" style="background-image:url('assets/set-1.jpg')"><span class="qr-sticker"><img src="assets/qr-0248.png" alt=""></span></span><div class="meta"><div class="who">Ivan Perić</div><span class="chip win">Zimske</span></div></a>
+        <a class="slide" href="#"><span class="tab-tl">0247</span><span class="thumb" style="background-image:url('assets/set-2.jpg')"><span class="qr-sticker"><img src="assets/qr-0247.png" alt=""></span></span><div class="meta"><div class="who">Ana Kovačević</div><span class="chip">Ljetne</span></div></a>
+        <a class="slide" href="#"><span class="tab-tl">0246</span><span class="thumb" style="background-image:url('assets/set-3.jpg')"><span class="qr-sticker"><img src="assets/qr-0246.png" alt=""></span></span><div class="meta"><div class="who">Marko Babić</div><span class="chip win">Zimske</span></div></a>
+        <a class="slide" href="#"><span class="tab-tl">0245</span><span class="thumb" style="background-image:url('assets/set-4.jpg')"><span class="qr-sticker"><img src="assets/qr-0245.png" alt=""></span></span><div class="meta"><div class="who">Petra Novak</div><span class="chip all">Cjelogodišnje</span></div></a>
+        <a class="slide" href="#"><span class="tab-tl">0244</span><span class="thumb" style="background-image:url('assets/set-5.jpg')"><span class="qr-sticker"><img src="assets/qr-0244.png" alt=""></span></span><div class="meta"><div class="who">Luka Marić</div><span class="chip">Ljetne</span></div></a>
+        <a class="slide" href="#"><span class="tab-tl">0243</span><span class="thumb" style="background-image:url('assets/set-6.jpg')"><span class="qr-sticker"><img src="assets/qr-0243.png" alt=""></span></span><div class="meta"><div class="who">Josip Horvat</div><span class="chip win">Zimske</span></div></a>
+        <a class="slide" aria-hidden="true" tabindex="-1" href="#"><span class="tab-tl">0248</span><span class="thumb" style="background-image:url('assets/set-1.jpg')"><span class="qr-sticker"><img src="assets/qr-0248.png" alt=""></span></span><div class="meta"><div class="who">Ivan Perić</div><span class="chip win">Zimske</span></div></a>
+        <a class="slide" aria-hidden="true" tabindex="-1" href="#"><span class="tab-tl">0247</span><span class="thumb" style="background-image:url('assets/set-2.jpg')"><span class="qr-sticker"><img src="assets/qr-0247.png" alt=""></span></span><div class="meta"><div class="who">Ana Kovačević</div><span class="chip">Ljetne</span></div></a>
+        <a class="slide" aria-hidden="true" tabindex="-1" href="#"><span class="tab-tl">0246</span><span class="thumb" style="background-image:url('assets/set-3.jpg')"><span class="qr-sticker"><img src="assets/qr-0246.png" alt=""></span></span><div class="meta"><div class="who">Marko Babić</div><span class="chip win">Zimske</span></div></a>
+        <a class="slide" aria-hidden="true" tabindex="-1" href="#"><span class="tab-tl">0245</span><span class="thumb" style="background-image:url('assets/set-4.jpg')"><span class="qr-sticker"><img src="assets/qr-0245.png" alt=""></span></span><div class="meta"><div class="who">Petra Novak</div><span class="chip all">Cjelogodišnje</span></div></a>
+        <a class="slide" aria-hidden="true" tabindex="-1" href="#"><span class="tab-tl">0244</span><span class="thumb" style="background-image:url('assets/set-5.jpg')"><span class="qr-sticker"><img src="assets/qr-0244.png" alt=""></span></span><div class="meta"><div class="who">Luka Marić</div><span class="chip">Ljetne</span></div></a>
+        <a class="slide" aria-hidden="true" tabindex="-1" href="#"><span class="tab-tl">0243</span><span class="thumb" style="background-image:url('assets/set-6.jpg')"><span class="qr-sticker"><img src="assets/qr-0243.png" alt=""></span></span><div class="meta"><div class="who">Josip Horvat</div><span class="chip win">Zimske</span></div></a>
       </div>
     </div>
   </section>
