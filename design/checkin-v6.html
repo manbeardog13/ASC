@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ASC — Zaprimanje v6 · Hanssen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ============================================================================
+   ASC v6 — check-in ("Spremi gume"), Hanssen composition. PHONE FIRST (390px
+   primary, roomy density, 50px capsule controls). Desktop is the enhancement.
+   Locked palette only. Twin themes via html.dark token remap — values copied
+   verbatim from the approved dashboard-v6-hanssen.html + css/styles.css v6
+   sections. One lava accent per card.
+   ============================================================================ */
+:root {
+  --bg:#edf0f5; --shell:rgba(255,255,255,.42); --shell-solid:rgba(255,255,255,.62);
+  --panel:#f2f4f8; --panel-2:#ffffff;
+  --ink:#020305; --ink-2:#3a3c40; --muted:#63676f;
+  --lava:#ff4e1b; --lava-ink:#c0360d; --lava-tint:rgba(255,78,27,.11); --lava-ring:rgba(255,78,27,.30);
+  --grad-lava:linear-gradient(140deg,#ff6234,#ff4e1b 55%,#ef3d0e);
+  --gun:#2e2f31; --hairline:rgba(2,3,5,.07); --line:rgba(2,3,5,.14);
+  --stage-1:#0b0c0e; --stage-2:#17181b; --on-stage:#f4f5f7; --on-stage-2:rgba(244,245,247,.6);
+  --rim-top:rgba(255,255,255,.75); --rim:rgba(255,255,255,.42);
+  --smooth:cubic-bezier(.25,1,.5,1);
+}
+html.dark {
+  --bg:#020305; --shell:rgba(23,24,28,.55); --shell-solid:rgba(23,24,28,.85);
+  --panel:#1d1e22; --panel-2:#26272b;
+  --ink:#f4f5f7; --ink-2:#d6d8dc; --muted:rgba(244,245,247,.6);
+  --hairline:rgba(244,245,247,.09); --line:rgba(244,245,247,.16);
+  --stage-1:#07080a; --stage-2:#101114;
+  --rim-top:rgba(255,255,255,.16); --rim:rgba(255,255,255,.08);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+html,body { min-height:100%; }
+body { font-family:"Inter",system-ui,sans-serif; color:var(--ink); background:var(--bg);
+  padding:14px 10px calc(86px + env(safe-area-inset-bottom));
+  -webkit-font-smoothing:antialiased; font-variant-numeric:tabular-nums;
+  transition:background 380ms var(--smooth), color 380ms var(--smooth); }
+
+/* ambient — palette blooms only, no imagery */
+.canvas { position:fixed; inset:0; z-index:-1; pointer-events:none;
+  background:
+    radial-gradient(58vmax 54vmax at 10% -12%, rgba(255,78,27,.16), transparent 62%),
+    radial-gradient(50vmax 46vmax at 92% 112%, rgba(255,78,27,.13), transparent 58%),
+    radial-gradient(44vmax 40vmax at 84% -8%, rgba(46,47,49,.22), transparent 60%);
+  transition:opacity 380ms var(--smooth); }
+html.dark .canvas {
+  background:
+    radial-gradient(58vmax 54vmax at 10% -12%, rgba(255,78,27,.10), transparent 60%),
+    radial-gradient(50vmax 46vmax at 92% 112%, rgba(255,78,27,.08), transparent 56%),
+    radial-gradient(44vmax 40vmax at 84% -8%, rgba(244,245,247,.05), transparent 60%); }
+.grain { position:fixed; inset:0; z-index:40; pointer-events:none; opacity:.045; mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E"); }
+
+/* ---- positioning frame: the nav must NOT live inside the blur surface —
+        backdrop-filter creates a containing block that would trap the fixed
+        phone dock. The frame carries width + anchors; the shell carries glass. */
+.frame { position:relative; max-width:1220px; margin:0 auto; }
+
+/* ---- glass shell (single blur surface) ---- */
+.shell { border-radius:28px; position:relative;
+  background:var(--shell-solid);
+  border:1px solid var(--rim); border-top-color:var(--rim-top);
+  box-shadow:0 25px 50px rgba(2,3,5,.22);
+  padding:12px;
+  transition:background 380ms var(--smooth); }
+@supports ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))) {
+  .shell { background:var(--shell);
+    -webkit-backdrop-filter:blur(30px) saturate(150%) brightness(108%);
+    backdrop-filter:blur(30px) saturate(150%) brightness(108%); }
+}
+@media (prefers-reduced-transparency:reduce) {
+  .shell { background:var(--panel-2) !important; -webkit-backdrop-filter:none !important; backdrop-filter:none !important; }
+  .canvas { display:none; }
+}
+@keyframes sheetIn { from { opacity:0; transform:translateY(24px) scale(.985); } }
+@keyframes rise { from { opacity:0; transform:translateY(12px); } }
+@media (prefers-reduced-motion:reduce) { * { animation:none !important; transition-property:opacity,color,background-color !important; } }
+
+/* ---- nav: floating bottom dock on phone (equal 14px rhythm around it),
+        Hanssen pill top-left inside the shell on desktop ---- */
+.nav { position:fixed; bottom:calc(14px + env(safe-area-inset-bottom)); left:50%;
+  transform:translateX(-50%); z-index:60;
+  display:flex; align-items:center; gap:4px; max-width:calc(100vw - 20px);
+  background:rgba(2,3,5,.88); color:#f4f5f7;
+  border-radius:22px; padding:7px 10px 7px 9px; font-size:12.5px;
+  border-top:1px solid rgba(255,255,255,.14);
+  box-shadow:0 16px 40px -12px rgba(2,3,5,.6); }
+.nav .mark { width:22px; height:22px; border-radius:50%; flex:none;
+  background:radial-gradient(circle at 32% 30%, #ff8a5c, var(--lava) 60%, #d6390c);
+  box-shadow:0 0 10px rgba(255,78,27,.5); margin-right:6px; }
+.nav a { position:relative; color:#f4f5f7; opacity:.62; padding:8px 11px; border-radius:14px;
+  text-decoration:none; white-space:nowrap;
+  transition:opacity 160ms ease, background 160ms ease; }
+.nav a::before { content:""; position:absolute; inset:-8px; }
+@media (hover:hover) and (pointer:fine){ .nav a:hover { opacity:1; } }
+.nav a:active { opacity:1; }
+.nav a.on { opacity:1; background:rgba(244,245,247,.14); }
+.mode { border:0; cursor:pointer; margin-left:4px; width:26px; height:26px; border-radius:50%; flex:none;
+  background:rgba(244,245,247,.14); display:grid; place-items:center; position:relative;
+  transition:transform 380ms var(--smooth); }
+.mode::before { content:""; position:absolute; inset:-10px; }
+@media (hover:hover) and (pointer:fine){ .mode:hover { transform:rotate(40deg); } }
+.mode i { width:11px; height:11px; border-radius:50%; background:#f4f5f7; display:block;
+  transition:background 380ms ease, box-shadow 380ms ease; }
+html.dark .mode i { background:transparent; box-shadow:inset 0 0 0 2.5px #f4f5f7; }
+
+/* ---- corner tabs (labels fit → they carry the step numbers) ---- */
+.tab { position:absolute; z-index:3; font:500 10.5px Inter; letter-spacing:.04em; color:var(--muted);
+  background:var(--shell-solid); padding:7px 13px 8px 13px; white-space:nowrap;
+  transition:background 380ms var(--smooth); }
+.tab.tl { top:0; left:0; border-radius:0 0 14px 0; }
+.tab.br { bottom:0; right:0; border-radius:14px 0 0 0; }
+.tab.tl::after, .tab.tl::before, .tab.br::after, .tab.br::before { content:""; position:absolute; width:14px; height:14px; }
+.tab.tl::after { right:-14px; top:0; background:radial-gradient(circle at 100% 100%, transparent 14px, var(--shell-solid) 14.5px); }
+.tab.tl::before { left:0; bottom:-14px; background:radial-gradient(circle at 100% 100%, transparent 14px, var(--shell-solid) 14.5px); }
+.tab.br::after { left:-14px; bottom:0; background:radial-gradient(circle at 0% 0%, transparent 14px, var(--shell-solid) 14.5px); }
+.tab.br::before { right:0; top:-14px; background:radial-gradient(circle at 0% 0%, transparent 14px, var(--shell-solid) 14.5px); }
+
+/* ---- stage header: the view's "one primary action" announced on dark material ---- */
+.stage { position:relative; border-radius:24px; overflow:hidden;
+  background:
+    radial-gradient(120% 90% at 82% -10%, rgba(255,78,27,.28), transparent 55%),
+    radial-gradient(90% 70% at -10% 110%, rgba(255,78,27,.14), transparent 55%),
+    linear-gradient(175deg, var(--stage-1) 0%, var(--stage-2) 100%);
+  color:var(--on-stage); padding:26px 22px 52px;
+  border-top:1px solid rgba(255,255,255,.10);
+  animation:rise 550ms var(--smooth) 80ms both; }
+.stage .aura { position:absolute; width:70%; height:55%; right:-16%; top:-14%; border-radius:50%;
+  background:radial-gradient(closest-side, rgba(255,78,27,.34), transparent 70%);
+  filter:blur(30px); animation:drift 16s ease-in-out infinite alternate; }
+@keyframes drift { to { transform:translate(-9%, 12%) scale(1.12); } }
+.stage > :not(.aura) { position:relative; z-index:2; }
+/* corner tab must stay absolute — the stage z-index blanket would flow it
+   (same incident as the live port; see styles.css "v6stage > .v6tab") */
+.stage > .tab { position:absolute; }
+.stage .k { font:600 11px Inter; letter-spacing:.08em; text-transform:uppercase; color:var(--on-stage-2); }
+.stage h1 { font-family:Sora; font-weight:400; font-size:clamp(34px,9vw,44px); line-height:1.05;
+  letter-spacing:-.03em; margin:10px 0 8px; }
+.stage .cap { font-size:13.5px; color:var(--on-stage-2); max-width:460px; }
+.vcta { display:inline-flex; align-items:center; justify-content:center; gap:10px; min-height:50px;
+  margin-top:22px; padding:0 26px; width:100%; max-width:460px;
+  border:0; cursor:pointer; border-radius:25px; background:rgba(244,245,247,.94); color:#020305;
+  font:600 14px Inter; transition:transform 200ms var(--smooth); position:relative; }
+.vcta::before { content:""; position:absolute; inset:-4px; }
+@media (hover:hover) and (pointer:fine){ .vcta:hover { transform:translateY(-1px); } }
+.vcta:active { transform:scale(.97); transition-duration:100ms; }
+.dot { width:9px; height:9px; border-radius:50%; background:var(--lava);
+  box-shadow:0 0 8px 2px var(--lava-ring); animation:breathe 2.4s ease-in-out infinite; flex:none; }
+@keyframes breathe { 50% { transform:scale(1.3); opacity:.8; } }
+
+/* ---- form flow: stacked panels, roomy ---- */
+.flow { display:flex; flex-direction:column; gap:12px; margin-top:12px; }
+.panel { position:relative; background:var(--panel); border-radius:24px; padding:36px 18px 22px;
+  animation:rise 550ms var(--smooth) both; transition:background 380ms var(--smooth); }
+.panel.s1 { animation-delay:140ms; } .panel.s2 { animation-delay:200ms; } .panel.s3 { animation-delay:260ms; }
+.lg { font-family:Sora; font-weight:600; font-size:15px; color:var(--ink); margin-bottom:16px; }
+.hint { font-size:13px; color:var(--muted); margin:-8px 0 16px; line-height:1.5; }
+.split { border-top:1px solid var(--hairline); margin:24px 2px 22px; }
+
+/* ---- capsule controls (v2 learned spec: transparent fill, 1px line, pill,
+        no resting shadow — anything else reads as "white glow" on dark) ---- */
+.f { display:block; }
+.f .lb { display:block; font:600 11px Inter; letter-spacing:.07em; text-transform:uppercase;
+  color:var(--muted); margin:0 0 7px 4px; }
+input, select, textarea { width:100%; font-family:inherit; font-size:15px; color:var(--ink);
+  background:transparent; border:1px solid var(--line); box-shadow:none;
+  transition:border-color 160ms ease, box-shadow 160ms ease; }
+input, select { min-height:50px; border-radius:25px; padding:0 20px; }
+textarea { border-radius:20px; padding:14px 20px; min-height:88px; resize:vertical; line-height:1.5; }
+input:focus, select:focus, textarea:focus { outline:none; border-color:var(--lava-ink);
+  box-shadow:0 0 0 3px var(--lava-ring); }
+input::placeholder, textarea::placeholder { color:var(--muted); }
+select { appearance:none; -webkit-appearance:none; padding-right:44px;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5 11 1.5' fill='none' stroke='%2363676f' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat; background-position:right 18px center; }
+html.dark select {
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5 11 1.5' fill='none' stroke='%239aa0a8' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E"); }
+option { background:var(--panel-2); color:var(--ink); }
+input[type="date"] { min-width:0; }
+input[type="date"]::-webkit-calendar-picker-indicator { opacity:.55; }
+html.dark input[type="date"]::-webkit-calendar-picker-indicator { filter:invert(1); }
+
+.gap { display:grid; gap:16px; }
+.g2, .g2p { display:grid; gap:12px; }
+.g2p { grid-template-columns:1fr 1fr; }         /* short pairs stay 2-up even on phone */
+.g4 { display:grid; gap:12px; grid-template-columns:1fr 1fr; }  /* zone/rack/shelf/slot = 2×2 unit */
+
+/* switch capsule (live .switch, capsule skin; 50px target) */
+.scap { display:flex; align-items:center; gap:10px; min-height:50px; padding:0 18px;
+  border:1px solid var(--line); border-radius:25px; cursor:pointer;
+  font:600 13.5px Inter; color:var(--ink-2); user-select:none;
+  transition:border-color 160ms ease; }
+.scap input { width:17px; height:17px; min-height:0; flex:none; accent-color:var(--lava); }
+@media (hover:hover) and (pointer:fine){ .scap:hover { border-color:var(--lava-ink); } }
+.scap:active { transform:scale(.98); }
+
+/* segmented season — capsule track, active option carries the card's lava */
+.seg { display:flex; gap:3px; padding:4px; border-radius:25px; background:rgba(2,3,5,.06);
+  transition:background 380ms var(--smooth); }
+html.dark .seg { background:rgba(244,245,247,.08); }
+.seg button { flex:1; min-height:46px; border:0; border-radius:25px; cursor:pointer;
+  display:flex; align-items:center; justify-content:center; gap:8px;
+  background:transparent; color:var(--muted); font:600 13.5px Inter;
+  transition:background 200ms var(--smooth), color 200ms var(--smooth), transform 200ms var(--smooth); }
+.seg button:active { transform:scale(.97); transition-duration:100ms; }
+@media (hover:hover) and (pointer:fine){ .seg button:not([aria-pressed="true"]):hover { color:var(--ink); } }
+.seg button[aria-pressed="true"] { background:var(--panel-2); color:var(--lava-ink);
+  box-shadow:0 1px 3px rgba(2,3,5,.12); }
+html.dark .seg button[aria-pressed="true"] { color:#ff8a5c; }
+.seg .glow { display:none; width:7px; height:7px; border-radius:50%; background:var(--lava);
+  box-shadow:0 0 8px 2px var(--lava-ring); animation:breathe 2.4s ease-in-out infinite; }
+.seg button[aria-pressed="true"] .glow { display:block; }
+
+/* recent-location capsule chips */
+.chips { display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }
+.chips button { min-height:44px; padding:0 16px; border-radius:22px; border:1px solid var(--line);
+  background:transparent; cursor:pointer; font:600 12.5px Inter; color:var(--ink-2);
+  transition:color 160ms ease, border-color 160ms ease, transform 200ms var(--smooth); }
+@media (hover:hover) and (pointer:fine){ .chips button:hover { border-color:var(--lava-ink); color:var(--lava-ink); } }
+.chips button:active { transform:scale(.97); transition-duration:100ms; }
+
+/* warn banner (duplicate / occupied slots) — the lava moment of card 01 */
+.warnb { display:flex; gap:10px; align-items:flex-start; margin-top:18px;
+  background:var(--lava-tint); color:var(--lava-ink); border-radius:16px;
+  padding:13px 16px; font:600 13px Inter; line-height:1.5; }
+html.dark .warnb { color:#ff8a5c; }
+.warnb a { color:inherit; }
+/* quiet info note (OCR status) — deliberately not lava */
+.note { margin:0 0 12px; background:rgba(2,3,5,.05); color:var(--ink-2); border-radius:14px;
+  padding:11px 14px; font-size:13px; line-height:1.5; transition:background 380ms var(--smooth); }
+html.dark .note { background:rgba(244,245,247,.07); }
+
+/* scan sidewall — dark hero row (card 03's lava accent lives here) */
+.scan { display:flex; align-items:center; justify-content:space-between; gap:10px;
+  width:100%; min-height:54px; padding:0 18px; margin:0 0 12px;
+  border:0; border-top:1px solid rgba(255,255,255,.10); border-radius:16px; cursor:pointer;
+  background:linear-gradient(175deg,var(--stage-1),var(--stage-2)); color:var(--on-stage);
+  font:550 13.5px Inter; position:relative;
+  transition:transform 200ms var(--smooth); }
+.scan::before { content:""; position:absolute; inset:-2px 0; }
+@media (hover:hover) and (pointer:fine){ .scan:hover { transform:translateX(3px); } }
+.scan:active { transform:scale(.98); transition-duration:100ms; }
+.scan .v { display:flex; align-items:center; gap:8px; color:#ff8a5c; font:600 12px Inter; }
+
+/* tire rows — soft inner panels on the panel */
+.trow { background:var(--panel-2); border-radius:18px; padding:14px; display:grid; gap:10px;
+  transition:background 380ms var(--smooth); }
+.trow + .trow { margin-top:10px; }
+.trow .r { display:grid; gap:10px; grid-template-columns:104px 1fr; }
+.trow .r2 { grid-template-columns:1fr 1fr; }
+.trow .r3 { grid-template-columns:1fr auto; align-items:center; }
+
+/* actions */
+.actions { display:flex; gap:10px; margin-top:12px; animation:rise 550ms var(--smooth) 320ms both; }
+.ghost { display:inline-flex; align-items:center; justify-content:center; min-height:50px;
+  padding:0 24px; border-radius:25px; border:1px solid var(--line);
+  color:var(--ink-2); font:600 14px Inter; text-decoration:none; background:transparent;
+  transition:color 160ms ease, border-color 160ms ease, transform 200ms var(--smooth); }
+@media (hover:hover) and (pointer:fine){ .ghost:hover { color:var(--ink); border-color:var(--ink-2); } }
+.ghost:active { transform:scale(.97); transition-duration:100ms; }
+.primary { flex:1; display:inline-flex; align-items:center; justify-content:center; gap:10px;
+  min-height:50px; padding:0 26px; border:0; border-radius:25px; cursor:pointer;
+  background:var(--grad-lava); color:#fff; font:650 14.5px Inter;
+  box-shadow:0 4px 14px var(--lava-ring);
+  transition:transform 200ms var(--smooth), box-shadow 200ms ease, filter 200ms ease; }
+@media (hover:hover) and (pointer:fine){ .primary:hover { filter:brightness(1.05); box-shadow:0 6px 18px var(--lava-ring); } }
+.primary:active { transform:scale(.97); transition-duration:100ms; }
+.err { display:none; margin-top:12px; font:600 13px Inter; color:var(--lava-ink); }
+.foot { padding:16px 8px 4px; font-size:11.5px; color:var(--muted); text-align:right; }
+
+:focus-visible { outline:2px solid var(--lava-ink); outline-offset:2px; box-shadow:0 0 0 2px var(--bg); border-radius:8px; }
+
+/* ---- desktop enhancement (phone is the primary design) ---- */
+@media (min-width:720px) {
+  .g2 { grid-template-columns:1fr 1fr; }
+  .g4 { grid-template-columns:repeat(4,1fr); }
+  .actions { justify-content:flex-end; }
+  .primary { flex:0 0 auto; padding:0 38px; }
+}
+@media (min-width:1021px) {
+  body { padding:30px 26px; }
+  .frame { max-width:960px; }
+  .shell { border-radius:36px; padding:18px; animation:sheetIn 550ms var(--smooth) both; }
+  .nav { position:absolute; bottom:auto; left:30px; top:30px; transform:none; z-index:5;
+    box-shadow:none; padding:7px 10px 7px 9px; animation:rise 550ms var(--smooth) 80ms both; }
+  .nav a { padding:5px 10px; }
+  .stage { padding:84px 30px 58px; }
+  .panel { padding:40px 24px 26px; }
+  .flow { gap:14px; }
+  .vcta { width:auto; }
+}
+</style>
+</head>
+<body>
+<div class="canvas" aria-hidden="true"></div>
+<div class="grain" aria-hidden="true"></div>
+
+<div class="frame">
+<!-- v6 nav: floating bottom dock on phone, Hanssen pill top-left on desktop.
+     Sibling of the shell on purpose — the blur surface must not contain it. -->
+<nav class="nav" aria-label="Primary">
+  <span class="mark" aria-hidden="true"></span>
+  <a href="#">Ploča</a><a class="on" href="#">Zaprimi</a><a href="#">Skladište</a><a href="#">Kupci</a>
+  <button class="mode" id="mode" aria-label="Tema"><i></i></button>
+</nav>
+
+<main class="shell">
+  <!-- stage header: the one primary action, announced -->
+  <header class="stage">
+    <i class="aura" aria-hidden="true"></i>
+    <span class="k">Zaprimanje · Hotel za gume · Dubrovnik</span>
+    <h1>Spremi gume</h1>
+    <p class="cap">Kupac, vozilo, sezona, lokacija i gume — sve na jednoj stranici. Upozorenja nikad ne blokiraju.</p>
+    <button class="vcta" type="button" id="voiceFill"><span class="dot"></span>Glasovni unos</button>
+    <span class="tab br">hotel za gume · Dubrovnik</span>
+  </header>
+
+  <form class="flow" id="ci" novalidate>
+
+    <!-- 01 · kupac i vozilo -->
+    <section class="panel s1">
+      <span class="tab tl">01 · kupac i vozilo</span>
+      <h3 class="lg">Kupac</h3>
+      <div class="gap">
+        <label class="f"><span class="lb">Ime</span><input id="c_name" value="Ante Grgurević" autocomplete="off" required></label>
+        <div class="g2">
+          <label class="f"><span class="lb">Telefon</span><input id="c_phone" type="tel" inputmode="tel" value="+385 98 934 5512" autocomplete="off"></label>
+          <label class="f"><span class="lb">E-pošta</span><input id="c_email" type="email" value="ante.grgurevic@gmail.com" autocomplete="off"></label>
+        </div>
+      </div>
+      <div class="split" role="presentation"></div>
+      <h3 class="lg">Vozilo</h3>
+      <div class="gap">
+        <div class="g2">
+          <label class="f"><span class="lb">Marka</span><input id="v_make" value="Škoda" autocomplete="off"></label>
+          <label class="f"><span class="lb">Model</span><input id="v_model" value="Octavia" autocomplete="off"></label>
+        </div>
+        <div class="g2p">
+          <label class="f"><span class="lb">Godina</span><input id="v_year" type="number" inputmode="numeric" min="1950" max="2100" value="2019"></label>
+          <label class="f"><span class="lb">Registracija</span><input id="v_plate" value="DU-819-KL" autocomplete="off" style="text-transform:uppercase"></label>
+        </div>
+      </div>
+      <!-- #dupWarn slot, shown in its found state -->
+      <div id="dupWarn"><div class="warnb"><span aria-hidden="true">!</span><div>Mogući duplikat — <a href="#/set/ASC-2026-0147" style="text-decoration:underline">ASC-2026-0147</a> (ista registracija)</div></div></div>
+    </section>
+
+    <!-- 02 · sezona i lokacija -->
+    <section class="panel s2">
+      <span class="tab tl">02 · sezona i lokacija</span>
+      <h3 class="lg">Sezona</h3>
+      <div class="seg" role="group" aria-label="Sezona">
+        <button type="button" data-season="winter" aria-pressed="true"><span class="glow" aria-hidden="true"></span>Zimske</button>
+        <button type="button" data-season="summer" aria-pressed="false"><span class="glow" aria-hidden="true"></span>Ljetne</button>
+        <button type="button" data-season="all_season" aria-pressed="false"><span class="glow" aria-hidden="true"></span>Cjelogodišnje</button>
+      </div>
+      <div class="split" role="presentation"></div>
+      <h3 class="lg">Lokacija u skladištu</h3>
+      <div class="g4">
+        <label class="f"><span class="lb">Zona</span><input id="s_zone" value="A" autocomplete="off"></label>
+        <label class="f"><span class="lb">Regal</span><input id="s_rack" value="3" autocomplete="off"></label>
+        <label class="f"><span class="lb">Polica</span><input id="s_shelf" value="2" autocomplete="off"></label>
+        <label class="f"><span class="lb">Mjesto</span><input id="s_slot" value="5" autocomplete="off"></label>
+      </div>
+      <div class="chips" id="recentLoc">
+        <button type="button" data-loc="0">Zona A · Regal 3 · Polica 2 · Mjesto 6</button>
+        <button type="button" data-loc="1">Zona A · Regal 4 · Polica 1 · Mjesto 2</button>
+        <button type="button" data-loc="2">Zona B · Regal 1 · Polica 4 · Mjesto 8</button>
+      </div>
+      <div id="locWarn"></div>
+      <div class="split" role="presentation"></div>
+      <h3 class="lg">Detalji</h3>
+      <div class="gap">
+        <div class="g2p">
+          <label class="f"><span class="lb">Broj guma</span><input id="s_qty" type="number" inputmode="numeric" min="1" max="8" value="4"></label>
+          <label class="f"><span class="lb">Očekivano preuzimanje</span><input id="s_out" type="date" value="2026-10-20"></label>
+        </div>
+        <label class="scap"><input id="s_onrims" type="checkbox" checked> Na naplacima / felgama</label>
+        <div class="g2" id="rimWrap">
+          <label class="f"><span class="lb">Vrsta naplatka</span>
+            <select id="s_rimtype"><option value="">—</option><option value="steel">Čelični</option><option value="alloy" selected>Aluminijski</option></select></label>
+        </div>
+        <div class="g2p">
+          <label class="f"><span class="lb">Cijena čuvanja</span><input id="s_fee" type="number" inputmode="decimal" step="0.01" min="0" value="40.00" placeholder="0.00"></label>
+          <label class="scap" style="align-self:end"><input id="s_paid" type="checkbox"> Plaćeno</label>
+        </div>
+        <label class="f"><span class="lb">Napomene</span><textarea id="s_notes" rows="2">Čep ventila oštećen na prednjoj lijevoj. Kupac obično dolazi subotom.</textarea></label>
+      </div>
+    </section>
+
+    <!-- 03 · gume -->
+    <section class="panel s3">
+      <span class="tab tl">03 · gume</span>
+      <h3 class="lg">Gume</h3>
+      <p class="hint">Ispunite što možete — prazna polja se preskaču.</p>
+      <button class="scan" type="button" id="ss_photoBtn">Skeniraj bok gume<span class="v">kamera →</span></button>
+      <input id="ss_photo" type="file" accept="image/*" capture="environment" hidden>
+      <p class="note" id="ocrStatus">Ispunjena guma 1: dimenzija 205/55R16, DOT 3523. Molimo provjerite.</p>
+      <datalist id="commonSizes">
+        <option value="195/65R15"><option value="205/55R16"><option value="215/60R16">
+        <option value="225/45R17"><option value="225/40R18"><option value="235/35R19">
+      </datalist>
+      <div id="tires">
+        <div class="trow">
+          <div class="r">
+            <select data-t="position" aria-label="Pozicija"><option selected>FL</option><option>FR</option><option>RL</option><option>RR</option><option>spare</option></select>
+            <input data-t="size" list="commonSizes" placeholder="225/45R17" value="205/55R16" aria-label="Dimenzija gume">
+          </div>
+          <div class="r r2">
+            <input data-t="tread_mm" type="number" inputmode="decimal" step="0.1" min="0" placeholder="Profil mm" value="6.5" aria-label="Profil mm">
+            <input data-t="dot_code" placeholder="DOT 2524" value="DOT 3523" aria-label="DOT kôd">
+          </div>
+          <div class="r r3">
+            <input data-t="brand" placeholder="Marka (nije obavezno)" value="Michelin Alpin 6" aria-label="Marka (nije obavezno)">
+            <label class="scap"><input data-t="studded" type="checkbox"> Čavlane</label>
+          </div>
+        </div>
+        <div class="trow">
+          <div class="r">
+            <select data-t="position" aria-label="Pozicija"><option>FL</option><option selected>FR</option><option>RL</option><option>RR</option><option>spare</option></select>
+            <input data-t="size" list="commonSizes" placeholder="225/45R17" value="205/55R16" aria-label="Dimenzija gume">
+          </div>
+          <div class="r r2">
+            <input data-t="tread_mm" type="number" inputmode="decimal" step="0.1" min="0" placeholder="Profil mm" value="6.4" aria-label="Profil mm">
+            <input data-t="dot_code" placeholder="DOT 2524" value="DOT 3523" aria-label="DOT kôd">
+          </div>
+          <div class="r r3">
+            <input data-t="brand" placeholder="Marka (nije obavezno)" value="Michelin Alpin 6" aria-label="Marka (nije obavezno)">
+            <label class="scap"><input data-t="studded" type="checkbox"> Čavlane</label>
+          </div>
+        </div>
+        <div class="trow">
+          <div class="r">
+            <select data-t="position" aria-label="Pozicija"><option>FL</option><option>FR</option><option selected>RL</option><option>RR</option><option>spare</option></select>
+            <input data-t="size" list="commonSizes" placeholder="225/45R17" value="205/55R16" aria-label="Dimenzija gume">
+          </div>
+          <div class="r r2">
+            <input data-t="tread_mm" type="number" inputmode="decimal" step="0.1" min="0" placeholder="Profil mm" value="5.8" aria-label="Profil mm">
+            <input data-t="dot_code" placeholder="DOT 2524" value="DOT 1224" aria-label="DOT kôd">
+          </div>
+          <div class="r r3">
+            <input data-t="brand" placeholder="Marka (nije obavezno)" value="Michelin Alpin 6" aria-label="Marka (nije obavezno)">
+            <label class="scap"><input data-t="studded" type="checkbox"> Čavlane</label>
+          </div>
+        </div>
+        <div class="trow">
+          <div class="r">
+            <select data-t="position" aria-label="Pozicija"><option>FL</option><option>FR</option><option>RL</option><option selected>RR</option><option>spare</option></select>
+            <input data-t="size" list="commonSizes" placeholder="225/45R17" value="205/55R16" aria-label="Dimenzija gume">
+          </div>
+          <div class="r r2">
+            <input data-t="tread_mm" type="number" inputmode="decimal" step="0.1" min="0" placeholder="Profil mm" value="6.0" aria-label="Profil mm">
+            <input data-t="dot_code" placeholder="DOT 2524" value="DOT 1224" aria-label="DOT kôd">
+          </div>
+          <div class="r r3">
+            <input data-t="brand" placeholder="Marka (nije obavezno)" value="Michelin Alpin 6" aria-label="Marka (nije obavezno)">
+            <label class="scap"><input data-t="studded" type="checkbox"> Čavlane</label>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <p id="ciErr" class="err">Ime kupca je obavezno.</p>
+    <div class="actions">
+      <a class="ghost" href="#/">Odustani</a>
+      <button class="primary" type="submit">Spremi gume</button>
+    </div>
+  </form>
+
+  <div class="foot">ASC · Auto servisni centar d.o.o.</div>
+</main>
+</div>
+
+<script>
+  // Twin themes — identical to dashboard-v6-hanssen.html
+  document.getElementById('mode').addEventListener('click', () => {
+    document.documentElement.classList.toggle('dark');
+  });
+  // Demo wiring so the mockup behaves like the live view
+  document.querySelectorAll('[data-season]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('[data-season]').forEach((b) => b.setAttribute('aria-pressed', String(b === btn)));
+    });
+  });
+  const onrims = document.getElementById('s_onrims'), rimWrap = document.getElementById('rimWrap');
+  onrims.addEventListener('change', () => { rimWrap.hidden = !onrims.checked; });
+  document.getElementById('ss_photoBtn').addEventListener('click', () => document.getElementById('ss_photo').click());
+  document.getElementById('ci').addEventListener('submit', (e) => e.preventDefault());
+</script>
+</body>
+</html>

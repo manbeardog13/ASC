@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>ASC — Koš za smeće v6 · Hanssen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ============================================================================
+   ASC v6 — recycle bin ("Koš za smeće"), Hanssen composition. PHONE FIRST.
+   Extends design/dashboard-v6-hanssen.html — tokens and component values are
+   copied from the approved mockup + the v6 sections of css/styles.css.
+   Locked palette only. Twin themes. One lava accent per card.
+   ============================================================================ */
+:root {
+  --bg:#edf0f5; --shell:rgba(255,255,255,.42); --shell-solid:rgba(255,255,255,.62);
+  --panel:#f2f4f8; --panel-2:#ffffff;
+  --ink:#020305; --ink-2:#3a3c40; --muted:#63676f;
+  --lava:#ff4e1b; --lava-ink:#c0360d; --lava-tint:rgba(255,78,27,.11); --lava-ring:rgba(255,78,27,.30);
+  --gun:#2e2f31; --hairline:rgba(2,3,5,.07); --line:rgba(2,3,5,.12);
+  --stage-1:#0b0c0e; --stage-2:#17181b; --on-stage:#f4f5f7; --on-stage-2:rgba(244,245,247,.6);
+  --rim-top:rgba(255,255,255,.75); --rim:rgba(255,255,255,.42);
+  --smooth:cubic-bezier(.25,1,.5,1);
+}
+html.dark {
+  --bg:#020305; --shell:rgba(23,24,28,.55); --shell-solid:rgba(23,24,28,.85);
+  --panel:#1d1e22; --panel-2:#26272b;
+  --ink:#f4f5f7; --ink-2:#d6d8dc; --muted:rgba(244,245,247,.6);
+  --hairline:rgba(244,245,247,.09); --line:rgba(244,245,247,.16);
+  --stage-1:#07080a; --stage-2:#101114;
+  --rim-top:rgba(255,255,255,.16); --rim:rgba(255,255,255,.08);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+html,body { min-height:100%; }
+body { font-family:"Inter",system-ui,sans-serif; color:var(--ink); background:var(--bg);
+  padding:calc(env(safe-area-inset-top,0px) + 14px) 10px calc(96px + env(safe-area-inset-bottom,0px));
+  -webkit-font-smoothing:antialiased; font-variant-numeric:tabular-nums;
+  transition:background 380ms var(--smooth), color 380ms var(--smooth); }
+button { font:inherit; color:inherit; }
+
+/* ambient — palette blooms only, no imagery */
+.canvas { position:fixed; inset:0; z-index:-1; pointer-events:none;
+  background:
+    radial-gradient(58vmax 54vmax at 10% -12%, rgba(255,78,27,.16), transparent 62%),
+    radial-gradient(50vmax 46vmax at 92% 112%, rgba(255,78,27,.13), transparent 58%),
+    radial-gradient(44vmax 40vmax at 84% -8%, rgba(46,47,49,.22), transparent 60%);
+  transition:opacity 380ms var(--smooth); }
+html.dark .canvas {
+  background:
+    radial-gradient(58vmax 54vmax at 10% -12%, rgba(255,78,27,.10), transparent 60%),
+    radial-gradient(50vmax 46vmax at 92% 112%, rgba(255,78,27,.08), transparent 56%),
+    radial-gradient(44vmax 40vmax at 84% -8%, rgba(244,245,247,.05), transparent 60%); }
+.grain { position:fixed; inset:0; z-index:40; pointer-events:none; opacity:.045; mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E"); }
+
+/* ---- glass shell (single blur surface) ---- */
+.shell { max-width:1220px; margin:0 auto; border-radius:28px; position:relative;
+  background:var(--shell-solid);
+  border:1px solid var(--rim); border-top-color:var(--rim-top);
+  box-shadow:0 25px 50px rgba(2,3,5,.22);
+  padding:12px; animation:sheetIn 550ms var(--smooth) both;
+  transition:background 380ms var(--smooth); }
+@supports ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))) {
+  .shell { background:var(--shell);
+    -webkit-backdrop-filter:blur(30px) saturate(150%) brightness(108%);
+    backdrop-filter:blur(30px) saturate(150%) brightness(108%); }
+}
+@media (prefers-reduced-transparency:reduce) {
+  .shell { background:var(--panel-2) !important; -webkit-backdrop-filter:none !important; backdrop-filter:none !important; }
+  .canvas { display:none; }
+}
+@keyframes sheetIn { from { opacity:0; transform:translateY(24px) scale(.985); } }
+@keyframes rise { from { opacity:0; transform:translateY(12px); } }
+@media (prefers-reduced-motion:reduce) { * { animation:none !important; transition-property:opacity,color,background-color !important; } }
+
+/* ---- nav: floating dark dock on phone (final mobile block values) ---- */
+.nav { position:fixed; top:auto; bottom:calc(14px + env(safe-area-inset-bottom,0px)); left:50%;
+  transform:translateX(-50%); z-index:60;
+  display:flex; align-items:center; justify-content:center; gap:0; flex-wrap:nowrap;
+  width:max-content; max-width:calc(100vw - 20px);
+  background:rgba(2,3,5,.88); color:#f4f5f7;
+  border-radius:24px; padding:6px 10px; font-size:12px;
+  border-top:1px solid rgba(255,255,255,.14);
+  box-shadow:0 16px 40px -12px rgba(2,3,5,.6);
+  -webkit-backdrop-filter:blur(14px) saturate(150%); backdrop-filter:blur(14px) saturate(150%); }
+.nav .mark { display:none; width:22px; height:22px; border-radius:50%; flex:none;
+  background:radial-gradient(circle at 32% 30%, #ff8a5c, var(--lava) 60%, #d6390c);
+  box-shadow:0 0 10px rgba(255,78,27,.5); margin-right:6px; }
+.nav a { position:relative; color:#f4f5f7; opacity:.62; padding:8px 9px; border-radius:14px;
+  text-decoration:none; white-space:nowrap;
+  transition:opacity 160ms ease, background 160ms ease, transform 100ms ease; }
+.nav a::before { content:""; position:absolute; inset:-8px; }
+@media (hover:hover) and (pointer:fine){ .nav a:hover { opacity:1; } }
+.nav a.on { opacity:1; background:rgba(244,245,247,.14); }
+.nav a:active { transform:scale(.95); }
+.mode { border:0; cursor:pointer; margin-left:2px; width:24px; height:24px; border-radius:50%;
+  background:rgba(244,245,247,.14); display:grid; place-items:center; position:relative; flex:none;
+  transition:transform 380ms var(--smooth); }
+.mode::before { content:""; position:absolute; inset:-10px; }
+@media (hover:hover) and (pointer:fine){ .mode:hover { transform:rotate(40deg); } }
+.mode:active i { transform:scale(.9); }
+.mode i { width:11px; height:11px; border-radius:50%; background:#f4f5f7; display:block;
+  transition:background 380ms ease, box-shadow 380ms ease; }
+html.dark .mode i { background:transparent; box-shadow:inset 0 0 0 2.5px #f4f5f7; }
+
+/* ---- top row: back to home (the live view's btn-ghost home link) ---- */
+.top { display:flex; align-items:center; justify-content:space-between;
+  margin:2px 2px 12px; animation:rise 550ms var(--smooth) 80ms both; }
+.vback { position:relative; display:inline-flex; align-items:center; gap:9px;
+  min-height:44px; padding:0 18px 0 15px; border-radius:999px;
+  background:var(--panel); color:var(--ink); text-decoration:none; font:600 13px Inter;
+  border:1px solid var(--hairline);
+  transition:transform 200ms var(--smooth), background 200ms ease; }
+.vback::before { content:""; position:absolute; inset:-4px; }
+@media (hover:hover) and (pointer:fine){ .vback:hover { transform:translateX(-2px); background:var(--panel-2); } }
+.vback:active { transform:scale(.97); transition-duration:100ms; }
+.top .tcount { font:600 12px Inter; color:var(--muted); letter-spacing:.04em; padding-right:6px; }
+
+/* ---- layout: single column on phone, stage | list on desktop ---- */
+.grid { display:grid; grid-template-columns:1fr; gap:12px; }
+
+/* corner tabs (Hanssen labels) — exact v6tab values */
+.tab { position:absolute; z-index:3; font:500 10.5px Inter; letter-spacing:.04em; color:var(--muted);
+  background:var(--shell-solid); padding:7px 13px 8px; white-space:nowrap;
+  transition:background 380ms var(--smooth); }
+.tab.tl { top:0; left:0; border-radius:0 0 14px 0; }
+.tab.br { bottom:0; right:0; border-radius:14px 0 0 0; }
+.tab.tl::after, .tab.tl::before, .tab.br::after, .tab.br::before { content:""; position:absolute; width:14px; height:14px; }
+.tab.tl::after { right:-14px; top:0; background:radial-gradient(circle at 100% 100%, transparent 14px, var(--shell-solid) 14.5px); }
+.tab.tl::before { left:0; bottom:-14px; background:radial-gradient(circle at 100% 100%, transparent 14px, var(--shell-solid) 14.5px); }
+.tab.br::after { left:-14px; bottom:0; background:radial-gradient(circle at 0% 0%, transparent 14px, var(--shell-solid) 14.5px); }
+.tab.br::before { right:0; top:-14px; background:radial-gradient(circle at 0% 0%, transparent 14px, var(--shell-solid) 14.5px); }
+
+/* ---- stage: the view's headline card (count hero + retention) ---- */
+.stage { position:relative; border-radius:24px; overflow:hidden;
+  background:
+    radial-gradient(120% 90% at 82% -10%, rgba(255,78,27,.28), transparent 55%),
+    radial-gradient(90% 70% at -10% 110%, rgba(255,78,27,.14), transparent 55%),
+    linear-gradient(175deg, var(--stage-1) 0%, var(--stage-2) 100%);
+  color:var(--on-stage); padding:24px 20px 52px;
+  display:flex; flex-direction:column;
+  border-top:1px solid rgba(255,255,255,.10);
+  animation:rise 550ms var(--smooth) 120ms both; }
+.stage .aura { position:absolute; width:70%; height:55%; right:-16%; top:-14%; border-radius:50%;
+  background:radial-gradient(closest-side, rgba(255,78,27,.34), transparent 70%);
+  filter:blur(30px); animation:drift 16s ease-in-out infinite alternate; }
+@keyframes drift { to { transform:translate(-9%, 12%) scale(1.12); } }
+.stage > :not(.aura) { position:relative; z-index:2; }
+.stage .k { font:600 11px Inter; letter-spacing:.08em; text-transform:uppercase; color:var(--on-stage-2); }
+.stage .hero { font-family:Sora; font-weight:400; font-size:64px; line-height:1; letter-spacing:-.03em; margin:10px 0 4px; }
+.stage .hero em { font-style:normal; font:500 14px Inter; letter-spacing:.06em; text-transform:uppercase; color:var(--on-stage-2); margin-left:8px; }
+.stage .cap { font-size:13.5px; color:var(--on-stage-2); max-width:420px; line-height:1.5; }
+.stage .meter { margin-top:18px; height:8px; border-radius:4px; background:rgba(244,245,247,.14); overflow:hidden; max-width:420px; }
+.stage .meter i { display:block; height:100%; border-radius:4px; background:linear-gradient(90deg,#ff8a5c,var(--lava)); }
+.stage .mlab { margin-top:9px; font-size:11.5px; color:var(--on-stage-2); }
+.stage .mlab b { color:var(--on-stage); font-weight:600; }
+
+/* ---- list panel: the bin ---- */
+.panel { position:relative; background:var(--panel); border-radius:24px; padding:42px 18px 12px;
+  animation:rise 550ms var(--smooth) 200ms both; transition:background 380ms var(--smooth); }
+
+/* row — live .set-row/.rec-row slots restyled; hairlines inset by panel padding */
+.rrow { padding:18px 2px 20px; }
+.rrow + .rrow { border-top:1px solid var(--hairline); }
+.rtop { display:flex; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:9px; }
+.code { font-family:Sora; font-weight:600; font-size:15px; letter-spacing:-.01em; color:var(--ink); margin-right:2px; }
+.chip { display:inline-flex; align-items:center; gap:5px; height:25px; padding:0 11px;
+  border-radius:999px; font-size:12px; font-weight:650; white-space:nowrap;
+  background:rgba(2,3,5,.06); color:var(--ink-2); }
+html.dark .chip { background:rgba(244,245,247,.10); }
+.chip.winter { background:rgba(46,47,49,.10); color:var(--gun); }
+html.dark .chip.winter { background:rgba(244,245,247,.10); color:var(--ink-2); }
+.chip.summer { background:var(--lava-tint); color:var(--lava-ink); }
+html.dark .chip.summer { background:rgba(255,78,27,.16); color:#ff8a5c; }
+.who { font:600 14px Inter; color:var(--ink); margin-bottom:5px; }
+.who .plate { font-weight:500; color:var(--muted); }
+.delrow { display:flex; align-items:center; gap:10px; margin-bottom:14px; }
+.del { font-size:12.5px; color:var(--muted); }
+.left { font:600 11.5px Inter; padding:4px 10px; border-radius:999px;
+  background:rgba(46,47,49,.08); color:var(--muted); white-space:nowrap; }
+html.dark .left { background:rgba(244,245,247,.08); }
+.left.hot { background:var(--lava-tint); color:var(--lava-ink); }
+html.dark .left.hot { background:rgba(255,78,27,.16); color:#ff8a5c; }
+
+/* capsule actions — 50px on phone, roomy; restore is the row's lava accent */
+.acts { display:flex; gap:10px; }
+.abtn { flex:1; display:inline-flex; align-items:center; justify-content:center; gap:8px;
+  min-height:50px; padding:0 18px; border-radius:999px; border:0; cursor:pointer;
+  font:600 13.5px Inter; position:relative;
+  transition:transform 200ms var(--smooth), background 200ms ease, box-shadow 200ms ease,
+    border-color 200ms ease, color 200ms ease, filter 200ms ease; }
+.abtn::before { content:""; position:absolute; inset:-3px 0; }
+.abtn:active { transform:scale(.97); transition-duration:100ms; }
+.abtn svg { flex:none; }
+.abtn.restore { background:linear-gradient(140deg, #ff6234, #ff4e1b 55%, #ef3d0e); color:#fff;
+  box-shadow:0 4px 14px var(--lava-ring); }
+@media (hover:hover) and (pointer:fine){
+  .abtn.restore:hover { filter:brightness(1.05); transform:translateY(-1px); box-shadow:0 6px 18px var(--lava-ring); }
+}
+.abtn.purge { background:transparent; border:1px solid var(--line); color:var(--ink-2); }
+@media (hover:hover) and (pointer:fine){
+  .abtn.purge:hover { background:var(--lava-tint); border-color:var(--lava-ink); color:var(--lava-ink); }
+}
+
+.foot { margin-top:2px; padding:14px 8px 4px; font-size:11.5px; color:var(--muted); text-align:right; }
+
+:focus-visible { outline:2.5px solid var(--lava-ink); outline-offset:2px; box-shadow:0 0 0 2px var(--bg); border-radius:8px; }
+.nav :focus-visible, .stage :focus-visible { outline-color:#ff8a5c; box-shadow:0 0 0 2px rgba(2,3,5,.9); }
+
+/* ============================================================================
+   DESKTOP (second-class citizen; phone above is the design) — pill nav returns
+   to the Hanssen top-left corner, back capsule mirrors it top-right, grid
+   splits stage | bin.
+   ============================================================================ */
+@media (min-width:1021px) {
+  body { padding:30px 26px; }
+  .shell { border-radius:36px; padding:18px; }
+  .nav { position:absolute; top:30px; left:30px; right:auto; bottom:auto; transform:none;
+    border-radius:22px; padding:7px 10px 7px 9px; font-size:12.5px; gap:4px;
+    box-shadow:none; -webkit-backdrop-filter:none; backdrop-filter:none;
+    animation:rise 550ms var(--smooth) 80ms both; }
+  .nav .mark { display:block; }
+  .nav a { padding:5px 10px; }
+  .mode { width:26px; height:26px; margin-left:4px; }
+  .top { position:absolute; top:30px; right:30px; z-index:5; margin:0; }
+  .top .tcount { display:none; }
+  .grid { grid-template-columns:.95fr 1.4fr; gap:14px; align-items:stretch; }
+  .stage { min-height:520px; padding:84px 30px 56px; }
+  .stage .hero { font-size:clamp(64px,7vw,96px); }
+  .stage .space { flex:1; }
+  .panel { padding:64px 24px 14px; }
+  .rrow { display:flex; align-items:center; gap:16px; padding:16px 4px; }
+  .rbody { flex:1; min-width:0; }
+  .rtop { margin-bottom:7px; }
+  .delrow { margin-bottom:0; }
+  .acts { flex:none; }
+  .abtn { flex:none; min-height:46px; }
+}
+</style>
+</head>
+<body>
+<div class="canvas" aria-hidden="true"></div>
+<div class="grain" aria-hidden="true"></div>
+
+<main class="shell">
+  <!-- dock on phone / pill top-left on desktop; recycle is not a dock item, so nothing is .on -->
+  <nav class="nav" aria-label="Primary">
+    <span class="mark" aria-hidden="true"></span>
+    <a href="#">Ploča</a><a href="#">Zaprimi</a><a href="#">Skladište</a><a href="#">Kupci</a>
+    <button class="mode" id="mode" aria-label="Tema"><i></i></button>
+  </nav>
+
+  <!-- live view: btn-ghost home link -->
+  <div class="top">
+    <a class="vback" href="#/">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
+      Početna
+    </a>
+    <span class="tcount">koš · 5</span>
+  </div>
+
+  <div class="grid">
+    <!-- headline card: h1 (rec.title as kicker context), count hero, rec.retention -->
+    <section class="stage" aria-labelledby="rec-title">
+      <i class="aura" aria-hidden="true"></i>
+      <span class="k" id="rec-title">Koš za smeće · Dubrovnik</span>
+      <div class="hero">5<em>kompleta u košu</em></div>
+      <p class="cap">Obrisani kompleti čuvaju se 30 dana, zatim se automatski uklanjaju.</p>
+      <div class="meter" role="img" aria-label="Najstariji komplet: 27 od 30 dana"><i style="width:90%"></i></div>
+      <div class="mlab">najstariji · <b>ASC-2026-0063</b> · briše se za 3 dana</div>
+      <div class="space"></div>
+      <span class="tab br">čuvanje · 30 dana</span>
+    </section>
+
+    <!-- the bin (live #bin > section.card.u-module > .set-list) -->
+    <section class="panel" aria-label="Obrisani kompleti">
+      <span class="tab tl">obrisano · 5</span>
+
+      <div class="rrow">
+        <div class="rbody">
+          <div class="rtop"><span class="code">ASC-2026-0187</span><span class="chip">Spremljeno</span><span class="chip winter">Zimske</span></div>
+          <div class="who">Ivo Matić <span class="plate">· DU 318-KL</span></div>
+          <div class="delrow"><span class="del">Obrisano 5. srp 2026.</span><span class="left">još 28 dana</span></div>
+        </div>
+        <div class="acts">
+          <button class="abtn restore"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>Vrati</button>
+          <button class="abtn purge"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>Obriši</button>
+        </div>
+      </div>
+
+      <div class="rrow">
+        <div class="rbody">
+          <div class="rtop"><span class="code">ASC-2026-0154</span><span class="chip">Spremljeno</span><span class="chip summer">Ljetne</span></div>
+          <div class="who">Marija Violić <span class="plate">· DU 902-TP</span></div>
+          <div class="delrow"><span class="del">Obrisano 1. srp 2026.</span><span class="left">još 24 dana</span></div>
+        </div>
+        <div class="acts">
+          <button class="abtn restore"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>Vrati</button>
+          <button class="abtn purge"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>Obriši</button>
+        </div>
+      </div>
+
+      <div class="rrow">
+        <div class="rbody">
+          <div class="rtop"><span class="code">ASC-2026-0121</span><span class="chip">Preuzeto</span><span class="chip winter">Zimske</span></div>
+          <div class="who">Niko Glavić <span class="plate">· DU 447-MB</span></div>
+          <div class="delrow"><span class="del">Obrisano 24. lip 2026.</span><span class="left">još 17 dana</span></div>
+        </div>
+        <div class="acts">
+          <button class="abtn restore"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>Vrati</button>
+          <button class="abtn purge"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>Obriši</button>
+        </div>
+      </div>
+
+      <div class="rrow">
+        <div class="rbody">
+          <div class="rtop"><span class="code">ASC-2026-0096</span><span class="chip">Spremljeno</span><span class="chip">Cjelogodišnje</span></div>
+          <div class="who">Ana Kristić <span class="plate">· DU 155-ZD</span></div>
+          <div class="delrow"><span class="del">Obrisano 15. lip 2026.</span><span class="left">još 8 dana</span></div>
+        </div>
+        <div class="acts">
+          <button class="abtn restore"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>Vrati</button>
+          <button class="abtn purge"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>Obriši</button>
+        </div>
+      </div>
+
+      <div class="rrow">
+        <div class="rbody">
+          <div class="rtop"><span class="code">ASC-2026-0063</span><span class="chip">Preuzeto</span><span class="chip summer">Ljetne</span></div>
+          <div class="who">Pero Miloslavić <span class="plate">· DU 730-JN</span></div>
+          <div class="delrow"><span class="del">Obrisano 10. lip 2026.</span><span class="left hot">još 3 dana</span></div>
+        </div>
+        <div class="acts">
+          <button class="abtn restore"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>Vrati</button>
+          <button class="abtn purge"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>Obriši</button>
+        </div>
+      </div>
+
+    </section>
+  </div>
+
+  <div class="foot">ASC · Auto servisni centar d.o.o.</div>
+</main>
+
+<script>
+  document.getElementById('mode').addEventListener('click', () => {
+    document.documentElement.classList.toggle('dark');
+  });
+</script>
+</body>
+</html>

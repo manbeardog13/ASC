@@ -2124,3 +2124,47 @@ main { padding-bottom: calc(var(--nav-h) + 42px + env(safe-area-inset-bottom, 0p
 .v6.dark .v6panel.p1 .sbar { background: rgba(244,245,247,.10); }
 .v6profile .hstat { background: var(--surface); }
 .v6.dark .v6profile .hstat { background: rgba(244,245,247,.07); }
+
+/* ============================================================================
+   v6 VIEW ELEVATION — the shared legacy components the 10 unported views
+   compose (.card / fieldset·legend / .field label / .segmented / .u-corner /
+   .banner / .suggestions / page h1) adopt the v6 language, so every screen
+   reads as one product without rewriting view markup. Login (.fieldx/.auth-*)
+   and dashboard (.v6*) don't use these classes — untouched.
+   ============================================================================ */
+/* page heading → v6 display */
+#main > h1, #main > .row-between > h1, .ws-title { font-family: var(--font-display); font-weight: 600; letter-spacing: -.02em; font-size: clamp(22px, 3vw, 28px); }
+/* cards → v6 panel: bigger arc, calm inset surface, hairline */
+#main .card { border-radius: var(--radius-xl); background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow-1); padding: 20px 22px; }
+#main .card + .card, #main .card[style*="margin-top"] { margin-top: 14px; }
+/* numbered corner (01/02/03) → v6 corner tab, top-right cut-in */
+#main .card { overflow: visible; }
+.u-corner.is-num {
+  position: absolute; top: 0; right: 0; width: auto; height: auto;
+  background: var(--bg); color: var(--muted);
+  font-family: var(--font); font-weight: 600; font-size: 11px; letter-spacing: .06em;
+  padding: 7px 14px 9px; border-radius: 0 var(--radius-xl) 0 16px;
+}
+/* section label → v6 micro-label (uppercase, tracked, lava-dotted) */
+fieldset legend {
+  font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 12px; display: inline-flex; align-items: center; gap: 8px;
+}
+fieldset legend::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--brand); flex: none; }
+.field > .label { font-size: 11.5px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); margin-bottom: 7px; }
+/* segmented control → v6 seg pill */
+.segmented { background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius-pill); padding: 4px; }
+.segmented button { border-radius: var(--radius-pill); font-weight: 600; font-size: 13px; color: var(--muted); }
+.segmented button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 3px 10px -3px rgba(2,3,5,.22); }
+.segmented button:active { transform: scale(.97); }
+/* banners → v6 (lava-tinted warn, hairline info) */
+.banner { border-radius: 16px; padding: 12px 15px; font-weight: 500; }
+.banner-warn { background: var(--brand-tint); color: var(--brand-ink); }
+/* recent-location / suggestion chips → v6 capsules */
+.suggestions button { border-radius: var(--radius-pill); border: 1px solid var(--line); background: var(--surface); color: var(--ink-2); font-weight: 500; }
+@media (hover:hover) and (pointer:fine) { .suggestions button:hover { border-color: var(--brand-ink); color: var(--brand-ink); background: var(--brand-tint); } }
+.suggestions button:active { transform: scale(.97); }
+/* switch (on-rims / paid) → lava accent */
+.switch input { accent-color: var(--brand); }
+/* voice CTA on view headers → v6 capsule with breathing dot handled by icon; keep pill */
+.voice-cta { border-radius: var(--radius-pill); }

@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>ASC — Agent v6 · Hanssen, no pictures</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ============================================================================
+   ASC v6 — "Pomoćnik" (assistant view) in the approved Hanssen composition.
+   PHONE-FIRST: the 390px column is the primary layout; desktop re-slots the
+   same cards into the Hanssen 3-column grid. Locked palette, twin themes,
+   one glass sheet, corner tabs, capsule controls, one lava accent per card.
+   Component values copied verbatim from dashboard-v6-hanssen.html and the
+   v6 sections of css/styles.css — nothing new invented.
+   ============================================================================ */
+:root {
+  --bg:#edf0f5; --shell:rgba(255,255,255,.42); --shell-solid:rgba(255,255,255,.62);
+  --panel:#f2f4f8; --panel-2:#ffffff;
+  --ink:#020305; --ink-2:#3a3c40; --muted:#63676f;
+  --lava:#ff4e1b; --lava-ink:#c0360d; --lava-tint:rgba(255,78,27,.11); --lava-ring:rgba(255,78,27,.30);
+  --grad-brand:linear-gradient(140deg,#ff6234,#ff4e1b 55%,#ef3d0e);
+  --gun:#2e2f31; --hairline:rgba(2,3,5,.07); --line-strong:rgba(2,3,5,.14);
+  --stage-1:#0b0c0e; --stage-2:#17181b; --on-stage:#f4f5f7; --on-stage-2:rgba(244,245,247,.6);
+  --rim-top:rgba(255,255,255,.75); --rim:rgba(255,255,255,.42);
+  --smooth:cubic-bezier(.25,1,.5,1);
+}
+html.dark {
+  --bg:#020305; --shell:rgba(23,24,28,.55); --shell-solid:rgba(23,24,28,.85);
+  --panel:#1d1e22; --panel-2:#26272b;
+  --ink:#f4f5f7; --ink-2:#d6d8dc; --muted:rgba(244,245,247,.6);
+  --hairline:rgba(244,245,247,.09); --line-strong:rgba(244,245,247,.16);
+  --stage-1:#07080a; --stage-2:#101114;
+  --rim-top:rgba(255,255,255,.16); --rim:rgba(255,255,255,.08);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+html,body { min-height:100%; }
+body { font-family:"Inter",system-ui,sans-serif; color:var(--ink); background:var(--bg);
+  /* phone: room for the floating dock below the sheet */
+  padding:12px 10px calc(86px + env(safe-area-inset-bottom,0px));
+  -webkit-font-smoothing:antialiased; font-variant-numeric:tabular-nums;
+  transition:background 380ms var(--smooth), color 380ms var(--smooth); }
+button { font:inherit; color:inherit; background:none; border:0; cursor:pointer; }
+input { font:inherit; }
+
+/* ambient — palette blooms only, no imagery */
+.canvas { position:fixed; inset:0; z-index:-1; pointer-events:none;
+  background:
+    radial-gradient(58vmax 54vmax at 10% -12%, rgba(255,78,27,.16), transparent 62%),
+    radial-gradient(50vmax 46vmax at 92% 112%, rgba(255,78,27,.13), transparent 58%),
+    radial-gradient(44vmax 40vmax at 84% -8%, rgba(46,47,49,.22), transparent 60%);
+  transition:opacity 380ms var(--smooth); }
+html.dark .canvas {
+  background:
+    radial-gradient(58vmax 54vmax at 10% -12%, rgba(255,78,27,.10), transparent 60%),
+    radial-gradient(50vmax 46vmax at 92% 112%, rgba(255,78,27,.08), transparent 56%),
+    radial-gradient(44vmax 40vmax at 84% -8%, rgba(244,245,247,.05), transparent 60%); }
+.grain { position:fixed; inset:0; z-index:40; pointer-events:none; opacity:.045; mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E"); }
+
+/* ---- glass shell (single blur surface) — phone values first ---- */
+.shell { max-width:1220px; margin:0 auto; border-radius:28px; position:relative;
+  background:var(--shell-solid);
+  border:1px solid var(--rim); border-top-color:var(--rim-top);
+  box-shadow:0 25px 50px rgba(2,3,5,.22);
+  /* phone: NO entrance transform — a filled transform animation becomes the
+     containing block and traps the fixed dock (learned spec from styles.css) */
+  padding:12px;
+  transition:background 380ms var(--smooth); }
+@supports ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))) {
+  .shell { background:var(--shell);
+    -webkit-backdrop-filter:blur(30px) saturate(150%) brightness(108%);
+    backdrop-filter:blur(30px) saturate(150%) brightness(108%); }
+}
+@media (prefers-reduced-transparency:reduce) {
+  .shell { background:var(--panel-2) !important; -webkit-backdrop-filter:none !important; backdrop-filter:none !important; }
+  .canvas { display:none; }
+}
+@keyframes sheetIn { from { opacity:0; transform:translateY(24px) scale(.985); } }
+@keyframes rise { from { opacity:0; transform:translateY(12px); } }
+@media (prefers-reduced-motion:reduce) { * { animation:none !important; transition-property:opacity,color,background-color !important; } }
+
+/* ---- nav: floating dark dock on phone (visual reference), pill on desktop -- */
+.nav { position:fixed; bottom:calc(14px + env(safe-area-inset-bottom,0px)); left:50%;
+  transform:translateX(-50%); z-index:60;
+  display:flex; align-items:center; justify-content:center; gap:0; flex-wrap:nowrap;
+  width:max-content; max-width:calc(100vw - 20px);
+  background:rgba(2,3,5,.88); color:#f4f5f7;
+  border-radius:24px; padding:6px 8px; font-size:12px;
+  border-top:1px solid rgba(255,255,255,.14);
+  box-shadow:0 16px 40px -12px rgba(2,3,5,.6); }
+@supports ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))) {
+  .nav { -webkit-backdrop-filter:blur(14px) saturate(150%); backdrop-filter:blur(14px) saturate(150%); }
+}
+.nav .mark { display:none; width:22px; height:22px; border-radius:50%;
+  background:radial-gradient(circle at 32% 30%, #ff8a5c, var(--lava) 60%, #d6390c);
+  box-shadow:0 0 10px rgba(255,78,27,.5); margin-right:6px; flex:none; }
+.nav a { position:relative; color:#f4f5f7; opacity:.62; padding:8px 9px; border-radius:14px;
+  text-decoration:none; white-space:nowrap;
+  transition:opacity 160ms ease, background 160ms ease, transform 100ms ease; }
+.nav a::before { content:""; position:absolute; inset:-8px; }
+@media (hover:hover) and (pointer:fine){ .nav a:hover { opacity:1; } }
+.nav a:active { transform:scale(.95); }
+.nav a.on { opacity:1; background:rgba(244,245,247,.14); }
+.mode { border:0; cursor:pointer; margin-left:2px; width:24px; height:24px; border-radius:50%;
+  background:rgba(244,245,247,.14); display:grid; place-items:center; position:relative;
+  transition:transform 380ms var(--smooth); flex:none; }
+.mode::before { content:""; position:absolute; inset:-10px; }
+@media (hover:hover) and (pointer:fine){ .mode:hover { transform:rotate(40deg); } }
+.mode:active i { transform:scale(.9); }
+.mode i { width:11px; height:11px; border-radius:50%; background:#f4f5f7; display:block;
+  transition:background 380ms ease, box-shadow 380ms ease, transform 100ms ease; }
+html.dark .mode i { background:transparent; box-shadow:inset 0 0 0 2.5px #f4f5f7; }
+
+/* ---- corner tabs (exact v6tab values) ---- */
+.tab { position:absolute; z-index:3; font:500 10.5px Inter; letter-spacing:.04em; color:var(--muted);
+  background:var(--shell-solid); padding:7px 13px 8px 13px; white-space:nowrap;
+  transition:background 380ms var(--smooth); }
+.tab.tl { top:0; left:0; border-radius:0 0 14px 0; }
+.tab.br { bottom:0; right:0; border-radius:14px 0 0 0; }
+.tab.tl::after, .tab.tl::before, .tab.br::after, .tab.br::before { content:""; position:absolute; width:14px; height:14px; }
+.tab.tl::after { right:-14px; top:0; background:radial-gradient(circle at 100% 100%, transparent 14px, var(--shell-solid) 14.5px); }
+.tab.tl::before { left:0; bottom:-14px; background:radial-gradient(circle at 100% 100%, transparent 14px, var(--shell-solid) 14.5px); }
+.tab.br::after { left:-14px; bottom:0; background:radial-gradient(circle at 0% 0%, transparent 14px, var(--shell-solid) 14.5px); }
+.tab.br::before { right:0; top:-14px; background:radial-gradient(circle at 0% 0%, transparent 14px, var(--shell-solid) 14.5px); }
+
+/* ---- layout: single roomy column on phone ---- */
+.grid { display:flex; flex-direction:column; gap:10px; }
+.icn { flex:none; display:block; }
+
+/* ---- head card (profile language): who the agent is + voice controls ---- */
+.aghead { background:var(--panel); border-radius:24px; padding:20px;
+  animation:rise 550ms var(--smooth) 120ms both; transition:background 380ms var(--smooth); }
+.aghead .row1 { display:flex; align-items:center; gap:13px; }
+.agavatar { width:46px; height:46px; border-radius:50%; flex:none;
+  background:radial-gradient(circle at 32% 30%, #ff8a5c, var(--lava) 62%, #d6390c);
+  color:#fff; display:grid; place-items:center; font:650 13px Inter; letter-spacing:.02em;
+  box-shadow:0 6px 16px rgba(255,78,27,.35); }
+.aghead h1 { font-family:Sora; font-weight:600; font-size:19px; letter-spacing:-.01em; color:var(--ink); }
+.aghead .sub { font-size:12.5px; color:var(--muted); margin-top:2px; }
+.ag-ctrls { display:flex; gap:8px; margin-top:16px; }
+.capbtn { display:flex; align-items:center; justify-content:center; gap:8px;
+  min-height:50px; padding:0 18px; border-radius:999px;
+  background:var(--panel-2); border:1px solid var(--hairline); color:var(--ink);
+  font:550 13.5px Inter;
+  transition:transform 200ms var(--smooth), background 200ms ease; }
+.capbtn.grow { flex:1; }
+.capbtn.round { width:50px; padding:0; }
+@media (hover:hover) and (pointer:fine){ .capbtn:hover { transform:translateY(-1px); } }
+.capbtn:active { transform:scale(.97); transition-duration:100ms; }
+.capbtn[aria-pressed="true"] { border-color:var(--line-strong); }
+.aghead .meta { display:flex; justify-content:space-between; align-items:center; gap:10px;
+  margin-top:16px; padding-top:12px; border-top:1px solid var(--hairline);
+  font-size:12.5px; color:var(--muted); }
+
+/* ---- chat stage (the "big photo" slot → the conversation) ---- */
+.stage { position:relative; border-radius:24px; overflow:hidden;
+  background:
+    radial-gradient(120% 90% at 82% -10%, rgba(255,78,27,.28), transparent 55%),
+    radial-gradient(90% 70% at -10% 110%, rgba(255,78,27,.14), transparent 55%),
+    linear-gradient(175deg, var(--stage-1) 0%, var(--stage-2) 100%);
+  color:var(--on-stage); padding:22px 16px 52px;
+  display:flex; flex-direction:column;
+  border-top:1px solid rgba(255,255,255,.10);
+  animation:rise 550ms var(--smooth) 160ms both; }
+.stage .aura { position:absolute; width:70%; height:55%; right:-16%; top:-14%; border-radius:50%;
+  background:radial-gradient(closest-side, rgba(255,78,27,.34), transparent 70%);
+  filter:blur(30px); animation:drift 16s ease-in-out infinite alternate; }
+@keyframes drift { to { transform:translate(-9%, 12%) scale(1.12); } }
+.stage > :not(.aura) { position:relative; z-index:2; }
+.stage .k { font:600 11px Inter; letter-spacing:.08em; text-transform:uppercase; color:var(--on-stage-2); margin-bottom:16px; }
+.stage > .tab { position:absolute; }
+
+.ag-log { display:flex; flex-direction:column; gap:12px; }
+.ag-msg { max-width:88%; padding:13px 16px; border-radius:18px; font-size:14px; line-height:1.55; }
+.ag-msg.is-bot { align-self:flex-start; background:rgba(244,245,247,.08);
+  border-top:1px solid rgba(255,255,255,.09); border-bottom-left-radius:6px; color:var(--on-stage); }
+.ag-msg.is-me { align-self:flex-end; background:rgba(244,245,247,.94); color:#020305;
+  font-weight:500; border-bottom-right-radius:6px; max-width:85%; }
+/* persistent print offer — lands in the log after the set is created */
+.ag-print { display:flex; align-items:center; gap:10px; min-height:50px; width:100%;
+  padding:0 16px; border-radius:16px; text-align:left;
+  background:rgba(244,245,247,.08); border-top:1px solid rgba(255,255,255,.09);
+  color:var(--on-stage); font:550 13.5px Inter; position:relative;
+  transition:transform 200ms var(--smooth), background 200ms ease; }
+.ag-print::before { content:""; position:absolute; inset:-2px 0; }
+@media (hover:hover) and (pointer:fine){ .ag-print:hover { background:rgba(244,245,247,.13); transform:translateX(3px); } }
+.ag-print:active { transform:scale(.98); transition-duration:100ms; }
+.ag-print .code { margin-left:auto; font:600 12.5px Inter; color:#ff8a5c; letter-spacing:.02em; }
+
+/* ---- suggestion chips → rail rows (v6row values) ---- */
+.ag-chips { display:flex; flex-direction:column; gap:8px; }
+.rrow { position:relative; display:flex; align-items:center; justify-content:space-between; gap:10px;
+  min-height:52px; padding:14px 16px; border-radius:16px; text-align:left; width:100%;
+  background:var(--panel); color:var(--ink); font:550 13.5px Inter;
+  transition:transform 200ms var(--smooth), background 200ms ease;
+  animation:rise 550ms var(--smooth) both; }
+.rrow:nth-child(1){animation-delay:200ms}.rrow:nth-child(2){animation-delay:240ms}.rrow:nth-child(3){animation-delay:280ms}
+.rrow::before { content:""; position:absolute; inset:-2px 0; }
+@media (hover:hover) and (pointer:fine){ .rrow:hover { transform:translateX(3px); } }
+.rrow:active { transform:scale(.98); transition-duration:100ms; }
+.rrow .v { color:var(--muted); font:600 12px Inter; flex:none; }
+
+/* ---- walkie-talkie card (stage language, the orb is the lava accent) ---- */
+.ag-ptt-zone { position:relative; border-radius:24px; overflow:hidden; text-align:center;
+  padding:30px 20px 34px;
+  background:
+    radial-gradient(120% 100% at 90% -20%, rgba(255,78,27,.20), transparent 55%),
+    linear-gradient(175deg, var(--stage-1), var(--stage-2));
+  color:var(--on-stage); border-top:1px solid rgba(255,255,255,.10);
+  animation:rise 550ms var(--smooth) 240ms both; }
+.ag-ptt-status { font-size:12.5px; color:var(--on-stage-2); margin-bottom:22px; }
+.ag-ptt { position:relative; width:96px; height:96px; border-radius:50%; margin:0 auto;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px;
+  background:radial-gradient(circle at 32% 30%, #ff8a5c, var(--lava) 62%, #d6390c);
+  color:#fff; box-shadow:0 6px 16px rgba(255,78,27,.35);
+  transition:transform 200ms var(--smooth); }
+.ag-ptt::before { content:""; position:absolute; inset:-12px; border-radius:50%; }
+@media (hover:hover) and (pointer:fine){ .ag-ptt:hover { transform:translateY(-1px); } }
+.ag-ptt:active { transform:scale(.94); transition-duration:100ms; }
+.ag-ptt-halo { position:absolute; inset:-10px; border-radius:50%; pointer-events:none;
+  box-shadow:0 0 0 1.5px var(--lava-ring); animation:breathe 2.4s ease-in-out infinite; }
+@keyframes breathe { 50% { transform:scale(1.08); opacity:.55; } }
+.ag-ptt-lab { font:600 9px Inter; letter-spacing:.09em; color:rgba(255,255,255,.85); }
+
+/* ---- input row (capsule field + lava send) ---- */
+.ag-inputrow { display:flex; gap:8px; animation:rise 550ms var(--smooth) 280ms both; }
+.ag-inputrow input { flex:1; min-width:0; min-height:50px; padding:0 20px; border-radius:999px;
+  background:transparent; border:1px solid var(--line-strong); box-shadow:none;
+  color:var(--ink); font-size:14px;
+  transition:border-color 200ms ease, box-shadow 200ms ease; }
+.ag-inputrow input::placeholder { color:var(--muted); }
+.ag-inputrow input:focus { outline:none; border-color:var(--lava); box-shadow:0 0 0 4px var(--lava-ring); }
+.btn-send { display:flex; align-items:center; justify-content:center; min-height:50px; padding:0 24px;
+  border-radius:999px; background:var(--grad-brand); color:#fff; font:600 14px Inter;
+  box-shadow:0 10px 26px -10px rgba(255,78,27,.55); position:relative;
+  transition:transform 200ms var(--smooth), filter 200ms ease; }
+.btn-send::before { content:""; position:absolute; inset:-4px; }
+@media (hover:hover) and (pointer:fine){ .btn-send:hover { filter:brightness(1.05); transform:translateY(-1px); } }
+.btn-send:active { transform:scale(.97); transition-duration:100ms; }
+
+/* ---- review card (agent draft → human confirms; modal in the live app) ---- */
+.ag-review { position:relative; background:var(--panel); border-radius:24px; padding:38px 20px 20px;
+  animation:rise 550ms var(--smooth) 200ms both; transition:background 380ms var(--smooth); }
+.ag-review h2 { display:flex; align-items:center; gap:9px;
+  font-family:Sora; font-weight:600; font-size:15px; letter-spacing:-.01em; color:var(--ink); margin-bottom:6px; }
+.ag-review h2 .icn { color:var(--lava-ink); }
+html.dark .ag-review h2 .icn { color:#ff8a5c; }
+.ag-review-rows { margin-bottom:18px; }
+.ag-rrow { display:flex; justify-content:space-between; align-items:baseline; gap:14px;
+  padding:11px 2px; border-bottom:1px solid var(--hairline); }
+.ag-rrow:last-child { border-bottom:0; }
+.ag-rrow span { font-size:12.5px; color:var(--muted); }
+.ag-rrow b { font:600 13.5px Inter; color:var(--ink); text-align:right; }
+.sheet-actions { display:flex; gap:10px; }
+.btn-ok { display:flex; align-items:center; justify-content:center; gap:8px; flex:1;
+  min-height:50px; padding:0 20px; border-radius:999px;
+  background:var(--grad-brand); color:#fff; font:600 14px Inter;
+  box-shadow:0 10px 26px -10px rgba(255,78,27,.55);
+  transition:transform 200ms var(--smooth), filter 200ms ease; }
+@media (hover:hover) and (pointer:fine){ .btn-ok:hover { filter:brightness(1.05); transform:translateY(-1px); } }
+.btn-ok:active { transform:scale(.97); transition-duration:100ms; }
+.btn-no { display:flex; align-items:center; justify-content:center; min-height:50px; padding:0 22px;
+  border-radius:999px; background:transparent; border:1px solid var(--line-strong);
+  color:var(--ink); font:550 13.5px Inter;
+  transition:transform 200ms var(--smooth), background 200ms ease; }
+@media (hover:hover) and (pointer:fine){ .btn-no:hover { background:var(--panel-2); } }
+.btn-no:active { transform:scale(.97); transition-duration:100ms; }
+
+.foot { padding:14px 6px 2px; font-size:11.5px; color:var(--muted); text-align:right; }
+
+/* ---- focus: two-tone ring; readable on dark surfaces ---- */
+:focus-visible { outline:2.5px solid var(--lava-ink); outline-offset:2px; box-shadow:0 0 0 2px var(--bg); border-radius:8px; }
+.nav :focus-visible, .stage :focus-visible, .ag-ptt-zone :focus-visible {
+  outline-color:#ff8a5c; box-shadow:0 0 0 2px rgba(2,3,5,.9); }
+
+/* ============================================================================
+   Desktop (second): Hanssen 3-column grid — chat stage keeps the hero slot,
+   identity + review in the middle, suggestions + orb on the rail.
+   ============================================================================ */
+@media (min-width:1021px) {
+  body { padding:30px 26px; }
+  .shell { border-radius:36px; padding:18px; animation:sheetIn 550ms var(--smooth) both; }
+  .nav { position:absolute; top:30px; left:30px; bottom:auto; transform:none; z-index:5;
+    gap:4px; padding:7px 10px 7px 9px; font-size:12.5px; border-radius:22px; box-shadow:none;
+    -webkit-backdrop-filter:none; backdrop-filter:none; }
+  .nav .mark { display:block; }
+  .nav a { padding:5px 10px; }
+  .mode { width:26px; height:26px; margin-left:4px; }
+  .grid { display:grid; grid-template-columns:1.35fr 1fr .78fr; gap:14px;
+    grid-template-rows:auto 1fr auto; }
+  .stage { grid-area:1 / 1 / 3 / 2; min-height:560px; padding:74px 24px 56px; }
+  .ag-inputrow { grid-area:3 / 1 / 4 / 2; }
+  .aghead { grid-area:1 / 2 / 2 / 3; padding:22px; }
+  .ag-review { grid-area:2 / 2 / 4 / 3; }
+  .agrail { grid-area:1 / 3 / 4 / 4; display:flex; flex-direction:column; gap:8px; }
+  .agrail .ag-ptt-zone { margin-top:auto; }
+  .foot { grid-column:1 / -1; }
+  .ag-log { margin-top:auto; }
+  .ag-msg { font-size:13.5px; }
+}
+@media (max-width:1020.5px) {
+  .agrail { display:contents; }   /* rail children flow in the phone column */
+}
+</style>
+</head>
+<body>
+<div class="canvas" aria-hidden="true"></div>
+<div class="grain" aria-hidden="true"></div>
+
+<main class="shell">
+  <!-- phone: floating dock (visual reference of the app dock) · desktop: Hanssen pill -->
+  <nav class="nav" aria-label="Primary">
+    <span class="mark" aria-hidden="true"></span>
+    <a href="#">Ploča</a><a href="#">Zaprimi</a><a href="#">Skladište</a><a href="#">Kupci</a><a class="on" href="#">Agent</a>
+    <button class="mode" id="mode" aria-label="Tema"><i></i></button>
+  </nav>
+
+  <div class="grid">
+
+    <!-- identity + voice controls (live: ws-head + agTts + agReset) -->
+    <section class="aghead">
+      <div class="row1">
+        <span class="agavatar" aria-hidden="true">AI</span>
+        <div>
+          <h1>ASC Agent</h1>
+          <div class="sub">Pitajte bilo što — ili izdiktirajte novi set</div>
+        </div>
+      </div>
+      <div class="ag-ctrls">
+        <button class="capbtn grow" id="agTts" aria-pressed="true" title="Čitaj odgovore naglas">
+          <svg class="icn" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>
+          Glas uključen
+        </button>
+        <button class="capbtn round" id="agReset" aria-label="Novi razgovor" title="Novi razgovor">
+          <svg class="icn" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+        </button>
+      </div>
+      <div class="meta"><span>Čita bazu pod tvojom prijavom</span><span>ništa bez potvrde</span></div>
+    </section>
+
+    <!-- the conversation — hero slot -->
+    <section class="stage">
+      <i class="aura" aria-hidden="true"></i>
+      <span class="k">ASC Agent · baza uživo · Dubrovnik</span>
+      <div class="ag-log" id="agLog" aria-live="polite">
+        <div class="ag-msg is-bot">Bok Toni! Pitaj me bilo što o skladištu — ili mi izdiktiraj novi set guma i ispunit ću ga umjesto tebe.</div>
+        <div class="ag-msg is-me">Tko je za preuzimanje ovaj tjedan?</div>
+        <div class="ag-msg is-bot">Ovaj tjedan su za preuzimanje 3 seta: Ivana Marić — DU-345-KL (srijeda), Marko Babić — DU-892-TR (četvrtak) i Pero Kovač — DU-118-AN (petak). Podsjetnici su svima poslani.</div>
+        <div class="ag-msg is-me">Zaprimi novi set: Ana Kovačević, 098 765 4321, DU-421-ST, Golf 7, četiri zimske Michelin 205/55 R16, zona B regal 3 polica 2.</div>
+        <div class="ag-msg is-bot">Zapisao sam sve — provjeri karticu za potvrdu. Ništa se ne sprema dok ti ne potvrdiš.</div>
+        <button class="ag-print" type="button">
+          <svg class="icn" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V3h12v6"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8" rx="1"/></svg>
+          <span>Ispiši naljepnicu</span><span class="code">ASC-2026-0249</span>
+        </button>
+      </div>
+      <span class="tab br">asc agent · online</span>
+    </section>
+
+    <!-- review card (live: modal sheet — shown in-flow here so both states read) -->
+    <section class="ag-review" aria-label="Novi set guma — molimo potvrdite">
+      <span class="tab tl">pregled prije upisa</span>
+      <h2>
+        <svg class="icn" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="M3 8l9 5 9-5"/><path d="M12 13v8"/></svg>
+        Novi set guma — molimo potvrdite
+      </h2>
+      <div class="ag-review-rows">
+        <div class="ag-rrow"><span>Ime</span><b>Ana Kovačević</b></div>
+        <div class="ag-rrow"><span>Telefon</span><b>098 765 4321</b></div>
+        <div class="ag-rrow"><span>Registracija</span><b>DU-421-ST</b></div>
+        <div class="ag-rrow"><span>Vozilo</span><b>2019 Volkswagen Golf</b></div>
+        <div class="ag-rrow"><span>Sezona</span><b>Zimske</b></div>
+        <div class="ag-rrow"><span>Broj guma</span><b>4</b></div>
+        <div class="ag-rrow"><span>Dimenzija gume</span><b>205/55 R16</b></div>
+        <div class="ag-rrow"><span>Marka (nije obavezno)</span><b>Michelin</b></div>
+        <div class="ag-rrow"><span>Lokacija u skladištu</span><b>B · R3 · P2</b></div>
+        <div class="ag-rrow"><span>Očekivano preuzimanje</span><b>2026-10-15</b></div>
+        <div class="ag-rrow"><span>Cijena čuvanja</span><b>40</b></div>
+      </div>
+      <div class="sheet-actions">
+        <button class="btn-ok" id="agOk">
+          <svg class="icn" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+          Kreiraj set
+        </button>
+        <button class="btn-no" id="agNo">Odustani</button>
+      </div>
+    </section>
+
+    <!-- rail: suggestions + walkie-talkie (display:contents on phone) -->
+    <aside class="agrail">
+      <div class="ag-chips" id="agChips">
+        <button class="rrow" type="button">Koliko je setova na skladištu?<span class="v">→</span></button>
+        <button class="rrow" type="button">Tko je za preuzimanje ovaj tjedan?<span class="v">→</span></button>
+        <button class="rrow" type="button">Zaprimi novi set za kupca<span class="v">→</span></button>
+      </div>
+
+      <section class="ag-ptt-zone">
+        <div class="ag-ptt-status" aria-live="polite">Pritisnite i držite za govor — pustite za slanje</div>
+        <button type="button" class="ag-ptt" id="agPtt" aria-label="Pritisnite i držite za govor — pustite za slanje">
+          <span class="ag-ptt-halo" aria-hidden="true"></span>
+          <svg class="icn" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v4"/></svg>
+          <span class="ag-ptt-lab">DRŽI I GOVORI</span>
+        </button>
+      </section>
+    </aside>
+
+    <!-- text input (live: agForm) -->
+    <form class="ag-inputrow" id="agForm" autocomplete="off">
+      <input id="agInput" placeholder="Pitaj o setovima, kupcima… ili izdiktiraj novi set" autocomplete="off" aria-label="Pitaj o setovima, kupcima… ili izdiktiraj novi set">
+      <button type="submit" class="btn-send" id="agSend">Pošalji</button>
+    </form>
+
+    <div class="foot">ASC · Auto servisni centar d.o.o.</div>
+  </div>
+</main>
+
+<script>
+  document.getElementById('mode').addEventListener('click', () => {
+    document.documentElement.classList.toggle('dark');
+  });
+</script>
+</body>
+</html>

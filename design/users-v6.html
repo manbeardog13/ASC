@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ASC — Korisnici v6 · Hanssen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ============================================================================
+   ASC v6 — "Korisnici" (users view) in the approved Hanssen composition.
+   PHONE FIRST: base styles are the 390px layout; desktop is layered on with
+   min-width media. Values copied from css/styles.css v6 sections and
+   design/dashboard-v6-hanssen.html — nothing new invented.
+   Locked palette: #EDF0F5 / #020305 / #FF4E1B / #2E2F31 + tints only.
+   ============================================================================ */
+:root {
+  --bg:#edf0f5; --shell:rgba(255,255,255,.42); --shell-solid:rgba(255,255,255,.62);
+  --panel:#f2f4f8; --panel-2:#ffffff;
+  --ink:#020305; --ink-2:#3a3c40; --muted:#63676f;
+  --lava:#ff4e1b; --lava-ink:#c0360d; --lava-tint:rgba(255,78,27,.11); --lava-ring:rgba(255,78,27,.30);
+  --gun:#2e2f31; --hairline:rgba(2,3,5,.07);
+  --stage-1:#0b0c0e; --stage-2:#17181b; --on-stage:#f4f5f7; --on-stage-2:rgba(244,245,247,.6);
+  --rim-top:rgba(255,255,255,.75); --rim:rgba(255,255,255,.42);
+  --line:rgba(2,3,5,.14); --hover:rgba(2,3,5,.045);
+  --chip-adm-bg:#2e2f31; --chip-adm-ink:#f4f5f7;
+  --seg-on-bg:#2e2f31; --seg-on-ink:#f4f5f7;
+  --smooth:cubic-bezier(.25,1,.5,1);
+}
+html.dark {
+  --bg:#020305; --shell:rgba(23,24,28,.55); --shell-solid:rgba(23,24,28,.85);
+  --panel:#1d1e22; --panel-2:#26272b;
+  --ink:#f4f5f7; --ink-2:#d6d8dc; --muted:rgba(244,245,247,.6);
+  --hairline:rgba(244,245,247,.09);
+  --stage-1:#07080a; --stage-2:#101114;
+  --rim-top:rgba(255,255,255,.16); --rim:rgba(255,255,255,.08);
+  --line:rgba(244,245,247,.16); --hover:rgba(244,245,247,.06);
+  --lava-ink:#ff8a5c; --lava-tint:rgba(255,78,27,.16);
+  --chip-adm-bg:rgba(244,245,247,.14); --chip-adm-ink:#f4f5f7;
+  --seg-on-bg:#f4f5f7; --seg-on-ink:#020305;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+html,body { min-height:100%; }
+body { font-family:"Inter",system-ui,sans-serif; color:var(--ink); background:var(--bg);
+  padding:16px 12px 86px;  /* phone: 86px keeps equal rhythm around the floating dock */
+  -webkit-font-smoothing:antialiased; font-variant-numeric:tabular-nums;
+  transition:background 380ms var(--smooth), color 380ms var(--smooth); }
+button { font-family:inherit; }
+.hidden { display:none !important; }
+
+/* ambient palette blooms only — no imagery */
+.v6canvas { position:fixed; inset:0; z-index:-1; pointer-events:none;
+  background:
+    radial-gradient(58vmax 54vmax at 10% -12%, rgba(255,78,27,.16), transparent 62%),
+    radial-gradient(50vmax 46vmax at 92% 112%, rgba(255,78,27,.13), transparent 58%),
+    radial-gradient(44vmax 40vmax at 84% -8%, rgba(46,47,49,.22), transparent 60%);
+  transition:opacity 380ms var(--smooth); }
+html.dark .v6canvas {
+  background:
+    radial-gradient(58vmax 54vmax at 10% -12%, rgba(255,78,27,.10), transparent 60%),
+    radial-gradient(50vmax 46vmax at 92% 112%, rgba(255,78,27,.08), transparent 56%),
+    radial-gradient(44vmax 40vmax at 84% -8%, rgba(244,245,247,.05), transparent 60%); }
+.v6grain { position:fixed; inset:0; z-index:40; pointer-events:none; opacity:.045; mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E"); }
+
+/* ---- glass shell (single blur surface) ---- */
+.v6shell { max-width:1220px; margin:0 auto; border-radius:28px; position:relative;
+  background:var(--shell-solid);
+  border:1px solid var(--rim); border-top-color:var(--rim-top);
+  box-shadow:0 25px 50px rgba(2,3,5,.22);
+  padding:12px;
+  transition:background 380ms var(--smooth); }
+@supports ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))) {
+  .v6shell { background:var(--shell);
+    -webkit-backdrop-filter:blur(30px) saturate(150%) brightness(108%);
+    backdrop-filter:blur(30px) saturate(150%) brightness(108%); }
+}
+@media (prefers-reduced-transparency:reduce) {
+  .v6shell { background:var(--panel-2) !important; -webkit-backdrop-filter:none !important; backdrop-filter:none !important; }
+  .v6canvas { display:none; }
+}
+@keyframes v6in { from { opacity:0; transform:translateY(24px) scale(.985); } }
+@keyframes v6rise { from { opacity:0; transform:translateY(12px); } }
+@media (prefers-reduced-motion:reduce) { * { animation:none !important; transition-property:opacity,color,background-color !important; } }
+
+/* ---- nav pill: floating bottom dock on phone, top-left in shell on desktop ---- */
+.v6nav { position:fixed; bottom:14px; left:50%; transform:translateX(-50%); z-index:60;
+  display:flex; align-items:center; gap:4px;
+  background:rgba(2,3,5,.88); color:#f4f5f7;
+  border-radius:22px; padding:7px 10px 7px 9px; font-size:12.5px;
+  border-top:1px solid rgba(255,255,255,.14);
+  box-shadow:0 16px 40px -12px rgba(2,3,5,.6);
+  max-width:calc(100vw - 20px); }
+.v6mark { width:22px; height:22px; border-radius:50%; flex:none;
+  background:radial-gradient(circle at 32% 30%, #ff8a5c, var(--lava) 60%, #d6390c);
+  box-shadow:0 0 10px rgba(255,78,27,.5); margin-right:6px; }
+.v6nav a { position:relative; color:#f4f5f7; opacity:.62; padding:8px 11px; border-radius:14px;
+  text-decoration:none; white-space:nowrap; transition:opacity 160ms ease, background 160ms ease; }
+.v6nav a::before { content:""; position:absolute; inset:-8px; }
+@media (hover:hover) and (pointer:fine){ .v6nav a:hover { opacity:1; } }
+.v6nav a.on { opacity:1; background:rgba(244,245,247,.14); }
+.v6mode { border:0; cursor:pointer; margin-left:4px; width:26px; height:26px; border-radius:50%;
+  background:rgba(244,245,247,.14); display:grid; place-items:center; position:relative;
+  transition:transform 380ms var(--smooth); }
+.v6mode::before { content:""; position:absolute; inset:-10px; }
+@media (hover:hover) and (pointer:fine){ .v6mode:hover { transform:rotate(40deg); } }
+.v6mode i { width:11px; height:11px; border-radius:50%; background:#f4f5f7; display:block;
+  transition:background 380ms ease, box-shadow 380ms ease; }
+html.dark .v6mode i { background:transparent; box-shadow:inset 0 0 0 2.5px #f4f5f7; }
+
+/* ---- layout: single roomy column on phone ---- */
+.v6grid { display:flex; flex-direction:column; gap:10px; }
+
+/* ---- corner tabs ---- */
+.v6tab { position:absolute; z-index:3; font:500 10.5px Inter; letter-spacing:.04em;
+  color:var(--muted); background:var(--shell-solid); padding:7px 13px 8px; white-space:nowrap;
+  transition:background 380ms var(--smooth); }
+.v6tab.tl { top:0; left:0; border-radius:0 0 14px 0; }
+.v6tab.br { bottom:0; right:0; border-radius:14px 0 0 0; }
+.v6tab.tl::after, .v6tab.tl::before, .v6tab.br::after, .v6tab.br::before { content:""; position:absolute; width:14px; height:14px; }
+.v6tab.tl::after { right:-14px; top:0; background:radial-gradient(circle at 100% 100%, transparent 14px, var(--shell-solid) 14.5px); }
+.v6tab.tl::before { left:0; bottom:-14px; background:radial-gradient(circle at 100% 100%, transparent 14px, var(--shell-solid) 14.5px); }
+.v6tab.br::after { left:-14px; bottom:0; background:radial-gradient(circle at 0% 0%, transparent 14px, var(--shell-solid) 14.5px); }
+.v6tab.br::before { right:0; top:-14px; background:radial-gradient(circle at 0% 0%, transparent 14px, var(--shell-solid) 14.5px); }
+
+/* ---- stage: the view header as material drama ---- */
+.v6stage { position:relative; border-radius:24px; overflow:hidden; min-height:380px;
+  background:
+    radial-gradient(120% 90% at 82% -10%, rgba(255,78,27,.28), transparent 55%),
+    radial-gradient(90% 70% at -10% 110%, rgba(255,78,27,.14), transparent 55%),
+    linear-gradient(175deg, var(--stage-1) 0%, var(--stage-2) 100%);
+  color:var(--on-stage); padding:24px 20px 52px;
+  display:flex; flex-direction:column;
+  border-top:1px solid rgba(255,255,255,.10);
+  animation:v6rise 550ms var(--smooth) 120ms both; }
+.v6aura { position:absolute; width:70%; height:55%; right:-16%; top:-14%; border-radius:50%;
+  background:radial-gradient(closest-side, rgba(255,78,27,.34), transparent 70%);
+  filter:blur(30px); animation:v6drift 16s ease-in-out infinite alternate; }
+@keyframes v6drift { to { transform:translate(-9%,12%) scale(1.12); } }
+.v6stage > :not(.v6aura) { position:relative; z-index:2; }
+.v6k { font:600 11px Inter; letter-spacing:.08em; text-transform:uppercase; color:var(--on-stage-2); }
+.v6hero { font-family:Sora; font-weight:400; font-size:56px; line-height:1; letter-spacing:-.03em; margin:10px 0 4px; }
+.v6hero em { font-style:normal; font:500 14px Inter; letter-spacing:.06em; text-transform:uppercase; color:var(--on-stage-2); margin-left:8px; }
+.v6cap { font-size:13.5px; color:var(--on-stage-2); }
+.v6meter { margin-top:18px; height:8px; border-radius:4px; background:rgba(244,245,247,.14); overflow:hidden; max-width:420px; }
+.v6meter i { display:block; height:100%; width:80%; border-radius:4px; background:linear-gradient(90deg,#ff8a5c,var(--lava)); }
+.v6space { flex:1; }
+.v6spills { display:flex; gap:8px; margin-bottom:18px; }
+.v6spill { flex:1; background:rgba(244,245,247,.08); border-radius:14px; padding:10px 12px; border-top:1px solid rgba(255,255,255,.09); }
+.v6spill b { display:block; font-family:Sora; font-weight:500; font-size:22px; }
+.v6spill span { font-size:11px; color:var(--on-stage-2); }
+.v6cta { display:flex; align-items:center; justify-content:center; gap:10px; min-height:50px;
+  border-radius:25px; background:rgba(244,245,247,.94); color:#020305; text-decoration:none; font:600 14px Inter;
+  transition:transform 200ms var(--smooth); position:relative; }
+.v6cta::before { content:""; position:absolute; inset:-4px; }
+@media (hover:hover) and (pointer:fine){ .v6cta:hover { transform:translateY(-1px); } }
+.v6cta:active { transform:scale(.97); transition-duration:100ms; }
+.v6dot { width:9px; height:9px; border-radius:50%; background:var(--lava); box-shadow:0 0 8px 2px var(--lava-ring); animation:v6breathe 2.4s ease-in-out infinite; }
+@keyframes v6breathe { 50% { transform:scale(1.3); opacity:.8; } }
+
+/* ---- panels ---- */
+.v6panel { position:relative; background:var(--panel); border-radius:24px; padding:34px 18px 18px;
+  animation:v6rise 550ms var(--smooth) both; transition:background 380ms var(--smooth); }
+.v6panel.p1 { animation-delay:200ms; }
+.v6panel.p2 { animation-delay:240ms; color:var(--on-stage);
+  background:
+    radial-gradient(120% 100% at 90% -20%, rgba(255,78,27,.20), transparent 55%),
+    linear-gradient(175deg, var(--stage-1), var(--stage-2)); }
+.v6panel h3 { font-family:Sora; font-weight:600; font-size:15px; margin-bottom:12px; color:var(--ink);
+  display:flex; align-items:center; gap:8px; }
+.v6panel.p2 h3 { color:var(--on-stage); }
+.v6psub { font-size:12.5px; color:var(--muted); margin:-6px 0 14px; }
+.v6panel.p2 .v6psub { color:var(--on-stage-2); }
+.v6count { font:600 11px Inter; padding:3px 9px; border-radius:10px;
+  background:rgba(255,78,27,.20); color:#ff8a5c; }
+
+/* ---- awaiting-approval rows (dark panel, hairlines inset) ---- */
+.v6arow { padding:14px 2px 16px; border-bottom:1px solid rgba(244,245,247,.09); }
+.v6arow:last-child { border-bottom:0; padding-bottom:6px; }
+.v6arow .who { font:600 14px Inter; }
+.v6arow .mail { font-size:12.5px; color:var(--on-stage-2); margin-top:2px; }
+.v6aacts { display:flex; flex-direction:column; gap:10px; margin-top:14px; }
+.v6abtn { display:flex; align-items:center; justify-content:center; gap:8px; min-height:50px;
+  padding:0 14px; border-radius:25px; border:0; cursor:pointer; font:600 13.5px Inter;
+  background:rgba(244,245,247,.94); color:#020305;
+  transition:transform 200ms var(--smooth), background 200ms ease; }
+.v6abtn.sec { background:rgba(244,245,247,.10); color:var(--on-stage);
+  border-top:1px solid rgba(255,255,255,.09); }
+.v6abtn.ghostd { background:transparent; color:rgba(244,245,247,.75);
+  box-shadow:inset 0 0 0 1px rgba(244,245,247,.22); }
+@media (hover:hover) and (pointer:fine){
+  .v6abtn:hover { transform:translateY(-1px); }
+  .v6abtn.sec:hover { background:rgba(244,245,247,.15); }
+  .v6abtn.ghostd:hover { color:#ff8a5c; box-shadow:inset 0 0 0 1px rgba(255,138,92,.45); }
+}
+.v6abtn:active { transform:scale(.97); transition-duration:100ms; }
+
+/* ---- capsule form controls (v2 learned spec: transparent, hairline, pill) ---- */
+.v6field { display:block; margin-bottom:14px; }
+.v6field .lbl { display:block; font:600 11px Inter; letter-spacing:.06em; text-transform:uppercase;
+  color:var(--muted); margin:0 4px 8px; }
+.v6field input { width:100%; min-height:50px; padding:0 18px; border-radius:25px;
+  background:transparent; box-shadow:none; border:1px solid var(--line);
+  font:400 14px Inter; color:var(--ink); transition:border-color 160ms ease; }
+.v6field input::placeholder { color:var(--muted); }
+.v6field input:focus { outline:none; border-color:var(--lava-ink); }
+.v6hint { font-size:12px; line-height:1.5; color:var(--muted); margin:8px 4px 0; }
+.v6err { font-size:12.5px; color:var(--lava-ink); margin:0 4px 12px; }
+
+.v6seg { display:flex; gap:4px; padding:4px; border-radius:25px; border:1px solid var(--line); }
+.v6seg button { flex:1; min-height:42px; border-radius:21px; border:0; cursor:pointer;
+  background:transparent; color:var(--muted); font:600 13px Inter;
+  transition:background 200ms ease, color 200ms ease, transform 200ms var(--smooth); }
+.v6seg button[aria-pressed="true"] { background:var(--seg-on-bg); color:var(--seg-on-ink); }
+@media (hover:hover) and (pointer:fine){ .v6seg button[aria-pressed="false"]:hover { background:var(--hover); color:var(--ink-2); } }
+.v6seg button:active { transform:scale(.97); transition-duration:100ms; }
+
+.v6submit { display:flex; align-items:center; justify-content:center; gap:10px; width:100%;
+  min-height:50px; margin-top:16px; border-radius:25px; border:0; cursor:pointer;
+  background:linear-gradient(175deg,var(--stage-1),var(--stage-2)); color:#f4f5f7;
+  border-top:1px solid rgba(255,255,255,.10); font:600 14px Inter;
+  transition:transform 200ms var(--smooth); }
+@media (hover:hover) and (pointer:fine){ .v6submit:hover { transform:translateY(-1px); } }
+.v6submit:active { transform:scale(.97); transition-duration:100ms; }
+
+/* ---- team list: roomy user rows on the panel ---- */
+.v6team { display:flex; flex-direction:column; gap:10px; }
+.v6urow { background:var(--panel-2); border-radius:18px; padding:16px;
+  display:flex; flex-direction:column; gap:14px;
+  animation:v6rise 550ms var(--smooth) both; transition:background 380ms var(--smooth); }
+.v6urow:nth-child(1){animation-delay:180ms}.v6urow:nth-child(2){animation-delay:220ms}
+.v6urow:nth-child(3){animation-delay:260ms}.v6urow:nth-child(4){animation-delay:300ms}
+.v6urow:nth-child(5){animation-delay:340ms}
+.v6uid { display:flex; align-items:center; gap:12px; }
+.v6uavatar { width:44px; height:44px; border-radius:50%; flex:none;
+  background:radial-gradient(circle at 32% 30%, #4b4d51, var(--gun) 62%, #1c1d1f);
+  color:#f4f5f7; display:grid; place-items:center; font:600 13px Inter; }
+.v6uavatar.own { background:radial-gradient(circle at 32% 30%, #ff8a5c, var(--lava) 62%, #d6390c);
+  box-shadow:0 6px 16px rgba(255,78,27,.35); color:#fff; }
+.v6uname { font-family:Sora; font-weight:600; font-size:15px; letter-spacing:-.01em; color:var(--ink); }
+.v6umail { font-size:12.5px; color:var(--muted); margin-top:2px; }
+.v6uchips { display:flex; flex-wrap:wrap; gap:6px; }
+.v6chip { font:600 11px Inter; padding:4px 10px; border-radius:999px; display:inline-flex;
+  align-items:center; gap:5px; }
+.v6chip.adm { background:var(--chip-adm-bg); color:var(--chip-adm-ink); }
+.v6chip.usr { background:transparent; box-shadow:inset 0 0 0 1px var(--line); color:var(--muted); }
+.v6chip.own { background:var(--lava-tint); color:var(--lava-ink); }
+.v6chip.you { background:transparent; box-shadow:inset 0 0 0 1px var(--line); color:var(--muted); }
+.v6chip.pend { background:transparent; box-shadow:inset 0 0 0 1px var(--line); color:var(--muted);
+  white-space:normal; text-align:left; }
+.v6ulocked { display:flex; align-items:center; gap:6px; font-size:12px; color:var(--muted);
+  padding-top:12px; border-top:1px solid var(--hairline); }
+
+.v6uacts { display:flex; flex-wrap:wrap; gap:10px; padding-top:14px; border-top:1px solid var(--hairline); }
+.v6uacts .v6seg { flex:1 1 100%; }
+.v6ubtn { display:inline-flex; align-items:center; justify-content:center; gap:8px;
+  flex:1; min-height:50px; padding:0 18px; border-radius:25px; cursor:pointer;
+  background:transparent; border:1px solid var(--line); color:var(--ink-2); font:600 13px Inter;
+  transition:background 200ms ease, transform 200ms var(--smooth), color 200ms ease; }
+@media (hover:hover) and (pointer:fine){ .v6ubtn:hover { background:var(--hover); } }
+.v6ubtn:active { transform:scale(.97); transition-duration:100ms; }
+.v6ubtn.danger { color:var(--lava-ink); }
+@media (hover:hover) and (pointer:fine){ .v6ubtn.danger:hover { background:var(--lava-tint); } }
+
+/* hidden inline editor — data-edit toggles it open, like the live view */
+.v6uedit { display:flex; flex-direction:column; gap:12px; padding-top:14px;
+  border-top:1px solid var(--hairline); }
+.v6uedit .v6field { margin-bottom:0; }
+.v6uedit-acts { display:flex; gap:10px; }
+.v6uedit-acts .v6submit { margin-top:0; flex:1; width:auto; }
+.v6uedit-acts .v6ubtn { flex:1; }
+
+.v6foot { display:none; padding:14px 6px 2px; font-size:11.5px; color:var(--muted); text-align:right; }
+@media (min-width:1021px) { .v6foot { display:block; margin-top:auto; } }
+
+:focus-visible { outline:2px solid var(--lava-ink); outline-offset:2px; box-shadow:0 0 0 2px var(--bg); border-radius:8px; }
+
+/* ============================================================================
+   DESKTOP second — the Hanssen 3-column grid: stage | team | actions rail
+   ============================================================================ */
+@media (min-width:1021px) {
+  body { padding:30px 26px; }
+  .v6shell { border-radius:36px; padding:18px; animation:v6in 550ms var(--smooth) both; }
+  .v6nav { position:absolute; top:30px; left:30px; bottom:auto; transform:none; z-index:5;
+    box-shadow:none; max-width:none; animation:v6rise 550ms var(--smooth) 80ms both; }
+  .v6nav a { padding:5px 10px; }
+  .v6grid { display:grid; grid-template-columns:1.35fr 1fr .78fr; gap:14px; }
+  .v6uteam-wrap { grid-column:2; grid-row:1; }
+  .v6uaside { grid-column:3; grid-row:1; }
+  .v6stage { grid-column:1; grid-row:1; min-height:560px; padding:64px 30px 56px; }
+  .v6hero { font-size:clamp(64px,7vw,96px); }
+  .v6meter, .v6cta { max-width:460px; }
+  .v6spills { max-width:460px; }
+  .v6panel { padding:34px 20px 20px; }
+}
+.v6uaside { display:flex; flex-direction:column; gap:10px; }
+@media (min-width:1021px) { .v6uaside { gap:14px; } }
+</style>
+</head>
+<body>
+<div class="v6canvas" aria-hidden="true"></div>
+<div class="v6grain" aria-hidden="true"></div>
+
+<main class="v6shell">
+  <!-- floating dock on phone / pill top-left on desktop -->
+  <nav class="v6nav" aria-label="Primary">
+    <span class="v6mark" aria-hidden="true"></span>
+    <a href="#">Ploča</a><a href="#">Skladište</a><a href="#">Kupci</a><a class="on" href="#">Korisnici</a>
+    <button class="v6mode" id="mode" aria-label="Tema"><i></i></button>
+  </nav>
+
+  <div class="v6grid">
+
+    <!-- stage: users.title + users.sub as material drama -->
+    <section class="v6stage">
+      <i class="v6aura" aria-hidden="true"></i>
+      <span class="v6k">Korisnici · ASC · Dubrovnik</span>
+      <div class="v6hero">5<em>u timu</em></div>
+      <div class="v6cap">Svi koji imaju pristup ASC-u.</div>
+      <div class="v6meter" role="img" aria-label="4 od 5 računa aktivno"><i></i></div>
+      <div class="v6space"></div>
+      <div class="v6spills">
+        <div class="v6spill"><b>2</b><span>administratora</span></div>
+        <div class="v6spill"><b>3</b><span>korisnika</span></div>
+        <div class="v6spill"><b>1</b><span>čeka odobrenje</span></div>
+      </div>
+      <a class="v6cta" href="#addForm"><span class="v6dot"></span>Dodaj korisnika</a>
+      <span class="v6tab br">pristup · uloge</span>
+    </section>
+
+    <!-- rail: approval queue + add-user form (admin only in live view) -->
+    <aside class="v6uaside">
+      <section class="v6panel p2">
+        <span class="v6tab tl">prijave · 1</span>
+        <h3>Čeka odobrenje <span class="v6count">1</span></h3>
+        <p class="v6psub">Ove osobe su se prijavile, ali još nemaju pristup.</p>
+        <div class="v6arow" data-row="au-1">
+          <div class="who">Petra Vlašić</div>
+          <div class="mail">petra.vlasic@gmail.com</div>
+          <div class="v6aacts">
+            <button class="v6abtn" data-approve="au-1" data-role="employee" data-name="Petra Vlašić">Odobri kao korisnika</button>
+            <button class="v6abtn sec" data-approve="au-1" data-role="admin" data-name="Petra Vlašić">Odobri kao administratora</button>
+            <button class="v6abtn ghostd" data-reject="au-1" data-name="Petra Vlašić">Odbij</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="v6panel p1" id="addForm">
+        <span class="v6tab tl">novi korisnik</span>
+        <h3>Dodaj korisnika</h3>
+        <form id="addUserForm" novalidate>
+          <label class="v6field"><span class="lbl">Ime i prezime</span>
+            <input id="uName" type="text" autocomplete="name" required></label>
+          <label class="v6field"><span class="lbl">E-pošta</span>
+            <input id="uEmail" type="email" autocomplete="off" required></label>
+          <div class="v6field" style="margin-bottom:0">
+            <span class="lbl">Uloga</span>
+            <div class="v6seg" id="uRole" role="group" aria-label="Uloga">
+              <button type="button" data-set="employee" aria-pressed="true">Korisnik</button>
+              <button type="button" data-set="admin" aria-pressed="false">Administrator</button>
+            </div>
+            <p class="v6hint">Administratori mogu upravljati korisnicima i cijelom aplikacijom. Korisnici vode poslovanje, ali ne mogu upravljati računima.</p>
+          </div>
+          <p id="addErr" class="v6err hidden"></p>
+          <button class="v6submit" type="submit"><span class="v6dot"></span>Dodaj korisnika</button>
+        </form>
+      </section>
+
+      <div class="v6foot">ASC · Auto servisni centar d.o.o.</div>
+    </aside>
+
+    <!-- team directory -->
+    <section class="v6panel p1 v6uteam-wrap">
+      <span class="v6tab tl">tim · 5</span>
+      <h3>Korisnici</h3>
+      <div class="v6team">
+
+        <!-- owner + self: role locked, name still editable -->
+        <div class="v6urow" data-row="u-1">
+          <div class="v6uid">
+            <span class="v6uavatar own">TJ</span>
+            <div>
+              <div class="v6uname">Toni Jurić</div>
+              <div class="v6umail">toni@ascdubrovnik.hr</div>
+            </div>
+          </div>
+          <div class="v6uchips">
+            <span class="v6chip adm"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Administrator</span>
+            <span class="v6chip own">Vlasnik</span>
+            <span class="v6chip you">Vi</span>
+          </div>
+          <div class="v6ulocked"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Vlasnički račun ne može se ukloniti ni mijenjati.</div>
+          <div class="v6uacts" style="border-top:0;padding-top:0">
+            <button class="v6ubtn" data-edit="u-1"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3l4 4L7 21H3v-4L17 3z"/></svg>Uredi</button>
+          </div>
+          <form class="v6uedit hidden" data-editor="u-1">
+            <label class="v6field"><span class="lbl">Ime i prezime</span>
+              <input type="text" name="fullName" value="Toni Jurić" autocomplete="off" required></label>
+            <div class="v6uedit-acts">
+              <button class="v6submit" type="submit" data-save="u-1">Spremi</button>
+              <button class="v6ubtn" type="button" data-cancel="u-1">Odustani</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- admin teammate -->
+        <div class="v6urow" data-row="u-2">
+          <div class="v6uid">
+            <span class="v6uavatar">IM</span>
+            <div>
+              <div class="v6uname">Ivana Marić</div>
+              <div class="v6umail">ivana.maric@ascdubrovnik.hr</div>
+            </div>
+          </div>
+          <div class="v6uchips">
+            <span class="v6chip adm"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Administrator</span>
+          </div>
+          <div class="v6uacts">
+            <div class="v6seg v6urole" role="group" aria-label="Uloga">
+              <button type="button" data-role="admin" data-id="u-2" aria-pressed="true">Administrator</button>
+              <button type="button" data-role="employee" data-id="u-2" aria-pressed="false">Korisnik</button>
+            </div>
+            <button class="v6ubtn" data-edit="u-2"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3l4 4L7 21H3v-4L17 3z"/></svg>Uredi</button>
+            <button class="v6ubtn danger" data-remove="u-2" data-name="Ivana Marić"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>Ukloni</button>
+          </div>
+          <form class="v6uedit hidden" data-editor="u-2">
+            <label class="v6field"><span class="lbl">Ime i prezime</span>
+              <input type="text" name="fullName" value="Ivana Marić" autocomplete="off" required></label>
+            <div class="v6uedit-acts">
+              <button class="v6submit" type="submit" data-save="u-2">Spremi</button>
+              <button class="v6ubtn" type="button" data-cancel="u-2">Odustani</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- regular users -->
+        <div class="v6urow" data-row="u-3">
+          <div class="v6uid">
+            <span class="v6uavatar">MB</span>
+            <div>
+              <div class="v6uname">Marko Babić</div>
+              <div class="v6umail">marko.babic@ascdubrovnik.hr</div>
+            </div>
+          </div>
+          <div class="v6uchips"><span class="v6chip usr">Korisnik</span></div>
+          <div class="v6uacts">
+            <div class="v6seg v6urole" role="group" aria-label="Uloga">
+              <button type="button" data-role="admin" data-id="u-3" aria-pressed="false">Administrator</button>
+              <button type="button" data-role="employee" data-id="u-3" aria-pressed="true">Korisnik</button>
+            </div>
+            <button class="v6ubtn" data-edit="u-3"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3l4 4L7 21H3v-4L17 3z"/></svg>Uredi</button>
+            <button class="v6ubtn danger" data-remove="u-3" data-name="Marko Babić"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>Ukloni</button>
+          </div>
+          <form class="v6uedit hidden" data-editor="u-3">
+            <label class="v6field"><span class="lbl">Ime i prezime</span>
+              <input type="text" name="fullName" value="Marko Babić" autocomplete="off" required></label>
+            <div class="v6uedit-acts">
+              <button class="v6submit" type="submit" data-save="u-3">Spremi</button>
+              <button class="v6ubtn" type="button" data-cancel="u-3">Odustani</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="v6urow" data-row="u-4">
+          <div class="v6uid">
+            <span class="v6uavatar">AK</span>
+            <div>
+              <div class="v6uname">Ana Kovačević</div>
+              <div class="v6umail">ana.kovacevic@gmail.com</div>
+            </div>
+          </div>
+          <div class="v6uchips"><span class="v6chip usr">Korisnik</span></div>
+          <div class="v6uacts">
+            <div class="v6seg v6urole" role="group" aria-label="Uloga">
+              <button type="button" data-role="admin" data-id="u-4" aria-pressed="false">Administrator</button>
+              <button type="button" data-role="employee" data-id="u-4" aria-pressed="true">Korisnik</button>
+            </div>
+            <button class="v6ubtn" data-edit="u-4"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3l4 4L7 21H3v-4L17 3z"/></svg>Uredi</button>
+            <button class="v6ubtn danger" data-remove="u-4" data-name="Ana Kovačević"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>Ukloni</button>
+          </div>
+          <form class="v6uedit hidden" data-editor="u-4">
+            <label class="v6field"><span class="lbl">Ime i prezime</span>
+              <input type="text" name="fullName" value="Ana Kovačević" autocomplete="off" required></label>
+            <div class="v6uedit-acts">
+              <button class="v6submit" type="submit" data-save="u-4">Spremi</button>
+              <button class="v6ubtn" type="button" data-cancel="u-4">Odustani</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- invited, hasn't signed in yet -->
+        <div class="v6urow" data-row="pending:josip.horvat@gmail.com">
+          <div class="v6uid">
+            <span class="v6uavatar">JH</span>
+            <div>
+              <div class="v6uname">Josip Horvat</div>
+              <div class="v6umail">josip.horvat@gmail.com</div>
+            </div>
+          </div>
+          <div class="v6uchips">
+            <span class="v6chip usr">Korisnik</span>
+            <span class="v6chip pend">Na čekanju — još se nije prijavio/la</span>
+          </div>
+          <div class="v6uacts">
+            <div class="v6seg v6urole" role="group" aria-label="Uloga">
+              <button type="button" data-role="admin" data-id="pending:josip.horvat@gmail.com" aria-pressed="false">Administrator</button>
+              <button type="button" data-role="employee" data-id="pending:josip.horvat@gmail.com" aria-pressed="true">Korisnik</button>
+            </div>
+            <button class="v6ubtn" data-edit="pending:josip.horvat@gmail.com"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3l4 4L7 21H3v-4L17 3z"/></svg>Uredi</button>
+            <button class="v6ubtn danger" data-remove="pending:josip.horvat@gmail.com" data-name="Josip Horvat"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>Ukloni</button>
+          </div>
+          <form class="v6uedit hidden" data-editor="pending:josip.horvat@gmail.com">
+            <label class="v6field"><span class="lbl">Ime i prezime</span>
+              <input type="text" name="fullName" value="Josip Horvat" autocomplete="off" required></label>
+            <div class="v6uedit-acts">
+              <button class="v6submit" type="submit" data-save="pending:josip.horvat@gmail.com">Spremi</button>
+              <button class="v6ubtn" type="button" data-cancel="pending:josip.horvat@gmail.com">Odustani</button>
+            </div>
+          </form>
+        </div>
+
+      </div>
+    </section>
+
+  </div>
+</main>
+
+<script>
+  // twin themes — identical to dashboard-v6-hanssen.html
+  document.getElementById('mode').addEventListener('click', () => {
+    document.documentElement.classList.toggle('dark');
+  });
+  // mockup demo of the live view's behavior hooks (views/users.js):
+  // pencil opens the hidden inline editor, Odustani closes it
+  document.querySelectorAll('[data-edit]').forEach((btn) => btn.onclick = () => {
+    const ed = document.querySelector(`[data-editor="${CSS.escape(btn.dataset.edit)}"]`);
+    if (!ed) return;
+    ed.classList.toggle('hidden');
+    if (!ed.classList.contains('hidden')) ed.querySelector('input')?.focus();
+  });
+  document.querySelectorAll('[data-cancel]').forEach((btn) => btn.onclick = () => {
+    btn.closest('.v6uedit')?.classList.add('hidden');
+  });
+  // segmented role controls — visual aria-pressed swap only
+  document.querySelectorAll('.v6seg').forEach((g) => g.querySelectorAll('button').forEach((b) => b.onclick = () => {
+    g.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+  }));
+  // forms are inert in the mockup
+  document.querySelectorAll('form').forEach((f) => f.onsubmit = (e) => e.preventDefault());
+</script>
+</body>
+</html>

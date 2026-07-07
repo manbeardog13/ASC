@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ASC — Skener v6 · Hanssen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ============================================================================
+   ASC v6 — SCAN view. Hanssen composition, PHONE FIRST (390px is the design;
+   desktop is the adaptation). Camera = the stage. Manual entry = light panel.
+   Locked palette only, values copied from dashboard-v6-hanssen.html and the
+   v6 sections of css/styles.css. App vocabulary (v6*) so the port is verbatim.
+   Live-view ids preserved: #reader #scanErr #photoBtn #photo #manual #openManual.
+   ============================================================================ */
+:root {
+  --bg:#edf0f5; --shell:rgba(255,255,255,.42); --shell-solid:rgba(255,255,255,.62);
+  --panel:#f2f4f8; --panel-2:#ffffff;
+  --ink:#020305; --ink-2:#3a3c40; --muted:#63676f;
+  --lava:#ff4e1b; --lava-ink:#c0360d; --lava-tint:rgba(255,78,27,.11); --lava-ring:rgba(255,78,27,.30);
+  --grad-lava:linear-gradient(140deg, #ff6234, #ff4e1b 55%, #ef3d0e);
+  --gun:#2e2f31; --hairline:rgba(2,3,5,.07); --line-strong:rgba(2,3,5,.14);
+  --stage-1:#0b0c0e; --stage-2:#17181b; --on-stage:#f4f5f7; --on-stage-2:rgba(244,245,247,.6);
+  --rim-top:rgba(255,255,255,.75); --rim:rgba(255,255,255,.42);
+  --smooth:cubic-bezier(.25,1,.5,1);
+  --spring:cubic-bezier(.34,1.4,.5,1);
+}
+html.dark {
+  --bg:#020305; --shell:rgba(23,24,28,.55); --shell-solid:rgba(23,24,28,.85);
+  --panel:#1d1e22; --panel-2:#26272b;
+  --ink:#f4f5f7; --ink-2:#d6d8dc; --muted:rgba(244,245,247,.6);
+  --hairline:rgba(244,245,247,.09); --line-strong:rgba(244,245,247,.16);
+  --lava-ink:#ff8a5c;
+  --stage-1:#07080a; --stage-2:#101114;
+  --rim-top:rgba(255,255,255,.16); --rim:rgba(255,255,255,.08);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+html,body { min-height:100%; }
+body { font-family:"Inter",system-ui,sans-serif; color:var(--ink); background:var(--bg);
+  /* phone first: clearance below = dock + equal 14px rhythm above and under it */
+  padding:14px 10px calc(72px + env(safe-area-inset-bottom, 0px));
+  -webkit-font-smoothing:antialiased; font-variant-numeric:tabular-nums;
+  transition:background 380ms var(--smooth), color 380ms var(--smooth); }
+
+/* ambient — palette blooms only, no imagery */
+.v6canvas { position:fixed; inset:0; z-index:-1; pointer-events:none;
+  background:
+    radial-gradient(58vmax 54vmax at 10% -12%, rgba(255,78,27,.16), transparent 62%),
+    radial-gradient(50vmax 46vmax at 92% 112%, rgba(255,78,27,.13), transparent 58%),
+    radial-gradient(44vmax 40vmax at 84% -8%, rgba(46,47,49,.22), transparent 60%);
+  transition:opacity 380ms var(--smooth); }
+html.dark .v6canvas {
+  background:
+    radial-gradient(58vmax 54vmax at 10% -12%, rgba(255,78,27,.10), transparent 60%),
+    radial-gradient(50vmax 46vmax at 92% 112%, rgba(255,78,27,.08), transparent 56%),
+    radial-gradient(44vmax 40vmax at 84% -8%, rgba(244,245,247,.05), transparent 60%); }
+.v6grain { position:fixed; inset:0; z-index:40; pointer-events:none; opacity:.045; mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E"); }
+
+/* ---- glass shell (single blur surface) ---- */
+.v6shell { max-width:1220px; margin:0 auto; border-radius:28px; position:relative;
+  background:var(--shell-solid);
+  border:1px solid var(--rim); border-top-color:var(--rim-top);
+  box-shadow:0 25px 50px rgba(2,3,5,.22);
+  padding:12px;
+  transition:background 380ms var(--smooth); }
+@supports ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))) {
+  .v6shell { background:var(--shell);
+    -webkit-backdrop-filter:blur(30px) saturate(150%) brightness(108%);
+    backdrop-filter:blur(30px) saturate(150%) brightness(108%); }
+}
+@media (prefers-reduced-transparency:reduce) {
+  .v6shell { background:var(--panel-2) !important; -webkit-backdrop-filter:none !important; backdrop-filter:none !important; }
+  .v6canvas { display:none; }
+}
+@keyframes v6in { from { opacity:0; transform:translateY(24px) scale(.985); } }
+@keyframes v6rise { from { opacity:0; transform:translateY(12px); } }
+@media (prefers-reduced-motion:reduce) { * { animation:none !important; transition-property:opacity,color,background-color !important; } }
+
+/* ---- nav: PHONE = floating dark dock at the bottom (the app portals its
+        tabbar/v6nav here; shown as visual reference) ---- */
+.v6nav { position:fixed; top:auto; bottom:calc(14px + env(safe-area-inset-bottom, 0px));
+  left:50%; transform:translateX(-50%); z-index:60;
+  display:flex; align-items:center; justify-content:center; gap:0;
+  background:rgba(2,3,5,.88); color:#f4f5f7;
+  border-radius:24px; padding:6px 10px; font-size:12px;
+  border-top:1px solid rgba(255,255,255,.14);
+  box-shadow:0 16px 40px -12px rgba(2,3,5,.6);
+  flex-wrap:nowrap; width:max-content; max-width:calc(100vw - 20px); }
+.v6mark { display:none; width:22px; height:22px; border-radius:50%;
+  background:radial-gradient(circle at 32% 30%, #ff8a5c, var(--lava) 60%, #d6390c);
+  box-shadow:0 0 10px rgba(255,78,27,.5); margin-right:6px; }
+.v6nav a { position:relative; color:#f4f5f7; opacity:.62; padding:8px 11px; border-radius:14px;
+  text-decoration:none; white-space:nowrap;
+  transition:opacity 200ms ease, background 200ms ease, transform 100ms ease; }
+.v6nav a::before { content:""; position:absolute; inset:-8px; }
+@media (hover:hover) and (pointer:fine){ .v6nav a:hover { opacity:1; } }
+.v6nav a.on { opacity:1; background:rgba(244,245,247,.14); }
+.v6nav a:active { transform:scale(.95); }
+.v6mode { border:0; cursor:pointer; margin-left:2px; width:24px; height:24px; border-radius:50%;
+  background:rgba(244,245,247,.14); display:grid; place-items:center; position:relative;
+  transition:transform 380ms var(--smooth); }
+.v6mode::before { content:""; position:absolute; inset:-10px; }
+@media (hover:hover) and (pointer:fine){ .v6mode:hover { transform:rotate(40deg); } }
+.v6mode:active i { transform:scale(.9); }
+.v6mode i { width:11px; height:11px; border-radius:50%; background:#f4f5f7; display:block;
+  transition:background 380ms ease, box-shadow 380ms ease, transform 100ms ease; }
+html.dark .v6mode i { background:transparent; box-shadow:inset 0 0 0 2.5px #f4f5f7; }
+
+/* ---- one column on phone, roomy rhythm ---- */
+.v6grid { display:flex; flex-direction:column; gap:12px; }
+
+/* corner tabs */
+.v6tab { position:absolute; z-index:3; font:500 10.5px Inter; letter-spacing:.04em; color:var(--muted);
+  background:var(--shell-solid); padding:7px 13px 8px 13px; white-space:nowrap;
+  display:inline-flex; align-items:center; gap:7px;
+  transition:background 380ms var(--smooth); }
+.v6tab.tl { top:0; left:0; border-radius:0 0 14px 0; }
+.v6tab.br { bottom:0; right:0; border-radius:14px 0 0 0; }
+.v6tab.tl::after, .v6tab.tl::before, .v6tab.br::after, .v6tab.br::before { content:""; position:absolute; width:14px; height:14px; }
+.v6tab.tl::after { right:-14px; top:0; background:radial-gradient(circle at 100% 100%, transparent 14px, var(--shell-solid) 14.5px); }
+.v6tab.tl::before { left:0; bottom:-14px; background:radial-gradient(circle at 100% 100%, transparent 14px, var(--shell-solid) 14.5px); }
+.v6tab.br::after { left:-14px; bottom:0; background:radial-gradient(circle at 0% 0%, transparent 14px, var(--shell-solid) 14.5px); }
+.v6tab.br::before { right:0; top:-14px; background:radial-gradient(circle at 0% 0%, transparent 14px, var(--shell-solid) 14.5px); }
+
+/* ---- stage = the live camera (#reader slot) ---- */
+.v6stage { position:relative; border-radius:24px; overflow:hidden; min-height:480px;
+  background:
+    radial-gradient(120% 90% at 82% -10%, rgba(255,78,27,.28), transparent 55%),
+    radial-gradient(90% 70% at -10% 110%, rgba(255,78,27,.14), transparent 55%),
+    linear-gradient(175deg, var(--stage-1) 0%, var(--stage-2) 100%);
+  color:var(--on-stage); padding:26px 22px 52px;
+  display:flex; flex-direction:column;
+  border-top:1px solid rgba(255,255,255,.10);
+  animation:v6rise 550ms var(--smooth) 120ms both; }
+.v6stage > :not(.v6aura) { position:relative; z-index:2; }
+/* corner tab must stay absolute — the stage z-index blanket flows it otherwise */
+.v6stage > .v6tab { position:absolute; }
+.v6aura { position:absolute; width:70%; height:55%; right:-16%; top:-14%; border-radius:50%;
+  background:radial-gradient(closest-side, rgba(255,78,27,.34), transparent 70%);
+  filter:blur(30px); animation:v6drift 16s ease-in-out infinite alternate; }
+@keyframes v6drift { to { transform:translate(-9%, 12%) scale(1.12); } }
+.v6k { font:600 11px Inter; letter-spacing:.08em; text-transform:uppercase; color:var(--on-stage-2); }
+/* v6hero carries a word here, not a number — sized down accordingly */
+.v6hero { font-family:Sora; font-weight:600; font-size:clamp(27px, 7.2vw, 32px);
+  line-height:1.12; letter-spacing:-.02em; margin:10px 0 0; }
+.v6cap { font-size:13.5px; line-height:1.5; color:var(--on-stage-2); margin-top:8px; max-width:460px; }
+.v6space { flex:1; min-height:18px; }
+
+/* viewfinder — html5-qrcode mounts its video here; qrbox is 240×240 in the app */
+.v6reader { position:relative; width:min(240px, 100%); aspect-ratio:1/1; margin:0 auto; flex:none;
+  border-radius:22px; background:rgba(244,245,247,.06);
+  border-top:1px solid rgba(255,255,255,.09); }
+.v6reader .c { position:absolute; width:30px; height:30px; border:2.5px solid rgba(244,245,247,.9); }
+.v6reader .c.tl { top:0; left:0; border-right:0; border-bottom:0; border-top-left-radius:22px; }
+.v6reader .c.tr { top:0; right:0; border-left:0; border-bottom:0; border-top-right-radius:22px; }
+.v6reader .c.bl { bottom:0; left:0; border-right:0; border-top:0; border-bottom-left-radius:22px; }
+.v6reader .c.br { bottom:0; right:0; border-left:0; border-top:0; border-bottom-right-radius:22px; }
+/* the card's one lava accent: the scan beam */
+.v6beam { position:absolute; left:16px; right:16px; top:18px; height:2.5px; border-radius:2px;
+  background:linear-gradient(90deg, transparent, #ff8a5c 18%, var(--lava) 50%, #ff8a5c 82%, transparent);
+  box-shadow:0 0 14px 2px var(--lava-ring);
+  animation:v6beam 3.4s ease-in-out infinite; }
+@keyframes v6beam { 0%,100% { transform:translateY(0); opacity:.85; } 50% { transform:translateY(200px); opacity:1; } }
+
+/* inline error slot (scan.cantRead / scan.cameraUnavail / scan.photoFail) */
+.v6err { margin:14px auto 0; max-width:460px; text-align:center;
+  font:600 12.5px Inter; color:#ff8f7e; }
+.v6err[hidden] { display:none; }
+
+.v6hint { font-size:12.5px; line-height:1.55; color:var(--on-stage-2);
+  max-width:460px; margin:22px auto 0; text-align:center; }
+.v6dot { width:8px; height:8px; border-radius:50%; background:var(--lava); flex:none;
+  box-shadow:0 0 8px 2px var(--lava-ring); animation:v6breathe 2.4s ease-in-out infinite; }
+@keyframes v6breathe { 50% { transform:scale(1.3); opacity:.8; } }
+
+/* ---- light panel: photo fallback + typed code (roomy: 50px controls) ---- */
+.v6panel { position:relative; background:var(--panel); border-radius:24px; padding:44px 22px 24px;
+  animation:v6rise 550ms var(--smooth) 200ms both; transition:background 380ms var(--smooth);
+  display:flex; flex-direction:column; gap:14px; }
+.v6photo { display:flex; align-items:center; justify-content:center; gap:10px;
+  min-height:50px; width:100%; border-radius:999px; cursor:pointer;
+  background:var(--panel-2); color:var(--ink); border:1px solid var(--line-strong);
+  font:600 14px Inter; box-shadow:none;
+  transition:transform 200ms var(--spring), background 200ms ease, border-color 200ms ease; }
+.v6photo svg { flex:none; opacity:.75; }
+@media (hover:hover) and (pointer:fine){ .v6photo:hover { transform:translateY(-1px); border-color:var(--muted); } }
+.v6photo:active { transform:scale(.97); transition-duration:100ms; }
+.v6code { position:relative; display:block; }
+.v6code svg { position:absolute; left:18px; top:50%; transform:translateY(-50%);
+  color:var(--muted); pointer-events:none; }
+.v6code input { width:100%; min-height:50px; border-radius:999px;
+  background:transparent; border:1px solid var(--line-strong); box-shadow:none;
+  padding:0 18px 0 48px; font:500 14px Inter; color:var(--ink);
+  transition:border-color 200ms ease, box-shadow 200ms ease; }
+.v6code input::placeholder { color:var(--muted); }
+.v6code input:focus { outline:none; border-color:var(--lava); box-shadow:0 0 0 4px var(--lava-ring); }
+/* the panel's one lava accent: Otvori */
+.v6open { display:flex; align-items:center; justify-content:center; gap:9px;
+  min-height:50px; width:100%; border-radius:999px; border:0; cursor:pointer;
+  background:var(--grad-lava); color:#fff; font:600 14.5px Inter;
+  box-shadow:0 10px 26px -10px rgba(255,78,27,.55);
+  transition:transform 200ms var(--spring), filter 200ms ease; }
+.v6open .arr { opacity:.85; font-weight:500; }
+@media (hover:hover) and (pointer:fine){ .v6open:hover { filter:brightness(1.05); transform:translateY(-1px); } }
+.v6open:active { transform:scale(.97); transition-duration:100ms; }
+
+:focus-visible { outline:2px solid var(--lava-ink); outline-offset:2px; box-shadow:0 0 0 2px var(--bg); border-radius:8px; }
+.v6nav :focus-visible, .v6stage :focus-visible { outline-color:#ff8a5c; box-shadow:0 0 0 2px rgba(2,3,5,.9); }
+
+/* ============================================================================
+   DESKTOP — second-class citizen: two columns, nav pill docks top-left over
+   the stage (dashboard pattern), panel becomes the centered form column.
+   ============================================================================ */
+@media (min-width:1021px) {
+  body { padding:30px 26px; }
+  .v6shell { border-radius:36px; padding:18px; animation:v6in 550ms var(--smooth) both; }
+  .v6nav { position:absolute; top:30px; bottom:auto; left:30px; transform:none; z-index:5;
+    border-radius:22px; padding:7px 10px 7px 9px; font-size:12.5px; gap:4px;
+    box-shadow:none; max-width:none; animation:v6rise 550ms var(--smooth) 80ms both; }
+  .v6mark { display:block; }
+  .v6nav a { padding:5px 10px; }
+  .v6mode { width:26px; height:26px; margin-left:4px; }
+  .v6grid { display:grid; grid-template-columns:1.35fr .78fr; gap:14px; }
+  .v6stage { min-height:560px; padding:74px 30px 56px; }
+  .v6hero { font-size:40px; }
+  .v6reader { width:min(264px, 100%); }
+  .v6beam { animation-name:v6beamlg; }
+  @keyframes v6beamlg { 0%,100% { transform:translateY(0); opacity:.85; } 50% { transform:translateY(224px); opacity:1; } }
+  .v6panel { padding:44px 26px 28px; justify-content:center; gap:14px; }
+}
+</style>
+</head>
+<body>
+<div class="v6canvas" aria-hidden="true"></div>
+<div class="v6grain" aria-hidden="true"></div>
+
+<main class="v6shell">
+  <!-- phone: floating dock (visual reference — the app portals its nav here)
+       desktop: Hanssen pill over the stage -->
+  <nav class="v6nav" aria-label="Primary">
+    <span class="v6mark" aria-hidden="true"></span>
+    <a href="#">Ploča</a><a href="#">Zaprimi</a><a href="#">Skladište</a><a class="on" href="#">Skener</a>
+    <button class="v6mode" id="mode" aria-label="Tema"><i></i></button>
+  </nav>
+
+  <div class="v6grid">
+    <!-- stage = live camera; #reader is where html5-qrcode mounts its video -->
+    <section class="v6stage" aria-label="Skener">
+      <i class="v6aura" aria-hidden="true"></i>
+      <span class="v6k">Skener · Hotel za gume · Dubrovnik</span>
+      <h1 class="v6hero">Skeniraj naljepnicu</h1>
+      <p class="v6cap">Usmjerite kameru na QR naljepnicu kompleta.</p>
+      <div class="v6space"></div>
+      <div class="v6reader" id="reader" role="img" aria-label="Kamera">
+        <i class="c tl" aria-hidden="true"></i><i class="c tr" aria-hidden="true"></i>
+        <i class="c bl" aria-hidden="true"></i><i class="c br" aria-hidden="true"></i>
+        <i class="v6beam" aria-hidden="true"></i>
+      </div>
+      <!-- inline error slot — hidden until scan.cantRead / scan.cameraUnavail / scan.photoFail -->
+      <p id="scanErr" class="v6err" hidden>Kamera nije dostupna: NotAllowedError. Snimite fotografiju ili upišite kôd.</p>
+      <div class="v6space"></div>
+      <p class="v6hint">Savjet: i standardna aplikacija Kamera skenira naljepnicu — automatski otvara zapis.</p>
+      <span class="v6tab br"><i class="v6dot" aria-hidden="true"></i>kamera uživo</span>
+    </section>
+
+    <!-- fallbacks: native photo, then a typed code -->
+    <section class="v6panel" aria-label="Ručni unos">
+      <span class="v6tab tl">bez kamere</span>
+      <button type="button" class="v6photo" id="photoBtn">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
+        Umjesto toga snimi fotografiju
+      </button>
+      <input id="photo" type="file" accept="image/*" capture="environment" hidden>
+      <label class="v6code">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3z"/><path d="M21 14v.01"/><path d="M14 21v.01"/><path d="M21 21v.01"/><path d="M17.5 17.5v.01"/></svg>
+        <input id="manual" placeholder="…ili upišite kôd (ASC-2026-0042)" aria-label="…ili upišite kôd (ASC-2026-0042)" autocomplete="off">
+      </label>
+      <button type="button" class="v6open" id="openManual">Otvori<span class="arr" aria-hidden="true">→</span></button>
+    </section>
+  </div>
+</main>
+
+<script>
+  document.getElementById('mode').addEventListener('click', () => {
+    document.documentElement.classList.toggle('dark');
+  });
+</script>
+</body>
+</html>
