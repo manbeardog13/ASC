@@ -20,12 +20,16 @@ export async function start(elementId, onResult, onError) {
   }
   const inst = new Html5Qrcode(elementId, { verbose: false });
   active = inst;
+  let handled = false;   // html5-qrcode can fire the success cb several times in
+                         // a row on a held code — accept exactly the first.
   starting = (async () => {
     try {
       await inst.start(
         { facingMode: "environment" },
         { fps: 12, qrbox: { width: 240, height: 240 } },
         (decodedText) => {
+          if (handled) return;
+          handled = true;
           const parsed = parseScan(decodedText);
           stop();
           onResult(parsed);

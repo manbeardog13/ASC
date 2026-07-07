@@ -30,9 +30,13 @@ export async function render(main) {
     </div>`;
 
   const showErr = (msg) => { const p = main.querySelector("#scanErr"); p.textContent = msg; p.classList.remove("hidden"); };
+  const clearErr = () => main.querySelector("#scanErr")?.classList.add("hidden");
+  let navigated = false;   // one scan → one navigation, whatever the source
   const handle = (parsed) => {
-    if (!parsed?.code) return showErr(t("scan.cantRead"));
+    if (navigated) return;
+    if (!parsed?.valid || !parsed?.code) return showErr(t("scan.notAsc"));
     if (parsed.checksumOk === false) toast(t("scan.checksum"), "err");
+    navigated = true;
     go(`/set/${encodeURIComponent(parsed.code)}`);
   };
 
@@ -46,10 +50,15 @@ export async function render(main) {
     try { handle(await scanner.scanFile(file)); }
     catch (err) { showErr(t("scan.photoFail", { err: err.message || err })); }
   };
-  main.querySelector("#openManual").onclick = () => {
+  const openManual = () => {
+    clearErr();
     const raw = main.querySelector("#manual").value.trim();
-    if (raw) handle(scanner.parseScan(raw));
+    if (raw) handle(scanner.parseScan(raw, { typed: true }));   // accept partials
   };
+  main.querySelector("#openManual").onclick = openManual;
+  main.querySelector("#manual").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { e.preventDefault(); openManual(); }
+  });
 
   // Stop the camera on ANY exit path — nav (hashchange) but also sign-out,
   // access gate and language change, which swap the view without a hashchange.
