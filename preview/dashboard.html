@@ -50,6 +50,47 @@
 @media(hover:hover){ .stream:hover .stream-track{animation-play-state:paused} }
 @media(prefers-reduced-motion:reduce){ .stream-track{animation:none} .stream{overflow-x:auto;-webkit-mask-image:none;mask-image:none} }
 .stream .slide .new{position:absolute;top:8px;left:8px;z-index:2;font:700 8.5px Inter;letter-spacing:.08em;text-transform:uppercase;color:#fff;background:var(--lava);padding:3px 7px;border-radius:6px;box-shadow:0 3px 9px -2px rgba(255,78,27,.6)}
+
+/* ===== ASC Agent card — rotating hook, expands to a shimmer input bubble ===== */
+.agent-card{position:relative;margin-top:var(--gap);border-radius:24px;overflow:hidden;
+  background:linear-gradient(165deg,#0e0b1c,#131024 58%,#0a0912);
+  border:1px solid rgba(150,100,255,.20);box-shadow:var(--shadow-card)}
+.agent-card::before{content:"";position:absolute;inset:-35%;z-index:0;pointer-events:none;opacity:.55;
+  background:
+    radial-gradient(38% 46% at 22% 32%,rgba(130,70,255,.55),transparent 60%),
+    radial-gradient(40% 48% at 78% 38%,rgba(232,64,208,.42),transparent 60%),
+    radial-gradient(46% 54% at 58% 82%,rgba(50,100,255,.42),transparent 62%);
+  filter:blur(34px);animation:agAurora 15s ease-in-out infinite alternate}
+@keyframes agAurora{to{transform:translate(7%,-6%) rotate(10deg) scale(1.12)}}
+.agent-face{position:relative;z-index:1;width:100%;display:flex;flex-direction:column;gap:9px;
+  padding:22px 22px 20px;background:transparent;border:0;text-align:left;color:#f4f5f7;cursor:pointer;font:inherit}
+.agent-badge{display:inline-flex;align-items:center;gap:7px;align-self:flex-start;font:700 10.5px Inter;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.72)}
+.agent-badge .spark{color:#c79bff}
+.agent-badge .alive{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px 2px rgba(47,191,91,.5);animation:breathe 2.2s ease-in-out infinite}
+.agent-hook{font-family:Sora;font-weight:500;font-size:clamp(18px,4.7vw,23px);line-height:1.28;letter-spacing:-.01em;min-height:2.56em;transition:opacity .45s ease,transform .45s ease}
+.agent-hook.fade{opacity:0;transform:translateY(7px)}
+.agent-cue{display:inline-flex;align-items:center;gap:6px;font:600 12.5px Inter;color:rgba(205,155,255,.9)}
+.agent-cue .chev{transition:transform .4s var(--smooth)}
+.agent-card.open .agent-cue .chev{transform:rotate(90deg)}
+.agent-drawer{position:relative;z-index:1;max-height:0;overflow:hidden;transition:max-height .5s var(--smooth)}
+.agent-card.open .agent-drawer{max-height:110px}
+.agent-bubble{margin:0 18px 20px;padding:1.6px;border-radius:16px;position:relative;isolation:isolate}
+.agent-bubble::before{content:"";position:absolute;inset:0;border-radius:inherit;padding:1.6px;z-index:-1;
+  background:conic-gradient(from 0deg,#8b5cf6,#e040d0,#3b6cff,#0a0a12,#2fbf5b,#ff3b6b,#7c3bff,#8b5cf6);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;
+  mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);mask-composite:exclude;
+  animation:agSpin 5.5s linear infinite}
+.agent-bubble::after{content:"";position:absolute;inset:-3px;border-radius:inherit;z-index:-2;filter:blur(11px);opacity:.5;
+  background:conic-gradient(from 90deg,#8b5cf6,#e040d0,#3b6cff,#0a0a12,#2fbf5b,#ff3b6b,#7c3bff,#8b5cf6);
+  animation:agSpin 7.5s linear infinite reverse}
+@keyframes agSpin{to{transform:rotate(1turn)}}
+.agent-inrow{display:flex;align-items:center;gap:8px;border-radius:15px;min-height:48px;padding:0 6px 0 15px;
+  background:rgba(10,9,18,.55);-webkit-backdrop-filter:blur(10px) saturate(140%);backdrop-filter:blur(10px) saturate(140%)}
+.agent-input{flex:1;min-width:0;background:transparent;border:0;outline:0;color:#fff;font:500 14px Inter}
+.agent-input::placeholder{color:rgba(255,255,255,.45)}
+.agent-send{flex:none;width:36px;height:36px;border-radius:11px;border:0;cursor:pointer;display:grid;place-items:center;color:#fff;background:linear-gradient(135deg,#8b5cf6,#e040d0);transition:transform 150ms var(--snap)}
+.agent-send:active{transform:scale(.92)}
+@media(prefers-reduced-motion:reduce){ .agent-card::before,.agent-bubble::before,.agent-bubble::after{animation:none} }
 </style>
 </head>
 <body>
@@ -81,7 +122,6 @@
         <button type="button" class="spill"><b data-count="2">0</b><span>Preuzeto</span></button>
         <button type="button" class="spill"><b data-count="17">0</b><span>Uskoro</span></button>
       </div>
-      <a class="cta agent" href="#"><svg class="cta-waves" viewBox="0 0 120 44" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="agw" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="120" y2="0"><stop offset="0" stop-color="#3d7bff"/><stop offset=".5" stop-color="#d13cff"/><stop offset="1" stop-color="#8b4dff"/></linearGradient></defs><path class="agwave a1" d="M0 22 Q10 14 20 22 T40 22 T60 22 T80 22 T100 22 T120 22 T140 22 T160 22 T180 22 T200 22 T220 22 T240 22"/><path class="agwave a2" d="M0 24 Q10 31 20 24 T40 24 T60 24 T80 24 T100 24 T120 24 T140 24 T160 24 T180 24 T200 24 T220 24 T240 24"/><path class="agwave a3" d="M0 20 Q10 26 20 20 T40 20 T60 20 T80 20 T100 20 T120 20 T140 20 T160 20 T180 20 T200 20 T220 20 T240 20"/></svg><span class="dot"></span>Pitaj ASC Agenta</a>
       <span class="tab-corner">danas · Dubrovnik</span>
     </div>
 
@@ -101,6 +141,24 @@
   </section>
 
   <!-- TRIO: profile | season | reminders (equal height) -->
+  <!-- ASC AGENT — its own card. Rotating hook (changes on load + while browsing);
+       tap drops open a glassy login-style input wrapped in a shimmer border. -->
+  <section class="agent-card reveal" id="agentCard" style="animation-delay:200ms">
+    <button class="agent-face" id="agentFace" type="button" aria-expanded="false" aria-controls="agentDrawer">
+      <span class="agent-badge"><svg class="spark" viewBox="0 0 24 24" width="13" height="13" fill="currentColor" aria-hidden="true"><path d="M12 2l1.5 6.1L20 10l-6.5 1.9L12 18l-1.5-6.1L4 10l6.5-1.9z"/></svg>ASC Agent<span class="alive" aria-hidden="true"></span></span>
+      <span class="agent-hook" id="agentHook">…</span>
+      <span class="agent-cue">Dodirni za razgovor <span class="chev">→</span></span>
+    </button>
+    <div class="agent-drawer" id="agentDrawer">
+      <div class="agent-bubble">
+        <div class="agent-inrow">
+          <input class="agent-input" type="text" placeholder="Pitaj bilo što o skladištu…" aria-label="Poruka za ASC Agenta">
+          <button class="agent-send" type="button" aria-label="Pošalji"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M13 6l6 6-6 6"/></svg></button>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <section class="trio">
     <div class="card profile reveal" style="animation-delay:230ms">
       <span class="tab-tl">smjena</span>
@@ -162,5 +220,41 @@
 </nav>
 
 <script src="app.js"></script>
+<script>
+  // ASC Agent card: an intriguing hook that changes on every visit AND rotates
+  // while the user browses — as if the agent is inviting them in. Tap = expand.
+  (() => {
+    const face = document.getElementById('agentFace');
+    const card = document.getElementById('agentCard');
+    const hookEl = document.getElementById('agentHook');
+    if (!face || !card || !hookEl) return;
+    const hooks = [
+      "Koliko kompleta čeka na preuzimanje ovaj tjedan?",
+      "Reci mi registraciju — naći ću gume u sekundi.",
+      "Izdiktiraj novi set, ja ću ga zapisati umjesto tebe.",
+      "Koga danas treba nazvati za preuzimanje?",
+      "Tražiš nešto? Znam gdje leži svaka guma.",
+      "Pitaj me bilo što — tu sam, na mreži.",
+      "Koje gume idu van sutra? Odmah provjeravam.",
+      "Novi kupac? Reci mi ime i krećemo.",
+      "Zaprimi set glasom — samo reci, ja zapisujem.",
+      "Zapelo je? Brži sam od papira i olovke."
+    ];
+    let i = Math.floor(Math.random() * hooks.length);
+    hookEl.textContent = hooks[i];
+    const reduce = matchMedia('(prefers-reduced-motion:reduce)').matches;
+    if (!reduce) setInterval(() => {
+      let n; do { n = Math.floor(Math.random() * hooks.length); } while (n === i && hooks.length > 1);
+      i = n;
+      hookEl.classList.add('fade');
+      setTimeout(() => { hookEl.textContent = hooks[i]; hookEl.classList.remove('fade'); }, 440);
+    }, 5200);
+    face.addEventListener('click', () => {
+      const open = card.classList.toggle('open');
+      face.setAttribute('aria-expanded', String(open));
+      if (open) setTimeout(() => { const el = card.querySelector('.agent-input'); if (el) el.focus(); }, 420);
+    });
+  })();
+</script>
 </body>
 </html>
