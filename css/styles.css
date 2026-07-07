@@ -1915,3 +1915,73 @@ body.v6-dark::before { background:#020305; }
 
 /* corner tab must stay absolute — the stage z-index blanket was flowing it */
 .v6stage > .v6tab { position:absolute; }
+
+/* ============================================================================
+   Mobile design pass #1 (v65): the dashboard owns its chrome on EVERY width —
+   legacy topbar never returns; the v6 nav pill becomes a static compact row
+   above the stage (no fixed-position, no containing-block traps). Login's
+   language/theme pill anchors to the shell so it sits over the dark stage
+   like the mockup, instead of floating mid-form when columns stack.
+   ============================================================================ */
+@media (max-width:1020px) {
+  body:has(#main.v2wide) .topbar { display:none; }
+  body:has(#main.v2wide) { padding-top: 14px; }
+  .v6nav { position:static; display:inline-flex; margin:2px 2px 12px; max-width:100%; flex-wrap:wrap; }
+  .v6nav a, .v6nav a:not(.on) { display:inline-block; padding:5px 9px; font-size:12px; }
+  .v6shell { display:flex; flex-direction:column; }
+  .v6stage { padding:24px 22px 44px; min-height:360px; }
+}
+@media (max-width:759.5px) {
+  .auth-side { position:static; }   /* seg's containing block becomes the shell */
+  .auth-seg { top:14px; right:14px; z-index:6; }
+}
+
+/* ============================================================================
+   MOBILE FINAL BLOCK — cascade-last on purpose. Late desktop tuning kept
+   clobbering earlier media rules (append-order debt); everything phone lives
+   here now. Do not add unscoped login/v6 rules below this block.
+   ============================================================================ */
+@media (max-width: 759.5px) {
+  /* ---- login ---- */
+  .login-canvas.auth { padding: 12px 0 24px; overflow-y: auto; }
+  .auth-shell { width: calc(100% - 24px); }
+  .auth-stage { padding: 16px 22px 46px; }
+  .auth-stage .auth-logo { height: 42px; margin-bottom: 18px; }
+  .stage-title { font-size: 24px; }
+  .stage-lead { font-size: 13.5px; }
+  .stage-chips { flex-wrap: wrap; gap: 6px; }
+  .auth-seg { top: 12px; right: 12px; }
+  .auth-side { padding: 24px 22px 32px; justify-content: flex-start; }
+  .auth-title + .auth-form, .auth-sub + .auth-form { margin-top: 18px; }
+}
+@media (max-width: 1020px) {
+  /* ---- v6 dashboard: old frame OFF, v6 dock ON ---- */
+  body:has(#main.v2wide) .topbar { display: none; }
+  body:has(#main.v2wide) .tabbar { display: none; }
+  body:has(#main.v2wide) #main { padding-bottom: 0; }
+  .v6 { padding-bottom: 86px; }
+  /* entrance transform would trap the fixed dock (containing-block rule) */
+  .v6shell { animation: none; padding: 12px; border-radius: 28px; }
+  .v6nav { position: fixed; top: auto; bottom: 14px; left: 50%;
+    transform: translateX(-50%); z-index: 60; animation: none;
+    box-shadow: 0 16px 40px -12px rgba(2,3,5,.6);
+    max-width: calc(100vw - 20px); }
+  .v6nav a { display: inline-block !important; padding: 8px 11px; white-space: nowrap; font-size: 12.5px; }
+  .v6grid { grid-template-columns: 1fr; gap: 10px; }
+  .v6stage { min-height: 380px; padding: 20px 20px 52px; }
+  .v6hero { font-size: 56px; }
+  .v6spills { max-width: none; }
+  .v6cta { max-width: none; }
+  .v6profile, .v6panel { padding: 30px 18px 16px; }
+  .v6profile { padding-top: 18px; }
+  .v6list { padding: 16px 14px; }
+}
+
+/* Release the v6 root from the view-enter filled transform — a filled
+   animation makes it a containing block, trapping the fixed bottom dock.
+   v6 runs its own entrance choreography, so nothing is lost. */
+#main.view-enter > .v6 { animation: none; }
+/* The dock replaces the app tabbar on the dashboard (mobile) */
+@media (max-width: 1020px) {
+  body:has(#main.v2wide) .tabbar { display: none; }
+}
