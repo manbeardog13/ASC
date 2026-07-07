@@ -2239,3 +2239,31 @@ fieldset legend::before { content: ""; width: 6px; height: 6px; border-radius: 5
   background: var(--online); box-shadow: 0 0 8px 2px var(--online-ring);
 }
 .v6row.hero .v { color: #7fe0a3; }   /* "online" label to match the green dot */
+
+/* ============================================================================
+   REVIEW v78 — old-UI, a11y & consistency fixes from the 5-lens app review.
+   ============================================================================ */
+/* Bare inputs (tire-detail rows, set-detail Move) get the v6 capsule too, so a
+   single form isn't half capsules / half old rounded rectangles. */
+.tire-grid input:not([type=checkbox]), .tire-grid select, #moveArea .grid-4 input {
+  border-radius: var(--radius-pill); background: transparent;
+  border: 1px solid var(--line-strong); box-shadow: none;
+}
+.tire-grid input:not([type=checkbox]):focus, .tire-grid select:focus, #moveArea .grid-4 input:focus {
+  border-color: var(--brand); box-shadow: 0 0 0 4px var(--brand-ring);
+}
+/* set-detail hero action row: edit + print (+ pay) share one tidy row */
+.sd-actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+.sd-actions .btn { flex: 1; min-width: 120px; }
+.sd-reserve { margin-top: 8px; width: 100%; }
+/* soften pre-v6 sharp corners on the most-looked-at surfaces */
+.slot { border-radius: 11px; }
+.wh-zone-badge { border-radius: var(--radius-sm); }
+.tire-table { border-radius: var(--radius); }
+.tire-table .tr.th { background: transparent; font-size: 11px; letter-spacing: .08em; color: var(--muted); font-weight: 600; }
+.action-bar { border-radius: var(--radius-lg); }
+.approve-card { background: var(--brand-tint); border: 1px solid var(--line); border-radius: var(--radius-xl); }
+/* AA contrast: informational text must not use --faint / raw semantic hues */
+.conn-online { color: var(--ok-ink); }
+.conn-offline { color: var(--danger-ink); }
+.tl-item .tl-time, .loc-empty-mini { color: var(--muted); }

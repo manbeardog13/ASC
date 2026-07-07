@@ -16,7 +16,7 @@ export async function render(main) {
     <p class="muted" style="font-size:13px;margin-bottom:14px">${t("users.sub")}</p>
     <div id="addSlot"></div>
     <div id="userList">${skeletonRows(3)}</div>`;
-  setViewRefresh(() => load(main));
+  setViewRefresh(() => { if (main.querySelector("input:focus") || main.querySelector(".user-edit:not(.hidden)")) return; load(main); });
   await load(main);
 }
 

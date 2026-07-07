@@ -9,14 +9,14 @@ import { t } from "../i18n.js";
 export async function render(main) {
   main.innerHTML = `
     <a class="btn btn-ghost scan-back" href="#/" style="margin-bottom:12px;min-height:44px">${icon("back", 18)} ${t("common.menu")}</a>
+    <header class="view-stage"><div><span class="vs-k">${t("view.ctx")}</span><h1>${t("scan.title")}</h1></div></header>
     <div class="card center-narrow" style="text-align:center">
-      <h1>${t("scan.title")}</h1>
-      <p class="muted" style="margin-top:6px">${t("scan.point")}</p>
+      <p class="muted">${t("scan.point")}</p>
       <div class="scan-view">
         <div id="reader"></div>
         <p class="scan-hint">${t("scan.tip")}</p>
       </div>
-      <p id="scanErr" class="inline-err hidden" style="justify-content:center"></p>
+      <p id="scanErr" class="inline-err hidden" role="alert" style="justify-content:center"></p>
 
       <div style="margin:12px 0 4px">
         <button type="button" id="photoBtn" class="btn" style="min-height:44px">${icon("camera", 18)} ${t("scan.takePhoto")}</button>

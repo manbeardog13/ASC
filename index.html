@@ -2,7 +2,7 @@
 <html lang="hr">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>ASC</title>
   <meta name="description" content="ASC — check in, locate, move and retrieve customer tire sets.">
 
@@ -38,8 +38,12 @@
   <script>
     window.__ascBooted = false;
     function ascReset(btn){
+      // First recovery: a plain reload (fast, keeps the cache). Only the SECOND
+      // attempt wipes the service worker + caches, so slow Wi-Fi isn't nuked.
+      var n = 0; try { n = +(sessionStorage.getItem("ascResetN") || 0); } catch(e){}
+      if (n < 1) { try { sessionStorage.setItem("ascResetN", "1"); } catch(e){} location.reload(); return; }
       if (btn) { btn.disabled = true; btn.textContent = "…"; }
-      var reload = function(){ location.reload(); };
+      var reload = function(){ try { sessionStorage.removeItem("ascResetN"); } catch(e){} location.reload(); };
       var p = Promise.resolve();
       if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations) {
         p = navigator.serviceWorker.getRegistrations().then(function(rs){ return Promise.all(rs.map(function(r){ return r.unregister(); })); });

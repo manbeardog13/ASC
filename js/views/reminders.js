@@ -63,8 +63,8 @@ function card(set) {
         ${set.reminded_at ? `<span class="ok">${icon("check", 13)} ${t("rem.remindedAgo", { ago: timeAgo(set.reminded_at) })}</span>` : ""}
       </div>
       <div class="u-rows">
-        ${row(`tel:${encodeURIComponent(phone)}`, !!phone, "phone", t("rem.call"))}
-        ${row(`sms:${encodeURIComponent(phone)}?&body=${body}`, !!phone, "phone", t("rem.text"))}
+        ${row(`tel:${phone.replace(/[^\d+]/g, "")}`, !!phone, "phone", t("rem.call"))}
+        ${row(`sms:${phone.replace(/[^\d+]/g, "")}?body=${body}`, !!phone, "phone", t("rem.text"))}
         ${row(`mailto:${encodeURIComponent(email)}?subject=${subject}&body=${body}`, !!email, "list", t("rem.email"))}
         <button class="u-row ${set.reminded_at ? "" : "is-dark"}" data-remind="${esc(set.id)}">
           ${icon("check", 17)} <span>${set.reminded_at ? t("rem.markAgain") : t("rem.mark")}</span>

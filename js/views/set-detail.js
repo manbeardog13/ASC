@@ -12,6 +12,19 @@ import {
 } from "../ui.js";
 import { t } from "../i18n.js";
 import { tireRowsHtml, collectTires, fmtDate, timeAgo } from "./shared.js";
+import { printLabel } from "../qrlabel.js";   // static: window.open must fire in the click gesture (iOS pop-up blocker)
+
+// Status controls. A STORED set is most often handed back at the desk, so offer
+// a one-tap "Mark picked up" primary + a "Reserve" secondary; other states keep
+// the single linear next-step button. No next step → a read-only state note.
+function statusButtons(set, next) {
+  if (!next) return `<div class="sd-state-note">${icon("check", 16)} ${esc(statusLabel(set.status))}</div>`;
+  if (set.status === "in_storage") {
+    return `<button id="statusBtn" class="btn btn-primary btn-lg sd-primary" data-to="checked_out">${icon("check", 18)} ${esc(t("statusAction.checked_out"))}</button>
+      <button id="reserveBtn" class="btn btn-ghost sd-reserve" data-to="reserved">${icon("clock", 18)} ${esc(t("statusAction.reserved"))}</button>`;
+  }
+  return `<button id="statusBtn" class="btn btn-primary btn-lg sd-primary" data-to="${next.to}">${icon("check", 18)} ${esc(next.label)}</button>`;
+}
 
 export async function render(main, { params, mode }) {
   const code = decodeURIComponent(params[0]);
@@ -23,8 +36,14 @@ export async function render(main, { params, mode }) {
     main.innerHTML = `<div class="card"><h2>${t("common.notFound")}</h2><p class="muted">${t("sd.noSet", { code: esc(code) })}</p><a class="btn" href="#/">${t("sd.backHome")}</a></div>`;
     return;
   }
-  setViewRefresh(async () => { try { await render(main, { params, mode }); } catch {} });
+  // Edit mode registers NO realtime refresh — a background event must never wipe
+  // an in-progress edit form. Detail mode refreshes, but not mid-interaction.
   if (mode === "edit") return renderEdit(main, set);
+  setViewRefresh(async () => {
+    const menuOpen = main.querySelector("#sdMenuPop") && !main.querySelector("#sdMenuPop").hidden;
+    if (main.querySelector("#moveArea .card") || menuOpen || main.querySelector("input:focus")) return;
+    try { await render(main, { params, mode }); } catch {}
+  });
   renderDetail(main, set);
 }
 
@@ -37,7 +56,7 @@ function renderDetail(main, set) {
   const rim = set.rim_type === "steel" ? t("ci.steel") : set.rim_type === "alloy" ? t("ci.alloy") : t("sd.rimsWord");
 
   main.innerHTML = `
-    <a class="btn btn-ghost sd-back" href="#/" style="margin-bottom:12px;min-height:38px">${icon("back", 18)} ${t("common.home")}</a>
+    <button type="button" class="btn btn-ghost sd-back" id="sdBack" style="margin-bottom:12px;min-height:44px">${icon("back", 18)} ${t("common.menu")}</button>
 
     <div class="card sd-hero">
       <div class="detail-head">
@@ -48,16 +67,17 @@ function renderDetail(main, set) {
         <div class="sd-menu-wrap">
           <button type="button" class="btn btn-ghost sd-menu-btn" id="sdMenu" aria-haspopup="menu" aria-expanded="false" aria-label="${esc(t("common.menu"))}">${icon("list", 20)}</button>
           <div class="sd-menu-pop" id="sdMenuPop" role="menu" hidden>
-            <button type="button" id="printBtn" class="sd-menu-item" role="menuitem">${icon("printer", 18)} ${t("sd.label")}</button>
             <button type="button" id="delBtn" class="sd-menu-item danger" role="menuitem">${icon("trash", 18)} ${t("sd.delete")}</button>
           </div>
         </div>
       </div>
       <div class="detail-chips">${statusChip(set.status)}${seasonChip(set.season)}${paymentChip(set)}</div>
-      ${next
-        ? `<button id="statusBtn" class="btn btn-primary btn-lg sd-primary" data-to="${next.to}">${icon("check", 18)} ${esc(next.label)}</button>`
-        : `<div class="sd-state-note">${icon("check", 16)} ${esc(statusLabel(set.status))}</div>`}
-      <a class="btn btn-ghost sd-edit" href="#/set/${esc(set.public_code)}/edit">${icon("pencil", 18)} ${t("sd.edit")}</a>
+      ${statusButtons(set, next)}
+      <div class="sd-actions">
+        <a class="btn btn-ghost sd-edit" href="#/set/${esc(set.public_code)}/edit">${icon("pencil", 18)} ${t("sd.edit")}</a>
+        <button type="button" class="btn btn-ghost" id="printBtn">${icon("printer", 18)} ${t("sd.label")}</button>
+        ${set.fee != null && !set.paid ? `<button type="button" class="btn btn-ghost" id="payHeroBtn">${icon("alert", 18)} ${t("sd.markPaid")}</button>` : ""}
+      </div>
     </div>
 
     <div class="u-stats u-rise" style="margin-bottom:14px">${insightCells(set)}</div>
@@ -152,7 +172,10 @@ function wireDetail(main, set) {
   const menuBtn = $("sdMenu");
   const pop = $("sdMenuPop");
   if (menuBtn && pop) {
-    const setOpen = (open) => { pop.hidden = !open; menuBtn.setAttribute("aria-expanded", String(open)); };
+    const setOpen = (open) => {
+      pop.hidden = !open; menuBtn.setAttribute("aria-expanded", String(open));
+      if (open) pop.querySelector("[role=menuitem]")?.focus();   // keyboard/SR lands in the menu
+    };
     menuBtn.addEventListener("click", (e) => { e.stopPropagation(); setOpen(pop.hidden); });
     pop.addEventListener("click", () => setOpen(false));   // any item closes it
     const onDocClick = (e) => { if (!pop.hidden && !pop.contains(e.target) && !menuBtn.contains(e.target)) setOpen(false); };
@@ -165,32 +188,44 @@ function wireDetail(main, set) {
     }, { once: true });
   }
 
-  $("statusBtn")?.addEventListener("click", async (e) => {
-    const to = e.currentTarget.dataset.to;
-    busy(e.currentTarget, true);
+  // Back goes back to where the set was opened from (customer, warehouse map,
+  // reminders, search) — not always Home. Safe fallback when there's no history.
+  $("sdBack")?.addEventListener("click", () => {
+    if (history.length > 1) history.back(); else go("/");
+  });
+
+  // Shared status change for the primary + the secondary "Reserve" button.
+  // Capture the node BEFORE the await — e.currentTarget is null afterwards, so
+  // a failed change would otherwise leave the button spinning forever.
+  const changeStatusFrom = async (btn) => {
+    const to = btn.dataset.to;
+    busy(btn, true);
     try {
       const res = await db.changeStatus(set.id, to);
       if (res?.queued) { set.status = to; toast(t("sd.savedOffline")); renderDetail(main, set); }
       else { toast(t("status.now", { status: statusLabel(to).toLowerCase() })); await render(main, { params: [set.public_code] }); }
-    } catch (err) { toast(err.message, "err"); busy(e.currentTarget, false); }
-  });
+    } catch (err) { toast(err.message, "err"); busy(btn, false); }
+  };
+  $("statusBtn")?.addEventListener("click", (e) => changeStatusFrom(e.currentTarget));
+  $("reserveBtn")?.addEventListener("click", (e) => changeStatusFrom(e.currentTarget));
 
-  $("payBtn")?.addEventListener("click", async (e) => {
-    busy(e.currentTarget, true);
+  const markPaidFrom = async (btn) => {
+    busy(btn, true);
     try {
       const res = await db.setPaid(set.id, !set.paid);
       if (res?.queued) { set.paid = !set.paid; toast(t("sd.savedOffline")); renderDetail(main, set); }
       else { toast(set.paid ? t("sd.markedUnpaid") : t("sd.markedPaid")); await render(main, { params: [set.public_code] }); }
-    } catch (err) { toast(err.message, "err"); busy(e.currentTarget, false); }
-  });
+    } catch (err) { toast(err.message, "err"); busy(btn, false); }
+  };
+  $("payBtn")?.addEventListener("click", (e) => markPaidFrom(e.currentTarget));
+  $("payHeroBtn")?.addEventListener("click", (e) => markPaidFrom(e.currentTarget));
 
-  $("printBtn").addEventListener("click", async () => {
-    const { printLabel } = await import("../qrlabel.js");
-    printLabel(set);
-  });
+  // Static import + synchronous call = window.open fires inside the gesture.
+  $("printBtn")?.addEventListener("click", () => printLabel(set));
 
-  $("delBtn").addEventListener("click", async (e) => {
-    busy(e.currentTarget, true);
+  $("delBtn")?.addEventListener("click", async (e) => {
+    const btn = e.currentTarget;
+    busy(btn, true);
     try {
       await db.softDeleteSet(set.id);
       toast(t("sd.movedToBin", { code: set.public_code }), {
@@ -198,7 +233,7 @@ function wireDetail(main, set) {
         onAction: async () => { await db.restoreSet(set.id); toast(t("sd.restored")); },
       });
       go("/");
-    } catch (err) { toast(err.message, "err"); busy(e.currentTarget, false); }
+    } catch (err) { toast(err.message, "err"); busy(btn, false); }
   });
 
   $("moveBtn").addEventListener("click", () => openMove(main, set));
@@ -242,13 +277,14 @@ function openMove(main, set) {
   };
   ["m_zone", "m_rack", "m_shelf", "m_slot"].forEach((id) => main.querySelector("#" + id).addEventListener("input", refreshPreview));
   main.querySelector("#confirmMove").addEventListener("click", async (e) => {
-    busy(e.currentTarget, true);
+    const btn = e.currentTarget;   // null after await — capture first
+    busy(btn, true);
     const dest = read();
     try {
       const res = await db.moveStorageSet(set, dest);
       if (res?.queued) { Object.assign(set, dest); toast(t("sd.savedOffline")); renderDetail(main, set); }
       else { toast(t("sd.locationUpdated")); await render(main, { params: [set.public_code] }); }
-    } catch (err) { toast(err.message, "err"); busy(e.currentTarget, false); }
+    } catch (err) { toast(err.message, "err"); busy(btn, false); }
   });
 }
 

@@ -109,7 +109,7 @@ function mountFrame() {
       <span class="spacer"></span>
       ${langToggle(false)}
       <span id="conn" class="conn"></span>
-      <button id="menuBtn" class="btn btn-ghost" style="min-height:40px;padding:0 10px;position:relative" aria-haspopup="menu" aria-label="More">${icon("list", 20)}<span class="menu-dot users-dot" hidden></span></button>
+      <button id="menuBtn" class="btn btn-ghost" style="min-height:40px;padding:0 10px;position:relative" aria-haspopup="menu" aria-expanded="false" aria-label="More">${icon("list", 20)}<span class="menu-dot users-dot" hidden></span></button>
     </header>
     <main id="main"></main>
     <nav class="tabbar" aria-label="Sections">
@@ -192,6 +192,7 @@ let menuCleanup = null;
 function closeMenu() {
   const pop = document.getElementById("menuPop");
   if (!pop || pop.classList.contains("out")) return;
+  document.getElementById("menuBtn")?.setAttribute("aria-expanded", "false");
   if (menuCleanup) { menuCleanup(); menuCleanup = null; }
   pop.classList.add("out");
   const done = () => pop.remove();
@@ -200,6 +201,7 @@ function closeMenu() {
 }
 function openMenu() {
   if (document.getElementById("menuPop")) { closeMenu(); return; }
+  document.getElementById("menuBtn")?.setAttribute("aria-expanded", "true");
   const role = getState().profile?.role ?? "manager";
   const pop = document.createElement("div");
   pop.id = "menuPop";
@@ -375,7 +377,7 @@ function renderNameGate() {
             <label class="field"><span class="label">${t("login.lastName")}</span>
               <input id="ngLast" type="text" autocomplete="family-name" required></label>
             <button class="btn-sunset" type="submit">${t("namegate.submit")}</button>
-            <p id="ngErr" class="login-err hidden"></p>
+            <p id="ngErr" class="login-err hidden" role="alert"></p>
           </form>
         </div>
       </div>
@@ -421,7 +423,7 @@ function renderSetPassword() {
             <label class="field"><span class="label">${t("setpw.confirm")}</span>
               <input id="pw2" type="password" autocomplete="new-password" required></label>
             <button class="btn-sunset" type="submit">${t("setpw.submit")}</button>
-            <p id="pwErr" class="login-err hidden"></p>
+            <p id="pwErr" class="login-err hidden" role="alert"></p>
           </form>
         </div>
       </div>
@@ -464,7 +466,7 @@ const A_USER = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strok
 // Minimal auth screen (dark, card-less): logo, form, language flag top-right.
 // `mode` is "signin" (default) or "signup"; the toggle swaps only the form body.
 // Keep in sync with service-worker CACHE version on every ship.
-const APP_V = "v77";
+const APP_V = "v78";
 
 // Stage chips: real cached counts from the last dashboard visit (written by
 // views/dashboard.js) — never fake numbers. Falls back to feature labels on
@@ -552,7 +554,7 @@ function paintLogin(mode) {
       <input id="password" type="password" placeholder="${t("login.password")}" autocomplete="${signup ? "new-password" : "current-password"}" required>
       <button type="button" class="fx-eye" id="pwToggle" aria-label="${t("login.showPw")}">${A_EYE}</button></label>`;
   const googleBtn = `<button type="button" class="btn-google" id="googleBtn">${A_GOOGLE}<span>${t("login.google")}</span></button>`;
-  const status = `<p id="loginErr" class="auth-err hidden"></p><p id="loginOk" class="auth-ok hidden"></p>`;
+  const status = `<p id="loginErr" class="auth-err hidden" role="alert"></p><p id="loginOk" class="auth-ok hidden" role="status"></p>`;
 
   // Everyone must state who they are — first and last name, asked up front.
   const nameFields = `<div class="auth-names">

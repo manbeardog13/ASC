@@ -30,7 +30,11 @@ export function enqueue(mutation) {
 
 // Replay everything through the executor (db.js supplies it) in FIFO order.
 // Stops at the first failure so ordering is preserved for the next attempt.
+let replaying = false;
 export async function replay(executor) {
+  if (replaying) return { flushed: false, remaining: pendingCount() };
+  replaying = true;
+  try {
   let entries = readOutbox();
   while (entries.length) {
     try {
@@ -43,6 +47,7 @@ export async function replay(executor) {
     }
   }
   return { flushed: true, remaining: 0 };
+  } finally { replaying = false; }
 }
 
 // ---- Connection watching -----------------------------------------------------

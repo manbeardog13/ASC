@@ -88,8 +88,7 @@ async function load(main) {
 
   main.querySelector("#map").innerHTML = overview + navbar + zonesHtml;
 
-  main.querySelectorAll(".slot.filled, .slot.reserved").forEach((el) =>
-    el.addEventListener("click", () => location.hash = `#/set/${el.dataset.code}`));
+  // Slots are real <a> links now — no click wiring needed (keyboard/SR reachable).
 
   main.querySelectorAll(".wh-zonepill").forEach((p) => {
     const open = () => { const el = main.querySelector("#" + p.dataset.z); if (el) { el.open = true; el.scrollIntoView({ behavior: "smooth", block: "start" }); } };
@@ -101,5 +100,5 @@ async function load(main) {
 function slotCell(set) {
   const owner = set.vehicle?.customer?.name || set.vehicle?.plate || set.public_code;
   const cls = set.status === "reserved" ? "reserved" : "filled";
-  return `<span class="slot ${cls}" data-code="${esc(set.public_code)}" title="${esc(owner)} · ${esc(set.public_code)}">${esc(set.slot || "•")}</span>`;
+  return `<a class="slot ${cls}" href="#/set/${esc(set.public_code)}" aria-label="${esc(owner)} · ${esc(set.public_code)}" title="${esc(owner)} · ${esc(set.public_code)}">${esc(set.slot || "•")}</a>`;
 }
