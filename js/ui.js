@@ -214,3 +214,11 @@ export function emptyState({ iconName = "box", title, body = "", actionHtml = ""
     ${actionHtml}
   </div>`;
 }
+
+// iOS paints the status-bar / Dynamic-Island surround with <meta name="theme-color">.
+// It's static HTML, so the app must retint it whenever the manual theme flips.
+export function setThemeColor(dark) {
+  let m = document.querySelector('meta[name="theme-color"]');
+  if (!m) { m = document.createElement("meta"); m.name = "theme-color"; document.head.appendChild(m); }
+  m.setAttribute("content", dark ? "#020305" : "#edf0f5");
+}

@@ -5,7 +5,7 @@
 import * as db from "../db.js";
 import { getState, setViewRefresh, on } from "../store.js";
 import { matchesQuery, isDueSoon } from "../domain.js";
-import { icon, esc, skeletonRows, emptyState } from "../ui.js";
+import { icon, esc, skeletonRows, emptyState, setThemeColor } from "../ui.js";
 import { t, noun, lang } from "../i18n.js";
 import { setRow, timeAgo } from "./shared.js";
 
@@ -105,11 +105,13 @@ export async function render(main) {
   // Body class too: the fixed canvas is trapped by the view-transition
   // transform (containing-block rule), so the page edges are painted here.
   document.body.classList.toggle("v6-dark", themeDark);
+  setThemeColor(themeDark);
   window.addEventListener("asc:teardown", () => document.body.classList.remove("v6-dark"), { once: true });
   main.querySelector("#v6mode").addEventListener("click", () => {
     const rootEl = main.querySelector("#v6root");
     const dark = rootEl.classList.toggle("dark");
     document.body.classList.toggle("v6-dark", dark);
+    setThemeColor(dark);
     try { localStorage.setItem("asc.theme", dark ? "dark" : "light"); } catch { /* ignore */ }
   });
   // Phone dock: #main's view-transition transform traps position:fixed, so the

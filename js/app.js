@@ -8,7 +8,7 @@ import { isConfigured } from "./supabaseClient.js";
 import { getState, setState, on, setViewRefresh, refreshActiveView, loadRecentLocations } from "./store.js";
 import { initOffline } from "./offline.js";
 import * as db from "./db.js";
-import { icon, esc, go, toast, busy } from "./ui.js";
+import { icon, esc, go, toast, busy, setThemeColor } from "./ui.js";
 import { t, lang, setLang, LANGS, onLangChange } from "./i18n.js";
 import { initMotion } from "./motion.js";
 
@@ -459,7 +459,7 @@ const A_USER = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strok
 // Minimal auth screen (dark, card-less): logo, form, language flag top-right.
 // `mode` is "signin" (default) or "signup"; the toggle swaps only the form body.
 // Keep in sync with service-worker CACHE version on every ship.
-const APP_V = "v66";
+const APP_V = "v67";
 
 // Stage chips: real cached counts from the last dashboard visit (written by
 // views/dashboard.js) — never fake numbers. Falls back to feature labels on
@@ -481,6 +481,7 @@ function renderLogin(mode = "signin") {
   if (document.getElementById("loginBody")) return;
   let themeDark = false;
   try { themeDark = localStorage.getItem("asc.theme") === "dark"; } catch { /* ignore */ }
+  setThemeColor(themeDark);
   const cur = lang();
   root.innerHTML = `
     <div class="login-canvas auth${themeDark ? " theme-dark" : ""}">
@@ -518,6 +519,7 @@ function renderLogin(mode = "signin") {
   root.querySelector("#themeToggle").addEventListener("click", () => {
     const canvas = root.querySelector(".login-canvas.auth");
     const dark = canvas.classList.toggle("theme-dark");
+    setThemeColor(dark);
     try { localStorage.setItem("asc.theme", dark ? "dark" : "light"); } catch { /* ignore */ }
   });
   // Cursor glow — moved with transform only (compositor-frame, zero lag).
