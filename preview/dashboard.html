@@ -218,20 +218,22 @@ html.dark .obar .bar{background:rgba(244,245,247,.10)}
 .chip.win{background:rgba(46,47,49,.12);color:var(--gun)} html.dark .chip.win{background:rgba(244,245,247,.10);color:#c9ccd2}
 .chip.all{background:rgba(99,103,111,.16);color:var(--muted)}
 
-/* ============================== Dock — redesigned, sliding indicator ==== */
-.dock{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:50;display:flex;align-items:center;gap:4px;max-width:calc(100vw - 24px);
-  background:rgba(2,3,5,.92);border-radius:26px;border:1px solid rgba(255,255,255,.10);border-top-color:rgba(255,255,255,.18);
-  box-shadow:0 18px 44px -14px rgba(2,3,5,.7);padding:8px;-webkit-backdrop-filter:blur(16px) saturate(160%);backdrop-filter:blur(16px) saturate(160%)}
-.dock .ind{position:absolute;top:8px;bottom:8px;left:0;border-radius:16px;background:var(--lava-tint);border:1px solid var(--lava-ring);z-index:0;transition:transform 340ms var(--snap),width 340ms var(--snap);pointer-events:none}
-html.dark .dock .ind{background:rgba(255,78,27,.18)}
-.dock a{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:56px;min-height:var(--tap);padding:7px 8px;border-radius:16px;color:#f4f5f7;opacity:.55;text-decoration:none;font:600 10px Inter;transition:opacity 200ms var(--snap),color 200ms var(--snap),transform 120ms var(--snap)}
-.dock a.on{opacity:1;color:var(--lava-2)}
-.dock a:active{transform:scale(.94)}
-.dock a svg{width:22px;height:22px}
-.dock .scan{min-width:0;padding:0;opacity:1;z-index:2}
-.dock .scan .orb{width:54px;height:54px;border-radius:50%;display:grid;place-items:center;color:#fff;margin-top:-24px;background:radial-gradient(circle at 40% 32%,var(--lava-2),var(--lava) 62%,#d6390c);box-shadow:0 12px 26px -6px rgba(255,78,27,.75),0 0 0 5px var(--bg);transition:transform 160ms var(--snap)}
-.dock .scan:active .orb{transform:scale(.92)}
-.dock .scan svg{width:26px;height:26px}
+/* ============================== Dock — iOS tab bar ====================== */
+/* Flat translucent tab bar: five equal tabs, icon + label, tint-only active.
+   No protruding button, no sliding pill — reads as a native iOS tab bar. */
+.dock{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(10px + env(safe-area-inset-bottom,0px));z-index:50;
+  display:flex;align-items:stretch;width:calc(100% - 24px);max-width:430px;padding:5px;
+  border-radius:26px;background:rgba(250,250,252,.72);border:.5px solid rgba(255,255,255,.55);
+  box-shadow:0 10px 34px -10px rgba(2,3,5,.26);
+  -webkit-backdrop-filter:blur(24px) saturate(180%);backdrop-filter:blur(24px) saturate(180%)}
+html.dark .dock{background:rgba(30,30,34,.62);border-color:rgba(255,255,255,.10);box-shadow:0 10px 34px -10px rgba(0,0,0,.62)}
+.dock a{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+  min-height:46px;border-radius:20px;text-decoration:none;color:var(--muted);
+  font:500 10px Inter;letter-spacing:.005em;transition:color 200ms var(--snap),opacity 100ms linear}
+.dock a.on{color:var(--lava-ink)}
+html.dark .dock a.on{color:var(--lava-2)}
+.dock a svg{width:25px;height:25px}
+.dock a:active{opacity:.4}
 @media(min-width:1021px){ .dock{display:none} }
 @media(max-width:1020px){ .pill-links{display:none} .pill{background:transparent;border:0;padding:0;margin-left:auto} }
 
@@ -333,10 +335,9 @@ html.dark .dock .ind{background:rgba(255,78,27,.18)}
 </main>
 
 <nav class="dock" aria-label="Sekcije">
-  <span class="ind" aria-hidden="true"></span>
   <a class="dtab on" href="#" aria-label="Početna"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.2 10.6L12 4l7.8 6.6"/><path d="M5.8 9.4V19a2 2 0 002 2h8.4a2 2 0 002-2V9.4"/></svg>Ploča</a>
   <a class="dtab" href="#" aria-label="Zaprimi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5.4v13.2M5.4 12h13.2"/></svg>Zaprimi</a>
-  <a class="scan" href="#" aria-label="Skeniraj"><span class="orb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.2V6.4A2.4 2.4 0 016.4 4h1.8M15.8 4h1.8A2.4 2.4 0 0120 6.4v1.8M20 15.8v1.8a2.4 2.4 0 01-2.4 2.4h-1.8M8.2 20H6.4A2.4 2.4 0 014 17.6v-1.8"/><path d="M7.2 12h9.6"/></svg></span></a>
+  <a class="dtab" href="#" aria-label="Skeniraj"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.2V6.4A2.4 2.4 0 016.4 4h1.8M15.8 4h1.8A2.4 2.4 0 0120 6.4v1.8M20 15.8v1.8a2.4 2.4 0 01-2.4 2.4h-1.8M8.2 20H6.4A2.4 2.4 0 014 17.6v-1.8"/><path d="M7.2 12h9.6"/></svg>Skeniraj</a>
   <a class="dtab" href="#" aria-label="Skladište"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21.2s-7-5.5-7-11a7 7 0 0114 0c0 5.5-7 11-7 11z"/><circle cx="12" cy="10" r="2.4"/></svg>Skladište</a>
   <a class="dtab" href="#" aria-label="Više"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8.6 6.4H21M8.6 12H21M8.6 17.6H21"/><path d="M3.6 6.4h.01M3.6 12h.01M3.6 17.6h.01"/></svg>Više</a>
 </nav>
@@ -366,18 +367,11 @@ html.dark .dock .ind{background:rgba(255,78,27,.18)}
     requestAnimationFrame(() => document.querySelectorAll('[data-w]').forEach(i => { i.style.width = i.dataset.w + '%'; }));
   }
 
-  // Dock: sliding lava indicator glides to the active tab.
-  const dock = document.querySelector('.dock');
-  const ind = dock.querySelector('.ind');
-  const dtabs = [...dock.querySelectorAll('.dtab')];
-  function moveInd(el){ ind.style.width = el.offsetWidth + 'px'; ind.style.transform = 'translateX(' + el.offsetLeft + 'px)'; }
-  function initDock(){ const cur = dock.querySelector('.dtab.on') || dtabs[0]; moveInd(cur); }
-  dtabs.forEach(t => t.addEventListener('click', e => { e.preventDefault(); dtabs.forEach(x => x.classList.remove('on')); t.classList.add('on'); moveInd(t); }));
-  addEventListener('resize', () => { const cur = dock.querySelector('.dtab.on'); if(cur) moveInd(cur); });
+  // Dock: iOS tab bar — active state is a colour tint only (nothing to position).
+  const dtabs = [...document.querySelectorAll('.dock .dtab')];
+  dtabs.forEach(t => t.addEventListener('click', e => { e.preventDefault(); dtabs.forEach(x => x.classList.remove('on')); t.classList.add('on'); }));
 
-  const boot = () => { animate(); initDock(); };
-  if (document.readyState !== 'loading') boot(); else addEventListener('DOMContentLoaded', boot);
-  if (document.fonts && document.fonts.ready) document.fonts.ready.then(initDock);   // re-measure the dock indicator once Inter/Sora swap in
+  if (document.readyState !== 'loading') animate(); else addEventListener('DOMContentLoaded', animate);
 </script>
 </body>
 </html>
