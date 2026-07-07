@@ -9,12 +9,12 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;650;700;800&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
 <!--
-  ASC dashboard — CLEAN-ROOM REBUILD (isolated preview). Self-contained; shares
-  nothing with css/styles.css. Refines the approved v6 "Hanssen" look and adds:
-  animated count-up stats, animated bars/meter, sharp (no-tilt/no-swim) hover +
-  buttery active clicks, a recent-sets slider, and ONE self-contained nav.
-  Dedicated imagery: zaprimi.jpg (green) → Check-in card only; preuzmi.jpg (red)
-  → Pickup card only. Numbers are illustrative; the live port reads real data.
+  ASC dashboard — CLEAN-ROOM REBUILD v2 (isolated preview). Self-contained.
+  Rebuilt for RIGOROUS alignment: hero = stage (spans 2 rows) beside two stacked
+  action cards of equal total height; a clean equal-height trio row; full-width
+  slider. Real ASC logo (cropped from assets/asc-mark.png). Redesigned dock with a
+  sliding lava indicator. Dedicated imagery: zaprimi.jpg (green) = check-in card,
+  preuzmi.jpg (red) = pickup card — used ONLY there. Numbers are placeholders.
 -->
 <style>
 /* ============================== Tokens · twin themes ====================== */
@@ -26,17 +26,18 @@
   --gun:#2e2f31; --hairline:rgba(2,3,5,.07); --line:rgba(2,3,5,.10);
   --stage-1:#0b0c0e; --stage-2:#17181b; --on-stage:#f4f5f7; --on-stage-2:rgba(244,245,247,.6);
   --rim-top:rgba(255,255,255,.75); --rim:rgba(255,255,255,.42);
-  --ok:#3f9d6b; --ok-ink:#2e7a52; --green:#2fbf5b;
+  --green:#2fbf5b;
   --smooth:cubic-bezier(.25,1,.5,1); --snap:cubic-bezier(.22,1,.36,1);
   --shadow-card:0 10px 30px -14px rgba(2,3,5,.35);
-  --tap:44px; --dock-h:64px;
+  --gap:14px; --pad:20px; --radius:22px;
+  --tap:44px; --dock-h:66px;
 }
 html.dark{
   --bg:#020305; --shell:rgba(23,24,28,.55); --shell-solid:rgba(23,24,28,.86);
   --panel:#1d1e22; --panel-2:#26272b;
   --ink:#f4f5f7; --ink-2:#d6d8dc; --muted:rgba(244,245,247,.62);
   --hairline:rgba(244,245,247,.09); --line:rgba(244,245,247,.12);
-  --lava-ink:#ff8a5c; --ok-ink:#7cc9a2;
+  --lava-ink:#ff8a5c;
   --stage-1:#07080a; --stage-2:#101114;
   --rim-top:rgba(255,255,255,.16); --rim:rgba(255,255,255,.08);
   --shadow-card:0 12px 34px -14px rgba(0,0,0,.6);
@@ -44,7 +45,7 @@ html.dark{
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{min-height:100%}
 body{font-family:"Inter",system-ui,sans-serif;color:var(--ink);background:var(--bg);
-  padding:26px 20px calc(var(--dock-h) + env(safe-area-inset-bottom,0px) + 26px);
+  padding:24px 18px calc(var(--dock-h) + env(safe-area-inset-bottom,0px) + 24px);
   -webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums;
   transition:background 380ms var(--smooth),color 380ms var(--smooth)}
 @media(min-width:1021px){ body{padding:30px 26px} }
@@ -61,14 +62,12 @@ html.dark .canvas{
     radial-gradient(44vmax 40vmax at 84% -8%,rgba(244,245,247,.05),transparent 60%)}
 .grain{position:fixed;inset:0;z-index:60;pointer-events:none;opacity:.04;mix-blend-mode:overlay;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E")}
-.preview-tag{position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:70;
-  font:700 10px Inter;letter-spacing:.14em;text-transform:uppercase;background:var(--gun);color:#f4f5f7;padding:4px 12px;border-radius:0 0 10px 10px;opacity:.9}
+.preview-tag{position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:70;font:700 10px Inter;letter-spacing:.14em;text-transform:uppercase;background:var(--gun);color:#f4f5f7;padding:4px 12px;border-radius:0 0 10px 10px;opacity:.9}
 
 /* ============================== Glass shell ============================== */
-.shell{max-width:1220px;margin:0 auto;border-radius:34px;position:relative;
+.shell{max-width:1180px;margin:0 auto;border-radius:32px;position:relative;
   background:var(--shell-solid);border:1px solid var(--rim);border-top-color:var(--rim-top);
-  box-shadow:0 25px 50px rgba(2,3,5,.22);padding:16px;animation:sheetIn 550ms var(--smooth) both;
-  transition:background 380ms var(--smooth)}
+  box-shadow:0 25px 50px rgba(2,3,5,.22);padding:var(--gap);animation:sheetIn 550ms var(--smooth) both;transition:background 380ms var(--smooth)}
 @media(min-width:1021px){ .shell{padding:18px} }
 @supports ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
   .shell{background:var(--shell);-webkit-backdrop-filter:blur(30px) saturate(150%) brightness(108%);backdrop-filter:blur(30px) saturate(150%) brightness(108%)}
@@ -76,165 +75,147 @@ html.dark .canvas{
 @media(prefers-reduced-transparency:reduce){ .shell{background:var(--panel-2)!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important} .canvas{display:none} }
 @keyframes sheetIn{from{opacity:0;transform:translateY(24px) scale(.985)}}
 @keyframes rise{from{opacity:0;transform:translateY(12px)}}
+.reveal{animation:rise 620ms var(--smooth) both}
 
-/* ============================== Top bar ============================== */
-.top{display:flex;align-items:center;gap:12px;margin-bottom:14px;padding:2px 4px}
-.brand{display:flex;align-items:center;gap:9px;font:700 15px Sora;letter-spacing:.02em;color:var(--ink)}
-.brand .m{width:24px;height:24px;border-radius:50%;background:radial-gradient(circle at 32% 30%,var(--lava-2),var(--lava) 60%,#d6390c);box-shadow:0 0 10px rgba(255,78,27,.5)}
+/* ============================== Top bar (real logo) ====================== */
+.top{display:flex;align-items:center;gap:14px;height:40px;margin-bottom:var(--gap);padding:0 4px}
+.logo{height:26px;width:auto;display:block;filter:drop-shadow(0 3px 8px rgba(255,78,27,.28))}
 .pill{margin-left:auto;display:flex;align-items:center;gap:2px;background:rgba(2,3,5,.88);color:#f4f5f7;border-radius:20px;padding:6px 8px;font:500 12.5px Inter;border-top:1px solid rgba(255,255,255,.14)}
 html.dark .pill{background:rgba(244,245,247,.10)}
 .pill a{position:relative;color:#f4f5f7;opacity:.62;padding:6px 11px;border-radius:13px;text-decoration:none;transition:opacity 150ms var(--snap),background 150ms var(--snap)}
 .pill a.on{opacity:1;background:rgba(244,245,247,.14)}
 @media(hover:hover){ .pill a:hover{opacity:1} }
-.mode{border:0;cursor:pointer;width:var(--tap);height:var(--tap);border-radius:50%;flex:none;background:var(--panel);display:grid;place-items:center;position:relative;transition:transform 380ms var(--smooth),background 380ms var(--smooth)}
+.mode{border:0;cursor:pointer;width:38px;height:38px;border-radius:50%;flex:none;background:var(--panel);display:grid;place-items:center;position:relative;transition:transform 380ms var(--smooth),background 380ms var(--smooth)}
 @media(hover:hover){ .mode:hover{transform:rotate(40deg)} }
 .mode:active{transform:scale(.92)}
 .mode i{width:12px;height:12px;border-radius:50%;background:var(--ink);display:block;transition:background 380ms ease,box-shadow 380ms ease}
 html.dark .mode i{background:transparent;box-shadow:inset 0 0 0 2.5px #f4f5f7}
 
-/* ============================== Grid + tabs ============================== */
-.grid{display:grid;grid-template-columns:1.35fr 1fr .8fr;gap:14px}
-@media(max-width:1020px){ .grid{grid-template-columns:1fr;gap:12px} }
-.tab{position:absolute;z-index:3;font:500 10.5px Inter;letter-spacing:.04em;color:var(--muted);background:var(--shell-solid);padding:7px 13px 8px}
-.tab.tl{top:0;left:0;border-radius:0 0 14px 0}
-.tab.br{bottom:0;right:0;border-radius:14px 0 0 0}
+/* ============================== HERO grid (aligned) ===================== */
+.hero{display:grid;grid-template-columns:1.5fr 1fr;grid-template-rows:1fr 1fr;gap:var(--gap)}
+.hero .stage{grid-column:1;grid-row:1 / 3}
+.hero .act.green{grid-column:2;grid-row:1}
+.hero .act.red{grid-column:2;grid-row:2}
+@media(max-width:900px){ .hero{grid-template-columns:1fr;grid-template-rows:auto} .hero .stage{grid-column:auto;grid-row:auto} .hero .act.green,.hero .act.red{grid-column:auto;grid-row:auto} }
 
-/* reveal-on-load helper */
-.reveal{animation:rise 620ms var(--smooth) both}
+.tab-corner{position:absolute;z-index:3;font:500 10.5px Inter;letter-spacing:.04em;color:var(--muted);background:var(--shell-solid);padding:7px 13px 8px;bottom:0;right:0;border-radius:14px 0 0 0}
 
-/* ============================== Stage ============================== */
-.stage{position:relative;border-radius:24px;overflow:hidden;min-height:520px;
+/* ---- stage ---- */
+.stage{position:relative;border-radius:24px;overflow:hidden;min-height:452px;
   background:
     radial-gradient(120% 90% at 82% -10%,rgba(255,78,27,.28),transparent 55%),
     radial-gradient(90% 70% at -10% 110%,rgba(255,78,27,.14),transparent 55%),
     linear-gradient(175deg,var(--stage-1) 0%,var(--stage-2) 100%);
-  color:var(--on-stage);padding:56px 28px 36px;display:flex;flex-direction:column;border-top:1px solid rgba(255,255,255,.10)}
-@media(max-width:1020px){ .stage{min-height:auto;padding:44px 22px 32px} }
+  color:var(--on-stage);padding:32px 28px 28px;display:flex;flex-direction:column;border-top:1px solid rgba(255,255,255,.10)}
+@media(max-width:900px){ .stage{min-height:auto;padding:30px 22px 26px} }
 .stage .aura{position:absolute;width:70%;height:55%;right:-16%;top:-14%;border-radius:50%;background:radial-gradient(closest-side,rgba(255,78,27,.34),transparent 70%);filter:blur(30px);animation:drift 16s ease-in-out infinite alternate}
 @keyframes drift{to{transform:translate(-9%,12%) scale(1.12)}}
 .stage>*{position:relative;z-index:2}
 .k{font:600 11px Inter;letter-spacing:.08em;text-transform:uppercase;color:var(--on-stage-2)}
-.hero{font-family:Sora;font-weight:400;font-size:clamp(58px,7vw,94px);line-height:1;letter-spacing:-.03em;margin:10px 0 4px}
-.hero em{font-style:normal;font:500 14px Inter;letter-spacing:.06em;text-transform:uppercase;color:var(--on-stage-2);margin-left:8px}
+.hero-num{font-family:Sora;font-weight:400;font-size:clamp(56px,6.6vw,88px);line-height:.98;letter-spacing:-.03em;margin:10px 0 4px}
+.hero-num em{font-style:normal;font:500 14px Inter;letter-spacing:.06em;text-transform:uppercase;color:var(--on-stage-2);margin-left:8px;vertical-align:baseline}
 .cap{font-size:13.5px;color:var(--on-stage-2)}
-.meter{margin-top:16px;height:8px;border-radius:4px;background:rgba(244,245,247,.14);overflow:hidden;max-width:440px}
+.meter{margin-top:15px;height:8px;border-radius:4px;background:rgba(244,245,247,.14);overflow:hidden;max-width:460px}
 .meter i{display:block;height:100%;width:0;border-radius:4px;background:linear-gradient(90deg,var(--lava-2),var(--lava));transition:width 1100ms var(--smooth)}
-.space{flex:1;min-height:20px}
-.spills{display:flex;gap:8px;margin-bottom:16px;max-width:480px}
-.spill{flex:1;background:rgba(244,245,247,.08);border-radius:14px;padding:11px 12px;border-top:1px solid rgba(255,255,255,.09);
-  transition:transform 150ms var(--snap),background 150ms var(--snap);cursor:pointer}
+.space{flex:1;min-height:18px}
+.spills{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+.spill{text-align:left;background:rgba(244,245,247,.08);border:0;border-radius:14px;padding:12px;border-top:1px solid rgba(255,255,255,.09);color:var(--on-stage);transition:transform 150ms var(--snap),background 150ms var(--snap);cursor:pointer}
 @media(hover:hover){ .spill:hover{transform:translateY(-2px);background:rgba(244,245,247,.14)} }
 .spill:active{transform:scale(.97);transition-duration:80ms}
-.spill b{display:block;font-family:Sora;font-weight:500;font-size:22px}
-.spill span{font-size:11px;color:var(--on-stage-2)}
-.cta{display:flex;align-items:center;justify-content:center;gap:10px;min-height:50px;max-width:480px;border-radius:25px;background:rgba(244,245,247,.94);color:#020305;text-decoration:none;font:600 14px Inter;
-  transition:transform 150ms var(--snap),box-shadow 200ms var(--snap);position:relative;box-shadow:0 0 0 rgba(255,78,27,0)}
+.spill b{display:block;font-family:Sora;font-weight:500;font-size:24px;line-height:1}
+.spill span{font-size:11px;color:var(--on-stage-2);display:block;margin-top:4px}
+.cta{display:flex;align-items:center;justify-content:center;gap:10px;min-height:50px;border-radius:25px;background:rgba(244,245,247,.94);color:#020305;text-decoration:none;font:600 14px Inter;transition:transform 150ms var(--snap),box-shadow 200ms var(--snap);position:relative}
 @media(hover:hover){ .cta:hover{transform:translateY(-2px);box-shadow:0 12px 26px -10px rgba(0,0,0,.5)} }
-.cta:active{transform:scale(.97);transition-duration:80ms}
+.cta:active{transform:scale(.98);transition-duration:80ms}
 .cta .dot{width:9px;height:9px;border-radius:50%;background:var(--lava);box-shadow:0 0 8px 2px var(--lava-ring);animation:breathe 2.4s ease-in-out infinite}
 @keyframes breathe{50%{transform:scale(1.3);opacity:.8}}
 
-/* ============================== Middle column ============================== */
-.mid{display:flex;flex-direction:column;gap:12px}
-.card-base{transition:transform 160ms var(--snap),box-shadow 200ms var(--snap)}
-.profile{position:relative;background:var(--panel);border-radius:24px;padding:34px 22px 18px;transition:background 380ms var(--smooth)}
+/* ============================== Action cards (dedicated imagery) ========= */
+.act{position:relative;border-radius:var(--radius);overflow:hidden;min-height:180px;display:flex;align-items:flex-end;text-decoration:none;color:#fff;isolation:isolate;box-shadow:var(--shadow-card);transition:transform 160ms var(--snap),box-shadow 220ms var(--snap)}
+.act .bg{position:absolute;inset:0;background-size:cover;background-position:center;transform:scale(1.01);transition:transform 500ms var(--smooth);z-index:-2}
+.act::after{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(180deg,rgba(2,3,5,.12) 0%,rgba(2,3,5,.34) 42%,rgba(2,3,5,.88) 100%)}
+@media(hover:hover){ .act:hover{transform:translateY(-3px);box-shadow:0 20px 40px -16px rgba(2,3,5,.6)} .act:hover .bg{transform:scale(1.06)} }
+.act:active{transform:scale(.985);transition-duration:90ms}
+.act .body{position:relative;padding:16px 18px;width:100%}
+.act .eyebrow{font:600 10.5px Inter;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.74);display:flex;align-items:center;gap:7px}
+.act .eyebrow .led{width:7px;height:7px;border-radius:50%}
+.act.green .eyebrow .led{background:var(--green);box-shadow:0 0 8px 1px rgba(47,191,91,.7)}
+.act.red .eyebrow .led{background:var(--lava);box-shadow:0 0 8px 1px var(--lava-ring)}
+.act h2{font:600 21px Sora;letter-spacing:-.01em;margin:5px 0 2px}
+.act .desc{font:500 12.5px Inter;color:rgba(255,255,255,.76)}
+.act .go{position:absolute;top:14px;right:14px;width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.14);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.22);color:#fff;transition:background 160ms var(--snap),transform 160ms var(--snap)}
+@media(hover:hover){ .act:hover .go{transform:translateX(2px)} .act.red:hover .go{background:var(--lava)} .act.green:hover .go{background:var(--green)} }
+
+/* ============================== TRIO row (equal height) ================= */
+.trio{display:grid;grid-template-columns:1fr 1fr 1fr;gap:var(--gap);margin-top:var(--gap)}
+@media(max-width:900px){ .trio{grid-template-columns:1fr} }
+.card{position:relative;background:var(--panel);border-radius:var(--radius);padding:32px var(--pad) 18px;display:flex;flex-direction:column;transition:background 380ms var(--smooth),transform 160ms var(--snap),box-shadow 200ms var(--snap)}
+.card .tab-tl{position:absolute;top:0;left:0;z-index:3;font:500 10.5px Inter;letter-spacing:.04em;color:var(--muted);background:var(--shell-solid);padding:7px 13px 8px;border-radius:0 0 14px 0}
+.card h3{font-family:Sora;font-weight:600;font-size:15px;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.count-badge{margin-left:auto;font:800 12px Inter;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:var(--lava);color:#fff;display:inline-flex;align-items:center;justify-content:center}
+.card.dark{background:radial-gradient(120% 100% at 90% -20%,rgba(255,78,27,.20),transparent 55%),linear-gradient(175deg,var(--stage-1),var(--stage-2));color:var(--on-stage)}
+
+/* profile card */
 .row1{display:flex;align-items:center;gap:13px;margin-bottom:12px}
-.pavatar{width:46px;height:46px;border-radius:50%;flex:none;background:radial-gradient(circle at 32% 30%,var(--lava-2),var(--lava) 62%,#d6390c);color:#fff;display:grid;place-items:center;font:650 14px Inter;box-shadow:0 6px 16px rgba(255,78,27,.35)}
-.profile h1{font-family:Sora;font-weight:600;font-size:19px;letter-spacing:-.01em}
-.profile .sub{font-size:12.5px;color:var(--muted)}
-.profile p{font-size:13.5px;line-height:1.55;color:var(--ink-2)}
-.health{display:flex;gap:8px;margin-top:14px;padding-top:13px;border-top:1px solid var(--hairline)}
-.hstat{flex:1;background:var(--panel-2);border-radius:12px;padding:9px 10px;font-size:11px;color:var(--muted);transition:transform 150ms var(--snap)}
+.pavatar{width:44px;height:44px;border-radius:50%;flex:none;background:radial-gradient(circle at 32% 30%,var(--lava-2),var(--lava) 62%,#d6390c);color:#fff;display:grid;place-items:center;font:650 14px Inter;box-shadow:0 6px 16px rgba(255,78,27,.35)}
+.profile h1{font-family:Sora;font-weight:600;font-size:18px;letter-spacing:-.01em}
+.profile .sub{font-size:12px;color:var(--muted)}
+.profile p{font-size:13px;line-height:1.55;color:var(--ink-2);flex:1}
+.health{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:14px;padding-top:13px;border-top:1px solid var(--hairline)}
+.hstat{background:var(--panel-2);border-radius:12px;padding:9px 10px;font-size:10.5px;color:var(--muted);display:flex;flex-direction:column;gap:2px;min-width:0}
 html.dark .hstat{background:rgba(244,245,247,.05)}
-@media(hover:hover){ .hstat:hover{transform:translateY(-2px)} }
-.hstat b{display:block;font:700 14px Inter;color:var(--ink);margin-top:2px}
+.hstat b{font:700 13px Inter;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .hstat .g{color:var(--green)}
 
-.panel{position:relative;background:var(--panel);border-radius:24px;padding:32px 20px 18px;flex:1;transition:background 380ms var(--smooth)}
-.panel.p2{background:radial-gradient(120% 100% at 90% -20%,rgba(255,78,27,.20),transparent 55%),linear-gradient(175deg,var(--stage-1),var(--stage-2));color:var(--on-stage)}
-.panel h3{font-family:Sora;font-weight:600;font-size:15px;margin-bottom:12px;display:flex;align-items:center;gap:8px}
-.count-badge{margin-left:auto;font:800 12px Inter;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:var(--lava);color:#fff;display:inline-flex;align-items:center;justify-content:center}
-.obar{margin-bottom:11px;cursor:default}
-.obar .t{display:flex;justify-content:space-between;align-items:baseline;font-size:12px;color:var(--muted);margin-bottom:5px}
+/* season bars */
+.obar{margin-bottom:12px}
+.obar:last-child{margin-bottom:0}
+.obar .t{display:flex;justify-content:space-between;align-items:baseline;font-size:12px;color:var(--muted);margin-bottom:6px}
 .obar .t b{color:var(--ink);font:600 13.5px Inter}
 .obar .bar{height:6px;border-radius:3px;background:rgba(2,3,5,.08);overflow:hidden}
 html.dark .obar .bar{background:rgba(244,245,247,.10)}
 .obar .bar i{display:block;height:100%;width:0;border-radius:3px;background:linear-gradient(90deg,var(--lava-2),var(--lava));transition:width 1100ms var(--smooth)}
-.mini{display:flex;align-items:baseline;gap:10px;padding:9px 4px;border-radius:10px;border-bottom:1px solid rgba(244,245,247,.09);font-size:13px;color:var(--on-stage);text-decoration:none;transition:background 150ms var(--snap),transform 150ms var(--snap)}
+
+/* reminders list */
+.mini{display:flex;align-items:center;gap:10px;padding:10px 6px;border-radius:10px;border-bottom:1px solid rgba(244,245,247,.09);font-size:13px;color:var(--on-stage);text-decoration:none;transition:background 150ms var(--snap),transform 150ms var(--snap)}
 .mini:last-child{border-bottom:0}
 @media(hover:hover){ .mini:hover{background:rgba(244,245,247,.08);transform:translateX(3px)} }
 .mini:active{transform:scale(.99);transition-duration:80ms}
-.mini time{font:600 12px Inter;color:var(--lava-2);min-width:52px}
-.mini span{color:var(--on-stage-2)}
+.mini time{font:600 11px Inter;color:var(--lava-2);min-width:46px;flex:none}
+.mini b{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mini .pl{margin-left:auto;font:600 11px Inter;color:var(--on-stage-2);flex:none}
 .mini.overdue time{color:#ff8f7e}
 
-/* ============================== Rail ============================== */
-.rail{display:flex;flex-direction:column;gap:8px}
-@media(max-width:1020px){ .rail{display:grid;grid-template-columns:1fr 1fr;gap:8px} .rail .hero,.rail .rail-tab{grid-column:1/-1} }
-.rail-tab{font:500 10.5px Inter;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:2px 4px 0}
-.rrow{position:relative;display:flex;align-items:center;justify-content:space-between;min-height:54px;padding:0 16px;border-radius:16px;background:var(--panel);color:var(--ink);text-decoration:none;font:550 13.5px Inter;
-  transition:transform 160ms var(--snap),background 160ms var(--snap),box-shadow 200ms var(--snap)}
-@media(hover:hover){ .rrow:hover{transform:translateX(3px);box-shadow:var(--shadow-card)} }
-.rrow:active{transform:scale(.98);transition-duration:80ms}
-.rrow .v{color:var(--muted);font:600 12px Inter;display:flex;align-items:center;gap:8px}
-.rrow .badge{font:800 11px Inter;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:var(--lava);color:#fff;display:inline-flex;align-items:center;justify-content:center}
-.rrow.hero{background:linear-gradient(175deg,var(--stage-1),var(--stage-2));color:var(--on-stage);border-top:1px solid rgba(255,255,255,.10);min-height:58px}
-.rrow.hero .v{color:var(--lava-2)}
-.rrow.hero .gdot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px 2px rgba(47,191,91,.4);animation:breathe 2.4s ease-in-out infinite}
-
-/* ============================== Action cards (dedicated imagery) ========= */
-.acts{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
-@media(max-width:640px){ .acts{grid-template-columns:1fr} }
-.act{position:relative;border-radius:22px;overflow:hidden;min-height:172px;display:flex;align-items:flex-end;text-decoration:none;color:#fff;isolation:isolate;
-  box-shadow:var(--shadow-card);transition:transform 160ms var(--snap),box-shadow 220ms var(--snap)}
-.act .bg{position:absolute;inset:0;background-size:cover;background-position:center;transform:scale(1.01);transition:transform 500ms var(--smooth);z-index:-2}
-.act::after{content:"";position:absolute;inset:0;z-index:-1;
-  background:linear-gradient(180deg,rgba(2,3,5,.15) 0%,rgba(2,3,5,.35) 45%,rgba(2,3,5,.86) 100%)}
-.act.green::after{background:linear-gradient(180deg,rgba(2,3,5,.12) 0%,rgba(2,3,5,.35) 45%,rgba(2,3,5,.88) 100%)}
-.act.red::after{background:linear-gradient(180deg,rgba(2,3,5,.12) 0%,rgba(2,3,5,.35) 45%,rgba(2,3,5,.88) 100%)}
-@media(hover:hover){ .act:hover{transform:translateY(-3px);box-shadow:0 20px 40px -16px rgba(2,3,5,.6)} .act:hover .bg{transform:scale(1.06)} }
-.act:active{transform:scale(.985);transition-duration:90ms}
-.act .body{position:relative;padding:16px 18px;width:100%}
-.act .eyebrow{font:600 10.5px Inter;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.72);display:flex;align-items:center;gap:7px}
-.act .eyebrow .led{width:7px;height:7px;border-radius:50%}
-.act.green .eyebrow .led{background:var(--green);box-shadow:0 0 8px 1px rgba(47,191,91,.7)}
-.act.red .eyebrow .led{background:var(--lava);box-shadow:0 0 8px 1px var(--lava-ring)}
-.act h2{font:600 22px Sora;letter-spacing:-.01em;margin:5px 0 2px}
-.act .desc{font:500 12.5px Inter;color:rgba(255,255,255,.75)}
-.act .go{position:absolute;top:14px;right:14px;width:38px;height:38px;border-radius:50%;display:grid;place-items:center;
-  background:rgba(255,255,255,.14);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.22);color:#fff;transition:background 160ms var(--snap),transform 160ms var(--snap)}
-@media(hover:hover){ .act:hover .go{background:var(--lava);transform:translateX(2px)} }
-.act.green:hover .go{background:var(--green)}
-
 /* ============================== Recent-sets slider ====================== */
-.recent{margin-top:16px}
+.recent{margin-top:var(--gap)}
 .recent .head{display:flex;align-items:baseline;justify-content:space-between;margin:0 4px 10px}
 .recent .head h3{font:600 15px Sora}
 .recent .head a{font:600 12px Inter;color:var(--lava-ink);text-decoration:none}
 .slider{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;padding:2px 4px 8px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
 .slider::-webkit-scrollbar{display:none}
-.slide{flex:0 0 auto;width:168px;scroll-snap-align:start;border-radius:18px;overflow:hidden;background:var(--panel);text-decoration:none;color:var(--ink);
-  box-shadow:var(--shadow-card);transition:transform 160ms var(--snap),box-shadow 220ms var(--snap)}
+.slide{flex:0 0 auto;width:164px;scroll-snap-align:start;border-radius:18px;overflow:hidden;background:var(--panel);text-decoration:none;color:var(--ink);box-shadow:var(--shadow-card);transition:transform 160ms var(--snap),box-shadow 220ms var(--snap)}
 @media(hover:hover){ .slide:hover{transform:translateY(-3px);box-shadow:0 18px 36px -16px rgba(2,3,5,.5)} }
 .slide:active{transform:scale(.98);transition-duration:90ms}
-.slide .thumb{height:104px;background-size:cover;background-position:center}
+.slide .thumb{height:100px;background-size:cover;background-position:center}
 .slide .meta{padding:11px 12px 13px}
-.slide .code{font:700 12.5px Inter;letter-spacing:.01em}
+.slide .code{font:700 12.5px Inter}
 .slide .who{font:500 12px Inter;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.chip{display:inline-flex;align-items:center;gap:5px;margin-top:8px;padding:3px 9px;border-radius:999px;font:600 10.5px Inter;background:var(--lava-tint);color:var(--lava-ink)}
+.chip{display:inline-flex;align-items:center;margin-top:8px;padding:3px 9px;border-radius:999px;font:600 10.5px Inter;background:var(--lava-tint);color:var(--lava-ink)}
 .chip.win{background:rgba(79,127,168,.14);color:#3d6485} html.dark .chip.win{color:#8fb8d9}
 .chip.all{background:rgba(99,103,111,.16);color:var(--muted)}
 
-/* ============================== Bottom dock (one nav) =================== */
-.dock{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:50;display:flex;align-items:center;gap:2px;max-width:calc(100vw - 24px);
-  background:rgba(2,3,5,.9);border-radius:24px;border-top:1px solid rgba(255,255,255,.14);box-shadow:0 16px 40px -12px rgba(2,3,5,.6);padding:7px 10px;
-  -webkit-backdrop-filter:blur(14px) saturate(150%);backdrop-filter:blur(14px) saturate(150%)}
-.dock a{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:58px;min-height:var(--tap);padding:6px 8px;border-radius:14px;color:#f4f5f7;opacity:.6;text-decoration:none;font:600 10.5px Inter;transition:opacity 150ms var(--snap),background 150ms var(--snap),transform 120ms var(--snap)}
-.dock a.on{opacity:1;background:rgba(244,245,247,.14)}
+/* ============================== Dock — redesigned, sliding indicator ==== */
+.dock{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:50;display:flex;align-items:center;gap:4px;max-width:calc(100vw - 24px);
+  background:rgba(2,3,5,.92);border-radius:26px;border:1px solid rgba(255,255,255,.10);border-top-color:rgba(255,255,255,.18);
+  box-shadow:0 18px 44px -14px rgba(2,3,5,.7);padding:8px;-webkit-backdrop-filter:blur(16px) saturate(160%);backdrop-filter:blur(16px) saturate(160%)}
+.dock .ind{position:absolute;top:8px;bottom:8px;left:0;border-radius:16px;background:var(--lava-tint);border:1px solid var(--lava-ring);z-index:0;transition:transform 340ms var(--snap),width 340ms var(--snap);pointer-events:none}
+html.dark .dock .ind{background:rgba(255,78,27,.18)}
+.dock a{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:60px;min-height:var(--tap);padding:7px 8px;border-radius:16px;color:#f4f5f7;opacity:.55;text-decoration:none;font:600 10.5px Inter;transition:opacity 200ms var(--snap),color 200ms var(--snap),transform 120ms var(--snap)}
+.dock a.on{opacity:1;color:var(--lava-2)}
 .dock a:active{transform:scale(.94)}
 .dock a svg{width:22px;height:22px}
-.dock .scan{min-width:0;padding:0}
-.dock .scan .orb{width:52px;height:52px;border-radius:50%;display:grid;place-items:center;color:#fff;margin-top:-22px;background:radial-gradient(circle at 40% 32%,var(--lava-2),var(--lava) 62%,#d6390c);box-shadow:0 10px 24px -6px rgba(255,78,27,.7),0 0 0 5px var(--shell-solid);transition:transform 160ms var(--snap)}
+.dock .scan{min-width:0;padding:0;opacity:1;z-index:2}
+.dock .scan .orb{width:54px;height:54px;border-radius:50%;display:grid;place-items:center;color:#fff;margin-top:-24px;background:radial-gradient(circle at 40% 32%,var(--lava-2),var(--lava) 62%,#d6390c);box-shadow:0 12px 26px -6px rgba(255,78,27,.75),0 0 0 5px var(--bg);transition:transform 160ms var(--snap)}
 .dock .scan:active .orb{transform:scale(.92)}
 .dock .scan svg{width:26px;height:26px}
 @media(min-width:1021px){ .dock{display:none} }
@@ -251,96 +232,76 @@ html.dark .obar .bar{background:rgba(244,245,247,.10)}
 
 <main class="shell">
   <header class="top">
-    <span class="brand"><span class="m" aria-hidden="true"></span>ASC</span>
+    <img class="logo" src="assets/logo.png" alt="ASC — Auto servisni centar">
     <nav class="pill" aria-label="Glavna navigacija">
       <span class="pill-links"><a class="on" href="#">Ploča</a><a href="#">Zaprimi</a><a href="#">Skladište</a><a href="#">Kupci</a></span>
       <button class="mode" id="mode" aria-label="Promijeni temu"><i></i></button>
     </nav>
   </header>
 
-  <div class="grid">
-    <!-- STAGE -->
-    <section class="stage reveal" style="animation-delay:120ms">
+  <!-- HERO: stage (spans 2 rows) + two stacked action cards, heights aligned -->
+  <section class="hero">
+    <div class="stage reveal" style="animation-delay:110ms">
       <i class="aura" aria-hidden="true"></i>
       <span class="k">Skladište · Hotel za gume · Dubrovnik</span>
-      <div class="hero"><span class="tnum" data-count="248">0</span><em>setova</em></div>
+      <div class="hero-num"><span data-count="248">0</span><em>setova</em></div>
       <div class="cap">na čuvanju · 0 rezervirano · 92 % ostaje</div>
       <div class="meter"><i data-w="92"></i></div>
       <div class="space"></div>
       <div class="spills">
-        <button class="spill"><b data-count="4">0</b><span>zaprimljeno danas</span></button>
-        <button class="spill"><b data-count="2">0</b><span>preuzeto danas</span></button>
-        <button class="spill"><b data-count="17">0</b><span>uskoro van</span></button>
+        <button class="spill"><b data-count="4">0</b><span>Zaprimljeno</span></button>
+        <button class="spill"><b data-count="2">0</b><span>Preuzeto</span></button>
+        <button class="spill"><b data-count="17">0</b><span>Uskoro</span></button>
       </div>
       <a class="cta" href="#"><span class="dot"></span>Pitaj ASC Agenta</a>
-      <span class="tab br">hotel za gume · est. 2019</span>
-    </section>
-
-    <!-- MIDDLE -->
-    <div class="mid">
-      <section class="profile reveal" style="animation-delay:170ms">
-        <span class="tab tl">smjena</span>
-        <div class="row1"><span class="pavatar">TJ</span><div><h1>Dobra večer, Toni</h1><div class="sub">Ponedjeljak, 7. srpnja · Dubrovnik</div></div></div>
-        <p>Sve spremno za smjenu — 248 kompleta u sustavu, 3 podsjetnika čekaju danas.</p>
-        <div class="health">
-          <div class="hstat">Veza<b class="g">Na mreži</b></div>
-          <div class="hstat">Za sinkr.<b data-count="0">0</b></div>
-          <div class="hstat">Kopija<b>prije 5 h</b></div>
-        </div>
-      </section>
-
-      <section class="panel p1 reveal" style="animation-delay:210ms">
-        <span class="tab tl">zauzeće</span>
-        <h3>Po sezoni</h3>
-        <div class="obar"><div class="t"><span>Zimske</span><b data-count="141">0</b></div><div class="bar"><i data-w="78"></i></div></div>
-        <div class="obar"><div class="t"><span>Ljetne</span><b data-count="89">0</b></div><div class="bar"><i data-w="49"></i></div></div>
-        <div class="obar"><div class="t"><span>Cjelogodišnje</span><b data-count="18">0</b></div><div class="bar"><i data-w="10" style="opacity:.5"></i></div></div>
-      </section>
-
-      <section class="panel p2 reveal" style="animation-delay:250ms">
-        <span class="tab tl">podsjetnici</span>
-        <h3>Za preuzimanje <span class="count-badge">3</span></h3>
-        <a class="mini overdue" href="#"><time>Kasni</time><b>Josip Horvat</b><span>· zimske · DU-234-AB</span></a>
-        <a class="mini" href="#"><time>Danas</time><b>Ana Kovačević</b><span>· ljetne · DU-881-KL</span></a>
-        <a class="mini" href="#"><time>7. srp</time><b>Marko Babić</b><span>· zimske · DU-455-MN</span></a>
-      </section>
+      <span class="tab-corner">danas · Dubrovnik</span>
     </div>
 
-    <!-- RAIL -->
-    <aside class="rail reveal" style="animation-delay:290ms">
-      <div class="rail-tab">brze akcije</div>
-      <a class="rrow" href="#">Skeniraj QR<span class="v">→</span></a>
-      <a class="rrow" href="#">Radionica<span class="v">→</span></a>
-      <a class="rrow" href="#">Podsjetnici<span class="v"><span class="badge">3</span>→</span></a>
-      <a class="rrow" href="#">Kupci<span class="v">→</span></a>
-      <a class="rrow hero" href="#">Pitaj ASC Agenta<span class="v"><span class="gdot"></span>online</span></a>
-    </aside>
-  </div>
-
-  <!-- DEDICATED ACTION CARDS — green=check-in, red=pickup (visual aids only) -->
-  <div class="acts">
-    <a class="act green reveal" href="#" style="animation-delay:320ms">
+    <a class="act green reveal" href="#" style="animation-delay:150ms">
       <span class="bg" style="background-image:url('assets/zaprimi.jpg')"></span>
       <span class="go" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5.4v13.2M5.4 12h13.2"/></svg></span>
-      <div class="body">
-        <div class="eyebrow"><span class="led"></span>Zaprimanje</div>
-        <h2>Zaprimi novi set</h2>
-        <div class="desc">Novi komplet guma na čuvanje</div>
-      </div>
+      <div class="body"><div class="eyebrow"><span class="led"></span>Zaprimanje</div><h2>Zaprimi novi set</h2><div class="desc">Novi komplet guma na čuvanje</div></div>
     </a>
-    <a class="act red reveal" href="#" style="animation-delay:360ms">
+
+    <a class="act red reveal" href="#" style="animation-delay:190ms">
       <span class="bg" style="background-image:url('assets/preuzmi.jpg')"></span>
       <span class="go" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12.8l5 5L19.5 6.6"/></svg></span>
-      <div class="body">
-        <div class="eyebrow"><span class="led"></span>Preuzimanje</div>
-        <h2>Preuzmi komplet</h2>
-        <div class="desc">Izdaj gume kupcu i zatvori</div>
-      </div>
+      <div class="body"><div class="eyebrow"><span class="led"></span>Preuzimanje</div><h2>Preuzmi komplet</h2><div class="desc">Izdaj gume kupcu i zatvori</div></div>
     </a>
-  </div>
+  </section>
 
-  <!-- RECENT SETS SLIDER -->
-  <section class="recent reveal" style="animation-delay:400ms">
+  <!-- TRIO: profile | season | reminders (equal height) -->
+  <section class="trio">
+    <div class="card profile reveal" style="animation-delay:230ms">
+      <span class="tab-tl">smjena</span>
+      <div class="row1"><span class="pavatar">TJ</span><div><h1>Dobra večer, Toni</h1><div class="sub">Ponedjeljak, 7. srpnja</div></div></div>
+      <p>Sve spremno za smjenu — 248 kompleta u sustavu, 3 podsjetnika čekaju danas.</p>
+      <div class="health">
+        <div class="hstat">Veza<b class="g">Na mreži</b></div>
+        <div class="hstat">Sinkr.<b data-count="0">0</b></div>
+        <div class="hstat">Kopija<b>5 h</b></div>
+      </div>
+    </div>
+
+    <div class="card reveal" style="animation-delay:270ms">
+      <span class="tab-tl">zauzeće</span>
+      <h3>Po sezoni</h3>
+      <div class="obar"><div class="t"><span>Zimske</span><b data-count="141">0</b></div><div class="bar"><i data-w="78"></i></div></div>
+      <div class="obar"><div class="t"><span>Ljetne</span><b data-count="89">0</b></div><div class="bar"><i data-w="49"></i></div></div>
+      <div class="obar"><div class="t"><span>Cjelogodišnje</span><b data-count="18">0</b></div><div class="bar"><i data-w="10" style="opacity:.5"></i></div></div>
+    </div>
+
+    <div class="card dark reveal" style="animation-delay:310ms">
+      <span class="tab-tl">podsjetnici</span>
+      <h3>Za preuzimanje <span class="count-badge">3</span></h3>
+      <a class="mini overdue" href="#"><time>Kasni</time><b>Josip Horvat</b><span class="pl">DU-234-AB</span></a>
+      <a class="mini" href="#"><time>Danas</time><b>Ana Kovačević</b><span class="pl">DU-881-KL</span></a>
+      <a class="mini" href="#"><time>7. srp</time><b>Marko Babić</b><span class="pl">DU-455-MN</span></a>
+    </div>
+  </section>
+
+  <!-- RECENT SETS slider -->
+  <section class="recent reveal" style="animation-delay:350ms">
     <div class="head"><h3>Nedavno zaprimljeno</h3><a href="#">Sve →</a></div>
     <div class="slider" role="list" aria-label="Nedavno zaprimljeni setovi">
       <a class="slide" role="listitem" href="#"><span class="thumb" style="background-image:url('assets/set-1.jpg')"></span><div class="meta"><div class="code">ASC-2026-0248</div><div class="who">Ivan Perić</div><span class="chip win">Zimske</span></div></a>
@@ -354,11 +315,12 @@ html.dark .obar .bar{background:rgba(244,245,247,.10)}
 </main>
 
 <nav class="dock" aria-label="Sekcije">
-  <a class="on" href="#" aria-label="Početna"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.2 10.6L12 4l7.8 6.6"/><path d="M5.8 9.4V19a2 2 0 002 2h8.4a2 2 0 002-2V9.4"/></svg>Ploča</a>
-  <a href="#" aria-label="Zaprimi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5.4v13.2M5.4 12h13.2"/></svg>Zaprimi</a>
+  <span class="ind" aria-hidden="true"></span>
+  <a class="dtab on" href="#" aria-label="Početna"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.2 10.6L12 4l7.8 6.6"/><path d="M5.8 9.4V19a2 2 0 002 2h8.4a2 2 0 002-2V9.4"/></svg>Ploča</a>
+  <a class="dtab" href="#" aria-label="Zaprimi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5.4v13.2M5.4 12h13.2"/></svg>Zaprimi</a>
   <a class="scan" href="#" aria-label="Skeniraj"><span class="orb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.2V6.4A2.4 2.4 0 016.4 4h1.8M15.8 4h1.8A2.4 2.4 0 0120 6.4v1.8M20 15.8v1.8a2.4 2.4 0 01-2.4 2.4h-1.8M8.2 20H6.4A2.4 2.4 0 014 17.6v-1.8"/><path d="M7.2 12h9.6"/></svg></span></a>
-  <a href="#" aria-label="Skladište"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21.2s-7-5.5-7-11a7 7 0 0114 0c0 5.5-7 11-7 11z"/><circle cx="12" cy="10" r="2.4"/></svg>Skladište</a>
-  <a href="#" aria-label="Više"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8.6 6.4H21M8.6 12H21M8.6 17.6H21"/><path d="M3.6 6.4h.01M3.6 12h.01M3.6 17.6h.01"/></svg>Više</a>
+  <a class="dtab" href="#" aria-label="Skladište"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21.2s-7-5.5-7-11a7 7 0 0114 0c0 5.5-7 11-7 11z"/><circle cx="12" cy="10" r="2.4"/></svg>Skladište</a>
+  <a class="dtab" href="#" aria-label="Više"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8.6 6.4H21M8.6 12H21M8.6 17.6H21"/><path d="M3.6 6.4h.01M3.6 12h.01M3.6 17.6h.01"/></svg>Više</a>
 </nav>
 
 <script>
@@ -374,25 +336,29 @@ html.dark .obar .bar{background:rgba(244,245,247,.10)}
     paintTheme();
   });
 
-  // Animated count-up statistics + bar/meter fill. Runs once on load; instant if
-  // the user prefers reduced motion.
+  // Animated count-up + bar/meter fill (instant when reduced motion).
   function animate(){
     document.querySelectorAll('[data-count]').forEach(el => {
       const target = +el.dataset.count;
       if (reduce || target === 0){ el.textContent = target; return; }
       const dur = 900, t0 = performance.now();
-      const step = (t) => {
-        const p = Math.min(1, (t - t0) / dur);
-        const eased = 1 - Math.pow(1 - p, 3);            // easeOutCubic
-        el.textContent = Math.round(target * eased);
-        if (p < 1) requestAnimationFrame(step);
-      };
+      const step = (t) => { const p = Math.min(1,(t-t0)/dur); el.textContent = Math.round(target*(1-Math.pow(1-p,3))); if(p<1) requestAnimationFrame(step); };
       requestAnimationFrame(step);
     });
     requestAnimationFrame(() => document.querySelectorAll('[data-w]').forEach(i => { i.style.width = i.dataset.w + '%'; }));
   }
-  if (document.readyState !== 'loading') animate();
-  else addEventListener('DOMContentLoaded', animate);
+
+  // Dock: sliding lava indicator glides to the active tab.
+  const dock = document.querySelector('.dock');
+  const ind = dock.querySelector('.ind');
+  const dtabs = [...dock.querySelectorAll('.dtab')];
+  function moveInd(el){ ind.style.width = el.offsetWidth + 'px'; ind.style.transform = 'translateX(' + el.offsetLeft + 'px)'; }
+  function initDock(){ const cur = dock.querySelector('.dtab.on') || dtabs[0]; moveInd(cur); }
+  dtabs.forEach(t => t.addEventListener('click', e => { e.preventDefault(); dtabs.forEach(x => x.classList.remove('on')); t.classList.add('on'); moveInd(t); }));
+  addEventListener('resize', () => { const cur = dock.querySelector('.dtab.on'); if(cur) moveInd(cur); });
+
+  if (document.readyState !== 'loading'){ animate(); initDock(); }
+  else addEventListener('DOMContentLoaded', () => { animate(); initDock(); });
 </script>
 </body>
 </html>
