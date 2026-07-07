@@ -33,9 +33,11 @@ function firstName(profile) {
 export async function render(main) {
   const role = getState().profile?.role;
   const canWorkshop = !role || role === "employee" || db.isAdminRole(role);
-  // Dashboard spans the full v2 grid width; restore the default cap on leave.
+  // Dashboard spans the full v2 grid width. The router owns the .v2wide chrome
+  // class now (set/cleared in the same tick as the #main content swap, see
+  // app.js route()), so the legacy topbar can't flash over the dashboard during a
+  // slow navigation. Set it here too so the first paint is full-width immediately.
   main.classList.add("v2wide");
-  window.addEventListener("asc:teardown", () => main.classList.remove("v2wide"), { once: true });
   const initials = ((getState().profile?.full_name || "").trim().split(/\s+/).map((w) => w[0]).join("").slice(0, 2) || "·").toUpperCase();
   // v6 "Hanssen" composition — theme preference shared with the login screen.
   let themeDark = false;

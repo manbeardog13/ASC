@@ -298,13 +298,18 @@ async function route() {
   const main = document.getElementById("main");
 
   const match = ROUTES.map((r) => ({ r, m: path.match(r.pattern) })).find((x) => x.m);
-  if (!match) { main.innerHTML = `<div class="card"><h2>${t("common.notFound")}</h2><p class="muted"><a href="#/">${t("nav.home")}</a></p></div>`; return; }
+  if (!match) { main.classList.remove("v2wide"); main.innerHTML = `<div class="card"><h2>${t("common.notFound")}</h2><p class="muted"><a href="#/">${t("nav.home")}</a></p></div>`; return; }
 
   main.scrollTo?.(0, 0);
   window.scrollTo(0, 0);
   try {
     const mod = await match.r.load();
     if (stale()) return;                 // user already navigated elsewhere
+    // Flip the dashboard's full-width / no-topbar chrome IN THE SAME TICK the new
+    // view replaces #main — never at teardown. Toggling it early (at teardown, before
+    // the async module load) briefly showed the legacy topbar over the still-visible
+    // dashboard on slow loads — the "menu randomly reverts to the old UI" bug.
+    main.classList.toggle("v2wide", path === "/");
     await mod.render(main, { params: match.m.slice(1), mode: match.r.mode, go });
     if (stale()) return;
     // Replay the view-enter transition so every navigation glides in.
@@ -466,7 +471,7 @@ const A_USER = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strok
 // Minimal auth screen (dark, card-less): logo, form, language flag top-right.
 // `mode` is "signin" (default) or "signup"; the toggle swaps only the form body.
 // Keep in sync with service-worker CACHE version on every ship.
-const APP_V = "v79";
+const APP_V = "v80";
 
 // Stage chips: real cached counts from the last dashboard visit (written by
 // views/dashboard.js) — never fake numbers. Falls back to feature labels on
