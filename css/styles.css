@@ -1985,3 +1985,16 @@ body.v6-dark::before { background:#020305; }
 @media (max-width: 1020px) {
   body:has(#main.v2wide) .tabbar { display: none; }
 }
+/* portaled dock: theme via body class (nav may live outside .v6) */
+body.v6-dark .v6mode i { background:transparent; box-shadow:inset 0 0 0 2.5px #f4f5f7; }
+/* dock: one clean row, always */
+@media (max-width:1020px) {
+  .v6nav { flex-wrap:nowrap; width:max-content; max-width:calc(100vw - 24px); }
+  .v6nav a, .v6nav a:not(.on) { padding:6px 8px; font-size:12px; white-space:nowrap; }
+}
+@media (max-width: 1020px) {
+  .v6nav { flex-wrap: nowrap; padding: 6px 8px; gap: 0; }
+  .v6nav .v6mark { width: 18px; height: 18px; margin-right: 4px; }
+  .v6nav a { padding: 8px 9px !important; font-size: 12px; }
+  .v6mode { width: 24px; height: 24px; margin-left: 2px; }
+}

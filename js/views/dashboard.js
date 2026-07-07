@@ -112,6 +112,20 @@ export async function render(main) {
     document.body.classList.toggle("v6-dark", dark);
     try { localStorage.setItem("asc.theme", dark ? "dark" : "light"); } catch { /* ignore */ }
   });
+  // Phone dock: #main's view-transition transform traps position:fixed, so the
+  // nav is PORTALED to <body> on small screens (and returned on desktop).
+  const navEl = main.querySelector(".v6nav");
+  const dockMq = window.matchMedia("(max-width: 1020px)");
+  const dockPortal = () => {
+    if (dockMq.matches && navEl.parentElement !== document.body) document.body.appendChild(navEl);
+    else if (!dockMq.matches && navEl.parentElement === document.body) main.querySelector(".v6shell")?.prepend(navEl);
+  };
+  dockPortal();
+  dockMq.addEventListener?.("change", dockPortal);
+  window.addEventListener("asc:teardown", () => {
+    dockMq.removeEventListener?.("change", dockPortal);
+    if (navEl.parentElement === document.body) navEl.remove();
+  }, { once: true });
 
   // The personal hello — paints now, and re-paints when the background profile
   // fetch lands (first visit after boot often races it). Unsubscribes on swap.
