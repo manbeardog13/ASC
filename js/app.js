@@ -261,7 +261,12 @@ let navSeq = 0;
 async function route() {
   const seq = ++navSeq;
   const stale = () => seq !== navSeq;
-  const path = (location.hash.replace(/^#/, "") || "/");
+  // A QR deep-link (#/set/CODE?v=2&k=<checksum>) carries a query INSIDE the hash;
+  // when opened by a phone's native camera it lands here, so strip the query
+  // before route matching — otherwise the code param becomes "CODE?v=2&k=..." and
+  // the set lookup fails ("No set called ASC-2026-0005?v=2&k=IK2P"). Auth reads
+  // location.hash directly, so this only affects app routing.
+  const path = (location.hash.replace(/^#/, "").split("?")[0] || "/");
   setViewRefresh(null);
   // Views with live resources (camera, mic, timers) listen for this and shut
   // them down — it fires on EVERY view swap, including ones with no hashchange
@@ -459,7 +464,7 @@ const A_USER = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strok
 // Minimal auth screen (dark, card-less): logo, form, language flag top-right.
 // `mode` is "signin" (default) or "signup"; the toggle swaps only the form body.
 // Keep in sync with service-worker CACHE version on every ship.
-const APP_V = "v73";
+const APP_V = "v74";
 
 // Stage chips: real cached counts from the last dashboard visit (written by
 // views/dashboard.js) — never fake numbers. Falls back to feature labels on
