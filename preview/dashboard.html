@@ -37,7 +37,19 @@
 .recent{margin-top:var(--gap)}
 .recent .head{display:flex;align-items:baseline;justify-content:space-between;margin:0 4px 10px}
 .recent .head h3{font:600 15px Sora}
-.recent .head a{font:600 12px Inter;color:var(--lava-ink);text-decoration:none}
+.recent .head .live{display:inline-flex;align-items:center;gap:6px;font:600 10.5px Inter;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.recent .head .live .ld{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 7px 1px rgba(47,191,91,.6);animation:breathe 2.2s ease-in-out infinite}
+/* Live stream marquee — seamless (dup track + translateX(-50%) with per-card
+   margins), constant linear speed, GPU transform, edge-fade masks. */
+.stream{position:relative;overflow:hidden;padding:2px 0 8px;
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000 5%,#000 95%,transparent);
+          mask-image:linear-gradient(90deg,transparent,#000 5%,#000 95%,transparent)}
+.stream-track{display:flex;width:max-content;will-change:transform;animation:streamMove 34s linear infinite}
+.stream-track .slide{flex:0 0 auto;position:relative;margin-right:12px}
+@keyframes streamMove{to{transform:translateX(-50%)}}
+@media(hover:hover){ .stream:hover .stream-track{animation-play-state:paused} }
+@media(prefers-reduced-motion:reduce){ .stream-track{animation:none} .stream{overflow-x:auto;-webkit-mask-image:none;mask-image:none} }
+.stream .slide .new{position:absolute;top:8px;left:8px;z-index:2;font:700 8.5px Inter;letter-spacing:.08em;text-transform:uppercase;color:#fff;background:var(--lava);padding:3px 7px;border-radius:6px;box-shadow:0 3px 9px -2px rgba(255,78,27,.6)}
 </style>
 </head>
 <body>
@@ -69,7 +81,7 @@
         <button type="button" class="spill"><b data-count="2">0</b><span>Preuzeto</span></button>
         <button type="button" class="spill"><b data-count="17">0</b><span>Uskoro</span></button>
       </div>
-      <a class="cta agent" href="#"><span class="dot"></span>Pitaj ASC Agenta</a>
+      <a class="cta agent" href="#"><svg class="cta-waves" viewBox="0 0 120 44" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="agw" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="120" y2="0"><stop offset="0" stop-color="#3d7bff"/><stop offset=".5" stop-color="#d13cff"/><stop offset="1" stop-color="#8b4dff"/></linearGradient></defs><path class="agwave a1" d="M0 22 Q10 14 20 22 T40 22 T60 22 T80 22 T100 22 T120 22 T140 22 T160 22 T180 22 T200 22 T220 22 T240 22"/><path class="agwave a2" d="M0 24 Q10 31 20 24 T40 24 T60 24 T80 24 T100 24 T120 24 T140 24 T160 24 T180 24 T200 24 T220 24 T240 24"/><path class="agwave a3" d="M0 20 Q10 26 20 20 T40 20 T60 20 T80 20 T100 20 T120 20 T140 20 T160 20 T180 20 T200 20 T220 20 T240 20"/></svg><span class="dot"></span>Pitaj ASC Agenta</a>
       <span class="tab-corner">danas · Dubrovnik</span>
     </div>
 
@@ -118,16 +130,25 @@
     </div>
   </section>
 
-  <!-- RECENT SETS slider -->
+  <!-- RECENT — a live right-to-left stream. Newest auto-prepends and stays 24 h.
+       Two identical copies + translateX(-50%) with per-card margins = seamless. -->
   <section class="recent reveal" style="animation-delay:350ms">
-    <div class="head"><h3>Nedavno zaprimljeno</h3><a href="#">Sve →</a></div>
-    <div class="slider" role="list" aria-label="Nedavno zaprimljeni setovi">
-      <a class="slide" role="listitem" href="#"><span class="thumb" style="background-image:url('assets/set-1.jpg')"></span><div class="meta"><div class="code">ASC-2026-0248</div><div class="who">Ivan Perić</div><span class="chip win">Zimske</span></div></a>
-      <a class="slide" role="listitem" href="#"><span class="thumb" style="background-image:url('assets/set-2.jpg')"></span><div class="meta"><div class="code">ASC-2026-0247</div><div class="who">Ana Kovačević</div><span class="chip">Ljetne</span></div></a>
-      <a class="slide" role="listitem" href="#"><span class="thumb" style="background-image:url('assets/set-3.jpg')"></span><div class="meta"><div class="code">ASC-2026-0246</div><div class="who">Marko Babić</div><span class="chip win">Zimske</span></div></a>
-      <a class="slide" role="listitem" href="#"><span class="thumb" style="background-image:url('assets/set-4.jpg')"></span><div class="meta"><div class="code">ASC-2026-0245</div><div class="who">Petra Novak</div><span class="chip all">Cjelogodišnje</span></div></a>
-      <a class="slide" role="listitem" href="#"><span class="thumb" style="background-image:url('assets/set-5.jpg')"></span><div class="meta"><div class="code">ASC-2026-0244</div><div class="who">Luka Marić</div><span class="chip">Ljetne</span></div></a>
-      <a class="slide" role="listitem" href="#"><span class="thumb" style="background-image:url('assets/set-6.jpg')"></span><div class="meta"><div class="code">ASC-2026-0243</div><div class="who">Josip Horvat</div><span class="chip win">Zimske</span></div></a>
+    <div class="head"><h3>Nedavno zaprimljeno</h3><span class="live"><span class="ld"></span>uživo · 24 h</span></div>
+    <div class="stream" aria-label="Nedavno zaprimljeni setovi — stream uživo">
+      <div class="stream-track" id="streamTrack">
+        <a class="slide" href="#"><span class="new">Novo</span><span class="thumb" style="background-image:url('assets/set-1.jpg')"></span><div class="meta"><div class="code">ASC-2026-0248</div><div class="who">Ivan Perić</div><span class="chip win">Zimske</span></div></a>
+        <a class="slide" href="#"><span class="thumb" style="background-image:url('assets/set-2.jpg')"></span><div class="meta"><div class="code">ASC-2026-0247</div><div class="who">Ana Kovačević</div><span class="chip">Ljetne</span></div></a>
+        <a class="slide" href="#"><span class="thumb" style="background-image:url('assets/set-3.jpg')"></span><div class="meta"><div class="code">ASC-2026-0246</div><div class="who">Marko Babić</div><span class="chip win">Zimske</span></div></a>
+        <a class="slide" href="#"><span class="thumb" style="background-image:url('assets/set-4.jpg')"></span><div class="meta"><div class="code">ASC-2026-0245</div><div class="who">Petra Novak</div><span class="chip all">Cjelogodišnje</span></div></a>
+        <a class="slide" href="#"><span class="thumb" style="background-image:url('assets/set-5.jpg')"></span><div class="meta"><div class="code">ASC-2026-0244</div><div class="who">Luka Marić</div><span class="chip">Ljetne</span></div></a>
+        <a class="slide" href="#"><span class="thumb" style="background-image:url('assets/set-6.jpg')"></span><div class="meta"><div class="code">ASC-2026-0243</div><div class="who">Josip Horvat</div><span class="chip win">Zimske</span></div></a>
+        <a class="slide" aria-hidden="true" tabindex="-1" href="#"><span class="new">Novo</span><span class="thumb" style="background-image:url('assets/set-1.jpg')"></span><div class="meta"><div class="code">ASC-2026-0248</div><div class="who">Ivan Perić</div><span class="chip win">Zimske</span></div></a>
+        <a class="slide" aria-hidden="true" tabindex="-1" href="#"><span class="thumb" style="background-image:url('assets/set-2.jpg')"></span><div class="meta"><div class="code">ASC-2026-0247</div><div class="who">Ana Kovačević</div><span class="chip">Ljetne</span></div></a>
+        <a class="slide" aria-hidden="true" tabindex="-1" href="#"><span class="thumb" style="background-image:url('assets/set-3.jpg')"></span><div class="meta"><div class="code">ASC-2026-0246</div><div class="who">Marko Babić</div><span class="chip win">Zimske</span></div></a>
+        <a class="slide" aria-hidden="true" tabindex="-1" href="#"><span class="thumb" style="background-image:url('assets/set-4.jpg')"></span><div class="meta"><div class="code">ASC-2026-0245</div><div class="who">Petra Novak</div><span class="chip all">Cjelogodišnje</span></div></a>
+        <a class="slide" aria-hidden="true" tabindex="-1" href="#"><span class="thumb" style="background-image:url('assets/set-5.jpg')"></span><div class="meta"><div class="code">ASC-2026-0244</div><div class="who">Luka Marić</div><span class="chip">Ljetne</span></div></a>
+        <a class="slide" aria-hidden="true" tabindex="-1" href="#"><span class="thumb" style="background-image:url('assets/set-6.jpg')"></span><div class="meta"><div class="code">ASC-2026-0243</div><div class="who">Josip Horvat</div><span class="chip win">Zimske</span></div></a>
+      </div>
     </div>
   </section>
 </main>
