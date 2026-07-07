@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ASC — Ploča v3 · Cinematic</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --core: #050607; --panel: #0c0d0f; --ash: #edf0f5; --ash-dim: rgba(237,240,245,.55);
+    --lava: #ff4e1b; --line: rgba(237,240,245,.09);
+    --ease: cubic-bezier(.22,1,.36,1);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--core); color: var(--ash); font-family: "Inter", sans-serif; -webkit-font-smoothing: antialiased; }
+  .grain { position: fixed; inset: 0; z-index: 50; pointer-events: none; opacity: .55;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.06 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E"); }
+
+  /* ---- HERO ---- */
+  .hero { position: relative; min-height: 92vh; display: flex; flex-direction: column; overflow: hidden; }
+  .hero-img { position: absolute; inset: 0; background: url("img/hero-warehouse.png") center 30%/cover no-repeat; }
+  .hero-img::after { content: ""; position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(5,6,7,.55) 0%, rgba(5,6,7,.15) 40%, rgba(5,6,7,.92) 88%, var(--core) 100%); }
+  .top { position: relative; z-index: 2; display: flex; align-items: center; gap: 26px; padding: 26px 4vw; }
+  .top img.logo { height: 30px; filter: drop-shadow(0 4px 14px rgba(255,78,27,.4)); }
+  .top nav { display: flex; gap: 22px; font-size: 12.5px; letter-spacing: .14em; text-transform: uppercase; }
+  .top nav a { color: var(--ash-dim); text-decoration: none; transition: color .3s var(--ease); }
+  .top nav a.on, .top nav a:hover { color: var(--ash); }
+  .top .gap { flex: 1; }
+  .avatar { width: 38px; height: 38px; border-radius: 50%; background: rgba(237,240,245,.1); display: grid; place-items: center; font-size: 12px; font-weight: 600; backdrop-filter: blur(8px); }
+
+  .hero-body { position: relative; z-index: 2; flex: 1; display: flex; flex-direction: column; justify-content: flex-end; padding: 0 4vw 54px; }
+  .display {
+    font-family: "Sora", sans-serif; font-weight: 800; text-transform: uppercase;
+    font-size: clamp(52px, 9vw, 128px); line-height: .92; letter-spacing: -.03em;
+  }
+  .display .ghost { color: transparent; -webkit-text-stroke: 1.5px rgba(237,240,245,.5); }
+  .hero-sub { margin-top: 22px; display: flex; align-items: center; gap: 26px; flex-wrap: wrap; }
+  .hero-stat { font-family: "Sora"; font-size: 15px; letter-spacing: .04em; }
+  .hero-stat b { color: var(--lava); font-size: 22px; font-weight: 700; margin-right: 6px; }
+  .cta {
+    display: inline-flex; align-items: center; gap: 10px;
+    background: var(--lava); color: #fff; text-decoration: none;
+    padding: 15px 30px; border-radius: 999px;
+    font: 600 14px "Inter"; letter-spacing: .02em;
+    box-shadow: 0 12px 34px -8px rgba(255,78,27,.6);
+    transition: transform .3s var(--ease);
+  }
+  .cta:hover { transform: translateY(-2px); }
+  .cta .dot { width: 9px; height: 9px; border-radius: 50%; background: #fff; animation: br 2.4s ease-in-out infinite; }
+  @keyframes br { 50% { transform: scale(1.4); opacity: .7; } }
+
+  /* ---- STAT BAND ---- */
+  .band { display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .band .cell { padding: 42px 4vw 38px; border-right: 1px solid var(--line); }
+  .band .cell:last-child { border-right: 0; }
+  .band b { display: block; font-family: "Sora"; font-size: clamp(40px, 5vw, 64px); font-weight: 700; letter-spacing: -.04em; line-height: 1; }
+  .band .lava b { color: var(--lava); }
+  .band span { display: block; margin-top: 10px; font-size: 11.5px; letter-spacing: .16em; text-transform: uppercase; color: var(--ash-dim); }
+
+  /* ---- SPLIT: list + macro ---- */
+  .split { display: grid; grid-template-columns: 1.2fr .8fr; min-height: 72vh; position: relative; }
+  .split-list { padding: 64px 4vw; }
+  .kicker { font-size: 11.5px; letter-spacing: .2em; text-transform: uppercase; color: var(--lava); margin-bottom: 14px; }
+  .split h2 { font-family: "Sora"; font-weight: 800; text-transform: uppercase; font-size: clamp(34px, 4.6vw, 62px); letter-spacing: -.03em; line-height: .95; margin-bottom: 40px; }
+  .split h2 .ghost { color: transparent; -webkit-text-stroke: 1.2px rgba(237,240,245,.45); }
+  .row { display: flex; align-items: baseline; gap: 22px; padding: 20px 0; border-top: 1px solid var(--line); }
+  .row time { font-family: "Sora"; font-weight: 700; font-size: 17px; color: var(--lava); min-width: 64px; }
+  .row .who b { display: block; font-family: "Sora"; font-size: 17px; font-weight: 600; }
+  .row .who span { font-size: 13px; color: var(--ash-dim); }
+  .row .tag { margin-left: auto; font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--ash-dim); border: 1px solid var(--line); border-radius: 999px; padding: 7px 14px; white-space: nowrap; }
+  .row .tag.hot { color: var(--lava); border-color: rgba(255,78,27,.4); }
+  .split-img { background: url("img/tread-macro.png") center/cover no-repeat; position: relative; }
+  .split-img::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, var(--core) 0%, transparent 30%); }
+
+  /* ghost word crossing sections */
+  .mega { overflow: hidden; padding: 90px 0 70px; }
+  .mega div {
+    font-family: "Sora"; font-weight: 800; text-transform: uppercase;
+    font-size: clamp(80px, 14vw, 210px); letter-spacing: -.02em; line-height: 1;
+    color: transparent; -webkit-text-stroke: 1.5px rgba(237,240,245,.18);
+    white-space: nowrap; transform: translateX(-2vw);
+  }
+
+  /* ---- FOOT GRID: zauzeće + akcije ---- */
+  .foot { display: grid; grid-template-columns: 1fr 1fr; gap: 0; border-top: 1px solid var(--line); }
+  .foot section { padding: 56px 4vw 72px; }
+  .foot section:first-child { border-right: 1px solid var(--line); }
+  .foot h3 { font-family: "Sora"; font-weight: 800; text-transform: uppercase; font-size: 24px; letter-spacing: -.01em; margin-bottom: 30px; }
+  .obar { margin-bottom: 24px; }
+  .obar .t { display: flex; justify-content: space-between; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--ash-dim); margin-bottom: 10px; }
+  .obar .t b { color: var(--ash); font-family: "Sora"; font-size: 15px; }
+  .obar .bar { height: 3px; background: rgba(237,240,245,.1); }
+  .obar .bar i { display: block; height: 100%; background: var(--lava); }
+  .act { display: flex; align-items: center; justify-content: space-between; padding: 22px 0; border-top: 1px solid var(--line); text-decoration: none; color: var(--ash); font-family: "Sora"; font-weight: 600; font-size: 16px; letter-spacing: .01em; transition: padding .3s var(--ease); }
+  .act:hover { padding-left: 10px; color: var(--lava); }
+  .act .arw { color: var(--lava); }
+  @media (max-width: 900px) {
+    .band { grid-template-columns: 1fr 1fr; } .band .cell { border-bottom: 1px solid var(--line); }
+    .split { grid-template-columns: 1fr; } .split-img { min-height: 46vh; order: -1; }
+    .foot { grid-template-columns: 1fr; } .foot section:first-child { border-right: 0; border-bottom: 1px solid var(--line); }
+    .top nav { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="grain"></div>
+
+<header class="hero">
+  <div class="hero-img"></div>
+  <div class="top">
+    <img class="logo" src="asc-logo-cropped.png" alt="ASC">
+    <nav>
+      <a class="on" href="#">Ploča</a><a href="#">Zaprimi</a><a href="#">Skladište</a><a href="#">Kupci</a>
+    </nav>
+    <div class="gap"></div>
+    <div class="avatar">TJ</div>
+  </div>
+  <div class="hero-body">
+    <h1 class="display">Vaše gume,<br><span class="ghost">na sigurnom.</span></h1>
+    <div class="hero-sub">
+      <a class="cta" href="#"><span class="dot"></span>Pitaj ASC Agenta</a>
+      <div class="hero-stat"><b>248</b> setova na čuvanju · Dubrovnik</div>
+    </div>
+  </div>
+</header>
+
+<section class="band">
+  <div class="cell lava"><b>248</b><span>Na skladištu</span></div>
+  <div class="cell"><b>4</b><span>Termina danas</span></div>
+  <div class="cell"><b>17</b><span>Za zamjenu</span></div>
+  <div class="cell"><b>22</b><span>Slobodna mjesta</span></div>
+</section>
+
+<section class="split">
+  <div class="split-list">
+    <div class="kicker">Danas · Ponedjeljak, 6. srpnja</div>
+    <h2>Termini<br><span class="ghost">u radioni</span></h2>
+    <div class="row"><time>9:00</time><div class="who"><b>Josip Horvat</b><span>DU 4521-AB · Golf VII · zimske → ljetne</span></div><span class="tag hot">Zamjena</span></div>
+    <div class="row"><time>10:30</time><div class="who"><b>Ana Kovačević</b><span>DU 887-KL · Octavia · novi set</span></div><span class="tag">Prijem</span></div>
+    <div class="row"><time>13:00</time><div class="who"><b>Marko Babić</b><span>ST 2210-MB · Passat · michelinke 225/45 R17</span></div><span class="tag hot">Zamjena</span></div>
+    <div class="row"><time>15:30</time><div class="who"><b>Ivana Marić</b><span>DU 1178-IM · Tiguan · preuzimanje</span></div><span class="tag">Izdavanje</span></div>
+  </div>
+  <div class="split-img"></div>
+</section>
+
+<div class="mega"><div>Dubrovnik · ASC · Dubrovnik</div></div>
+
+<section class="foot">
+  <section>
+    <h3>Zauzeće</h3>
+    <div class="obar"><div class="t"><span>Zimske</span><b>141</b></div><div class="bar"><i style="width:78%"></i></div></div>
+    <div class="obar"><div class="t"><span>Ljetne</span><b>89</b></div><div class="bar"><i style="width:49%"></i></div></div>
+    <div class="obar"><div class="t"><span>Cjelogodišnje</span><b>18</b></div><div class="bar"><i style="width:10%;opacity:.4"></i></div></div>
+  </section>
+  <section>
+    <h3>Brze akcije</h3>
+    <a class="act" href="#">Novi set na čuvanje<span class="arw">→</span></a>
+    <a class="act" href="#">Skeniraj QR<span class="arw">→</span></a>
+    <a class="act" href="#">Radionica<span class="arw">→</span></a>
+  </section>
+</section>
+
+</body>
+</html>

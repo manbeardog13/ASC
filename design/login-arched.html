@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ASC — Prijava</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Sora:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --cloud: #EDF0F5;
+    --core: #020305;
+    --lava: #FF4E1B;
+    --gunmetal: #2E2F31;
+    --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    font-family: "Inter", system-ui, sans-serif;
+    background: var(--cloud);
+    color: var(--core);
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ---- organic lava ribbon backdrop ---- */
+  .backdrop { position: fixed; inset: 0; z-index: 0; }
+  .blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(90px);
+    opacity: .55;
+    will-change: transform;
+  }
+  .blob--a {
+    width: 56vmax; height: 56vmax;
+    left: -18vmax; top: -22vmax;
+    background: radial-gradient(circle at 35% 35%, #FF4E1B 0%, #FF8A5C 45%, transparent 72%);
+    animation: drift-a 26s var(--ease-out) infinite alternate;
+  }
+  .blob--b {
+    width: 44vmax; height: 44vmax;
+    right: -16vmax; bottom: -18vmax;
+    background: radial-gradient(circle at 60% 60%, #FFB597 0%, #FF4E1B 55%, transparent 75%);
+    opacity: .32;
+    animation: drift-b 32s var(--ease-out) infinite alternate;
+  }
+  .blob--c {
+    width: 30vmax; height: 30vmax;
+    right: 12vmax; top: -12vmax;
+    background: radial-gradient(circle, #FFD9C9 0%, transparent 70%);
+    opacity: .5;
+    animation: drift-c 22s var(--ease-out) infinite alternate;
+  }
+  @keyframes drift-a { to { transform: translate(9vmax, 7vmax) scale(1.12); } }
+  @keyframes drift-b { to { transform: translate(-7vmax, -5vmax) scale(1.08); } }
+  @keyframes drift-c { to { transform: translate(-5vmax, 6vmax); } }
+
+  /* faint arch echo lines in the backdrop */
+  .arches {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(140vmax 140vmax at 50% 175%, transparent 61.8%, rgba(2,3,5,.045) 61.9%, rgba(2,3,5,.045) 62.15%, transparent 62.25%),
+      radial-gradient(120vmax 120vmax at 50% 168%, transparent 61.8%, rgba(2,3,5,.035) 61.9%, rgba(2,3,5,.035) 62.15%, transparent 62.25%);
+  }
+
+  /* ---- glass card ---- */
+  .card {
+    position: relative; z-index: 1;
+    width: min(400px, calc(100vw - 40px));
+    padding: 44px 40px 36px;
+    border-radius: 32px;
+    background: rgba(255,255,255,.62);
+    backdrop-filter: blur(28px) saturate(1.35);
+    -webkit-backdrop-filter: blur(28px) saturate(1.35);
+    animation: card-in .8s var(--ease-out) both;
+  }
+  @keyframes card-in {
+    from { opacity: 0; transform: translateY(26px) scale(.965); }
+  }
+  .stagger { animation: rise .7s var(--ease-out) both; }
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(14px); }
+  }
+
+  /* ---- arch portal logo ---- */
+  .portal {
+    width: 72px; height: 88px;
+    margin: 0 auto 22px;
+    border-radius: 36px 36px 14px 14px;   /* the arch */
+    background: linear-gradient(168deg, #FF8A5C 0%, var(--lava) 58%, #E23C0D 100%);
+    display: grid; place-items: center;
+    animation-delay: .06s;
+  }
+  .portal span {
+    font-family: "Sora", sans-serif;
+    font-weight: 700; font-size: 24px; letter-spacing: .5px;
+    color: #fff;
+  }
+
+  h1 {
+    font-family: "Sora", sans-serif;
+    font-weight: 600; font-size: 24px;
+    text-align: center; letter-spacing: -.02em;
+    animation-delay: .12s;
+  }
+  .sub {
+    margin-top: 6px; margin-bottom: 28px;
+    text-align: center;
+    font-size: 14px; color: var(--gunmetal); opacity: .75;
+    animation-delay: .17s;
+  }
+
+  /* ---- controls: capsules, one depth cue each ---- */
+  .btn, .field input {
+    width: 100%; height: 52px;
+    border-radius: 26px;
+    font-family: "Inter", sans-serif;
+    font-size: 15px;
+    transition: transform .3s var(--ease-out), box-shadow .3s var(--ease-out), background .3s var(--ease-out);
+  }
+  .btn { border: 0; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; font-weight: 500; }
+  .btn:active { transform: scale(.97); }
+
+  .btn--google {
+    background: rgba(255,255,255,.9);
+    color: var(--core);
+    animation-delay: .22s;
+  }
+  .btn--google:hover { transform: translateY(-1px); background: #fff; }
+
+  .divider {
+    display: flex; align-items: center; gap: 14px;
+    margin: 20px 0;
+    color: var(--gunmetal); opacity: .5; font-size: 12px;
+    animation-delay: .26s;
+  }
+  .divider::before, .divider::after {
+    content: ""; flex: 1; height: 1px; background: rgba(2,3,5,.14);
+  }
+
+  .field { margin-bottom: 12px; }
+  .field input {
+    border: 1px solid rgba(2,3,5,.12);
+    background: rgba(255,255,255,.8);
+    padding: 0 22px;
+    color: var(--core);
+    outline: none;
+  }
+  .field input::placeholder { color: rgba(46,47,49,.45); }
+  .field input:focus {
+    border-color: var(--lava);
+    box-shadow: 0 0 0 4px rgba(255,78,27,.16);
+  }
+  .field--email { animation-delay: .30s; }
+  .field--pass  { animation-delay: .34s; }
+
+  .btn--lava {
+    margin-top: 8px;
+    background: var(--lava); color: #fff;
+    font-weight: 600;
+    box-shadow: 0 10px 24px -8px rgba(255,78,27,.55);
+    animation-delay: .38s;
+  }
+  .btn--lava:hover { transform: translateY(-1px); box-shadow: 0 14px 30px -8px rgba(255,78,27,.6); }
+
+  .foot {
+    margin-top: 22px; text-align: center;
+    font-size: 13px; color: var(--gunmetal); opacity: .7;
+    animation-delay: .44s;
+  }
+  .foot a { color: var(--lava); text-decoration: none; font-weight: 500; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .blob, .card, .stagger { animation: none; }
+  }
+</style>
+</head>
+<body>
+  <div class="backdrop">
+    <div class="blob blob--a"></div>
+    <div class="blob blob--b"></div>
+    <div class="blob blob--c"></div>
+    <div class="arches"></div>
+  </div>
+
+  <main class="card">
+    <div class="portal stagger"><span>A</span></div>
+    <h1 class="stagger">Dobro došli natrag</h1>
+    <p class="sub stagger">Prijavite se u ASC — hotel za gume</p>
+
+    <button class="btn btn--google stagger">
+      <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.5l6.7-6.7C35.6 2.4 30.1 0 24 0 14.6 0 6.5 5.4 2.5 13.2l7.8 6.1C12.2 13.4 17.6 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4.1 7.1-10.1 7.1-17.5z"/><path fill="#FBBC05" d="M10.3 28.7a14.5 14.5 0 0 1 0-9.4l-7.8-6.1a24 24 0 0 0 0 21.6l7.8-6.1z"/><path fill="#34A853" d="M24 48c6.1 0 11.2-2 15-5.5l-7.5-5.8c-2 1.4-4.6 2.2-7.5 2.2-6.4 0-11.8-3.9-13.7-9.2l-7.8 6.1C6.5 42.6 14.6 48 24 48z"/></svg>
+      Nastavi s Googleom
+    </button>
+
+    <div class="divider stagger">ili</div>
+
+    <form onsubmit="return false">
+      <div class="field field--email stagger">
+        <input type="email" placeholder="E-mail adresa" autocomplete="email">
+      </div>
+      <div class="field field--pass stagger">
+        <input type="password" placeholder="Lozinka" autocomplete="current-password">
+      </div>
+      <button class="btn btn--lava stagger">Prijavi se</button>
+    </form>
+
+    <p class="foot stagger">Nemate račun? <a href="#">Registrirajte se</a></p>
+  </main>
+</body>
+</html>

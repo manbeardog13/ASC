@@ -101,7 +101,7 @@ function mountFrame() {
   if (document.getElementById("main")) return;
   root.innerHTML = `
     <header class="topbar">
-      <a class="brand-logo" href="#/" aria-label="ASC"><img src="assets/asc-mark.png" alt="ASC"></a>
+      <a class="brand-logo" href="#/" aria-label="ASC"><img src="assets/asc-logo-tight.png" alt="ASC"></a>
       <nav class="topbar-desk-nav" aria-label="Primary">
         ${NAV.filter((n) => !n.center).map((n) => `<a href="#${n.route}" data-route="${n.route}">${icon(n.iconName, 18)}${t(n.key)}</a>`).join("")}
         <a href="#/users" data-route="/users">${icon("people", 18)}${t("nav.users")}<span class="nav-badge users-badge" hidden></span></a>
@@ -458,25 +458,79 @@ const A_USER = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strok
 
 // Minimal auth screen (dark, card-less): logo, form, language flag top-right.
 // `mode` is "signin" (default) or "signup"; the toggle swaps only the form body.
+// Keep in sync with service-worker CACHE version on every ship.
+const APP_V = "v63";
+
+// Stage chips: real cached counts from the last dashboard visit (written by
+// views/dashboard.js) — never fake numbers. Falls back to feature labels on
+// a device that has never signed in.
+function loginChips() {
+  let s = null;
+  try { s = JSON.parse(localStorage.getItem("asc.loginChips") || "null"); } catch { /* ignore */ }
+  const c1 = s && Number.isFinite(s.inStorage) ? t("login.chipSets", { n: s.inStorage }) : t("login.chipLive");
+  const c2 = s && Number.isFinite(s.dueSoon) ? t("login.chipDue", { n: s.dueSoon }) : t("login.chipQr");
+  return `<span class="schip schip-live"><i></i>${esc(c1)}</span>
+    <span class="schip">${esc(c2)}</span>
+    <span class="schip">${APP_V}</span>`;
+}
+
 function renderLogin(mode = "signin") {
   stopRealtime();
   // Redundant auth events (INITIAL_SESSION, token refreshes) re-run boot()/route();
   // don't rebuild if the login is already on screen.
   if (document.getElementById("loginBody")) return;
+  let themeDark = false;
+  try { themeDark = localStorage.getItem("asc.theme") === "dark"; } catch { /* ignore */ }
+  const cur = lang();
   root.innerHTML = `
-    <div class="login-canvas auth">
+    <div class="login-canvas auth${themeDark ? " theme-dark" : ""}">
       <div class="auth-bg" aria-hidden="true">
         <i class="ab-bloom"></i>
         <i class="ab-sash"></i>
         <i class="ab-arc"></i>
+        <i class="ab-ember"></i>
+        <i class="ab-cursor"></i>
         <i class="ab-grain"></i>
       </div>
-      <div class="login-langs-top">${langToggle(true)}</div>
-      <div class="auth-col">
-        <img class="auth-logo" src="assets/asc-logo.png" alt="ASC — Auto Servisni Centar d.o.o.">
-        <div id="loginBody"></div>
+      <div class="auth-shell">
+        <section class="auth-stage">
+          <img class="auth-logo" src="assets/asc-logo-tight.png" alt="ASC — Auto Servisni Centar d.o.o.">
+          <h2 class="stage-title">${t("login.stageTitle1")}<br><span>${t("login.stageTitle2")}</span></h2>
+          <p class="stage-lead">${t("login.stageLead")}</p>
+          <div class="stage-chips">${loginChips()}</div>
+          <span class="stage-notch">${t("login.stageNotch")}</span>
+        </section>
+        <section class="auth-side">
+          <div class="auth-seg" role="group">
+            <button type="button" class="seg-opt${cur === "hr" ? " on" : ""}" data-lang-set="hr"><i class="seg-glow"></i>HR</button>
+            <button type="button" class="seg-opt${cur === "en" ? " on" : ""}" data-lang-set="en"><i class="seg-glow"></i>EN</button>
+            <button type="button" class="seg-mode" id="themeToggle" aria-label="Tema / Theme"><i></i></button>
+          </div>
+          <div id="loginBody"></div>
+        </section>
       </div>
     </div>`;
+  // Language segments — same mechanism as the old flag (setLang re-renders everything).
+  root.querySelectorAll("[data-lang-set]").forEach((b) => {
+    b.addEventListener("click", () => { if (b.dataset.langSet !== lang()) setLang(b.dataset.langSet); });
+  });
+  // Light/dark — login-scoped for now (class + persisted preference).
+  root.querySelector("#themeToggle").addEventListener("click", () => {
+    const canvas = root.querySelector(".login-canvas.auth");
+    const dark = canvas.classList.toggle("theme-dark");
+    try { localStorage.setItem("asc.theme", dark ? "dark" : "light"); } catch { /* ignore */ }
+  });
+  // Cursor glow — moved with transform only (compositor-frame, zero lag).
+  // Pointer devices only; reduced-motion hides it via CSS.
+  const glowEl = root.querySelector(".ab-cursor");
+  if (window.__ascGlowMove) window.removeEventListener("pointermove", window.__ascGlowMove);
+  if (glowEl && window.matchMedia?.("(hover: hover)").matches) {
+    window.__ascGlowMove = (e) => {
+      if (!glowEl.isConnected) { window.removeEventListener("pointermove", window.__ascGlowMove); window.__ascGlowMove = null; return; }
+      glowEl.style.transform = `translate3d(${e.clientX - 320}px, ${e.clientY - 320}px, 0)`;
+    };
+    window.addEventListener("pointermove", window.__ascGlowMove, { passive: true });
+  }
   paintLogin(mode);
   setTimeout(() => document.getElementById("email")?.focus({ preventScroll: true }), 80);
 }
@@ -501,23 +555,28 @@ function paintLogin(mode) {
         <input id="lastName" type="text" placeholder="${t("login.lastName")}" autocomplete="family-name" required></label>
     </div>`;
 
+  const ctaArrow = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>`;
   body.innerHTML = signup
-    ? `<form id="loginForm" class="auth-form" novalidate>
+    ? `<h1 class="auth-title">${t("login.createTitle")}</h1>
+      <form id="loginForm" class="auth-form" novalidate>
         ${nameFields}${emailField}${passField}
-        <button class="btn-amber" type="submit">${t("login.signupCta")}</button>
+        <button class="btn-amber" type="submit">${t("login.signupCta")}${ctaArrow}</button>
         ${status}
         <div class="auth-divider"><span>${t("login.or")}</span></div>
         ${googleBtn}
         <p class="auth-create"><button type="button" id="loginSwitch" class="auth-create-link">${t("login.haveAccount")}</button></p>
       </form>`
-    : `<form id="loginForm" class="auth-form" novalidate>
-        ${emailField}${passField}
-        <label class="remember"><input type="checkbox" id="remember"><span class="rm-box">${A_CHECK}</span><span class="rm-label">${t("login.remember")}</span></label>
-        <button class="btn-amber" type="submit">${t("login.signin")}</button>
-        ${status}
-        <button type="button" id="forgot" class="auth-forgot">${t("login.forgot")}</button>
-        <div class="auth-divider"><span>${t("login.or")}</span></div>
+    : `<h1 class="auth-title">${t("login.welcomeBack")}</h1>
+      <p class="auth-sub">${t("login.welcomeSub")}</p>
+      <form id="loginForm" class="auth-form" novalidate>
         ${googleBtn}
+        <div class="auth-divider"><span>${t("login.orEmail")}</span></div>
+        ${emailField}${passField}
+        <div class="auth-row auth-row--end">
+          <button type="button" id="forgot" class="auth-forgot">${t("login.forgot")}</button>
+        </div>
+        <button class="btn-amber" type="submit">${t("login.signin")}${ctaArrow}</button>
+        ${status}
         <p class="auth-create">${t("login.firstTime")} <button type="button" id="loginSwitch" class="auth-create-link">${t("login.createAccount")}</button></p>
       </form>`;
 
@@ -543,11 +602,11 @@ function paintLogin(mode) {
     pwToggle.setAttribute("aria-label", t(reveal ? "login.hidePw" : "login.showPw"));
   };
 
-  // Remember me → prefill the remembered email on the sign-in screen.
-  if (!signup && remember) {
+  // Silent remember — always prefill the last signed-in email (no checkbox, per v2).
+  if (!signup) {
     let saved = "";
     try { saved = localStorage.getItem("asc.rememberEmail") || ""; } catch { /* ignore */ }
-    if (saved) { body.querySelector("#email").value = saved; remember.checked = true; }
+    if (saved) body.querySelector("#email").value = saved;
   }
 
   // Forgot password → email a reset link (lands on the set-password screen).
@@ -581,8 +640,8 @@ function paintLogin(mode) {
     const last = body.querySelector("#lastName")?.value.trim() || "";
     if (signup && (!first || !last)) return showErr(t("login.nameRequired"));
     if (signup && password.length < 6) return showErr(t("login.minPass"));
-    if (!signup && remember) {
-      try { remember.checked ? localStorage.setItem("asc.rememberEmail", email) : localStorage.removeItem("asc.rememberEmail"); } catch { /* ignore */ }
+    if (!signup) {
+      try { localStorage.setItem("asc.rememberEmail", email); } catch { /* ignore */ }
     }
     busy(btn, true);
     try {

@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ASC — Ploča v5 · Glass</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ============================================================================
+   ASC v5 — "Glass" · arched shell rebuilt to Apple material standards.
+   Material architecture: ONE backdrop-filter sheet (the shell) sampling the
+   cinematic canvas; every card inside is a vibrancy-style tint fill (zero
+   nested blurs — perf budget: 1 live blur surface). Locked 4-color palette.
+   Motion: Apple .smooth entrance, .snappy springs for interaction, stagger
+   (row+col)*40ms, press 0.97@100ms, hover = shadow-opacity on ::after.
+   ============================================================================ */
+:root {
+  --bg:#edf0f5; --ink:#020305; --ink-2:#3a3c40; --muted:#63676f;
+  --lava:#ff4e1b; --lava-ink:#c0360d; --lava-tint:rgba(255,78,27,.11); --lava-ring:rgba(255,78,27,.30);
+  --gun:#2e2f31;
+  --fill-1:rgba(255,255,255,.52);      /* card vibrancy fill on glass */
+  --fill-2:rgba(255,255,255,.34);      /* inset tile */
+  --hairline:rgba(2,3,5,.07);
+  --smooth:cubic-bezier(.25,1,.5,1);           /* Apple .smooth ≈550ms */
+  --sheet:cubic-bezier(.32,.72,0,1);
+  --snappy:linear(0,.0049 1.3%,.0184 2.5%,.0391 3.8%,.0656 5%,.0967 6.3%,.1689 8.8%,.3317 13.8%,.4533 17.5%,.5651 21.3%,.632 23.8%,.6921 26.3%,.7455 28.8%,.792 31.3%,.8323 33.8%,.8817 37.5%,.9196 41.3%,.948 45%,.9741 50%,1.0011 58.8%,1.0099 63.8%,1.0128 68.8%,1.0122 72.5%,1.0035 85%,1.0005 96.3%,1);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body { min-height:100%; }
+body {
+  font-family:"Inter",system-ui,sans-serif; color:var(--ink);
+  background:var(--bg); padding:26px; -webkit-font-smoothing:antialiased;
+  font-variant-numeric: tabular-nums;
+}
+/* Cinematic canvas the glass samples — one photo, calmed toward Cloud Ash */
+.canvas { position:fixed; inset:0; z-index:-1;
+  background:url("../assets/gallery/asc-g031.jpg") center/cover no-repeat; }
+.canvas::after { content:""; position:absolute; inset:0;
+  background:linear-gradient(180deg, rgba(237,240,245,.50), rgba(237,240,245,.22) 45%, rgba(237,240,245,.58)); }
+
+/* ---- THE glass sheet (single backdrop surface) ---- */
+.shell {
+  max-width:1280px; margin:0 auto; border-radius:40px; corner-shape:squircle;
+  background:rgba(255,255,255,.55);                       /* fallback-safe */
+  padding:22px 24px 26px; position:relative;
+  border:1px solid rgba(255,255,255,.42);
+  border-top-color:rgba(255,255,255,.75);                 /* top-lit rim */
+  box-shadow:0 25px 50px rgba(2,3,5,.18);
+  animation:sheetIn 550ms var(--smooth) both;
+}
+@supports ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))) {
+  .shell {
+    background:rgba(255,255,255,.36);
+    -webkit-backdrop-filter: blur(30px) saturate(150%) brightness(110%);
+    backdrop-filter: blur(30px) saturate(150%) brightness(110%);
+  }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .shell { background:#fbfcfe !important; -webkit-backdrop-filter:none !important; backdrop-filter:none !important; }
+  .canvas { display:none; }
+}
+/* grain — material texture, not decoration */
+.shell::after { content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none; opacity:.04; mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E"); }
+@keyframes sheetIn { from { opacity:0; transform:translateY(24px) scale(.985); } }
+@keyframes rise { from { opacity:0; transform:translateY(12px); } }
+@media (prefers-reduced-motion: reduce) {
+  *, .shell { animation:none !important; transition-property:opacity,color,background-color !important; }
+}
+
+/* ---- top row ---- */
+.top { display:flex; align-items:center; gap:14px; margin-bottom:20px; animation:rise 550ms var(--smooth) 60ms both; }
+.nav { display:flex; align-items:center; gap:2px; background:rgba(2,3,5,.86); color:#f4f5f7;
+  border-radius:24px; padding:8px 12px 8px 10px; font-size:13px;
+  border-top:1px solid rgba(255,255,255,.14); }
+.nav img { height:22px; margin-right:8px; display:block; }
+.nav a { position:relative; color:#f4f5f7; opacity:.6; padding:6px 12px; border-radius:16px; text-decoration:none;
+  transition:opacity 160ms ease, background 160ms ease; }
+.nav a::before { content:""; position:absolute; inset:-8px; }   /* 44px hit rect */
+@media (hover:hover) and (pointer:fine) { .nav a:hover { opacity:1; } }
+.nav a.on { opacity:1; background:rgba(244,245,247,.14); }
+.gap { flex:1; }
+.seg { display:flex; gap:2px; padding:4px; background:var(--fill-2); border-radius:999px; border:1px solid var(--hairline); position:relative; }
+.seg button { position:relative; border:0; cursor:pointer; display:flex; align-items:center; gap:7px;
+  padding:8px 15px; border-radius:999px; background:transparent; color:var(--muted);
+  font:600 12.5px Inter; transition:color 160ms ease; }
+.seg button::before { content:""; position:absolute; inset:-6px; }
+.seg button.on { color:var(--ink); }
+.seg .thumb { position:absolute; top:4px; left:4px; height:calc(100% - 8px); width:64px;
+  background:rgba(255,255,255,.92); border-radius:999px; box-shadow:0 3px 10px -3px rgba(2,3,5,.22);
+  transition:transform 647ms var(--snappy), width 647ms var(--snappy); }
+.seg .glow { width:7px; height:7px; border-radius:50%; background:var(--lava); box-shadow:0 0 8px 2px var(--lava-ring); animation:breathe 2.4s ease-in-out infinite; display:none; }
+.seg button.on .glow { display:block; }
+@keyframes breathe { 50% { transform:scale(1.3); opacity:.8; } }
+.avatar { width:42px; height:42px; border-radius:50%; background:rgba(2,3,5,.86); color:#f4f5f7;
+  display:grid; place-items:center; font-size:13px; font-weight:650; border-top:1px solid rgba(255,255,255,.14); }
+
+/* ---- greeting (SF ladder: hero / footnote) ---- */
+.hello { margin:2px 6px 20px; animation:rise 550ms var(--smooth) 100ms both; }
+.hello h1 { font-family:Sora; font-weight:600; font-size:clamp(22px,3vw,28px); letter-spacing:-.02em; }
+.hello h1 .dim { color:var(--muted); font-weight:500; }
+.hello p { margin-top:3px; font-size:13px; color:var(--muted); }
+
+/* ---- grid ---- */
+.grid { display:grid; grid-template-columns:1.05fr 1.5fr .95fr; gap:14px; align-items:stretch; }
+.card { position:relative; border-radius:22px; corner-shape:squircle; padding:16px;
+  background:var(--fill-1);
+  border:1px solid rgba(255,255,255,.55); border-top-color:rgba(255,255,255,.85); border-bottom-color:rgba(255,255,255,.28);
+  animation:rise 550ms var(--smooth) both; }
+.card:nth-child(1){animation-delay:140ms} .card:nth-child(2){animation-delay:180ms} .card:nth-child(3){animation-delay:220ms}
+/* hover: pre-rendered shadow on ::after, opacity-only (compositor path) */
+.card::after { content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
+  box-shadow:0 8px 24px rgba(2,3,5,.10); opacity:0; transition:opacity 200ms ease; }
+@media (hover:hover) and (pointer:fine) {
+  .card.link { transition:transform 200ms var(--smooth); }
+  .card.link:hover { transform:translateY(-2px); }
+  .card.link:hover::after { opacity:1; }
+}
+.card.link:active { transform:scale(.98); transition-duration:100ms; }
+.k { font:600 11px Inter; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); }
+
+/* stage — dark thick material, photo under a guaranteed-AA tint */
+.stage { grid-row:span 2; border-radius:28px; corner-shape:squircle; overflow:hidden; position:relative;
+  color:#f4f5f7; padding:22px 20px 18px; display:flex; flex-direction:column;
+  border:1px solid rgba(255,255,255,.10); border-top-color:rgba(255,255,255,.22);
+  animation:rise 550ms var(--smooth) 120ms both; }
+.stage .ph { position:absolute; inset:0; background:url("../assets/gallery/asc-g001.jpg") center/cover; }
+.stage .tint { position:absolute; inset:0; background:rgba(13,16,21,.62); }
+.stage > :not(.ph):not(.tint) { position:relative; z-index:2; }
+.stage .k { color:rgba(244,245,247,.6); }
+.stage .hero { font-family:Sora; font-weight:400; font-size:56px; letter-spacing:-.025em; line-height:1; margin:12px 0 2px;
+  font-variant-numeric: proportional-nums; }
+.stage .hero em { font-style:normal; font:500 15px Inter; letter-spacing:.02em; color:rgba(244,245,247,.6); text-transform:uppercase; margin-left:6px; }
+.stage .cap { font-size:13px; color:rgba(244,245,247,.6); }
+.meter { margin-top:14px; height:8px; border-radius:4px; background:rgba(244,245,247,.14); overflow:hidden; }
+.meter i { display:block; height:100%; width:86%; border-radius:4px; background:linear-gradient(90deg,#ff8a5c,var(--lava)); }
+.spills { display:flex; gap:8px; margin:16px 0; }
+.spill { flex:1; background:rgba(244,245,247,.09); border-radius:14px; padding:10px 12px; border-top:1px solid rgba(255,255,255,.10); }
+.spill b { display:block; font-family:Sora; font-weight:500; font-size:22px; letter-spacing:-.01em; }
+.spill span { font-size:11px; color:rgba(244,245,247,.6); }
+.stage .space { flex:1; }
+.cta { display:flex; align-items:center; justify-content:center; gap:10px; min-height:48px; border-radius:24px;
+  background:rgba(244,245,247,.94); color:var(--ink); text-decoration:none; font:600 14px Inter;
+  transition:transform 200ms var(--smooth); position:relative; }
+.cta::before { content:""; position:absolute; inset:-4px; }
+@media (hover:hover) and (pointer:fine) { .cta:hover { transform:translateY(-1px); } }
+.cta:active { transform:scale(.97); transition-duration:100ms; }
+.cta .dot { width:9px; height:9px; border-radius:50%; background:var(--lava); box-shadow:0 0 8px 2px var(--lava-ring); animation:breathe 2.4s ease-in-out infinite; }
+
+/* list card — Stocks-row grammar */
+.list { grid-row:span 2; display:flex; flex-direction:column; }
+.list .head { display:flex; align-items:baseline; gap:10px; margin-bottom:10px; }
+.list .head h2 { font-family:Sora; font-weight:600; font-size:17px; letter-spacing:-.01em; }
+.list .head span { font-size:13px; color:var(--muted); }
+.search { display:flex; align-items:center; gap:9px; background:var(--fill-2); border:1px solid var(--hairline);
+  border-radius:999px; min-height:44px; padding:0 16px; margin-bottom:6px; color:var(--muted); font-size:14px; }
+.row { display:flex; align-items:center; gap:12px; min-height:44px; padding:6px 6px;
+  border-bottom:1px solid var(--hairline); text-decoration:none; color:inherit; border-radius:10px; }
+.row:last-child { border-bottom:0; }
+@media (hover:hover) and (pointer:fine) { .row:hover { background:rgba(255,255,255,.45); } }
+.row .id { font:600 12px Inter; color:var(--muted); width:104px; }
+.row .who { flex:1; min-width:0; }
+.row .who b { display:block; font-size:14px; font-weight:600; }
+.row .who span { display:block; font-size:12.5px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.pill { font:600 11px Inter; min-width:74px; text-align:center; padding:6px 10px; border-radius:8px; background:rgba(120,120,128,.14); color:var(--ink-2); }
+.pill.hot { background:var(--lava-tint); color:var(--lava-ink); }
+
+/* occupancy + actions column */
+.col { display:flex; flex-direction:column; gap:14px; }
+.obar { margin-bottom:12px; }
+.obar:last-child { margin-bottom:2px; }
+.obar .t { display:flex; justify-content:space-between; align-items:baseline; font-size:12.5px; color:var(--muted); margin-bottom:6px; }
+.obar .t b { color:var(--ink); font:600 14px Inter; }
+.obar .bar { height:6px; border-radius:3px; background:rgba(2,3,5,.07); overflow:hidden; }
+.obar .bar i { display:block; height:100%; border-radius:3px; background:linear-gradient(90deg,#ff8a5c,var(--lava)); }
+.obar.dim .bar i { background:var(--gun); opacity:.4; }
+.act { display:flex; align-items:center; justify-content:space-between; min-height:48px; padding:0 4px 0 8px;
+  border-bottom:1px solid var(--hairline); text-decoration:none; color:var(--ink); font:600 14px Inter;
+  transition:padding 200ms var(--smooth); position:relative; }
+.act::before { content:""; position:absolute; inset:-2px 0; }
+.act:last-child { border-bottom:0; }
+@media (hover:hover) and (pointer:fine) { .act:hover { padding-left:14px; } .act:hover .arw { color:var(--lava); } }
+.act:active { opacity:.6; }
+.act .arw { color:var(--muted); transition:color 160ms ease; font-weight:400; }
+.act.hero { color:var(--lava-ink); }
+
+/* focus: two-tone ring (audit rule 2) */
+:focus-visible { outline:2px solid var(--lava-ink); outline-offset:2px; box-shadow:0 0 0 2px rgba(255,255,255,.9); border-radius:8px; }
+
+h3.ct { font-family:Sora; font-weight:600; font-size:17px; letter-spacing:-.01em; margin-bottom:12px; }
+@media (max-width:1020px) {
+  .grid { grid-template-columns:1fr; }
+  .stage, .list { grid-row:auto; }
+  .nav a:not(.on) { display:none; }
+  .seg { display:none; }
+}
+</style>
+</head>
+<body>
+<div class="canvas" aria-hidden="true"></div>
+
+<main class="shell">
+  <div class="top">
+    <nav class="nav" aria-label="Primary">
+      <img src="asc-logo-cropped.png" alt="ASC">
+      <a class="on" href="#">Ploča</a><a href="#">Zaprimi</a><a href="#">Skladište</a><a href="#">Kupci</a>
+    </nav>
+    <div class="gap"></div>
+    <div class="seg" role="group" aria-label="Raspon">
+      <span class="thumb" aria-hidden="true"></span>
+      <button class="on"><span class="glow"></span>Svi</button>
+      <button>Danas</button>
+      <button>Uskoro</button>
+    </div>
+    <div class="avatar">TJ</div>
+  </div>
+
+  <div class="hello">
+    <h1>Dobra večer, Toni <span class="dim">— sve spremno za smjenu.</span></h1>
+    <p>Ponedjeljak, 6. srpnja · Dubrovnik · 7 kompleta</p>
+  </div>
+
+  <div class="grid">
+    <section class="stage">
+      <i class="ph"></i><i class="tint"></i>
+      <span class="k">Skladište · Hotel za gume</span>
+      <div class="hero">248<em>setova</em></div>
+      <div class="cap">na čuvanju · 0 rezervirano</div>
+      <div class="meter"><i></i></div>
+      <div class="spills">
+        <div class="spill"><b>4</b><span>zaprimljeno</span></div>
+        <div class="spill"><b>0</b><span>preuzeto</span></div>
+        <div class="spill"><b>17</b><span>uskoro</span></div>
+      </div>
+      <div class="space"></div>
+      <a class="cta" href="#"><span class="dot"></span>Pitaj ASC Agenta</a>
+    </section>
+
+    <section class="card list">
+      <div class="head"><h2>Skladište</h2><span>7 kompleta</span></div>
+      <div class="search">⌕ Traži ime, registraciju, dimenziju…</div>
+      <a class="row" href="#"><span class="id">ASC-2026-0008</span><span class="who"><b>Mia Franušić</b><span>225/45R19 · zimske</span></span><span class="pill">Spremljeno</span></a>
+      <a class="row" href="#"><span class="id">ASC-2026-0007</span><span class="who"><b>Vinko Jurjević</b><span>205/45R17 · Sava · zimske</span></span><span class="pill">Spremljeno</span></a>
+      <a class="row" href="#"><span class="id">ASC-2026-0006</span><span class="who"><b>Jurjević</b><span>2023 Volkswagen · 225/45R18</span></span><span class="pill">Spremljeno</span></a>
+      <a class="row" href="#"><span class="id">ASC-2026-0005</span><span class="who"><b>Ivan Tadić</b><span>Tesla Model 3 · 235/45R18 · ljetne</span></span><span class="pill hot">Ljetne</span></a>
+      <a class="row" href="#"><span class="id">ASC-2026-0004</span><span class="who"><b>Toni Jurjević</b><span>Volkswagen · 225/45R17</span></span><span class="pill">Spremljeno</span></a>
+      <a class="row" href="#"><span class="id">ASC-2026-0003</span><span class="who"><b>Radiš · DU1337</b><span>VW Golf 8 · 225/45R17</span></span><span class="pill">Spremljeno</span></a>
+    </section>
+
+    <div class="col">
+      <section class="card">
+        <h3 class="ct">Zauzeće</h3>
+        <div class="obar"><div class="t"><span>Zimske</span><b>141</b></div><div class="bar"><i style="width:78%"></i></div></div>
+        <div class="obar"><div class="t"><span>Ljetne</span><b>89</b></div><div class="bar"><i style="width:49%"></i></div></div>
+        <div class="obar dim"><div class="t"><span>Cjelogodišnje</span><b>18</b></div><div class="bar"><i style="width:10%"></i></div></div>
+      </section>
+      <section class="card">
+        <h3 class="ct">Brze akcije</h3>
+        <a class="act hero" href="#">Novi set na čuvanje<span class="arw">→</span></a>
+        <a class="act" href="#">Skeniraj QR<span class="arw">→</span></a>
+        <a class="act" href="#">Radionica<span class="arw">→</span></a>
+      </section>
+    </div>
+  </div>
+</main>
+
+<script>
+  // Seg thumb — snappy spring slide under the active option.
+  const seg = document.querySelector('.seg'), thumb = seg.querySelector('.thumb');
+  const place = (btn) => { thumb.style.width = btn.offsetWidth + 'px'; thumb.style.transform = `translateX(${btn.offsetLeft - 4}px)`; };
+  const btns = [...seg.querySelectorAll('button')];
+  requestAnimationFrame(() => place(btns[0]));
+  btns.forEach(b => b.addEventListener('click', () => {
+    btns.forEach(x => x.classList.toggle('on', x === b)); place(b);
+  }));
+</script>
+</body>
+</html>

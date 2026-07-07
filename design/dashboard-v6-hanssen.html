@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ASC — Ploča v6 · Hanssen, no pictures</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ============================================================================
+   ASC v6 — Hanssen composition, photography replaced by palette + effects.
+   Twin themes. One glass sheet. Apple material/motion values from the
+   apple-glass-ui skill. Locked palette only.
+   ============================================================================ */
+:root {
+  --bg:#edf0f5; --shell:rgba(255,255,255,.42); --shell-solid:rgba(255,255,255,.62);
+  --panel:#f2f4f8; --panel-2:#ffffff;
+  --ink:#020305; --ink-2:#3a3c40; --muted:#63676f;
+  --lava:#ff4e1b; --lava-ink:#c0360d; --lava-tint:rgba(255,78,27,.11); --lava-ring:rgba(255,78,27,.30);
+  --gun:#2e2f31; --hairline:rgba(2,3,5,.07);
+  --stage-1:#0b0c0e; --stage-2:#17181b; --on-stage:#f4f5f7; --on-stage-2:rgba(244,245,247,.6);
+  --rim-top:rgba(255,255,255,.75); --rim:rgba(255,255,255,.42);
+  --smooth:cubic-bezier(.25,1,.5,1);
+  --snappy:linear(0,.0049 1.3%,.0184 2.5%,.0391 3.8%,.0656 5%,.0967 6.3%,.1689 8.8%,.3317 13.8%,.4533 17.5%,.5651 21.3%,.632 23.8%,.6921 26.3%,.7455 28.8%,.792 31.3%,.8323 33.8%,.8817 37.5%,.9196 41.3%,.948 45%,.9741 50%,1.0011 58.8%,1.0099 63.8%,1.0128 68.8%,1.0122 72.5%,1.0035 85%,1.0005 96.3%,1);
+}
+html.dark {
+  --bg:#020305; --shell:rgba(23,24,28,.55); --shell-solid:rgba(23,24,28,.85);
+  --panel:#1d1e22; --panel-2:#26272b;
+  --ink:#f4f5f7; --ink-2:#d6d8dc; --muted:rgba(244,245,247,.6);
+  --hairline:rgba(244,245,247,.09);
+  --stage-1:#07080a; --stage-2:#101114;
+  --rim-top:rgba(255,255,255,.16); --rim:rgba(255,255,255,.08);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+html,body { min-height:100%; }
+body { font-family:"Inter",system-ui,sans-serif; color:var(--ink); background:var(--bg);
+  padding:30px 26px; -webkit-font-smoothing:antialiased; font-variant-numeric:tabular-nums;
+  transition:background 380ms var(--smooth), color 380ms var(--smooth); }
+
+/* ambient the glass samples — palette blooms only, no imagery */
+.canvas { position:fixed; inset:0; z-index:-1; pointer-events:none;
+  background:
+    radial-gradient(58vmax 54vmax at 10% -12%, rgba(255,78,27,.16), transparent 62%),
+    radial-gradient(50vmax 46vmax at 92% 112%, rgba(255,78,27,.13), transparent 58%),
+    radial-gradient(44vmax 40vmax at 84% -8%, rgba(46,47,49,.22), transparent 60%);
+  transition:opacity 380ms var(--smooth); }
+html.dark .canvas {
+  background:
+    radial-gradient(58vmax 54vmax at 10% -12%, rgba(255,78,27,.10), transparent 60%),
+    radial-gradient(50vmax 46vmax at 92% 112%, rgba(255,78,27,.08), transparent 56%),
+    radial-gradient(44vmax 40vmax at 84% -8%, rgba(244,245,247,.05), transparent 60%); }
+.grain { position:fixed; inset:0; z-index:40; pointer-events:none; opacity:.045; mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E"); }
+
+/* ---- glass shell (single blur surface) ---- */
+.shell { max-width:1220px; margin:0 auto; border-radius:36px; position:relative;
+  background:var(--shell-solid);
+  border:1px solid var(--rim); border-top-color:var(--rim-top);
+  box-shadow:0 25px 50px rgba(2,3,5,.22);
+  padding:18px; animation:sheetIn 550ms var(--smooth) both;
+  transition:background 380ms var(--smooth); }
+@supports ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))) {
+  .shell { background:var(--shell);
+    -webkit-backdrop-filter:blur(30px) saturate(150%) brightness(108%);
+    backdrop-filter:blur(30px) saturate(150%) brightness(108%); }
+}
+@media (prefers-reduced-transparency:reduce) {
+  .shell { background:var(--panel-2) !important; -webkit-backdrop-filter:none !important; backdrop-filter:none !important; }
+  .canvas { display:none; }
+}
+@keyframes sheetIn { from { opacity:0; transform:translateY(24px) scale(.985); } }
+@keyframes rise { from { opacity:0; transform:translateY(12px); } }
+@media (prefers-reduced-motion:reduce) { * { animation:none !important; transition-property:opacity,color,background-color !important; } }
+
+/* ---- Hanssen pill nav, docked top-left INSIDE shell ---- */
+.nav { position:absolute; top:30px; left:30px; z-index:5;
+  display:flex; align-items:center; gap:4px;
+  background:rgba(2,3,5,.88); color:#f4f5f7;
+  border-radius:22px; padding:7px 10px 7px 9px; font-size:12.5px;
+  border-top:1px solid rgba(255,255,255,.14);
+  animation:rise 550ms var(--smooth) 80ms both; }
+.nav .mark { width:22px; height:22px; border-radius:50%;
+  background:radial-gradient(circle at 32% 30%, #ff8a5c, var(--lava) 60%, #d6390c);
+  box-shadow:0 0 10px rgba(255,78,27,.5); margin-right:6px; }
+.nav a { position:relative; color:#f4f5f7; opacity:.62; padding:5px 10px; border-radius:14px; text-decoration:none; transition:opacity 160ms ease, background 160ms ease; }
+.nav a::before { content:""; position:absolute; inset:-8px; }
+@media (hover:hover) and (pointer:fine){ .nav a:hover { opacity:1; } }
+.nav a.on { opacity:1; background:rgba(244,245,247,.14); }
+.mode { border:0; cursor:pointer; margin-left:4px; width:26px; height:26px; border-radius:50%;
+  background:rgba(244,245,247,.14); display:grid; place-items:center; position:relative;
+  transition:transform 380ms var(--smooth); }
+.mode::before { content:""; position:absolute; inset:-8px; }
+@media (hover:hover) and (pointer:fine){ .mode:hover { transform:rotate(40deg); } }
+.mode i { width:11px; height:11px; border-radius:50%; background:#f4f5f7; transition:background 380ms ease, box-shadow 380ms ease; display:block; }
+html.dark .mode i { background:transparent; box-shadow:inset 0 0 0 2.5px #f4f5f7; }
+
+/* ---- Hanssen grid: stage | middle | rail ---- */
+.grid { display:grid; grid-template-columns:1.35fr 1fr .78fr; gap:14px; }
+
+/* corner tab (Hanssen's "Beige/Darkness/Selected Work" labels) */
+.tab { position:absolute; z-index:3; font:500 10.5px Inter; letter-spacing:.04em; color:var(--muted);
+  background:var(--shell-solid); padding:7px 13px 8px 13px; }
+.tab.tl { top:0; left:0; border-radius:0 0 14px 0; }
+.tab.br { bottom:0; right:0; border-radius:14px 0 0 0; }
+.tab.tl::after, .tab.tl::before, .tab.br::after, .tab.br::before { content:""; position:absolute; width:14px; height:14px; }
+.tab.tl::after { right:-14px; top:0; background:radial-gradient(circle at 100% 100%, transparent 14px, var(--shell-solid) 14.5px); }
+.tab.tl::before { left:0; bottom:-14px; background:radial-gradient(circle at 100% 100%, transparent 14px, var(--shell-solid) 14.5px); }
+.tab.br::after { left:-14px; bottom:0; background:radial-gradient(circle at 0% 0%, transparent 14px, var(--shell-solid) 14.5px); }
+.tab.br::before { right:0; top:-14px; background:radial-gradient(circle at 0% 0%, transparent 14px, var(--shell-solid) 14.5px); }
+
+/* ---- stage (the "big photo" slot → pure material drama) ---- */
+.stage { position:relative; border-radius:24px; overflow:hidden; min-height:560px;
+  background:
+    radial-gradient(120% 90% at 82% -10%, rgba(255,78,27,.28), transparent 55%),
+    radial-gradient(90% 70% at -10% 110%, rgba(255,78,27,.14), transparent 55%),
+    linear-gradient(175deg, var(--stage-1) 0%, var(--stage-2) 100%);
+  color:var(--on-stage); padding:64px 30px 56px;
+  display:flex; flex-direction:column;
+  border-top:1px solid rgba(255,255,255,.10);
+  animation:rise 550ms var(--smooth) 120ms both; }
+/* slow aurora drift — transform-only, compositor path */
+.stage .aura { position:absolute; width:70%; height:55%; right:-16%; top:-14%; border-radius:50%;
+  background:radial-gradient(closest-side, rgba(255,78,27,.34), transparent 70%);
+  filter:blur(30px); animation:drift 16s ease-in-out infinite alternate; }
+@keyframes drift { to { transform:translate(-9%, 12%) scale(1.12); } }
+.stage .k { font:600 11px Inter; letter-spacing:.08em; text-transform:uppercase; color:var(--on-stage-2); }
+.stage .hero { font-family:Sora; font-weight:400; font-size:clamp(64px,7vw,96px); line-height:1; letter-spacing:-.03em; margin:10px 0 4px; }
+.stage .hero em { font-style:normal; font:500 14px Inter; letter-spacing:.06em; text-transform:uppercase; color:var(--on-stage-2); margin-left:8px; }
+.stage .cap { font-size:13.5px; color:var(--on-stage-2); }
+.stage .meter { margin-top:18px; height:8px; border-radius:4px; background:rgba(244,245,247,.14); overflow:hidden; max-width:420px; }
+.stage .meter i { display:block; height:100%; width:86%; border-radius:4px; background:linear-gradient(90deg,#ff8a5c,var(--lava)); }
+.stage .space { flex:1; }
+.stage .spills { display:flex; gap:8px; margin-bottom:18px; max-width:460px; }
+.spill { flex:1; background:rgba(244,245,247,.08); border-radius:14px; padding:10px 12px; border-top:1px solid rgba(255,255,255,.09); }
+.spill b { display:block; font-family:Sora; font-weight:500; font-size:22px; }
+.spill span { font-size:11px; color:var(--on-stage-2); }
+.cta { display:flex; align-items:center; justify-content:center; gap:10px; min-height:50px; max-width:460px;
+  border-radius:25px; background:rgba(244,245,247,.94); color:#020305; text-decoration:none; font:600 14px Inter;
+  transition:transform 200ms var(--smooth); position:relative; }
+.cta::before { content:""; position:absolute; inset:-4px; }
+@media (hover:hover) and (pointer:fine){ .cta:hover { transform:translateY(-1px); } }
+.cta:active { transform:scale(.97); transition-duration:100ms; }
+.cta .dot { width:9px; height:9px; border-radius:50%; background:var(--lava); box-shadow:0 0 8px 2px var(--lava-ring); animation:breathe 2.4s ease-in-out infinite; }
+@keyframes breathe { 50% { transform:scale(1.3); opacity:.8; } }
+
+/* ---- middle column: profile + two tabbed panels ---- */
+.mid { display:flex; flex-direction:column; gap:14px; }
+.profile { background:var(--panel); border-radius:24px; padding:22px;
+  animation:rise 550ms var(--smooth) 160ms both; transition:background 380ms var(--smooth); }
+.profile .row1 { display:flex; align-items:center; gap:13px; margin-bottom:12px; }
+.pavatar { width:46px; height:46px; border-radius:50%; flex:none;
+  background:radial-gradient(circle at 32% 30%, #ff8a5c, var(--lava) 62%, #d6390c);
+  color:#fff; display:grid; place-items:center; font:650 14px Inter;
+  box-shadow:0 6px 16px rgba(255,78,27,.35); }
+.profile h1 { font-family:Sora; font-weight:600; font-size:19px; letter-spacing:-.01em; }
+.profile .sub { font-size:12.5px; color:var(--muted); }
+.profile p { font-size:13.5px; line-height:1.55; color:var(--ink-2); }
+.profile .meta { display:flex; justify-content:space-between; align-items:center; margin-top:14px; padding-top:12px; border-top:1px solid var(--hairline); font-size:12.5px; color:var(--muted); }
+.profile .meta a { color:var(--lava-ink); text-decoration:none; font-weight:600; }
+
+.panel { position:relative; background:var(--panel); border-radius:24px; padding:34px 20px 18px;
+  flex:1; animation:rise 550ms var(--smooth) both; transition:background 380ms var(--smooth); }
+.panel.p1 { animation-delay:200ms; }
+.panel.p2 { animation-delay:240ms;
+  background:
+    radial-gradient(120% 100% at 90% -20%, rgba(255,78,27,.20), transparent 55%),
+    linear-gradient(175deg, var(--stage-1), var(--stage-2));
+  color:var(--on-stage); }
+.panel.p2 .obar .t { color:var(--on-stage-2); } .panel.p2 .obar .t b { color:var(--on-stage); }
+.panel.p2 .obar .bar { background:rgba(244,245,247,.14); }
+.panel h3 { font-family:Sora; font-weight:600; font-size:15px; margin-bottom:12px; }
+.obar { margin-bottom:11px; }
+.obar .t { display:flex; justify-content:space-between; align-items:baseline; font-size:12px; color:var(--muted); margin-bottom:5px; }
+.obar .t b { color:var(--ink); font:600 13.5px Inter; }
+.obar .bar { height:5px; border-radius:3px; background:rgba(2,3,5,.08); overflow:hidden; }
+.obar .bar i { display:block; height:100%; border-radius:3px; background:linear-gradient(90deg,#ff8a5c,var(--lava)); }
+.mini { display:flex; align-items:baseline; gap:10px; padding:9px 2px; border-bottom:1px solid var(--hairline); font-size:13px; }
+.mini:last-child { border-bottom:0; }
+.mini time { font:600 12.5px Inter; color:var(--lava-ink); min-width:42px; }
+.panel.p2 .mini { border-bottom-color:rgba(244,245,247,.09); }
+.panel.p2 .mini time { color:#ff8a5c; }
+.panel.p2 .mini span { color:var(--on-stage-2); }
+
+/* ---- right rail: stacked rows (Hanssen socials → brze akcije) ---- */
+.rail { display:flex; flex-direction:column; gap:8px; }
+.rrow { position:relative; display:flex; align-items:center; justify-content:space-between;
+  min-height:52px; padding:0 16px; border-radius:16px;
+  background:var(--panel); color:var(--ink); text-decoration:none; font:550 13.5px Inter;
+  transition:transform 200ms var(--smooth), background 200ms ease;
+  animation:rise 550ms var(--smooth) both; }
+.rrow:nth-child(1){animation-delay:180ms}.rrow:nth-child(2){animation-delay:220ms}.rrow:nth-child(3){animation-delay:260ms}.rrow:nth-child(4){animation-delay:300ms}.rrow:nth-child(5){animation-delay:340ms}.rrow:nth-child(6){animation-delay:380ms}
+.rrow::before { content:""; position:absolute; inset:-2px 0; }
+@media (hover:hover) and (pointer:fine){ .rrow:hover { transform:translateX(3px); } }
+.rrow:active { transform:scale(.98); transition-duration:100ms; }
+.rrow .v { color:var(--muted); font:600 12px Inter; display:flex; align-items:center; gap:8px; }
+.rrow.hero { background:linear-gradient(175deg,var(--stage-1),var(--stage-2)); color:var(--on-stage);
+  border-top:1px solid rgba(255,255,255,.10); min-height:58px; }
+.rrow.hero .v { color:#ff8a5c; }
+.rrow.hero .dot { width:8px; height:8px; border-radius:50%; background:var(--lava); box-shadow:0 0 8px 2px var(--lava-ring); animation:breathe 2.4s ease-in-out infinite; }
+.rail .foot { margin-top:auto; padding:14px 6px 2px; font-size:11.5px; color:var(--muted); text-align:right; }
+
+:focus-visible { outline:2px solid var(--lava-ink); outline-offset:2px; box-shadow:0 0 0 2px var(--bg); border-radius:8px; }
+
+@media (max-width:1020px) {
+  .grid { grid-template-columns:1fr; }
+  .stage { min-height:420px; padding:74px 24px 40px; }
+  .nav a:not(.on) { display:none; }
+}
+</style>
+</head>
+<body>
+<div class="canvas" aria-hidden="true"></div>
+<div class="grain" aria-hidden="true"></div>
+
+<main class="shell">
+  <nav class="nav" aria-label="Primary">
+    <span class="mark" aria-hidden="true"></span>
+    <a class="on" href="#">Ploča</a><a href="#">Zaprimi</a><a href="#">Skladište</a><a href="#">Kupci</a>
+    <button class="mode" id="mode" aria-label="Tema"><i></i></button>
+  </nav>
+
+  <div class="grid">
+    <section class="stage">
+      <i class="aura" aria-hidden="true"></i>
+      <span class="k">Skladište · Hotel za gume · Dubrovnik</span>
+      <div class="hero">248<em>setova</em></div>
+      <div class="cap">na čuvanju · 0 rezervirano · 92 % ostaje</div>
+      <div class="meter"><i></i></div>
+      <div class="space"></div>
+      <div class="spills">
+        <div class="spill"><b>4</b><span>zaprimljeno danas</span></div>
+        <div class="spill"><b>0</b><span>preuzeto danas</span></div>
+        <div class="spill"><b>17</b><span>uskoro van</span></div>
+      </div>
+      <a class="cta" href="#"><span class="dot"></span>Pitaj ASC Agenta</a>
+      <span class="tab br">hotel za gume · est. 2019</span>
+    </section>
+
+    <div class="mid">
+      <section class="profile">
+        <div class="row1">
+          <span class="pavatar">TJ</span>
+          <div>
+            <h1>Dobra večer, Toni</h1>
+            <div class="sub">Ponedjeljak, 6. srpnja · Dubrovnik</div>
+          </div>
+        </div>
+        <p>Sve spremno za smjenu — 7 kompleta u sustavu, podsjetnici poslani za 12 od 17 zamjena ovog tjedna.</p>
+        <div class="meta"><span>Zadnja kopija · prije 5 h</span><a href="#">Pretraga →</a></div>
+      </section>
+
+      <section class="panel p1">
+        <span class="tab tl">zauzeće</span>
+        <h3>Po sezoni</h3>
+        <div class="obar"><div class="t"><span>Zimske</span><b>141</b></div><div class="bar"><i style="width:78%"></i></div></div>
+        <div class="obar"><div class="t"><span>Ljetne</span><b>89</b></div><div class="bar"><i style="width:49%"></i></div></div>
+        <div class="obar"><div class="t"><span>Cjelogodišnje</span><b>18</b></div><div class="bar"><i style="width:10%;opacity:.45"></i></div></div>
+      </section>
+
+      <section class="panel p2">
+        <span class="tab tl">danas · 4</span>
+        <h3>Termini</h3>
+        <div class="mini"><time>9:00</time><b>Josip Horvat</b><span>· zimske → ljetne</span></div>
+        <div class="mini"><time>10:30</time><b>Ana Kovačević</b><span>· prijem</span></div>
+        <div class="mini"><time>13:00</time><b>Marko Babić</b><span>· zamjena</span></div>
+        <div class="mini"><time>15:30</time><b>Ivana Marić</b><span>· izdavanje</span></div>
+      </section>
+    </div>
+
+    <aside class="rail">
+      <a class="rrow" href="#">Novi set na čuvanje<span class="v">→</span></a>
+      <a class="rrow" href="#">Skeniraj QR<span class="v">→</span></a>
+      <a class="rrow" href="#">Radionica<span class="v">→</span></a>
+      <a class="rrow" href="#">Pretraga setova<span class="v">⌕</span></a>
+      <a class="rrow hero" href="#">Pitaj ASC Agenta<span class="v"><span class="dot"></span>online</span></a>
+      <div class="foot">ASC · Auto servisni centar d.o.o.</div>
+    </aside>
+  </div>
+</main>
+
+<script>
+  document.getElementById('mode').addEventListener('click', () => {
+    document.documentElement.classList.toggle('dark');
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ASC — Ploča v4 · Noir grid</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Sora:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root { --ash:#edf0f5; --core:#020305; --lava:#ff4e1b; --muted:#63676f; --line:rgba(2,3,5,.08); --ease:cubic-bezier(.22,1,.36,1); }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--ash); color:var(--core); font-family:"Inter",sans-serif; -webkit-font-smoothing:antialiased; padding:26px; }
+
+  .shell { max-width:1240px; margin:0 auto; background:#fff; border-radius:40px; padding:22px 24px 28px; box-shadow:0 30px 90px -35px rgba(2,3,5,.4); }
+
+  .top { display:flex; align-items:center; gap:14px; margin-bottom:20px; }
+  .nav { display:flex; align-items:center; gap:2px; background:var(--core); color:var(--ash); border-radius:24px; padding:8px 12px 8px 10px; font-size:13px; }
+  .nav img { height:22px; margin-right:8px; }
+  .nav a { color:var(--ash); opacity:.6; padding:6px 11px; border-radius:16px; text-decoration:none; }
+  .nav a.on { opacity:1; background:rgba(244,245,247,.12); }
+  .gap { flex:1; }
+  .avatar { width:42px; height:42px; border-radius:50%; background:var(--core); color:var(--ash); display:grid; place-items:center; font-size:13px; font-weight:650; }
+
+  /* ---- HERO photo card ---- */
+  .hero {
+    position:relative; height:330px; border-radius:28px; overflow:hidden;
+    display:grid; place-items:center; text-align:center; color:#fff; margin-bottom:14px;
+  }
+  .hero .ph { position:absolute; inset:0; background:url("../assets/gallery/asc-g001.jpg") center/cover;
+    filter:grayscale(.82) contrast(1.06) brightness(.72); transform:scale(1.02); }
+  .hero::after { content:""; position:absolute; inset:0; background:radial-gradient(80% 90% at 50% 45%, transparent 30%, rgba(2,3,5,.55) 100%); }
+  .hero > div { position:relative; z-index:2; }
+  .hero h1 { font-family:"Sora"; font-weight:600; font-size:clamp(30px,4vw,44px); letter-spacing:-.02em; }
+  .hero p { margin-top:8px; font-size:13.5px; opacity:.75; }
+
+  /* meta strip */
+  .meta { display:flex; align-items:center; gap:26px; padding:14px 10px 20px; font-size:12.5px; color:var(--muted); flex-wrap:wrap; }
+  .meta b { color:var(--core); font-weight:600; }
+  .meta i { width:3px; height:3px; border-radius:50%; background:var(--muted); opacity:.5; }
+  .meta .go { margin-left:auto; color:var(--lava); text-decoration:none; font-weight:600; }
+
+  /* ---- photo card grid ---- */
+  .grid { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+  .card {
+    position:relative; border-radius:22px; overflow:hidden; aspect-ratio:3/3.6;
+    color:#fff; text-decoration:none; display:flex; flex-direction:column; justify-content:space-between;
+    padding:16px 17px;
+    transition:transform .45s var(--ease);
+  }
+  .card:hover { transform:translateY(-4px); }
+  .card .ph { position:absolute; inset:0; background-size:cover; background-position:center;
+    filter:grayscale(.85) contrast(1.05) brightness(.78); transition:filter .6s var(--ease), transform .6s var(--ease); }
+  .card:hover .ph { filter:grayscale(.25) contrast(1.05) brightness(.82); transform:scale(1.04); }
+  .card::after { content:""; position:absolute; inset:0; background:linear-gradient(180deg, rgba(2,3,5,.30) 0%, transparent 35%, rgba(2,3,5,.72) 100%); }
+  .card > * { position:relative; z-index:2; }
+  .k { font-size:10px; letter-spacing:.18em; text-transform:uppercase; opacity:.75; }
+  .card h3 { font-family:"Sora"; font-weight:600; font-size:17px; line-height:1.25; letter-spacing:-.01em; }
+  .card .num { font-family:"Sora"; font-weight:700; font-size:56px; letter-spacing:-.04em; line-height:1; margin-bottom:6px; }
+  .card .num em { font-style:normal; color:var(--lava); }
+  .card .sub { font-size:12px; opacity:.7; margin-top:4px; }
+  .dotlive { display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--lava); box-shadow:0 0 10px 2px rgba(255,78,27,.6); margin-right:8px; animation:br 2.4s ease-in-out infinite; }
+  @keyframes br { 50% { transform:scale(1.35); opacity:.75; } }
+  .bars { display:flex; flex-direction:column; gap:9px; margin-top:8px; }
+  .bars .b { display:flex; align-items:center; gap:10px; font-size:11px; }
+  .bars .b span { width:78px; opacity:.8; }
+  .bars .b .t { flex:1; height:3px; background:rgba(255,255,255,.25); }
+  .bars .b .t i { display:block; height:100%; background:#fff; }
+  .bars .b:first-child .t i { background:var(--lava); }
+
+  @media (max-width:900px){ .grid { grid-template-columns:1fr 1fr; } .hero{height:250px;} }
+  @media (max-width:600px){ .grid { grid-template-columns:1fr; } .card{aspect-ratio:3/2.4;} }
+</style>
+</head>
+<body>
+<main class="shell">
+  <div class="top">
+    <nav class="nav">
+      <img src="asc-logo-cropped.png" alt="ASC">
+      <a class="on" href="#">Ploča</a><a href="#">Zaprimi</a><a href="#">Skladište</a><a href="#">Kupci</a>
+    </nav>
+    <div class="gap"></div>
+    <div class="avatar">TJ</div>
+  </div>
+
+  <section class="hero">
+    <i class="ph"></i>
+    <div>
+      <h1>Dobra večer, Toni</h1>
+      <p>Ponedjeljak, 6. srpnja · Dubrovnik · sve spremno za smjenu</p>
+    </div>
+  </section>
+
+  <div class="meta">
+    <span><b>248</b> setova na čuvanju</span><i></i>
+    <span><b>4</b> termina danas</span><i></i>
+    <span><b>17</b> za zamjenu ovaj tjedan</span>
+    <a class="go" href="#">Pretraga setova →</a>
+  </div>
+
+  <section class="grid">
+    <a class="card" href="#">
+      <i class="ph" style="background-image:url('../assets/gallery/asc-g002.jpg')"></i>
+      <span class="k">Skladište · hotel za gume</span>
+      <div><div class="num">248</div><h3>setova na čuvanju</h3><div class="sub">92 % zauzeto · regali A–D</div></div>
+    </a>
+    <a class="card" href="#">
+      <i class="ph" style="background-image:url('../assets/gallery/asc-g011.jpg')"></i>
+      <span class="k">Danas · termini</span>
+      <div><div class="num">4</div><h3>9:00 Josip Horvat — zimske → ljetne</h3><div class="sub">+ još 3 termina</div></div>
+    </a>
+    <a class="card" href="#">
+      <i class="ph" style="background-image:url('../assets/gallery/asc-g003.jpg')"></i>
+      <span class="k">Ovaj tjedan</span>
+      <div><div class="num"><em>17</em></div><h3>za zamjenu — podsjetnici poslani</h3><div class="sub">12 od 17 obaviješteno</div></div>
+    </a>
+    <a class="card" href="#">
+      <i class="ph" style="background-image:url('../assets/gallery/asc-g021.jpg')"></i>
+      <span class="k">Zauzeće</span>
+      <div>
+        <h3>Po sezoni</h3>
+        <div class="bars">
+          <div class="b"><span>Zimske</span><div class="t"><i style="width:78%"></i></div></div>
+          <div class="b"><span>Ljetne</span><div class="t"><i style="width:49%"></i></div></div>
+          <div class="b"><span>Cjelogodišnje</span><div class="t"><i style="width:10%"></i></div></div>
+        </div>
+      </div>
+    </a>
+    <a class="card" href="#">
+      <i class="ph" style="background-image:url('../assets/gallery/asc-g012.jpg')"></i>
+      <span class="k">Brza akcija</span>
+      <div><h3>Novi set na čuvanje →</h3><div class="sub">Prijem · QR naljepnica · lokacija</div></div>
+    </a>
+    <a class="card" href="#">
+      <i class="ph" style="background-image:url('../assets/gallery/asc-g022.jpg')"></i>
+      <span class="k">ASC Agent</span>
+      <div><h3><span class="dotlive"></span>Pitaj ASC Agenta</h3><div class="sub">glasom ili tekstom — bilo što o setovima</div></div>
+    </a>
+  </section>
+</main>
+</body>
+</html>

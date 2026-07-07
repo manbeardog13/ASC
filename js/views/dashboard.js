@@ -6,7 +6,7 @@ import * as db from "../db.js";
 import { getState, setViewRefresh, on } from "../store.js";
 import { matchesQuery, isDueSoon } from "../domain.js";
 import { icon, esc, skeletonRows, emptyState } from "../ui.js";
-import { t, noun } from "../i18n.js";
+import { t, noun, lang } from "../i18n.js";
 import { setRow, timeAgo } from "./shared.js";
 
 let allSets = [];
@@ -33,38 +33,104 @@ function firstName(profile) {
 export async function render(main) {
   const role = getState().profile?.role;
   const canWorkshop = !role || role === "employee" || db.isAdminRole(role);
+  // Dashboard spans the full v2 grid width; restore the default cap on leave.
+  main.classList.add("v2wide");
+  window.addEventListener("asc:teardown", () => main.classList.remove("v2wide"), { once: true });
+  const initials = ((getState().profile?.full_name || "").trim().split(/\s+/).map((w) => w[0]).join("").slice(0, 2) || "·").toUpperCase();
+  // v6 "Hanssen" composition — theme preference shared with the login screen.
+  let themeDark = false;
+  try { themeDark = localStorage.getItem("asc.theme") === "dark"; } catch { /* ignore */ }
   main.innerHTML = `
-    <div class="dash-hello" id="dashHello"></div>
-    <div class="search-wrap dash-search">
-      ${icon("search", 20)}
-      <input id="search" type="search" placeholder="${esc(t("dash.search"))}" autocomplete="off" value="${esc(query)}" aria-label="${esc(t("dash.search"))}">
+    <div class="v6${themeDark ? " dark" : ""}" id="v6root">
+    <i class="v6canvas" aria-hidden="true"></i>
+    <div class="v6shell">
+      <nav class="v6nav" aria-label="Primary">
+        <span class="v6mark" aria-hidden="true"></span>
+        <a href="#/" class="on">${t("nav.home")}</a>
+        <a href="#/checkin">${t("nav.checkin")}</a>
+        <a href="#/warehouse">${t("nav.warehouse")}</a>
+        <a href="#/customers">${t("nav.customers")}</a>
+        <button type="button" class="v6mode" id="v6mode" aria-label="Tema / Theme"><i></i></button>
+      </nav>
+      <div class="v6grid">
+        <section class="v6stage">
+          <i class="v6aura" aria-hidden="true"></i>
+          <span class="v6k">${esc(t("dash.stageLabel"))}</span>
+          <div class="v6hero"><span class="tnum" id="scBig">–</span><em>${esc(t("dash.setsUnit"))}</em></div>
+          <div class="v6cap" id="scCap"></div>
+          <div class="v6meter"><i id="scMeter"></i></div>
+          <div class="v6space"></div>
+          <div class="v6spills" id="tiles"></div>
+          <a class="v6cta" href="#/assistant"><span class="v6dot"></span>${esc(t("dash.askAgent"))}</a>
+          <span class="v6tab br">${esc(t("dash.estTab"))}</span>
+        </section>
+        <div class="v6mid">
+          <section class="v6profile">
+            <div class="v6prow">
+              <span class="v6avatar" id="v6avatar">${esc(initials)}</span>
+              <div><h1 id="helloTitle"></h1><div class="v6sub" id="helloSub"></div></div>
+            </div>
+            <p class="v6status" id="dashStatus"></p>
+          </section>
+          <section class="v6panel p1">
+            <span class="v6tab tl">${esc(t("dash.occupancy").toLowerCase())}</span>
+            <h3>${t("dash.bySeason")}</h3>
+            <div id="seasons"></div>
+          </section>
+          <section class="v6panel p2">
+            <span class="v6tab tl" id="dueTab"></span>
+            <h3>${t("dash.dueTitle")}</h3>
+            <div id="dueMini"></div>
+          </section>
+        </div>
+        <aside class="v6rail">
+          <a class="v6row" href="#/checkin">${t("dash.newSet")}<span class="v">→</span></a>
+          <a class="v6row" href="#/scan">${t("dash.scanQr")}<span class="v">→</span></a>
+          ${canWorkshop ? `<a class="v6row" href="#/workshop">${t("ws.enter")}<span class="v">→</span></a>` : ""}
+          <a class="v6row" href="#/reminders">${t("dash.reminders")}<span class="v">→</span></a>
+          <a class="v6row hero" href="#/assistant">${t("ag.title")}<span class="v"><span class="v6dot"></span>online</span></a>
+        </aside>
+      </div>
+      <section class="v6list">
+        <h2 class="ptitle">${t("dash.inventory")} <span id="listCount" class="u-meta"></span></h2>
+        <div class="search-wrap dash-search">
+          ${icon("search", 20)}
+          <input id="search" type="search" placeholder="${esc(t("dash.search"))}" autocomplete="off" value="${esc(query)}" aria-label="${esc(t("dash.search"))}">
+        </div>
+        <div id="dueSoon" hidden></div>
+        <div id="list">${skeletonRows(5)}</div>
+      </section>
     </div>
-    <div class="dash-launch">
-      <a class="ws-enter is-agent" href="#/assistant">
-        <span class="ws-enter-orb">${icon("agent", 22)}</span>
-        <span class="ws-enter-txt"><b>${t("ag.title")}</b><span>${t("ag.enterSub")}</span></span>
-        <span class="ws-enter-go">${icon("back", 20)}</span>
-      </a>
-      ${canWorkshop ? `<a class="ws-enter" href="#/workshop">
-        <span class="ws-enter-orb">${icon("box", 22)}</span>
-        <span class="ws-enter-txt"><b>${t("ws.enter")}</b><span>${t("ws.enterSub")}</span></span>
-        <span class="ws-enter-go">${icon("back", 20)}</span>
-      </a>` : ""}
-    </div>
-    <section class="card u-module dash-pulse">
-      <div id="tiles" class="tiles u-rise"></div>
-    </section>
-    <div id="dueSoon"></div>
-    <div class="section-title"><h2>${t("dash.inventory")}</h2><span id="listCount" class="u-meta"></span></div>
-    <div id="list">${skeletonRows(5)}</div>`;
+    </div>`;
+  // Body class too: the fixed canvas is trapped by the view-transition
+  // transform (containing-block rule), so the page edges are painted here.
+  document.body.classList.toggle("v6-dark", themeDark);
+  window.addEventListener("asc:teardown", () => document.body.classList.remove("v6-dark"), { once: true });
+  main.querySelector("#v6mode").addEventListener("click", () => {
+    const rootEl = main.querySelector("#v6root");
+    const dark = rootEl.classList.toggle("dark");
+    document.body.classList.toggle("v6-dark", dark);
+    try { localStorage.setItem("asc.theme", dark ? "dark" : "light"); } catch { /* ignore */ }
+  });
 
   // The personal hello — paints now, and re-paints when the background profile
   // fetch lands (first visit after boot often races it). Unsubscribes on swap.
   const paintHello = () => {
-    const el = main.querySelector("#dashHello");
-    if (!el) return;
+    const title = main.querySelector("#helloTitle");
+    if (!title) return;
     const name = firstName(getState().profile);
-    el.innerHTML = `${t(helloKey())}${name ? `, <b>${esc(name)}</b>` : ""}`;
+    const d = new Date();
+    let dateLine = d.toLocaleDateString(lang() === "hr" ? "hr-HR" : "en-GB", { weekday: "long", day: "numeric", month: "long" });
+    dateLine = dateLine.charAt(0).toUpperCase() + dateLine.slice(1);
+    title.innerHTML = `${t(helloKey())}${name ? `, ${esc(name)}` : ""}`;
+    main.querySelector("#helloSub").textContent = `${dateLine} · Dubrovnik`;
+    const due = allSets.filter((s) => isDueSoon(s)).length;
+    main.querySelector("#dashStatus").textContent =
+      t("dash.statusLine", { total: allSets.length, sets: noun(allSets.length, "sets"), due });
+    // Avatar initials resolve with the same async profile fetch.
+    const av = main.querySelector("#v6avatar");
+    const ini = ((getState().profile?.full_name || "").trim().split(/\s+/).map((w) => w[0]).join("").slice(0, 2) || "·").toUpperCase();
+    if (av) av.textContent = ini;
   };
   paintHello();
   const offHello = on("change", paintHello);
@@ -92,23 +158,32 @@ async function load(main) {
 function paintTiles(main, health, counts) {
   const { online, syncPending } = getState();
   const dueSoon = allSets.filter((s) => isDueSoon(s)).length;
+  // Cache real counts for the login screen's stage chips (never fake numbers).
+  try { localStorage.setItem("asc.loginChips", JSON.stringify({ inStorage: counts.in_storage, dueSoon })); } catch { /* ignore */ }
   const backup = health.lastBackup
     ? `${health.lastBackup.status === "success" ? "✓" : "⚠"} ${timeAgo(health.lastBackup.finished_at)}`
     : t("dash.backupNotYet");
-  const tile = (key, extra, cls = "") => `
-    <div class="tile${cls ? " " + cls : ""}${filter === key ? " is-active" : ""}" role="button" tabindex="0"
-         data-filter="${key}" aria-pressed="${filter === key}">${extra}</div>`;
-  main.querySelector("#tiles").innerHTML =
-    tile("checkedInToday", `<div class="tlabel">${icon("plus", 15)}${t("dash.checkedInToday")}</div><div class="tval tnum">${health.todayCheckIns}</div>`, "tile-accent") +
-    tile("pickedUpToday", `<div class="tlabel">${icon("check", 15)}${t("dash.pickedUpToday")}</div><div class="tval tnum">${health.todayPickups}</div>`) +
-    tile("inStorage", `<div class="tlabel">${icon("box", 15)}${t("dash.inStorage")}</div><div class="tval tnum">${counts.in_storage}</div><div class="tsub">${t("dash.reservedN", { n: counts.reserved })}</div>`) +
-    tile("dueSoon", `<div class="tlabel">${icon("clock", 15)}${t("dash.dueSoon")}</div><div class="tval tnum">${dueSoon}</div><div class="tsub">${t("dash.next7")}</div>`);
+  // Stage card: the big number IS storage; the meter shows how much of the
+  // hotel is staying (stored sets not due out within 7 days) — real data only.
+  const inStorage = counts.in_storage || 0;
+  main.querySelector("#scBig").textContent = inStorage;
+  main.querySelector("#scCap").textContent =
+    `${t("dash.capLine", { n: counts.reserved || 0 })}`;
+  const staying = inStorage ? Math.round(((inStorage - dueSoon) / inStorage) * 100) : 0;
+  main.querySelector("#scMeter").style.width = `${Math.max(4, staying)}%`;
 
-  // Tap a tile to filter the inventory list below; tap the active one again to clear.
+  // Spills stay interactive: tap to filter the inventory list, tap again to clear.
+  const spill = (key, val, label) => `
+    <div class="sc-spill${filter === key ? " is-active" : ""}" role="button" tabindex="0"
+         data-filter="${key}" aria-pressed="${filter === key}"><b class="tnum">${val}</b><span>${label}</span></div>`;
+  main.querySelector("#tiles").innerHTML =
+    spill("checkedInToday", health.todayCheckIns, t("dash.checkedInToday")) +
+    spill("pickedUpToday", health.todayPickups, t("dash.pickedUpToday")) +
+    spill("dueSoon", dueSoon, t("dash.dueSoon"));
   main.querySelectorAll("#tiles [data-filter]").forEach((el) => {
     const toggle = () => {
       filter = filter === el.dataset.filter ? null : el.dataset.filter;
-      main.querySelectorAll("#tiles .tile").forEach((t2) => {
+      main.querySelectorAll("#tiles .sc-spill").forEach((t2) => {
         const on = t2.dataset.filter === filter;
         t2.classList.toggle("is-active", on);
         t2.setAttribute("aria-pressed", String(on));
@@ -118,13 +193,14 @@ function paintTiles(main, health, counts) {
     el.addEventListener("click", toggle);
     el.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); } });
   });
+  paintSeasons(main);
 
   let strip = main.querySelector("#healthStrip");
   if (!strip) {
     strip = document.createElement("div");
     strip.id = "healthStrip";
     strip.className = "dash-health";
-    main.querySelector(".dash-pulse").appendChild(strip);
+    main.querySelector(".v6profile").appendChild(strip);
   }
   strip.innerHTML = `
     <span class="hstat"><span class="u-dot ${online ? "is-ok" : "is-warn"}"></span><span class="hk">${t("dash.connection")}</span><span class="hv">${online ? t("conn.online") : t("conn.offline")}</span></span>
@@ -134,11 +210,39 @@ function paintTiles(main, health, counts) {
 
 function paintDueSoon(main) {
   const due = allSets.filter((s) => isDueSoon(s)).sort((a, b) => (a.expected_out_date || "").localeCompare(b.expected_out_date || ""));
+  // v6: compact mini-list in the dark "Darkness" panel + count in its corner tab.
+  const tab = main.querySelector("#dueTab");
+  if (tab) tab.textContent = `${t("dash.next7").toLowerCase()} · ${due.length}`;
+  const mini = main.querySelector("#dueMini");
+  if (mini) {
+    mini.innerHTML = due.length
+      ? due.slice(0, 4).map((s) => `
+        <a class="v6mini" href="#/set/${esc(s.public_code)}">
+          <time class="tnum">${esc((s.expected_out_date || "").slice(8, 10))}.${esc((s.expected_out_date || "").slice(5, 7))}.</time>
+          <b>${esc(s.vehicle?.customer?.name || s.public_code || "—")}</b>
+          <span>${esc((s.tires || [])[0]?.size || "")}</span>
+        </a>`).join("")
+      : `<div class="v6mini-empty">${esc(t("dash.noneHere"))}</div>`;
+  }
   const box = main.querySelector("#dueSoon");
-  if (!due.length) { box.innerHTML = ""; return; }
-  box.innerHTML = `
-    <div class="section-title"><h2>${t("dash.dueForPickup")}<span class="u-count-chip">${due.length}</span></h2><a class="link" href="#/reminders">${t("dash.remind")}</a></div>
-    <div class="set-list dash-due">${due.slice(0, 5).map(setRow).join("")}</div>`;
+  if (box) box.innerHTML = "";
+}
+
+// Occupancy bars — stored sets by season, real proportions.
+function paintSeasons(main) {
+  const box = main.querySelector("#seasons");
+  if (!box) return;
+  const stored = allSets.filter((s) => s.status === "in_storage");
+  const by = { winter: 0, summer: 0, all_season: 0 };
+  stored.forEach((s) => { if (by[s.season] != null) by[s.season]++; });
+  const max = Math.max(1, ...Object.values(by));
+  box.innerHTML = ["winter", "summer", "all_season"].map((k) => `
+    <div class="srow">
+      <div class="srow-top"><b>${t("season." + k)}</b><span class="tnum">${by[k]}</span></div>
+      <div class="sbar"><i class="${k === "all_season" ? "dim" : ""}" style="width:${Math.round((by[k] / max) * 100)}%"></i></div>
+    </div>`).join("");
+  const notch = main.querySelector("#listNotch");
+  if (notch) notch.textContent = `${t("dash.inStorage").toLowerCase()} · ${stored.length}`;
 }
 
 function paintList(main) {
@@ -151,7 +255,7 @@ function paintList(main) {
     const clear = main.querySelector("#clearFilter");
     if (clear) clear.onclick = () => {
       filter = null;
-      main.querySelectorAll("#tiles .tile.is-active").forEach((t2) => { t2.classList.remove("is-active"); t2.setAttribute("aria-pressed", "false"); });
+      main.querySelectorAll("#tiles .sc-spill.is-active").forEach((t2) => { t2.classList.remove("is-active"); t2.setAttribute("aria-pressed", "false"); });
       paintList(main);
     };
   } else {
