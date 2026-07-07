@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ASC — Agent (preview)</title>
+<meta name="theme-color" content="#edf0f5">
+<script>try{if(localStorage.getItem('asc.theme')==='dark'){document.documentElement.classList.add('dark');document.querySelector('meta[name="theme-color"]').content='#020305';}}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;650;700;800&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+<!--
+  ASC assistant ("ASC Agent") — isolated preview. Shared design system lives in
+  app.css + app.js (v6 "Hanssen"): tokens, glass shell, header, notched corner
+  tabs, dark card surface, iOS dock, theme toggle + count-up. Only the chat
+  screen's own layout (log / bubbles / chips / voice orb / input row) is inline
+  below. This is the "Više" tab. No dedicated green/red imagery here — the chat
+  is a focused dark surface; hero.jpg is used only as a faint context texture.
+  Croatian copy is grounded verbatim in i18n's `ag.*` hr strings.
+-->
+<link rel="stylesheet" href="app.css">
+<style>
+/* ---- Assistant-page-specific layout only (shared rules live in app.css) ---- */
+
+.ag-wrap{max-width:760px;margin:0 auto}
+
+/* The chat card is a constant focused dark surface in BOTH themes (.card.dark
+   is theme-stable), giving the assistant its own calm, premium room. */
+.ag{position:relative;overflow:hidden;min-height:520px;padding-top:16px}
+.ag .photo{position:absolute;inset:0;z-index:0;background:url('assets/hero.jpg') center right/cover;opacity:.10;filter:saturate(.7)}
+.ag .scrim{position:absolute;inset:0;z-index:0;background:
+  radial-gradient(120% 90% at 92% -10%,rgba(255,78,27,.20),transparent 52%),
+  linear-gradient(180deg,transparent 40%,rgba(7,8,10,.55) 100%)}
+.ag>*{position:relative;z-index:2}
+.ag>.tab-tl,.ag>.tab-corner{z-index:5}
+
+/* head: title + online + actions */
+.ag-head{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.ag-head h3{font:600 16px Sora;color:var(--on-stage);display:flex;align-items:center;gap:9px;margin:0}
+.ag-head h3 .rob{width:26px;height:26px;border-radius:9px;flex:none;display:grid;place-items:center;
+  background:radial-gradient(circle at 32% 30%,var(--lava-2),var(--lava) 62%,#d6390c);color:#fff;box-shadow:0 5px 14px -4px var(--lava-ring)}
+.ag-live{display:inline-flex;align-items:center;gap:6px;font:600 10.5px Inter;letter-spacing:.04em;text-transform:uppercase;color:var(--on-stage-2)}
+.ag-live i{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px 1px rgba(47,191,91,.7)}
+.ag-actions{margin-left:auto;display:flex;align-items:center;gap:8px}
+.ag-gbtn{display:inline-flex;align-items:center;gap:7px;min-height:36px;padding:0 12px;border-radius:999px;cursor:pointer;
+  border:1px solid rgba(255,255,255,.12);background:rgba(244,245,247,.07);color:var(--on-stage-2);
+  font:600 12px Inter;transition:background 160ms var(--snap),color 160ms var(--snap),transform 160ms var(--snap)}
+.ag-gbtn.icon{width:36px;padding:0;justify-content:center}
+.ag-gbtn svg{width:17px;height:17px;flex:none}
+@media(hover:hover){ .ag-gbtn:hover{background:rgba(244,245,247,.14);color:var(--on-stage)} }
+.ag-gbtn:active{transform:scale(.94)}
+.ag-gbtn[aria-pressed="true"]{background:var(--lava-tint);border-color:var(--lava-ring);color:var(--lava-2)}
+
+/* database-context strip — subtle live numbers the agent reads over */
+.ag-ctx{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:14px}
+.ag-ctx span{display:inline-flex;align-items:baseline;gap:5px;padding:5px 11px;border-radius:999px;
+  background:rgba(244,245,247,.06);border:1px solid rgba(255,255,255,.08);font:500 11px Inter;color:var(--on-stage-2)}
+.ag-ctx b{font:600 12px Sora;color:var(--on-stage)}
+
+/* the scrolling message log */
+.ag-log{display:flex;flex-direction:column;gap:10px;max-height:min(46vh,420px);overflow-y:auto;
+  padding:4px 2px 6px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.ag-log::-webkit-scrollbar{display:none}
+.ag-msg{max-width:82%;padding:11px 14px;font:500 13.5px/1.5 Inter;border-radius:16px;
+  animation:rise 460ms var(--smooth) both;word-wrap:break-word;overflow-wrap:anywhere}
+.ag-msg.is-bot{align-self:flex-start;background:rgba(244,245,247,.08);border:1px solid rgba(255,255,255,.08);
+  border-bottom-left-radius:5px;color:var(--on-stage)}
+.ag-msg.is-me{align-self:flex-end;background:linear-gradient(180deg,rgba(255,78,27,.24),rgba(255,78,27,.16));
+  border:1px solid var(--lava-ring);border-bottom-right-radius:5px;color:#fff;font-weight:500}
+.ag-msg.is-busy{color:var(--on-stage-2);font-style:normal}
+.ag-msg.is-busy::after{content:"";display:inline-block;width:3px;height:3px;margin-left:3px;border-radius:50%;
+  background:currentColor;box-shadow:7px 0 currentColor,14px 0 currentColor;animation:blink 1s steps(3) infinite}
+@keyframes blink{0%{box-shadow:7px 0 rgba(0,0,0,0),14px 0 rgba(0,0,0,0)}33%{box-shadow:7px 0 currentColor,14px 0 rgba(0,0,0,0)}66%,100%{box-shadow:7px 0 currentColor,14px 0 currentColor}}
+
+/* suggestion chips */
+.ag-chips{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 4px}
+.ag-chip{cursor:pointer;min-height:38px;padding:0 15px;border-radius:999px;text-align:left;
+  border:1px solid rgba(255,255,255,.12);background:rgba(244,245,247,.06);color:var(--on-stage-2);
+  font:500 12.5px Inter;display:inline-flex;align-items:center;gap:8px;
+  transition:background 150ms var(--snap),color 150ms var(--snap),transform 150ms var(--snap)}
+.ag-chip::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--lava);flex:none;opacity:.85}
+@media(hover:hover){ .ag-chip:hover{background:rgba(244,245,247,.13);color:var(--on-stage);transform:translateY(-1px)} }
+.ag-chip:active{transform:scale(.97)}
+.ag-chips[hidden]{display:none}
+
+/* walkie-talkie press-and-hold voice orb */
+.ag-ptt-zone{display:flex;flex-direction:column;align-items:center;gap:12px;margin:18px 0 6px}
+.ag-ptt-status{font:600 11px Inter;letter-spacing:.06em;text-transform:uppercase;color:var(--on-stage-2);
+  min-height:14px;text-align:center;transition:color 200ms var(--snap)}
+.ag-ptt-status.is-live{color:var(--lava-2)}
+.ag-ptt{position:relative;width:104px;height:104px;border-radius:50%;border:0;cursor:pointer;touch-action:none;
+  background:radial-gradient(circle at 32% 28%,var(--lava-2),var(--lava) 58%,#d6390c);color:#fff;
+  display:grid;place-items:center;
+  box-shadow:0 14px 34px -10px var(--lava-ring),inset 0 2px 7px rgba(255,255,255,.38);
+  transition:transform 160ms var(--snap),box-shadow 220ms var(--snap)}
+.ag-ptt svg{width:44px;height:44px}
+.ag-ptt .halo{position:absolute;inset:0;border-radius:50%;border:2px solid var(--lava-2);opacity:0;pointer-events:none}
+.ag-ptt:active{transform:scale(.95)}
+.ag-ptt.is-live{box-shadow:0 0 0 12px rgba(255,78,27,.12),0 14px 40px -6px var(--lava-ring)}
+.ag-ptt.is-live .halo{animation:ping 1.5s var(--smooth) infinite}
+.ag-ptt.is-think{box-shadow:0 0 0 6px rgba(255,78,27,.10),0 14px 34px -10px var(--lava-ring)}
+@keyframes ping{0%{transform:scale(1);opacity:.7}100%{transform:scale(1.55);opacity:0}}
+.ag-ptt-lab{font:700 10px Inter;letter-spacing:.14em;text-transform:uppercase;color:var(--on-stage-2)}
+
+/* bottom input row */
+.ag-inputrow{display:flex;gap:9px;margin-top:14px;align-items:center}
+.ag-input{flex:1;min-width:0;height:48px;padding:0 18px;border-radius:999px;
+  background:rgba(244,245,247,.07);border:1px solid rgba(255,255,255,.12);color:var(--on-stage);
+  font:500 13.5px Inter;transition:border-color 160ms var(--snap),background 160ms var(--snap)}
+.ag-input::placeholder{color:var(--on-stage-2)}
+.ag-input:focus{outline:none;border-color:var(--lava-ring);background:rgba(244,245,247,.10)}
+.ag-send{flex:none;height:48px;padding:0 20px;border-radius:999px;border:0;cursor:pointer;
+  background:linear-gradient(180deg,var(--lava-2),var(--lava));color:#fff;font:600 13.5px Inter;
+  display:inline-flex;align-items:center;gap:8px;box-shadow:0 10px 22px -10px var(--lava-ring);
+  transition:transform 150ms var(--snap),box-shadow 200ms var(--snap)}
+.ag-send svg{width:16px;height:16px}
+@media(hover:hover){ .ag-send:hover{transform:translateY(-2px);box-shadow:0 14px 28px -10px var(--lava-ring)} }
+.ag-send:active{transform:scale(.97)}
+
+.ag :focus-visible{outline-color:var(--lava-2);box-shadow:0 0 0 4px rgba(2,3,5,.55)}
+@media(max-width:520px){ .ag-send span{display:none} .ag-send{padding:0;width:48px;justify-content:center} }
+</style>
+</head>
+<body>
+<div class="canvas" aria-hidden="true"></div>
+<div class="grain" aria-hidden="true"></div>
+<span class="preview-tag">Preview · nije uživo</span>
+
+<main class="shell">
+  <header class="top">
+    <img class="logo" src="assets/logo.png" alt="ASC — Auto servisni centar">
+    <nav class="pill" aria-label="Glavna navigacija">
+      <span class="pill-links"><a href="#">Ploča</a><a href="#">Zaprimi</a><a href="#">Skladište</a><a href="#">Kupci</a></span>
+      <button class="mode" id="mode" aria-label="Promijeni temu"><i></i></button>
+    </nav>
+  </header>
+
+  <section class="ag-wrap">
+    <div class="card dark ag reveal" style="animation-delay:110ms">
+      <span class="photo" aria-hidden="true"></span>
+      <span class="scrim" aria-hidden="true"></span>
+      <span class="tab-tl">pomoćnik</span>
+      <span class="tab-corner">uživo · Dubrovnik</span>
+
+      <div class="ag-head">
+        <h3>
+          <span class="rob" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="7.5" width="15" height="12" rx="3"/><path d="M12 3.4v3.6M8.6 12.4v.01M15.4 12.4v.01M9.4 16.4h5.2"/></svg></span>
+          ASC Agent
+        </h3>
+        <span class="ag-live"><i></i>Na mreži</span>
+        <div class="ag-actions">
+          <button id="agTts" class="ag-gbtn" aria-pressed="true" title="Čitaj odgovore naglas">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5.5L6.5 9H4v6h2.5L11 18.5z"/><path d="M15.4 8.6a5 5 0 010 6.8M17.8 6.2a8.5 8.5 0 010 11.6"/></svg>
+            <span id="agTtsLab">Glas uključen</span>
+          </button>
+          <button id="agReset" class="ag-gbtn icon" title="Novi razgovor" aria-label="Novi razgovor">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9.5 7V5.4A1.4 1.4 0 0110.9 4h2.2a1.4 1.4 0 011.4 1.4V7M6.5 7l.9 12.1A1.6 1.6 0 009 20.6h6a1.6 1.6 0 001.6-1.5L17.5 7"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="ag-ctx" aria-label="Kontekst baze">
+        <span><b data-count="248">0</b>setova</span>
+        <span><b data-count="141">0</b>zimske</span>
+        <span><b data-count="3">0</b>za preuzimanje</span>
+      </div>
+
+      <div id="agLog" class="ag-log" aria-live="polite">
+        <div class="ag-msg is-bot">Bok Toni! Pitaj me bilo što o skladištu — ili mi izdiktiraj novi set guma i ispunit ću ga umjesto tebe.</div>
+        <div class="ag-msg is-me">Koliko je setova na skladištu?</div>
+        <div class="ag-msg is-bot">Trenutačno je na čuvanju 248 kompleta guma — 141 zimski, 89 ljetnih i 18 cjelogodišnjih setova. Slobodno je još 8 % kapaciteta skladišta.</div>
+        <div class="ag-msg is-me">Tko je za preuzimanje ovaj tjedan?</div>
+        <div class="ag-msg is-bot">Ovaj tjedan tri kupca čekaju preuzimanje: Josip Horvat (DU-234-AB) — kasni od petka, Ana Kovačević (DU-881-KL) — danas, i Marko Babić (DU-455-MN) — u srijedu. Želiš li da nekoga podsjetim porukom?</div>
+      </div>
+
+      <div id="agChips" class="ag-chips" aria-label="Prijedlozi">
+        <button type="button" class="ag-chip" data-chip>Koliko je setova na skladištu?</button>
+        <button type="button" class="ag-chip" data-chip>Tko je za preuzimanje ovaj tjedan?</button>
+        <button type="button" class="ag-chip" data-chip>Zaprimi novi set za kupca</button>
+      </div>
+
+      <div class="ag-ptt-zone">
+        <div id="agPttStatus" class="ag-ptt-status">Pritisnite i držite za govor — pustite za slanje</div>
+        <button type="button" id="agPtt" class="ag-ptt" aria-label="Pritisnite i držite za govor — pustite za slanje">
+          <span class="halo" aria-hidden="true"></span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M6 11a6 6 0 0012 0M12 17v3.5M9 20.5h6"/></svg>
+        </button>
+        <span class="ag-ptt-lab">DRŽI I GOVORI</span>
+      </div>
+
+      <form id="agForm" class="ag-inputrow" autocomplete="off">
+        <input id="agInput" class="ag-input" placeholder="Pitaj o setovima, kupcima… ili izdiktiraj novi set" autocomplete="off" aria-label="Poruka agentu">
+        <button type="submit" class="ag-send">
+          <span>Pošalji</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M12.5 6l6 6-6 6"/></svg>
+        </button>
+      </form>
+    </div>
+  </section>
+</main>
+
+<nav class="dock" aria-label="Sekcije">
+  <a class="dtab" href="#" aria-label="Ploča"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.2 10.6L12 4l7.8 6.6"/><path d="M5.8 9.4V19a2 2 0 002 2h8.4a2 2 0 002-2V9.4"/></svg>Ploča</a>
+  <a class="dtab" href="#" aria-label="Zaprimi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5.4v13.2M5.4 12h13.2"/></svg>Zaprimi</a>
+  <a class="dtab" href="#" aria-label="Skeniraj"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.2V6.4A2.4 2.4 0 016.4 4h1.8M15.8 4h1.8A2.4 2.4 0 0120 6.4v1.8M20 15.8v1.8a2.4 2.4 0 01-2.4 2.4h-1.8M8.2 20H6.4A2.4 2.4 0 014 17.6v-1.8"/><path d="M7.2 12h9.6"/></svg>Skeniraj</a>
+  <a class="dtab" href="#" aria-label="Skladište"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21.2s-7-5.5-7-11a7 7 0 0114 0c0 5.5-7 11-7 11z"/><circle cx="12" cy="10" r="2.4"/></svg>Skladište</a>
+  <a class="dtab on" href="#" aria-label="Više"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8.6 6.4H21M8.6 12H21M8.6 17.6H21"/><path d="M3.6 6.4h.01M3.6 12h.01M3.6 17.6h.01"/></svg>Više</a>
+</nav>
+
+<script src="app.js"></script>
+<script>
+/* ---- Assistant-page-specific behaviour (theme/dock/count-up live in app.js) ----
+   A self-contained mock of the chat loop: chips + text send append a user bubble
+   and a canned, DB-grounded agent reply; the walkie-talkie orb runs a real
+   press-and-hold gesture; the read-aloud + new-chat controls flip state. No
+   network, no real speech — a faithful preview of views/assistant.js flow. */
+(function () {
+  const log = document.getElementById('agLog');
+  const input = document.getElementById('agInput');
+  const chips = document.getElementById('agChips');
+  const form = document.getElementById('agForm');
+  const reduce = matchMedia('(prefers-reduced-motion:reduce)').matches;
+
+  const GREET = 'Bok Toni! Pitaj me bilo što o skladištu — ili mi izdiktiraj novi set guma i ispunit ću ga umjesto tebe.';
+
+  // Deterministic canned replies grounded in the Dubrovnik/DU sample data.
+  function replyFor(msg) {
+    const m = msg.toLowerCase();
+    if (m.includes('koliko')) return 'Trenutačno je na čuvanju 248 kompleta guma — 141 zimski, 89 ljetnih i 18 cjelogodišnjih setova. Slobodno je još 8 % kapaciteta skladišta.';
+    if (m.includes('preuzim') || m.includes('tjedan')) return 'Ovaj tjedan tri kupca čekaju preuzimanje: Josip Horvat (DU-234-AB) — kasni od petka, Ana Kovačević (DU-881-KL) — danas, i Marko Babić (DU-455-MN) — u srijedu.';
+    if (m.includes('zaprimi') || m.includes('novi set') || m.includes('diktir')) return 'Može — pripremio sam nacrt za novi set (Ivan Perić, zimske Michelin 205/55 R16, kod ASC-2026-0249). Provjeri podatke i potvrdi kad si spreman.';
+    return 'Provjerio sam bazu — 248 kompleta je na čuvanju. Za detalje o pojedinom kupcu reci mi ime ili registraciju, npr. DU-234-AB.';
+  }
+
+  function bubble(who, text, cls) {
+    const el = document.createElement('div');
+    el.className = 'ag-msg is-' + who + (cls ? ' ' + cls : '');
+    el.textContent = text;
+    log.appendChild(el);
+    log.scrollTop = log.scrollHeight;
+    return el;
+  }
+
+  let running = false;
+  function send(text) {
+    const msg = (text || '').trim();
+    if (!msg || running) return;
+    running = true;
+    chips.hidden = true;
+    input.value = '';
+    bubble('me', msg);
+    const thinking = bubble('bot', 'Provjeravam bazu…', 'is-busy');
+    const finish = () => {
+      thinking.remove();
+      bubble('bot', replyFor(msg));
+      running = false;
+    };
+    if (reduce) finish(); else setTimeout(finish, 780);
+  }
+
+  form.addEventListener('submit', function (e) { e.preventDefault(); send(input.value); });
+  chips.querySelectorAll('[data-chip]').forEach(function (b) {
+    b.addEventListener('click', function () { send(b.textContent); });
+  });
+
+  // New conversation — reset the log to the greeting and bring chips back.
+  document.getElementById('agReset').addEventListener('click', function () {
+    running = false;
+    log.innerHTML = '';
+    bubble('bot', GREET);
+    chips.hidden = false;
+  });
+
+  // Read-aloud toggle — visual state only in this preview.
+  const tts = document.getElementById('agTts');
+  const ttsLab = document.getElementById('agTtsLab');
+  tts.addEventListener('click', function () {
+    const on = tts.getAttribute('aria-pressed') !== 'true';
+    tts.setAttribute('aria-pressed', String(on));
+    ttsLab.textContent = on ? 'Glas uključen' : 'Glas isključen';
+  });
+
+  // ---- Walkie-talkie: press & HOLD the orb to talk, release to send ----
+  const ptt = document.getElementById('agPtt');
+  const pttStatus = document.getElementById('agPttStatus');
+  const HOLD = 'Pritisnite i držite za govor — pustite za slanje';
+  let holding = false, heldAt = 0;
+
+  function setState(state, text) {
+    ptt.classList.toggle('is-live', state === 'live');
+    ptt.classList.toggle('is-think', state === 'think');
+    pttStatus.textContent = text;
+    pttStatus.classList.toggle('is-live', state === 'live');
+  }
+  function startHold() {
+    if (holding || running) return;
+    holding = true; heldAt = Date.now();
+    setState('live', 'Slušam…');
+  }
+  function endHold() {
+    if (!holding) return;
+    holding = false;
+    const long = Date.now() - heldAt > 350;
+    if (long) {
+      setState('think', 'Razmišljam…');
+      // Simulated captured dictation → into the same send() loop.
+      setTimeout(function () {
+        setState('idle', HOLD);
+        send('Zaprimi novi set za Ivana Perića, zimske Michelin 205 55 R16');
+      }, 420);
+    } else {
+      setState('idle', HOLD);
+    }
+  }
+  ptt.addEventListener('pointerdown', function (e) { e.preventDefault(); if (ptt.setPointerCapture) ptt.setPointerCapture(e.pointerId); startHold(); });
+  ptt.addEventListener('pointerup', endHold);
+  ptt.addEventListener('pointercancel', endHold);
+  ptt.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+  ptt.addEventListener('keydown', function (e) { if ((e.key === ' ' || e.key === 'Enter') && !e.repeat) { e.preventDefault(); startHold(); } });
+  ptt.addEventListener('keyup', function (e) { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); endHold(); } });
+})();
+</script>
+</body>
+</html>

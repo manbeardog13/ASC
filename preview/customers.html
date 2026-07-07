@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ASC — Kupci (preview)</title>
+<meta name="theme-color" content="#edf0f5">
+<script>try{if(localStorage.getItem('asc.theme')==='dark'){document.documentElement.classList.add('dark');document.querySelector('meta[name="theme-color"]').content='#020305';}}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;650;700;800&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+<!--
+  ASC customers ("Kupci") — CLEAN-ROOM preview, same app as dashboard.html.
+  Shared design system lives in app.css + app.js (v6 "Hanssen"): tokens, glass
+  shell, header, notched corner tabs, stage hero, card surfaces, chips, iOS dock,
+  theme toggle + count-up. Only this screen's own layout (.chero / .cwrap /
+  .crow / detail internals) stays inline below. Copy is grounded in i18n hr.
+  No green/red action imagery here — that belongs to check-in / pickup only.
+-->
+<link rel="stylesheet" href="app.css">
+<style>
+/* ---- Customers-page-specific layout only (shared rules live in app.css) ---- */
+
+/* Compact list-hero: same dark stage aesthetic, shorter than the dashboard's */
+.chero{min-height:auto;padding:26px 24px 22px}
+.chero .hero-num{margin-top:8px}
+
+/* Search field — reuses the shell palette; app.css has no input base */
+.csearch{position:relative;margin:var(--gap) 4px 0}
+.csearch .ic{position:absolute;left:16px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none;display:grid;place-items:center}
+.csearch input{width:100%;height:52px;border:1px solid var(--line);background:var(--panel-2);color:var(--ink);
+  border-radius:16px;padding:0 16px 0 46px;font:500 14.5px Inter;-webkit-appearance:none;appearance:none;
+  transition:border-color 150ms var(--snap),box-shadow 150ms var(--snap),background 380ms var(--smooth)}
+.csearch input::placeholder{color:var(--muted)}
+.csearch input:focus{outline:0;border-color:var(--lava-ring);box-shadow:0 0 0 4px var(--lava-tint)}
+.csearch input::-webkit-search-cancel-button{-webkit-appearance:none}
+
+/* Two-pane layout: customer list | selected customer card */
+.cwrap{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);gap:var(--gap);margin-top:var(--gap);align-items:start}
+@media(max-width:900px){ .cwrap{grid-template-columns:minmax(0,1fr)} }
+
+/* Customer + set rows — the reference "set-row" look, rebuilt on app.css tokens */
+.clist{display:flex;flex-direction:column;gap:10px}
+.crow{display:flex;gap:12px;align-items:stretch;padding:13px 14px;text-decoration:none;color:var(--ink);
+  background:var(--panel-2);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow-card);cursor:pointer;
+  -webkit-tap-highlight-color:transparent;transition:transform 160ms var(--snap),box-shadow 200ms var(--snap),border-color 150ms var(--snap),background 380ms var(--smooth)}
+@media(hover:hover){ .crow:hover{transform:translateY(-2px);box-shadow:0 16px 30px -18px rgba(2,3,5,.5);border-color:var(--lava-ring)} }
+.crow:active{transform:scale(.99);transition-duration:90ms}
+.crow.sel{border-color:var(--lava-ring);box-shadow:0 0 0 1px var(--lava-ring),var(--shadow-card);background:var(--panel)}
+.crow .cav{width:40px;height:40px;border-radius:50%;flex:none;align-self:center;display:grid;place-items:center;
+  font:650 13px Inter;color:#fff;background:radial-gradient(circle at 32% 30%,var(--lava-2),var(--lava) 62%,#d6390c);box-shadow:0 5px 14px rgba(255,78,27,.3)}
+.crow .body{flex:1;min-width:0}
+.crow .who{font:650 15px Inter;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.crow .spec{font:500 12.5px Inter;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.crow .cnt{flex:none;align-self:center;text-align:right;padding-left:12px;border-left:1px solid var(--line);line-height:1.15}
+.crow .cnt b{display:block;font:500 17px Sora;color:var(--ink)}
+.crow .cnt span{font:500 11px Inter;color:var(--muted)}
+
+/* Empty / no-match states */
+.cempty{text-align:center;padding:34px 18px;color:var(--muted)}
+.cempty .ei{width:52px;height:52px;margin:0 auto 12px;border-radius:16px;display:grid;place-items:center;background:var(--panel-2);color:var(--muted)}
+.cempty h4{font:600 15px Sora;color:var(--ink);margin-bottom:5px}
+.cempty p{font:500 13px Inter;max-width:34ch;margin:0 auto;line-height:1.5}
+
+/* Detail card internals */
+.cust-name{font:600 21px Sora;letter-spacing:-.01em}
+.cust-sub{font:500 12.5px Inter;color:var(--muted);margin-top:2px}
+.inforows{display:flex;flex-direction:column;gap:8px;margin-top:16px}
+.inforow{display:flex;align-items:center;gap:11px;min-height:46px;padding:0 14px;text-decoration:none;
+  background:var(--panel-2);border:1px solid var(--line);border-radius:14px;color:var(--ink);
+  transition:transform 150ms var(--snap),box-shadow 150ms var(--snap),border-color 150ms var(--snap)}
+a.inforow:hover{transform:translateY(-2px);box-shadow:var(--shadow-card);border-color:var(--lava-ring)}
+a.inforow:active{transform:scale(.99);transition-duration:90ms}
+.inforow .ic{color:var(--muted);display:grid;place-items:center;flex:none}
+.inforow .lbl{font:500 13px Inter;color:var(--muted)}
+.inforow .val{margin-left:auto;font:600 13.5px Inter;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:60%;text-align:right}
+.cstats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.cstat{background:var(--panel-2);border:1px solid var(--line);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.cstat .l{font:600 10.5px Inter;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.cstat .v{font:500 20px Sora;color:var(--ink);display:flex;align-items:center;gap:8px}
+.cstat .v .ic{color:var(--lava-ink)}
+html.dark .cstat .v .ic{color:var(--lava-2)}
+
+/* Nested "tire sets" module inside the detail card */
+.cmod{margin-top:16px;padding-top:15px;border-top:1px solid var(--hairline)}
+.cmod-head{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.cmod-head h4{font:600 11px Inter;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.srow{display:block;padding:12px 14px;text-decoration:none;color:var(--ink);background:var(--panel-2);
+  border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow-card);cursor:pointer;-webkit-tap-highlight-color:transparent;
+  transition:transform 160ms var(--snap),box-shadow 200ms var(--snap),border-color 150ms var(--snap)}
+@media(hover:hover){ .srow:hover{transform:translateX(3px);box-shadow:0 16px 30px -18px rgba(2,3,5,.5);border-color:var(--lava-ring)} }
+.srow:active{transform:scale(.99);transition-duration:90ms}
+.srow .toprow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px}
+.srow .code{font:700 13px Inter;letter-spacing:.2px}
+.srow .spec{font:500 12.5px Inter;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* status pill: dot + label, strictly on-palette (no green/red misuse) */
+.stt{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:999px;font:600 10.5px Inter}
+.stt::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.stt.store{background:rgba(46,47,49,.12);color:var(--gun)} html.dark .stt.store{background:rgba(244,245,247,.10);color:#c9ccd2}
+.stt.res{background:var(--lava-tint);color:var(--lava-ink)}
+.stt.out{background:rgba(99,103,111,.16);color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="canvas" aria-hidden="true"></div>
+<div class="grain" aria-hidden="true"></div>
+<span class="preview-tag">Preview · nije uživo</span>
+
+<main class="shell">
+  <header class="top">
+    <img class="logo" src="assets/logo.png" alt="ASC — Auto servisni centar">
+    <nav class="pill" aria-label="Glavna navigacija">
+      <span class="pill-links"><a href="dashboard.html">Ploča</a><a href="#">Zaprimi</a><a href="#">Skladište</a><a class="on" href="#">Kupci</a></span>
+      <button class="mode" id="mode" aria-label="Promijeni temu"><i></i></button>
+    </nav>
+  </header>
+
+  <!-- LIST HERO: compact dark stage (neutral tire photo — no green/red here) -->
+  <section class="stage chero reveal" style="animation-delay:90ms">
+    <span class="photo" aria-hidden="true"></span>
+    <span class="scrim" aria-hidden="true"></span>
+    <span class="k">Hotel za gume · Dubrovnik</span>
+    <div class="hero-num"><span data-count="7">0</span><em>kupaca</em></div>
+    <div class="cap">aktivnih kupaca · <span data-count="12">0</span> kompleta u kartonu</div>
+    <span class="tab-corner">Kupci · Dubrovnik</span>
+  </section>
+
+  <!-- SEARCH -->
+  <div class="csearch">
+    <span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></span>
+    <input id="search" type="search" placeholder="Traži ime ili telefon…" autocomplete="off" aria-label="Traži ime ili telefon">
+  </div>
+
+  <!-- LIST | DETAIL -->
+  <section class="cwrap">
+    <div class="card reveal" style="animation-delay:150ms">
+      <span class="tab-tl">popis</span>
+      <h3>Kupci <span class="count-badge" id="listCount">7</span></h3>
+      <div id="clist" class="clist" role="list" aria-label="Popis kupaca"></div>
+    </div>
+
+    <div class="card reveal" id="detail" style="animation-delay:200ms">
+      <span class="tab-tl">karton</span>
+      <!-- detail content injected by page script -->
+    </div>
+  </section>
+</main>
+
+<nav class="dock" aria-label="Sekcije">
+  <a class="dtab" href="dashboard.html" aria-label="Početna"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.2 10.6L12 4l7.8 6.6"/><path d="M5.8 9.4V19a2 2 0 002 2h8.4a2 2 0 002-2V9.4"/></svg>Ploča</a>
+  <a class="dtab" href="#" aria-label="Zaprimi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5.4v13.2M5.4 12h13.2"/></svg>Zaprimi</a>
+  <a class="dtab" href="#" aria-label="Skeniraj"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.2V6.4A2.4 2.4 0 016.4 4h1.8M15.8 4h1.8A2.4 2.4 0 0120 6.4v1.8M20 15.8v1.8a2.4 2.4 0 01-2.4 2.4h-1.8M8.2 20H6.4A2.4 2.4 0 014 17.6v-1.8"/><path d="M7.2 12h9.6"/></svg>Skeniraj</a>
+  <a class="dtab" href="#" aria-label="Skladište"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21.2s-7-5.5-7-11a7 7 0 0114 0c0 5.5-7 11-7 11z"/><circle cx="12" cy="10" r="2.4"/></svg>Skladište</a>
+  <a class="dtab on" href="#" aria-label="Više"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8.6 6.4H21M8.6 12H21M8.6 17.6H21"/><path d="M3.6 6.4h.01M3.6 12h.01M3.6 17.6h.01"/></svg>Više</a>
+</nav>
+
+<script src="app.js"></script>
+<script>
+/* ---- Customers page behaviour (search + select). Shared theme/dock/count-up
+   live in app.js; this only drives this screen's list ↔ detail. ---- */
+(function(){
+  var reduce = matchMedia('(prefers-reduced-motion:reduce)').matches;
+
+  // Croatian plural for "komplet" (mirror of i18n.js slavicIndex + NOUNS.sets)
+  function setsNoun(n){
+    var m10=n%10, m100=n%100, i;
+    if(m10===1 && m100!==11) i=0;
+    else if(m10>=2 && m10<=4 && !(m100>=12 && m100<=14)) i=1;
+    else i=2;
+    return ['komplet','kompleta','kompleta'][i];
+  }
+  function initials(name){ return name.split(/\s+/).map(function(w){return w[0];}).join('').slice(0,2).toUpperCase(); }
+  function esc(s){ return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+
+  var SEASON = { winter:{l:'Zimske',c:'chip win'}, summer:{l:'Ljetne',c:'chip'}, all_season:{l:'Cjelogodišnje',c:'chip all'} };
+  var STATUS = { in_storage:{l:'Spremljeno',c:'store'}, reserved:{l:'Rezervirano',c:'res'}, checked_out:{l:'Preuzeto',c:'out'} };
+
+  // Realistic Dubrovnik placeholder data (DU plates, ASC-2026-#### codes).
+  var CUSTOMERS = [
+    { id:'marko', name:'Marko Babić', phone:'095 455 6677', email:'marko.babic@email.hr', vehicles:2, sets:[
+      { code:'ASC-2026-0246', season:'winter',    status:'in_storage', vehicle:'Audi A4',    plate:'DU-455-MN' },
+      { code:'ASC-2026-0231', season:'summer',    status:'in_storage', vehicle:'VW Passat',  plate:'DU-902-MB' },
+      { code:'ASC-2026-0155', season:'all_season',status:'reserved',   vehicle:'Audi A4',    plate:'DU-455-MN' } ] },
+    { id:'ana', name:'Ana Kovačević', phone:'098 881 2244', email:'ana.kovacevic@email.hr', vehicles:1, sets:[
+      { code:'ASC-2026-0247', season:'summer', status:'in_storage', vehicle:'Škoda Octavia', plate:'DU-881-KL' } ] },
+    { id:'ivan', name:'Ivan Perić', phone:'091 234 5678', email:'ivan.peric@email.hr', vehicles:1, sets:[
+      { code:'ASC-2026-0248', season:'winter', status:'in_storage', vehicle:'VW Golf VII', plate:'DU-234-AB' },
+      { code:'ASC-2026-0142', season:'summer', status:'checked_out', vehicle:'VW Golf VII', plate:'DU-234-AB' } ] },
+    { id:'petra', name:'Petra Novak', phone:'091 662 1180', email:'petra.novak@email.hr', vehicles:1, sets:[
+      { code:'ASC-2026-0245', season:'all_season', status:'in_storage', vehicle:'Renault Clio', plate:'DU-662-PP' } ] },
+    { id:'luka', name:'Luka Marić', phone:'099 733 2091', email:'luka.maric@email.hr', vehicles:1, sets:[
+      { code:'ASC-2026-0244', season:'summer', status:'in_storage', vehicle:'BMW 320d', plate:'DU-733-XY' },
+      { code:'ASC-2026-0187', season:'winter', status:'checked_out', vehicle:'BMW 320d', plate:'DU-733-XY' } ] },
+    { id:'josip', name:'Josip Horvat', phone:'098 234 7788', email:'josip.horvat@email.hr', vehicles:1, sets:[
+      { code:'ASC-2026-0243', season:'winter', status:'in_storage', vehicle:'Mercedes C220', plate:'DU-118-JH' } ] },
+    { id:'ivana', name:'Ivana Jurić', phone:'', email:'ivana.juric@email.hr', vehicles:1, sets:[
+      { code:'ASC-2026-0239', season:'summer', status:'in_storage', vehicle:'Toyota RAV4', plate:'DU-509-IJ' },
+      { code:'ASC-2026-0121', season:'winter', status:'reserved',   vehicle:'Toyota RAV4', plate:'DU-509-IJ' } ] }
+  ];
+
+  var listEl = document.getElementById('clist');
+  var detailEl = document.getElementById('detail');
+  var countEl = document.getElementById('listCount');
+  var searchEl = document.getElementById('search');
+  var selectedId = CUSTOMERS[0].id;
+  var query = '';
+
+  function activeSets(c){ return c.sets.filter(function(s){ return s.status !== 'checked_out'; }); }
+
+  function renderList(){
+    var q = query.toLowerCase().trim();
+    var rows = CUSTOMERS.filter(function(c){ return !q || (c.name+' '+c.phone).toLowerCase().indexOf(q) !== -1; });
+    countEl.textContent = q ? (rows.length + ' od ' + CUSTOMERS.length) : String(CUSTOMERS.length);
+
+    if(!rows.length){
+      listEl.innerHTML = '<div class="cempty"><div class="ei"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></div><h4>Nema rezultata</h4><p>Ništa ne odgovara upitu „'+esc(query)+'”. Pokušajte s imenom ili telefonom.</p></div>';
+      return;
+    }
+    listEl.innerHTML = rows.map(function(c){
+      var n = activeSets(c).length;
+      var spec = (c.phone || 'Bez telefona') + ' · ' + esc(c.sets[0].vehicle);
+      return '<a class="crow'+(c.id===selectedId?' sel':'')+'" role="listitem" href="#" data-id="'+c.id+'">'
+        + '<span class="cav" aria-hidden="true">'+initials(c.name)+'</span>'
+        + '<div class="body"><div class="who">'+esc(c.name)+'</div><div class="spec">'+spec+'</div></div>'
+        + '<div class="cnt"><b>'+n+'</b><span>'+setsNoun(n)+'</span></div></a>';
+    }).join('');
+  }
+
+  function chip(kind, map){ var m=map[kind]; return '<span class="'+m.c+'">'+m.l+'</span>'; }
+  function statusChip(kind){ var m=STATUS[kind]; return '<span class="stt '+m.c+'">'+m.l+'</span>'; }
+
+  function renderDetail(){
+    var c = CUSTOMERS.filter(function(x){ return x.id===selectedId; })[0];
+    if(!c) return;
+    var phoneRow = c.phone
+      ? '<a class="inforow" href="tel:'+esc(c.phone.replace(/\s/g,''))+'"><span class="ic"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5C4 4.7 4.7 4 5.5 4H8l1.6 4L7.8 9.6a12 12 0 006.6 6.6L16 14.4 20 16v2.5c0 .8-.7 1.5-1.5 1.5A15.5 15.5 0 014 5.5z"/></svg></span><span class="lbl">Telefon</span><span class="val">'+esc(c.phone)+'</span></a>'
+      : '<div class="inforow"><span class="ic"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5C4 4.7 4.7 4 5.5 4H8l1.6 4L7.8 9.6a12 12 0 006.6 6.6L16 14.4 20 16v2.5c0 .8-.7 1.5-1.5 1.5A15.5 15.5 0 014 5.5z"/></svg></span><span class="lbl">Telefon</span><span class="val">—</span></div>';
+    var emailRow = c.email
+      ? '<a class="inforow" href="mailto:'+esc(c.email)+'"><span class="ic"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2.4"/><path d="M3.6 6.5L12 12l8.4-5.5"/></svg></span><span class="lbl">E-pošta</span><span class="val">'+esc(c.email)+'</span></a>'
+      : '<div class="inforow"><span class="lbl">E-pošta</span><span class="val">—</span></div>';
+
+    var sets = c.sets;
+    var setsHtml = sets.length
+      ? '<div class="clist">'+sets.map(function(s){
+          return '<a class="srow" href="#" aria-label="'+esc(s.code)+'">'
+            + '<div class="toprow"><span class="code">'+esc(s.code)+'</span>'+statusChip(s.status)+chip(s.season,SEASON)+'</div>'
+            + '<div class="spec">'+esc(s.vehicle+' · '+s.plate)+'</div></a>';
+        }).join('')+'</div>'
+      : '<p class="cempty" style="padding:14px 0">Nema aktivnih kompleta.</p>';
+
+    detailEl.innerHTML = '<span class="tab-tl">karton</span>'
+      + '<div class="cust-name">'+esc(c.name)+'</div>'
+      + '<div class="cust-sub">Kupac · Dubrovnik</div>'
+      + '<div class="inforows">'+phoneRow+emailRow+'</div>'
+      + '<div class="cstats">'
+        + '<div class="cstat"><span class="l">Vozila</span><span class="v"><span class="ic"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 16.5V13l1.7-4.2A2 2 0 018.6 7.5h6.8a2 2 0 011.9 1.3L19 13v3.5"/><path d="M4 13h16"/><circle cx="7.5" cy="16.5" r="1.4"/><circle cx="16.5" cy="16.5" r="1.4"/></svg></span>'+c.vehicles+'</span></div>'
+        + '<div class="cstat"><span class="l">Spremljeni kompleti</span><span class="v"><span class="ic"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8l8-4 8 4-8 4-8-4z"/><path d="M4 8v8l8 4 8-4V8"/><path d="M12 12v8"/></svg></span>'+sets.length+'</span></div>'
+      + '</div>'
+      + '<div class="cmod"><div class="cmod-head"><h4>Kompleti guma</h4>'+(sets.length?'<span class="count-badge">'+sets.length+'</span>':'')+'</div>'+setsHtml+'</div>';
+  }
+
+  listEl.addEventListener('click', function(e){
+    var row = e.target.closest('.crow'); if(!row) return; e.preventDefault();
+    selectedId = row.getAttribute('data-id');
+    renderList(); renderDetail();
+    if(window.matchMedia('(max-width:900px)').matches) detailEl.scrollIntoView({behavior:reduce?'auto':'smooth',block:'start'});
+  });
+  searchEl.addEventListener('input', function(e){ query = e.target.value; renderList(); });
+
+  renderList();
+  renderDetail();
+})();
+</script>
+</body>
+</html>

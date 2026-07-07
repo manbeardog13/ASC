@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ASC — Skladište (preview)</title>
+<meta name="theme-color" content="#edf0f5">
+<script>try{if(localStorage.getItem('asc.theme')==='dark'){document.documentElement.classList.add('dark');document.querySelector('meta[name="theme-color"]').content='#020305';}}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;650;700;800&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+<!--
+  ASC warehouse — CLEAN-ROOM REBUILD (isolated preview).
+  Shared design system lives in app.css + app.js (v6 "Hanssen"): tokens, glass
+  shell, header, notched corner tabs, card surfaces, chips, iOS dock, theme
+  toggle + count-up animations — all LINKED, never redefined. Only the
+  warehouse-map layout (occupancy header, zone → rack → shelf → slot grid) is
+  page-specific and lives inline below. No green/red imagery here — those belong
+  to check-in / pickup only. Numbers & names are Dubrovnik placeholders.
+-->
+<link rel="stylesheet" href="app.css">
+<style>
+/* ---- Warehouse-page-specific layout only (shared rules live in app.css) ---- */
+
+/* Occupancy overview = the hero: a .card.dark that states the count + spread */
+.wh-head{gap:0}
+.wh-head .eyebrow{font:600 10.5px Inter;letter-spacing:.09em;text-transform:uppercase;color:var(--on-stage-2)}
+.wh-title{display:flex;align-items:baseline;gap:12px;margin:8px 0 2px;flex-wrap:wrap}
+.wh-title h1{font-family:Sora;font-weight:600;font-size:clamp(28px,7vw,40px);letter-spacing:-.02em;line-height:1}
+.wh-title .sub{font:500 12.5px Inter;color:var(--on-stage-2)}
+.wh-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:16px}
+.wh-stat{background:rgba(244,245,247,.08);border:0;border-top:1px solid rgba(255,255,255,.09);border-radius:14px;padding:12px 12px 11px}
+.wh-stat b{display:block;font-family:Sora;font-weight:500;font-size:clamp(22px,5.4vw,27px);line-height:1;letter-spacing:-.01em}
+.wh-stat span{font:600 10px Inter;letter-spacing:.05em;text-transform:uppercase;color:var(--on-stage-2);display:block;margin-top:5px}
+.wh-stat.res b{color:var(--lava-2)}
+.wh-meter{margin-top:15px;height:8px;border-radius:4px;background:rgba(244,245,247,.14);overflow:hidden}
+.wh-meter i{display:block;height:100%;width:0;border-radius:4px;background:linear-gradient(90deg,var(--lava-2),var(--lava));transition:width 1100ms var(--smooth)}
+.wh-cap{margin-top:9px;font:500 11.5px Inter;color:var(--on-stage-2)}
+.wh-legend{display:flex;flex-wrap:wrap;gap:8px 16px;margin-top:16px;padding-top:14px;border-top:1px solid rgba(244,245,247,.10)}
+.leg{display:flex;align-items:center;gap:7px;font:600 11px Inter;color:var(--on-stage-2)}
+.leg i{width:13px;height:13px;border-radius:5px;flex:none}
+.leg.f i{background:var(--lava)}
+.leg.r i{background:var(--lava-tint);box-shadow:inset 0 0 0 1.5px var(--lava-ring)}
+.leg.e i{background:rgba(244,245,247,.10);box-shadow:inset 0 0 0 1.5px rgba(244,245,247,.22)}
+
+/* Zone quick-nav pills (reuses .chip; scroll-jump to a zone) */
+.wh-zonebar{display:flex;flex-wrap:wrap;gap:8px;margin:var(--gap) 4px 2px}
+.wh-zonepill{margin-top:0;cursor:pointer;gap:7px;padding:6px 7px 6px 11px;background:var(--panel);color:var(--ink-2);border:1px solid var(--line);transition:transform 150ms var(--snap),background 150ms var(--snap),color 150ms var(--snap)}
+.wh-zonepill .n{font:800 10px Inter;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:var(--lava-tint);color:var(--lava-ink);display:inline-flex;align-items:center;justify-content:center}
+@media(hover:hover){ .wh-zonepill:hover{transform:translateY(-1px);background:var(--panel-2);color:var(--ink)} }
+.wh-zonepill:active{transform:scale(.96);transition-duration:80ms}
+
+/* Zone = a .card holding a native <details>; summary is the zone header */
+.wh-zone{margin-top:var(--gap);padding-top:32px}
+.wh-zone>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:12px;user-select:none}
+.wh-zone>summary::-webkit-details-marker{display:none}
+.wh-badge{width:34px;height:34px;border-radius:11px;flex:none;display:grid;place-items:center;color:#fff;
+  background:radial-gradient(circle at 32% 28%,var(--lava-2),var(--lava) 64%,#d6390c);box-shadow:0 6px 16px rgba(255,78,27,.32)}
+.wh-name{font-family:Sora;font-weight:600;font-size:16px;letter-spacing:-.01em;line-height:1.1}
+.wh-name small{display:block;font:500 11.5px Inter;color:var(--muted);letter-spacing:0;margin-top:2px}
+.wh-fill{margin-left:auto;font:600 12px Inter;color:var(--muted);white-space:nowrap}
+.wh-fill b{color:var(--ink);font-weight:700}
+.wh-chev{flex:none;color:var(--muted);display:grid;place-items:center;transition:transform 260ms var(--snap)}
+.wh-zone[open]>summary .wh-chev{transform:rotate(180deg)}
+.wh-zone-body{margin-top:16px;display:flex;flex-direction:column;gap:14px}
+
+/* Rack → shelf → slots */
+.wh-rack{border:1px solid var(--hairline);border-radius:16px;background:var(--panel-2);padding:12px 13px 13px}
+html.dark .wh-rack{background:rgba(244,245,247,.03)}
+.wh-rack-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:11px}
+.wh-rack-head .r{font:700 12.5px Inter;letter-spacing:.02em}
+.rfill{font:600 11px Inter;color:var(--muted)}
+.rfill b{color:var(--lava-ink);font-weight:800}
+html.dark .rfill b{color:var(--lava-2)}
+.wh-shelf{display:grid;grid-template-columns:64px 1fr;gap:11px;align-items:start;padding:9px 0;border-top:1px dashed var(--line)}
+.wh-shelf:first-of-type{border-top:0;padding-top:2px}
+.wh-shelf-lab{font:600 10.5px Inter;letter-spacing:.03em;color:var(--muted);padding-top:9px}
+.slots{display:grid;grid-template-columns:repeat(auto-fill,minmax(40px,1fr));gap:7px}
+.slot{aspect-ratio:1/1;border-radius:11px;display:grid;place-items:center;font:700 12px Inter;text-decoration:none;position:relative;
+  transition:transform 140ms var(--snap),box-shadow 200ms var(--snap),background 150ms var(--snap)}
+.slot.filled{background:var(--lava);color:#fff;box-shadow:0 5px 13px -6px var(--lava)}
+.slot.reserved{background:var(--lava-tint);color:var(--lava-ink);box-shadow:inset 0 0 0 1.5px var(--lava-ring)}
+html.dark .slot.reserved{color:var(--lava-2)}
+.slot.empty{background:var(--panel);color:var(--muted);box-shadow:inset 0 0 0 1.5px var(--line);font-weight:600;pointer-events:none}
+html.dark .slot.empty{background:rgba(244,245,247,.04)}
+@media(hover:hover){ .slot.filled:hover,.slot.reserved:hover{transform:translateY(-2px);box-shadow:0 10px 20px -8px var(--lava-ring)} }
+.slot.filled:active,.slot.reserved:active{transform:scale(.92);transition-duration:80ms}
+.slot .rdot{position:absolute;top:4px;right:4px;width:5px;height:5px;border-radius:50%;background:var(--lava)}
+
+@media(max-width:460px){ .wh-shelf{grid-template-columns:1fr;gap:6px} .wh-shelf-lab{padding-top:0} }
+</style>
+</head>
+<body>
+<div class="canvas" aria-hidden="true"></div>
+<div class="grain" aria-hidden="true"></div>
+<span class="preview-tag">Preview · nije uživo</span>
+
+<main class="shell">
+  <header class="top">
+    <img class="logo" src="assets/logo.png" alt="ASC — Auto servisni centar">
+    <nav class="pill" aria-label="Glavna navigacija">
+      <span class="pill-links"><a href="dashboard.html">Ploča</a><a href="#">Zaprimi</a><a class="on" href="#">Skladište</a><a href="#">Kupci</a></span>
+      <button class="mode" id="mode" aria-label="Promijeni temu"><i></i></button>
+    </nav>
+  </header>
+
+  <!-- OCCUPANCY OVERVIEW — doubles as the hero -->
+  <section class="card dark wh-head reveal" style="animation-delay:110ms">
+    <span class="tab-corner">danas · Dubrovnik</span>
+    <span class="eyebrow">Hotel za gume · Dubrovnik</span>
+    <div class="wh-title">
+      <h1>Skladište</h1>
+      <span class="sub"><span data-count="225">0</span> kompleta na karti</span>
+    </div>
+    <div class="wh-stats">
+      <div class="wh-stat"><b id="stStored" data-count="0">0</b><span>Spremljeno</span></div>
+      <div class="wh-stat res"><b id="stReserved" data-count="0">0</b><span>Rezervirano</span></div>
+      <div class="wh-stat"><b id="stZones" data-count="0">0</b><span>Zone</span></div>
+    </div>
+    <div class="wh-meter" aria-hidden="true"><i id="stMeter" data-w="0"></i></div>
+    <div class="wh-cap" id="stCap">Popunjenost skladišta</div>
+    <div class="wh-legend" aria-hidden="true">
+      <span class="leg f"><i></i>Zauzeto</span>
+      <span class="leg r"><i></i>Rezervirano</span>
+      <span class="leg e"><i></i>Slobodno</span>
+    </div>
+  </section>
+
+  <!-- Zone quick-nav + the map get generated below -->
+  <div id="zonebar"></div>
+  <div id="map"></div>
+</main>
+
+<nav class="dock" aria-label="Sekcije">
+  <a class="dtab" href="dashboard.html" aria-label="Početna"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.2 10.6L12 4l7.8 6.6"/><path d="M5.8 9.4V19a2 2 0 002 2h8.4a2 2 0 002-2V9.4"/></svg>Ploča</a>
+  <a class="dtab" href="#" aria-label="Zaprimi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5.4v13.2M5.4 12h13.2"/></svg>Zaprimi</a>
+  <a class="dtab" href="#" aria-label="Skeniraj"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.2V6.4A2.4 2.4 0 016.4 4h1.8M15.8 4h1.8A2.4 2.4 0 0120 6.4v1.8M20 15.8v1.8a2.4 2.4 0 01-2.4 2.4h-1.8M8.2 20H6.4A2.4 2.4 0 014 17.6v-1.8"/><path d="M7.2 12h9.6"/></svg>Skeniraj</a>
+  <a class="dtab on" href="#" aria-label="Skladište"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21.2s-7-5.5-7-11a7 7 0 0114 0c0 5.5-7 11-7 11z"/><circle cx="12" cy="10" r="2.4"/></svg>Skladište</a>
+  <a class="dtab" href="#" aria-label="Više"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8.6 6.4H21M8.6 12H21M8.6 17.6H21"/><path d="M3.6 6.4h.01M3.6 12h.01M3.6 17.6h.01"/></svg>Više</a>
+</nav>
+
+<script>
+/* ---- Build the occupancy map (Zone → Rack → Shelf → Slot) ----------------
+   Mirrors js/views/warehouse.js semantics: only OCCUPIED slots are "sets"
+   (filled = in_storage, reserved = reserved); empty tiles are free capacity.
+   Croatian labels are grounded in i18n's hr strings. ------------------------ */
+(function () {
+  var CHEV = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>';
+  var PIN  = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21.2s-7-5.5-7-11a7 7 0 0114 0c0 5.5-7 11-7 11z"/><circle cx="12" cy="10" r="2.4"/></svg>';
+
+  var NAMES = ["Ivan Perić","Ana Kovačević","Marko Babić","Petra Novak","Luka Marić","Josip Horvat","Ivana Jurić","Nikola Vuković","Marija Šimić","Tomislav Knežević","Iva Radić","Ante Bakić","Maja Lučić","Frane Vlašić","Klara Barišić","Damir Kovač","Lucija Matić","Roko Grgić","Petar Šarić","Tea Marković"];
+  var PLATES = ["DU-234-AB","DU-881-KL","DU-455-MN","DU-107-CD","DU-620-EF","DU-903-GH","DU-512-IJ","DU-744-OP","DU-368-QR","DU-159-ST","DU-826-UV","DU-471-WX","DU-093-YZ","DU-538-AC","DU-660-BD","DU-215-CE","DU-782-DF","DU-334-EG","DU-901-FH","DU-047-GI"];
+  var seq = 248, p = 0;
+  function occ() {
+    var o = { name: NAMES[p % NAMES.length], plate: PLATES[p % PLATES.length], code: "ASC-2026-" + String(seq).padStart(4, "0") };
+    p++; seq--; return o;
+  }
+  function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); }
+
+  // Zone → Rack → Shelf capacity + fill pattern (F filled · R reserved · E empty)
+  var ZONES = [
+    { name:"Zona A", sub:"Prizemlje · glavna hala", racks:[
+      { id:"A1", shelves:[ {s:"1",p:"FFFRFFEF"}, {s:"2",p:"FFRFFFFE"}, {s:"3",p:"FEFFRFEF"} ] },
+      { id:"A2", shelves:[ {s:"1",p:"FFFFFRFF"}, {s:"2",p:"EFFFFEFF"} ] }
+    ]},
+    { name:"Zona B", sub:"Kat · sezonske gume", racks:[
+      { id:"B1", shelves:[ {s:"1",p:"FRFFFFEF"}, {s:"2",p:"FFFEFFRF"} ] },
+      { id:"B2", shelves:[ {s:"1",p:"FFFFFFFR"}, {s:"2",p:"FEFFEFFF"} ] }
+    ]},
+    { name:"Zona C", sub:"Vanjski regali · natkriveno", racks:[
+      { id:"C1", shelves:[ {s:"1",p:"FFRFEFFF"}, {s:"2",p:"FFFFFEFF"} ] }
+    ]}
+  ];
+
+  var stored = 0, reserved = 0;
+  var pillHtml = "", mapHtml = "";
+
+  ZONES.forEach(function (z, zi) {
+    var zid = "zone-" + zi, zCount = 0;
+    var racksHtml = z.racks.map(function (rk) {
+      var rFill = 0;
+      var shelvesHtml = rk.shelves.map(function (sh) {
+        var cells = sh.p.split("").map(function (st, ci) {
+          var pos = String(ci + 1).padStart(2, "0");
+          if (st === "E") return '<span class="slot empty" aria-hidden="true">' + pos + '</span>';
+          var d = occ(); rFill++; zCount++;
+          if (st === "R") reserved++; else stored++;
+          var cls = st === "R" ? "reserved" : "filled";
+          var dot = st === "R" ? '<span class="rdot" aria-hidden="true"></span>' : '';
+          var lab = d.name + " · " + d.plate + " · " + d.code;
+          return '<a class="slot ' + cls + '" href="#" title="' + esc(lab) + '" aria-label="' + esc(lab) + '">' + pos + dot + '</a>';
+        }).join("");
+        return '<div class="wh-shelf"><span class="wh-shelf-lab">Polica ' + esc(sh.s) + '</span><div class="slots">' + cells + '</div></div>';
+      }).join("");
+      return '<div class="wh-rack"><div class="wh-rack-head"><span class="r">Regal ' + esc(rk.id) + '</span>' +
+             '<span class="rfill"><b data-count="' + rFill + '">0</b> zauzeto</span></div>' + shelvesHtml + '</div>';
+    }).join("");
+
+    mapHtml += '<details class="card wh-zone reveal" id="' + zid + '" open style="animation-delay:' + (150 + zi * 40) + 'ms">' +
+      '<span class="tab-tl">zona</span>' +
+      '<summary><span class="wh-badge" aria-hidden="true">' + PIN + '</span>' +
+      '<span class="wh-name">' + esc(z.name) + '<small>' + esc(z.sub) + '</small></span>' +
+      '<span class="wh-fill"><b data-count="' + zCount + '">0</b> kompleta</span>' +
+      '<span class="wh-chev" aria-hidden="true">' + CHEV + '</span></summary>' +
+      '<div class="wh-zone-body">' + racksHtml + '</div></details>';
+
+    pillHtml += '<span class="chip wh-zonepill" role="button" tabindex="0" data-z="' + zid + '">' +
+      esc(z.name) + '<span class="n">' + zCount + '</span></span>';
+  });
+
+  document.getElementById("zonebar").innerHTML = '<div class="wh-zonebar" role="group" aria-label="Zone">' + pillHtml + '</div>';
+  document.getElementById("map").innerHTML = mapHtml;
+
+  // Overview totals → feed app.js's count-up + meter fill
+  var total = stored + reserved;
+  var pct = total ? Math.round(stored / total * 100) : 0;
+  document.getElementById("stStored").dataset.count = stored;
+  document.getElementById("stReserved").dataset.count = reserved;
+  document.getElementById("stZones").dataset.count = ZONES.length;
+  document.getElementById("stMeter").dataset.w = pct;
+  document.querySelector(".wh-title .sub span").dataset.count = total;
+  document.getElementById("stCap").textContent = "Popunjenost skladišta · " + pct + " % zauzeto";
+
+  // Zone pills jump to (and open) their zone
+  Array.prototype.forEach.call(document.querySelectorAll(".wh-zonepill"), function (pill) {
+    var go = function () {
+      var el = document.getElementById(pill.dataset.z);
+      if (el) { el.open = true; el.scrollIntoView({ behavior: "smooth", block: "start" }); }
+    };
+    pill.addEventListener("click", go);
+    pill.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); } });
+  });
+})();
+</script>
+<script src="app.js"></script>
+</body>
+</html>

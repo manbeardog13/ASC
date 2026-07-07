@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ASC — Radionica (preview)</title>
+<meta name="theme-color" content="#edf0f5">
+<script>try{if(localStorage.getItem('asc.theme')==='dark'){document.documentElement.classList.add('dark');document.querySelector('meta[name="theme-color"]').content='#020305';}}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;650;700;800&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+<!--
+  ASC — Radionica (Workshop mode) · isolated preview.
+  Shop-floor UI: high-contrast, glove-friendly, OVERSIZED controls for reading
+  at arm's length with greasy hands. Shared design system (tokens, glass shell,
+  header, notched corner tabs, card surfaces, iOS dock, theme toggle + count-up)
+  lives in app.css + app.js (v6 "Hanssen"); only this screen's own oversized
+  layout stays inline below. Croatian copy grounded in js/i18n.js (hr). No
+  green/red set imagery on this screen — it is neither check-in nor pickup.
+-->
+<link rel="stylesheet" href="app.css">
+<style>
+/* ---- Workshop-page-specific layout only (shared rules live in app.css) ---- */
+
+/* Shop-floor column: a phone/tablet-width lane centred on big screens. */
+.ws{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:var(--gap)}
+
+/* Screen head: oversized title + a big glove-friendly exit chip */
+.ws-head{display:flex;align-items:center;gap:12px;padding:0 2px}
+.ws-title{font:600 22px Sora;letter-spacing:-.01em;display:flex;align-items:center;gap:10px}
+.ws-title svg{width:26px;height:26px;color:var(--lava-ink);flex:none}
+.ws-exit{margin-left:auto;display:inline-flex;align-items:center;gap:7px;min-height:44px;
+  padding:0 16px;border-radius:22px;background:var(--panel);color:var(--ink);
+  font:600 13.5px Inter;text-decoration:none;border-top:1px solid var(--rim-top);
+  transition:transform 150ms var(--snap),background 150ms var(--snap)}
+.ws-exit svg{width:17px;height:17px}
+@media(hover:hover){ .ws-exit:hover{background:var(--panel-2)} }
+.ws-exit:active{transform:scale(.96)}
+
+/* The search console — one card with the signature notched corner tab, holding
+   the two primary controls: the giant voice button and the big search field. */
+.ws-console{position:relative;background:var(--panel);border-radius:var(--radius);
+  padding:30px 16px 16px;display:flex;flex-direction:column;gap:14px}
+
+/* GIANT voice button — the star. Full width, unmissable, glove-friendly. */
+.ws-mic{position:relative;display:flex;align-items:center;gap:16px;width:100%;
+  min-height:104px;padding:16px 20px;border:1px solid var(--lava-ring);cursor:pointer;
+  border-radius:20px;text-align:left;color:var(--ink);
+  background:radial-gradient(120% 140% at 88% -20%,var(--lava-tint),transparent 60%),var(--panel-2);
+  transition:transform 150ms var(--snap),box-shadow 220ms var(--snap),border-color 200ms var(--snap)}
+@media(hover:hover){ .ws-mic:hover{transform:translateY(-2px);box-shadow:0 16px 34px -18px rgba(255,78,27,.55)} }
+.ws-mic:active{transform:scale(.985);transition-duration:90ms}
+.ws-mic-orb{width:66px;height:66px;flex:none;border-radius:50%;display:grid;place-items:center;color:#fff;
+  background:radial-gradient(circle at 32% 28%,var(--lava-2),var(--lava) 62%,#d6390c);
+  box-shadow:0 10px 24px -6px var(--lava-ring)}
+.ws-mic-orb svg{width:30px;height:30px}
+.ws-mic-orb::after{content:"";position:absolute;left:20px;width:66px;height:66px;border-radius:50%;
+  border:2px solid var(--lava);opacity:0;pointer-events:none}
+.ws-mic-txt{display:flex;flex-direction:column;gap:3px;min-width:0}
+.ws-mic-txt b{font:600 20px Sora;letter-spacing:-.01em}
+.ws-mic-txt span{font:500 13.5px Inter;color:var(--muted);line-height:1.35}
+.ws-mic.is-listening{border-color:var(--lava)}
+.ws-mic.is-listening .ws-mic-orb{animation:wsPulse 1.5s ease-in-out infinite}
+.ws-mic.is-listening .ws-mic-orb::after{animation:wsPing 1.5s ease-out infinite}
+.ws-mic.is-listening .ws-mic-txt span{color:var(--lava-ink);font-weight:600}
+@keyframes wsPulse{50%{transform:scale(1.06)}}
+@keyframes wsPing{0%{opacity:.7;transform:scale(1)}100%{opacity:0;transform:scale(1.5)}}
+
+/* Big search field — oversized target, tabular input for codes/plates. */
+.ws-search{display:flex;align-items:center;gap:12px;min-height:66px;padding:0 18px;
+  border-radius:18px;background:var(--panel-2);border:1px solid var(--line)}
+.ws-search svg{width:22px;height:22px;color:var(--muted);flex:none}
+.ws-search input{flex:1;min-width:0;border:0;background:transparent;color:var(--ink);
+  font:500 17px Inter;font-variant-numeric:tabular-nums;padding:14px 0}
+.ws-search input::placeholder{color:var(--muted);font-weight:500}
+.ws-search input:focus{outline:none}
+.ws-search:focus-within{border-color:var(--lava-ring);box-shadow:0 0 0 3px var(--lava-tint)}
+
+/* Oversized result rows: big code + owner·plate on the left, a BIG right-hand
+   LOCATION block — that's what the shop floor actually walks to. */
+.ws-results{display:flex;flex-direction:column;gap:10px}
+.ws-row{display:flex;align-items:stretch;gap:12px;min-height:90px;padding:14px 14px 14px 18px;
+  border-radius:18px;background:var(--panel);text-decoration:none;color:var(--ink);
+  box-shadow:var(--shadow-card);transition:transform 150ms var(--snap),box-shadow 220ms var(--snap)}
+@media(hover:hover){ .ws-row:hover{transform:translateY(-2px);box-shadow:0 18px 36px -18px rgba(2,3,5,.5)} }
+.ws-row:active{transform:scale(.99);transition-duration:90ms}
+.ws-row-body{display:flex;flex-direction:column;gap:5px;min-width:0;flex:1;justify-content:center}
+.ws-row-body b{font:600 clamp(18px,5.2vw,21px) Sora;letter-spacing:-.02em;font-variant-numeric:tabular-nums;white-space:nowrap}
+.ws-row-who{font:500 14.5px Inter;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ws-row-meta{display:flex;align-items:center;gap:8px;margin-top:1px}
+.ws-row-meta small{font:600 11.5px Inter;letter-spacing:.02em;text-transform:uppercase;color:var(--muted)}
+.ws-loc{flex:none;align-self:center;display:flex;flex-direction:column;justify-content:center;gap:3px;
+  min-width:112px;max-width:42%;text-align:right;padding:12px 15px;border-radius:14px;
+  background:var(--lava-tint);color:var(--lava-ink)}
+.ws-loc .ws-loc-k{font:700 9.5px Inter;letter-spacing:.12em;text-transform:uppercase;opacity:.8}
+.ws-loc .ws-loc-v{font:700 15px Inter;line-height:1.25;font-variant-numeric:tabular-nums}
+.ws-loc.none{background:rgba(99,103,111,.14);color:var(--muted)}
+.ws-none{display:flex;align-items:center;gap:10px;padding:22px 18px;border-radius:18px;
+  background:var(--panel);color:var(--muted);font:500 15px Inter}
+.ws-none svg{width:20px;height:20px;flex:none}
+
+/* Oversized action grid: 2×2 big buttons + a full-width dark "pickups due" bar. */
+.ws-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.ws-btn{position:relative;display:flex;flex-direction:column;align-items:flex-start;justify-content:space-between;
+  gap:16px;min-height:104px;padding:16px 16px;border-radius:18px;text-decoration:none;
+  background:var(--panel);color:var(--ink);box-shadow:var(--shadow-card);
+  transition:transform 150ms var(--snap),box-shadow 220ms var(--snap)}
+.ws-btn svg{width:32px;height:32px;color:var(--lava-ink)}
+.ws-btn span{font:600 15px Sora;letter-spacing:-.01em}
+@media(hover:hover){ .ws-btn:hover{transform:translateY(-2px);box-shadow:0 18px 36px -18px rgba(2,3,5,.5)} }
+.ws-btn:active{transform:scale(.985);transition-duration:90ms}
+.ws-btn.is-accent{background:linear-gradient(160deg,var(--lava-2),var(--lava));color:#fff;
+  box-shadow:0 14px 30px -14px var(--lava-ring)}
+.ws-btn.is-accent svg{color:#fff}
+.ws-btn.is-dark{grid-column:1 / -1;flex-direction:row;align-items:center;justify-content:flex-start;
+  min-height:88px;color:var(--on-stage);
+  background:radial-gradient(120% 130% at 90% -20%,rgba(255,78,27,.22),transparent 55%),linear-gradient(175deg,var(--stage-1),var(--stage-2));
+  border-top:1px solid rgba(255,255,255,.10)}
+html.dark .ws-btn.is-dark{background:radial-gradient(120% 130% at 90% -20%,rgba(255,78,27,.16),transparent 55%),linear-gradient(175deg,#24252a,#1a1b1f)}
+.ws-btn.is-dark svg{color:var(--lava-2)}
+.ws-btn.is-dark span{font:600 16px Sora}
+.ws-btn-num{margin-left:auto;font:400 40px Sora;line-height:1;letter-spacing:-.02em;
+  color:#fff;font-variant-numeric:tabular-nums}
+.ws-btn-num em{font-style:normal;font:600 12px Inter;letter-spacing:.04em;text-transform:uppercase;color:var(--on-stage-2);margin-left:7px}
+
+@media(max-width:360px){ .ws-loc{min-width:104px} .ws-mic-txt b{font-size:18px} }
+</style>
+</head>
+<body>
+<div class="canvas" aria-hidden="true"></div>
+<div class="grain" aria-hidden="true"></div>
+<span class="preview-tag">Preview · nije uživo</span>
+
+<main class="shell">
+  <header class="top">
+    <img class="logo" src="assets/logo.png" alt="ASC — Auto servisni centar">
+    <nav class="pill" aria-label="Glavna navigacija">
+      <span class="pill-links"><a href="#">Ploča</a><a href="#">Zaprimi</a><a href="#">Skladište</a><a class="on" href="#">Više</a></span>
+      <button class="mode" id="mode" aria-label="Promijeni temu"><i></i></button>
+    </nav>
+  </header>
+
+  <div class="ws">
+    <div class="ws-head reveal" style="animation-delay:80ms">
+      <h1 class="ws-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.8l8.6 4.7v9L12 21.2l-8.6-4.7v-9L12 2.8z"/><path d="M3.7 7.8L12 12.3l8.3-4.5"/><path d="M12 12.3V21"/></svg> Radionica</h1>
+      <a class="ws-exit" href="dashboard.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14.6 5.4L8 12l6.6 6.6"/></svg> Izlaz</a>
+    </div>
+
+    <!-- Search console: giant voice button + big field, in a notched-tab card -->
+    <div class="ws-console reveal" style="animation-delay:120ms">
+      <span class="tab-tl">traženje</span>
+      <button id="wsMic" class="ws-mic" type="button" aria-pressed="false">
+        <span class="ws-mic-orb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="8.8" y="3.2" width="6.4" height="11" rx="3.2"/><path d="M5.4 11.6a6.6 6.6 0 0013.2 0"/><path d="M12 18.2v2.6"/></svg></span>
+        <span class="ws-mic-txt">
+          <b>Glasovno traženje</b>
+          <span id="wsMicSub">Dodirnite pa recite registraciju, ime ili kôd</span>
+        </span>
+      </button>
+
+      <label class="ws-search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6.8"/><path d="M20.6 20.6L16 16"/><path d="M8.2 11a2.8 2.8 0 012.8-2.8"/></svg>
+        <input id="wsSearch" type="search" value="DU" placeholder="Traži ime, registraciju, dimenziju, DOT, lokaciju…" autocomplete="off" aria-label="Traži ime, registraciju, dimenziju, DOT, lokaciju…">
+      </label>
+    </div>
+
+    <span id="wsCount" class="reveal" style="display:block;padding:0 4px;font:600 12px Inter;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);animation-delay:150ms" aria-live="polite"></span>
+    <div id="wsResults" class="ws-results reveal" style="animation-delay:170ms"></div>
+
+    <div class="ws-grid reveal" style="animation-delay:220ms">
+      <a class="ws-btn is-accent" href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.2V6.4A2.4 2.4 0 016.4 4h1.8M15.8 4h1.8A2.4 2.4 0 0120 6.4v1.8M20 15.8v1.8a2.4 2.4 0 01-2.4 2.4h-1.8M8.2 20H6.4A2.4 2.4 0 014 17.6v-1.8"/><path d="M7.2 12h6.6"/><path d="M16.8 12h.01"/></svg>
+        <span>Skeniraj</span>
+      </a>
+      <a class="ws-btn" href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5.4v13.2M5.4 12h13.2"/></svg>
+        <span>Zaprimi</span>
+      </a>
+      <a class="ws-btn" href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21.2s-7-5.5-7-11a7 7 0 0114 0c0 5.5-7 11-7 11z"/><circle cx="12" cy="10" r="2.4"/></svg>
+        <span>Skladište</span>
+      </a>
+      <a class="ws-btn" href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.4Q13.4 9.6 20.6 12 13.4 14.4 12 20.6 10.6 14.4 3.4 12 10.6 9.6 12 3.4Z"/><path d="M19 4.4v.01"/></svg>
+        <span>ASC Agent</span>
+      </a>
+      <a class="ws-btn is-dark" href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.6"/><path d="M12 7.2V12l3.2 2"/></svg>
+        <span>Za preuzimanje</span>
+        <b class="ws-btn-num"><span data-count="17">0</span></b>
+      </a>
+    </div>
+  </div>
+</main>
+
+<nav class="dock" aria-label="Sekcije">
+  <a class="dtab" href="dashboard.html" aria-label="Ploča"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.2 10.6L12 4l7.8 6.6"/><path d="M5.8 9.4V19a2 2 0 002 2h8.4a2 2 0 002-2V9.4"/></svg>Ploča</a>
+  <a class="dtab" href="#" aria-label="Zaprimi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5.4v13.2M5.4 12h13.2"/></svg>Zaprimi</a>
+  <a class="dtab" href="#" aria-label="Skeniraj"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.2V6.4A2.4 2.4 0 016.4 4h1.8M15.8 4h1.8A2.4 2.4 0 0120 6.4v1.8M20 15.8v1.8a2.4 2.4 0 01-2.4 2.4h-1.8M8.2 20H6.4A2.4 2.4 0 014 17.6v-1.8"/><path d="M7.2 12h9.6"/></svg>Skeniraj</a>
+  <a class="dtab" href="#" aria-label="Skladište"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21.2s-7-5.5-7-11a7 7 0 0114 0c0 5.5-7 11-7 11z"/><circle cx="12" cy="10" r="2.4"/></svg>Skladište</a>
+  <a class="dtab on" href="#" aria-label="Više"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8.6 6.4H21M8.6 12H21M8.6 17.6H21"/><path d="M3.6 6.4h.01M3.6 12h.01M3.6 17.6h.01"/></svg>Više</a>
+</nav>
+
+<script src="app.js"></script>
+<script>
+/* ---- Workshop-only enhancement: live filtering of the oversized rows + mic
+   press feedback. Presentational preview data (Dubrovnik names, DU plates,
+   ASC-2026 codes). Shared behaviour (theme, count-up, dock) stays in app.js. */
+(function(){
+  var SETS = [
+    { code:"ASC-2026-0248", who:"Ivan Perić",        plate:"DU-234-AB", status:"Spremljeno",  season:"Zimske",       loc:"Zona A · Regal 3 · Polica 2" },
+    { code:"ASC-2026-0244", who:"Ana Kovačević",     plate:"DU-881-KL", status:"Rezervirano", season:"Ljetne",       loc:"Zona B · Regal 1 · Polica 4" },
+    { code:"ASC-2026-0239", who:"Marko Babić",       plate:"DU-455-MN", status:"Spremljeno",  season:"Zimske",       loc:"Zona A · Regal 5 · Mjesto 7" },
+    { code:"ASC-2026-0231", who:"Petra Novak",       plate:"DU-712-CD", status:"Spremljeno",  season:"Cjelogodišnje", loc:"Zona C · Regal 2 · Polica 1" },
+    { code:"ASC-2026-0226", who:"Luka Marić",        plate:"DU-198-EF", status:"Rezervirano", season:"Ljetne",       loc:"" },
+    { code:"ASC-2026-0219", who:"Nikolina Vlašić",   plate:"DU-540-GH", status:"Spremljeno",  season:"Zimske",       loc:"Zona B · Regal 4 · Polica 3" }
+  ];
+  function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); }
+  function seasonClass(s){ return s==="Ljetne" ? "" : (s==="Zimske" ? "win" : "all"); }
+  function row(s){
+    var loc = s.loc
+      ? '<span class="ws-loc"><span class="ws-loc-k">Lokacija</span><span class="ws-loc-v">'+esc(s.loc).replace(/ · /g,"<br>")+'</span></span>'
+      : '<span class="ws-loc none"><span class="ws-loc-k">Lokacija</span><span class="ws-loc-v">Bez lokacije</span></span>';
+    return '<a class="ws-row" href="#">'
+      + '<span class="ws-row-body">'
+      +   '<b>'+esc(s.code)+'</b>'
+      +   '<span class="ws-row-who">'+esc(s.who)+' · '+esc(s.plate)+'</span>'
+      +   '<span class="ws-row-meta"><small>'+esc(s.status)+'</small><span class="chip '+seasonClass(s.season)+'">'+esc(s.season)+'</span></span>'
+      + '</span>'
+      + loc
+      + '</a>';
+  }
+  var results = document.getElementById("wsResults");
+  var input = document.getElementById("wsSearch");
+  var count = document.getElementById("wsCount");
+  function paint(){
+    var q = (input.value||"").trim().toLowerCase();
+    if(!q){ results.innerHTML=""; count.textContent=""; return; }
+    var rows = SETS.filter(function(s){
+      return (s.code+" "+s.who+" "+s.plate+" "+s.status+" "+s.season+" "+s.loc).toLowerCase().indexOf(q) > -1;
+    }).slice(0,8);
+    if(rows.length){
+      results.innerHTML = rows.map(row).join("");
+      var n = rows.length;
+      var word = n===1 ? "komplet" : (n>=2 && n<=4 ? "kompleta" : "kompleta");
+      count.textContent = n+" "+word;
+    } else {
+      results.innerHTML = '<div class="ws-none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6.8"/><path d="M20.6 20.6L16 16"/></svg> Ništa za „'+esc(input.value.trim())+'”</div>';
+      count.textContent = "Ništa za „"+input.value.trim()+"”";
+    }
+  }
+  input.addEventListener("input", paint);
+  paint();
+
+  // Mic press feedback (no real speech in the preview).
+  var mic = document.getElementById("wsMic");
+  var sub = document.getElementById("wsMicSub");
+  var idle = "Dodirnite pa recite registraciju, ime ili kôd";
+  mic.addEventListener("click", function(){
+    var on = mic.classList.toggle("is-listening");
+    mic.setAttribute("aria-pressed", on ? "true" : "false");
+    sub.textContent = on ? "Slušam…" : idle;
+  });
+})();
+</script>
+</body>
+</html>

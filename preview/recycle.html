@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ASC — Koš za smeće (preview)</title>
+<meta name="theme-color" content="#edf0f5">
+<script>try{if(localStorage.getItem('asc.theme')==='dark'){document.documentElement.classList.add('dark');document.querySelector('meta[name="theme-color"]').content='#020305';}}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;650;700;800&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+<!--
+  ASC recycle bin — isolated preview. Shared design system in app.css + app.js
+  (v6 "Hanssen"): tokens, glass shell, header, notched corner tabs, card surface,
+  chips, iOS dock, theme toggle + count-up. Only this page's list/row/button
+  layout stays inline below. Quiet, secondary tone — NO green/red action imagery
+  here (those belong to check-in / pickup). Deleted-set thumbs are desaturated to
+  read as archived. Croatian copy is grounded in js/i18n.js (rec.* strings).
+-->
+<link rel="stylesheet" href="app.css">
+<style>
+/* ---- Recycle-page-specific layout only (shared rules live in app.css) ------ */
+
+/* Quiet view header (title + context eyebrow), calmer than the dashboard stage */
+.rec-back{display:inline-flex;align-items:center;gap:7px;min-height:38px;padding:0 12px;margin-bottom:12px;
+  border-radius:12px;background:var(--panel);color:var(--ink-2);text-decoration:none;
+  font:600 12.5px Inter;border:1px solid var(--hairline);transition:background 150ms var(--snap),transform 150ms var(--snap)}
+@media(hover:hover){ .rec-back:hover{background:var(--panel-2);transform:translateX(-2px)} }
+.rec-back:active{transform:scale(.97);transition-duration:80ms}
+.rec-head{margin:2px 4px 14px}
+.rec-head .vs-k{font:600 10.5px Inter;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.rec-head h1{font-family:Sora;font-weight:600;font-size:clamp(22px,5vw,27px);letter-spacing:-.02em;margin-top:5px}
+.rec-note{display:flex;align-items:center;gap:12px;margin:0 4px 16px;font-size:13px;color:var(--muted);line-height:1.5}
+.rec-note .days{flex:none;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  width:52px;height:52px;border-radius:14px;background:var(--panel);border:1px solid var(--hairline)}
+.rec-note .days b{font:600 20px Sora;line-height:1;color:var(--ink)}
+.rec-note .days span{font:600 8.5px Inter;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-top:3px}
+
+/* Deleted-set rows inside the card */
+.rec-list{display:flex;flex-direction:column;gap:2px}
+.rec-row{display:grid;grid-template-columns:56px 1fr auto;align-items:center;gap:14px;
+  padding:12px 6px;border-bottom:1px solid var(--hairline);
+  transition:opacity 320ms var(--smooth),transform 320ms var(--smooth),background 150ms var(--snap)}
+.rec-row:last-child{border-bottom:0}
+@media(hover:hover){ .rec-row:hover{background:var(--panel-2);border-radius:12px} }
+.rec-row.leaving{opacity:0;transform:translateX(14px)}
+.rec-thumb{width:56px;height:56px;border-radius:13px;background-size:cover;background-position:center;
+  flex:none;filter:grayscale(1) contrast(.96);opacity:.62;box-shadow:inset 0 0 0 1px var(--hairline)}
+.rec-body{min-width:0}
+.rec-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.rec-code{font:700 13px Inter;letter-spacing:.01em}
+.rec-who{font:500 13px Inter;color:var(--ink-2);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rec-when{font:500 11.5px Inter;color:var(--muted);margin-top:2px}
+.rec-status{display:inline-flex;align-items:center;padding:3px 9px;border-radius:999px;
+  font:600 10px Inter;letter-spacing:.02em;background:rgba(99,103,111,.16);color:var(--muted)}
+
+/* Row actions — restore is neutral (green is reserved for online/success),
+   delete-forever is the only danger colour and arms before it fires. */
+.rec-actions{display:flex;align-items:center;gap:8px;flex:none}
+.rbtn{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 12px;border:0;cursor:pointer;
+  border-radius:11px;font:600 12px Inter;background:var(--panel-2);color:var(--ink);border:1px solid var(--hairline);
+  transition:background 150ms var(--snap),transform 150ms var(--snap),color 150ms var(--snap)}
+@media(hover:hover){ .rbtn:hover{background:var(--panel);transform:translateY(-1px)} }
+.rbtn:active{transform:scale(.96);transition-duration:80ms}
+.rbtn.danger{background:transparent;color:var(--lava-ink);border-color:var(--lava-ring)}
+@media(hover:hover){ .rbtn.danger:hover{background:var(--lava-tint)} }
+.rbtn.danger.arm{background:var(--lava);color:#fff;border-color:transparent;box-shadow:0 6px 16px -6px var(--lava-ring)}
+.rbtn svg{width:15px;height:15px;flex:none}
+
+/* Empty state (shown when the bin clears) */
+.rec-empty{display:none;flex-direction:column;align-items:center;text-align:center;gap:6px;padding:34px 20px 30px}
+.rec-empty.on{display:flex}
+.rec-empty .ei{width:52px;height:52px;border-radius:16px;display:grid;place-items:center;
+  background:var(--panel-2);color:var(--muted);border:1px solid var(--hairline);margin-bottom:6px}
+.rec-empty h4{font:600 15px Sora;color:var(--ink)}
+.rec-empty p{font-size:12.5px;color:var(--muted);max-width:280px;line-height:1.55}
+
+/* Lightweight toast (app.js has none) — floats above the dock */
+.rec-toast{position:fixed;left:50%;bottom:calc(var(--dock-h) + 22px + env(safe-area-inset-bottom,0px));
+  transform:translate(-50%,14px);z-index:80;display:flex;align-items:center;gap:9px;
+  padding:11px 16px;border-radius:14px;background:var(--gun);color:#f4f5f7;
+  font:600 12.5px Inter;box-shadow:0 12px 30px -10px rgba(2,3,5,.5);
+  opacity:0;pointer-events:none;transition:opacity 220ms var(--smooth),transform 220ms var(--smooth)}
+.rec-toast.show{opacity:1;transform:translate(-50%,0)}
+.rec-toast svg{width:16px;height:16px}
+@media(min-width:1021px){ .rec-toast{bottom:26px} }
+
+@media(max-width:520px){
+  .rec-row{grid-template-columns:52px 1fr;grid-template-areas:"thumb body" "act act";row-gap:11px}
+  .rec-thumb{grid-area:thumb;width:52px;height:52px}
+  .rec-body{grid-area:body}
+  .rec-actions{grid-area:act;width:100%}
+  .rbtn{flex:1;justify-content:center}
+}
+</style>
+</head>
+<body>
+<div class="canvas" aria-hidden="true"></div>
+<div class="grain" aria-hidden="true"></div>
+<span class="preview-tag">Preview · nije uživo</span>
+
+<main class="shell">
+  <header class="top">
+    <img class="logo" src="assets/logo.png" alt="ASC — Auto servisni centar">
+    <nav class="pill" aria-label="Glavna navigacija">
+      <span class="pill-links"><a href="#">Ploča</a><a href="#">Zaprimi</a><a href="#">Skladište</a><a href="#">Kupci</a></span>
+      <button class="mode" id="mode" aria-label="Promijeni temu"><i></i></button>
+    </nav>
+  </header>
+
+  <a class="rec-back reveal" href="dashboard.html" style="animation-delay:60ms">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>Početna
+  </a>
+
+  <header class="rec-head reveal" style="animation-delay:90ms">
+    <span class="vs-k">Hotel za gume · Dubrovnik</span>
+    <h1>Koš za smeće</h1>
+  </header>
+
+  <p class="rec-note reveal" style="animation-delay:130ms">
+    <span class="days"><b data-count="30">0</b><span>dana</span></span>
+    Obrisani kompleti čuvaju se 30 dana, zatim se automatski uklanjaju.
+  </p>
+
+  <section class="card reveal" style="animation-delay:170ms">
+    <span class="tab-tl">koš</span>
+    <h3>
+      <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9.5 7V5.4A1.4 1.4 0 0110.9 4h2.2A1.4 1.4 0 0114.5 5.4V7M6 7l.9 12.1A1.9 1.9 0 008.8 21h6.4a1.9 1.9 0 001.9-1.9L18 7"/></svg>
+      Koš za smeće <span class="count-badge" id="binCount" data-count="5">0</span>
+    </h3>
+
+    <div class="rec-list" id="binList">
+
+      <div class="rec-row" data-code="ASC-2026-0231">
+        <span class="rec-thumb" style="background-image:url('assets/set-1.jpg')"></span>
+        <div class="rec-body">
+          <div class="rec-top"><span class="rec-code">ASC-2026-0231</span><span class="rec-status">Spremljeno</span><span class="chip win">Zimske</span></div>
+          <div class="rec-who">Ivan Perić · DU-512-AB</div>
+          <div class="rec-when">Obrisano 2. srp 2026.</div>
+        </div>
+        <div class="rec-actions">
+          <button class="rbtn" data-restore aria-label="Vrati komplet ASC-2026-0231">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5v5h5"/><path d="M4.6 14.5A7.5 7.5 0 105 8"/></svg>Vrati
+          </button>
+          <button class="rbtn danger" data-purge aria-label="Trajno obriši komplet ASC-2026-0231">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9.5 7V5.4A1.4 1.4 0 0110.9 4h2.2A1.4 1.4 0 0114.5 5.4V7M6 7l.9 12.1A1.9 1.9 0 008.8 21h6.4a1.9 1.9 0 001.9-1.9L18 7"/></svg><span class="lab">Obriši</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="rec-row" data-code="ASC-2026-0219">
+        <span class="rec-thumb" style="background-image:url('assets/set-2.jpg')"></span>
+        <div class="rec-body">
+          <div class="rec-top"><span class="rec-code">ASC-2026-0219</span><span class="rec-status">Preuzeto</span><span class="chip">Ljetne</span></div>
+          <div class="rec-who">Ana Kovačević · DU-773-KL</div>
+          <div class="rec-when">Obrisano 28. lip 2026.</div>
+        </div>
+        <div class="rec-actions">
+          <button class="rbtn" data-restore aria-label="Vrati komplet ASC-2026-0219">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5v5h5"/><path d="M4.6 14.5A7.5 7.5 0 105 8"/></svg>Vrati
+          </button>
+          <button class="rbtn danger" data-purge aria-label="Trajno obriši komplet ASC-2026-0219">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9.5 7V5.4A1.4 1.4 0 0110.9 4h2.2A1.4 1.4 0 0114.5 5.4V7M6 7l.9 12.1A1.9 1.9 0 008.8 21h6.4a1.9 1.9 0 001.9-1.9L18 7"/></svg><span class="lab">Obriši</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="rec-row" data-code="ASC-2026-0205">
+        <span class="rec-thumb" style="background-image:url('assets/set-3.jpg')"></span>
+        <div class="rec-body">
+          <div class="rec-top"><span class="rec-code">ASC-2026-0205</span><span class="rec-status">Spremljeno</span><span class="chip all">Cjelogodišnje</span></div>
+          <div class="rec-who">Marko Babić · DU-341-MN</div>
+          <div class="rec-when">Obrisano 24. lip 2026.</div>
+        </div>
+        <div class="rec-actions">
+          <button class="rbtn" data-restore aria-label="Vrati komplet ASC-2026-0205">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5v5h5"/><path d="M4.6 14.5A7.5 7.5 0 105 8"/></svg>Vrati
+          </button>
+          <button class="rbtn danger" data-purge aria-label="Trajno obriši komplet ASC-2026-0205">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9.5 7V5.4A1.4 1.4 0 0110.9 4h2.2A1.4 1.4 0 0114.5 5.4V7M6 7l.9 12.1A1.9 1.9 0 008.8 21h6.4a1.9 1.9 0 001.9-1.9L18 7"/></svg><span class="lab">Obriši</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="rec-row" data-code="ASC-2026-0198">
+        <span class="rec-thumb" style="background-image:url('assets/set-4.jpg')"></span>
+        <div class="rec-body">
+          <div class="rec-top"><span class="rec-code">ASC-2026-0198</span><span class="rec-status">Rezervirano</span><span class="chip win">Zimske</span></div>
+          <div class="rec-who">Petra Novak · DU-088-CD</div>
+          <div class="rec-when">Obrisano 19. lip 2026.</div>
+        </div>
+        <div class="rec-actions">
+          <button class="rbtn" data-restore aria-label="Vrati komplet ASC-2026-0198">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5v5h5"/><path d="M4.6 14.5A7.5 7.5 0 105 8"/></svg>Vrati
+          </button>
+          <button class="rbtn danger" data-purge aria-label="Trajno obriši komplet ASC-2026-0198">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9.5 7V5.4A1.4 1.4 0 0110.9 4h2.2A1.4 1.4 0 0114.5 5.4V7M6 7l.9 12.1A1.9 1.9 0 008.8 21h6.4a1.9 1.9 0 001.9-1.9L18 7"/></svg><span class="lab">Obriši</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="rec-row" data-code="ASC-2026-0186">
+        <span class="rec-thumb" style="background-image:url('assets/set-5.jpg')"></span>
+        <div class="rec-body">
+          <div class="rec-top"><span class="rec-code">ASC-2026-0186</span><span class="rec-status">Preuzeto</span><span class="chip">Ljetne</span></div>
+          <div class="rec-who">Luka Marić · DU-624-EF</div>
+          <div class="rec-when">Obrisano 12. lip 2026.</div>
+        </div>
+        <div class="rec-actions">
+          <button class="rbtn" data-restore aria-label="Vrati komplet ASC-2026-0186">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5v5h5"/><path d="M4.6 14.5A7.5 7.5 0 105 8"/></svg>Vrati
+          </button>
+          <button class="rbtn danger" data-purge aria-label="Trajno obriši komplet ASC-2026-0186">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9.5 7V5.4A1.4 1.4 0 0110.9 4h2.2A1.4 1.4 0 0114.5 5.4V7M6 7l.9 12.1A1.9 1.9 0 008.8 21h6.4a1.9 1.9 0 001.9-1.9L18 7"/></svg><span class="lab">Obriši</span>
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="rec-empty" id="binEmpty">
+      <span class="ei"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9.5 7V5.4A1.4 1.4 0 0110.9 4h2.2A1.4 1.4 0 0114.5 5.4V7M6 7l.9 12.1A1.9 1.9 0 008.8 21h6.4a1.9 1.9 0 001.9-1.9L18 7"/></svg></span>
+      <h4>Koš je prazan</h4>
+      <p>Ovdje se pojavljuju obrisani kompleti kako bi se pogreške lako ispravile.</p>
+    </div>
+  </section>
+</main>
+
+<div class="rec-toast" id="toast" role="status" aria-live="polite">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+  <span id="toastMsg"></span>
+</div>
+
+<nav class="dock" aria-label="Sekcije">
+  <a class="dtab" href="dashboard.html" aria-label="Početna"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.2 10.6L12 4l7.8 6.6"/><path d="M5.8 9.4V19a2 2 0 002 2h8.4a2 2 0 002-2V9.4"/></svg>Ploča</a>
+  <a class="dtab" href="#" aria-label="Zaprimi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5.4v13.2M5.4 12h13.2"/></svg>Zaprimi</a>
+  <a class="dtab" href="#" aria-label="Skeniraj"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.2V6.4A2.4 2.4 0 016.4 4h1.8M15.8 4h1.8A2.4 2.4 0 0120 6.4v1.8M20 15.8v1.8a2.4 2.4 0 01-2.4 2.4h-1.8M8.2 20H6.4A2.4 2.4 0 014 17.6v-1.8"/><path d="M7.2 12h9.6"/></svg>Skeniraj</a>
+  <a class="dtab" href="#" aria-label="Skladište"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21.2s-7-5.5-7-11a7 7 0 0114 0c0 5.5-7 11-7 11z"/><circle cx="12" cy="10" r="2.4"/></svg>Skladište</a>
+  <a class="dtab on" href="#" aria-label="Više"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8.6 6.4H21M8.6 12H21M8.6 17.6H21"/><path d="M3.6 6.4h.01M3.6 12h.01M3.6 17.6h.01"/></svg>Više</a>
+</nav>
+
+<script src="app.js"></script>
+<script>
+/* ---- Recycle-page interactions (restore / arm-and-purge / empty state) ----- */
+(function(){
+  const reduce = matchMedia('(prefers-reduced-motion:reduce)').matches;
+  const list   = document.getElementById('binList');
+  const empty  = document.getElementById('binEmpty');
+  const badge  = document.getElementById('binCount');
+  const toast  = document.getElementById('toast');
+  const toastMsg = document.getElementById('toastMsg');
+  let toastTimer;
+
+  function showToast(msg){
+    toastMsg.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove('show'), 2200);
+  }
+  function count(){ return list.querySelectorAll('.rec-row').length; }
+  function refresh(){
+    const n = count();
+    badge.textContent = n;               // count-up already ran; keep in sync
+    badge.style.display = n ? '' : 'none';
+    empty.classList.toggle('on', n === 0);
+  }
+  function removeRow(row, msg){
+    row.classList.add('leaving');
+    const done = () => { row.remove(); refresh(); };
+    if (reduce){ done(); } else { setTimeout(done, 300); }
+    showToast(msg);
+  }
+
+  list.addEventListener('click', (e) => {
+    const restore = e.target.closest('[data-restore]');
+    const purge   = e.target.closest('[data-purge]');
+    if (restore){
+      removeRow(restore.closest('.rec-row'), 'Komplet vraćen');
+      return;
+    }
+    if (purge){
+      // Two-step confirm: first tap arms the danger button, second tap fires.
+      if (!purge.classList.contains('arm')){
+        purge.classList.add('arm');
+        purge.querySelector('.lab').textContent = 'Potvrdi?';
+        setTimeout(() => {
+          if (purge.isConnected){ purge.classList.remove('arm'); purge.querySelector('.lab').textContent = 'Obriši'; }
+        }, 2600);
+        return;
+      }
+      removeRow(purge.closest('.rec-row'), 'Trajno obrisano');
+    }
+  });
+})();
+</script>
+</body>
+</html>
