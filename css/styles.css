@@ -2008,11 +2008,11 @@ body.v6-dark .v6mode i { background:transparent; box-shadow:inset 0 0 0 2.5px #f
   }
   .auth-shell { margin: auto; }
   /* 1/3-strength compression (v67 was too tight per Toni's hand-feel) */
-  .auth-stage { padding: 15px 21px 44px; }
+  .auth-stage { padding: 15px 21px 52px; }
   .auth-stage .auth-logo { height: 41px; margin-bottom: 17px; }
   .stage-title { font-size: 23px; }
   .stage-lead { font-size: 13.5px; margin-top: 10px; }
-  .stage-chips { padding-top: 22px; }
+  .stage-chips { padding-top: 0; margin: 15px 0 0; }
   .schip { padding: 7px 12px; font-size: 11.5px; }
   .auth-side { padding: 23px 21px 29px; }
   .auth-title { font-size: 21px; }
