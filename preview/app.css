@@ -236,7 +236,119 @@ html.dark .dock a.on{color:var(--lava-2)}
 @media(min-width:1021px){ .dock{display:none} }
 @media(max-width:1020px){ .pill-links{display:none} .pill{background:transparent;border:0;padding:0;margin-left:auto} }
 
+/* ============================== Global ASC Agent — right-edge voice dock ===
+   Injected by app.js on EVERY screen. Tucked as a slim tab on the right edge;
+   tap opens a violet-glass panel that slides out (still hugging the edge). The
+   big orb is press-and-HOLD to talk (Web Speech, hr-HR) — release acts like
+   Enter and the agent routes the intent (navigate / search). Off-palette violet
+   = the AI affordance (matches the dashboard agent card). Always dark, both
+   themes. Animations are transform/opacity only — GPU, 60fps, Apple-grade. */
+.ai-dock{position:fixed;inset:0;z-index:64;pointer-events:none;
+  font-family:"Inter",system-ui,sans-serif}
+.ai-dock *{box-sizing:border-box}
+
+/* the tucked tab */
+.ai-tab{position:fixed;right:0;top:41%;z-index:66;pointer-events:auto;
+  width:34px;height:92px;padding:0;border:0;cursor:pointer;color:#fff;display:grid;place-items:center;
+  border-radius:17px 0 0 17px;
+  background:linear-gradient(152deg,#a78bfa,#8b5cf6 46%,#6d28d9);
+  box-shadow:-7px 12px 28px -10px rgba(96,42,196,.72),inset 0 1px 0 rgba(255,255,255,.22),inset 1px 0 0 rgba(255,255,255,.12);
+  animation:aiTabBreathe 3.6s ease-in-out infinite;
+  transition:transform .55s cubic-bezier(.16,1,.3,1),width .4s var(--smooth),box-shadow .4s var(--smooth),opacity .4s var(--smooth)}
+.ai-tab svg{width:19px;height:19px}
+.ai-tab::before{content:"";position:absolute;left:6px;top:12px;bottom:12px;width:2px;border-radius:2px;
+  background:linear-gradient(#fff,rgba(255,255,255,.2));opacity:.5}
+@keyframes aiTabBreathe{50%{box-shadow:-7px 12px 34px -8px rgba(150,96,255,.9),inset 0 1px 0 rgba(255,255,255,.22),inset 1px 0 0 rgba(255,255,255,.12)}}
+@media(hover:hover){ .ai-tab:hover{width:42px;box-shadow:-9px 14px 32px -8px rgba(224,64,208,.72)} }
+.ai-tab:active{transform:scale(.95)}
+.ai-dock[data-open="true"] .ai-tab{transform:translateX(130%);opacity:0;pointer-events:none;animation:none}
+
+/* soft scrim to focus + tap-to-close (very light — not a heavy modal) */
+.ai-scrim{position:fixed;inset:0;z-index:65;pointer-events:none;opacity:0;
+  background:radial-gradient(120% 90% at 100% 50%,rgba(20,10,45,.5),rgba(4,3,10,.28) 60%,transparent);
+  transition:opacity .5s var(--smooth)}
+.ai-dock[data-open="true"] .ai-scrim{opacity:1;pointer-events:auto}
+
+/* the panel */
+.ai-panel{position:fixed;right:10px;top:50%;z-index:66;pointer-events:auto;
+  width:min(360px,90vw);max-height:calc(100dvh - 90px);overflow-y:auto;-webkit-overflow-scrolling:touch;
+  transform:translate(calc(100% + 26px),-50%);
+  transition:transform .58s cubic-bezier(.16,1,.3,1);will-change:transform;
+  border-radius:26px;padding:16px 16px 14px;color:#f4f0ff;
+  background:linear-gradient(168deg,#150f2b,#0e0b1c 58%,#0a0912);
+  border:1px solid rgba(150,110,255,.30);
+  box-shadow:0 34px 80px -26px rgba(70,26,170,.8),0 8px 24px -12px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.07);
+  display:flex;flex-direction:column;gap:13px}
+.ai-panel::-webkit-scrollbar{display:none}
+.ai-dock[data-open="true"] .ai-panel{transform:translate(0,-50%)}
+.ai-panel::before{content:"";position:absolute;inset:-1px;border-radius:inherit;pointer-events:none;z-index:0;opacity:.6;
+  background:radial-gradient(60% 44% at 22% 8%,rgba(139,92,246,.32),transparent 62%),radial-gradient(56% 42% at 88% 4%,rgba(224,64,208,.24),transparent 60%)}
+.ai-panel>*{position:relative;z-index:1}
+
+.ai-head{display:flex;align-items:center;justify-content:space-between}
+.ai-title{display:flex;align-items:center;gap:9px;font:600 14px Sora;letter-spacing:-.01em}
+.ai-title .dot{width:8px;height:8px;border-radius:50%;background:#3ddc84;box-shadow:0 0 9px 1px rgba(61,220,132,.6);animation:breathe 2.6s ease-in-out infinite}
+.ai-close{width:32px;height:32px;flex:none;border:0;border-radius:50%;cursor:pointer;color:#cdbff5;
+  background:rgba(150,110,255,.16);display:grid;place-items:center;transition:transform .2s var(--snap),background .2s var(--snap)}
+.ai-close svg{width:16px;height:16px}
+@media(hover:hover){ .ai-close:hover{background:rgba(150,110,255,.28)} }
+.ai-close:active{transform:scale(.9)}
+
+.ai-stage{display:flex;flex-direction:column;align-items:center;gap:11px;padding:6px 0 2px}
+
+/* press-and-hold mic — the star */
+.ai-mic{position:relative;width:108px;height:108px;flex:none;border:0;border-radius:50%;cursor:pointer;padding:0;
+  background:transparent;touch-action:none;-webkit-touch-callout:none;user-select:none;-webkit-user-select:none;
+  -webkit-tap-highlight-color:transparent}
+.ai-mic-orb{position:absolute;inset:0;border-radius:50%;display:grid;place-items:center;color:#fff;
+  background:radial-gradient(circle at 34% 26%,#c4b5fd,#8b5cf6 50%,#6d28d9);
+  box-shadow:0 16px 38px -10px rgba(139,92,246,.75),inset 0 2px 0 rgba(255,255,255,.28),inset 0 -6px 14px -6px rgba(60,20,150,.6);
+  transition:transform .32s cubic-bezier(.16,1,.3,1),background .3s var(--smooth),box-shadow .3s var(--smooth)}
+.ai-mic-orb svg{width:40px;height:40px}
+.ai-mic::before,.ai-mic::after{content:"";position:absolute;inset:2px;border-radius:50%;border:2px solid rgba(224,64,208,.75);opacity:0;pointer-events:none}
+.ai-mic:active .ai-mic-orb{transform:scale(.965)}
+.ai-mic.is-live .ai-mic-orb{transform:scale(1.05);
+  background:radial-gradient(circle at 34% 26%,#f5d0fe,#e040d0 52%,#a21caf);
+  box-shadow:0 18px 46px -8px rgba(224,64,208,.85),inset 0 2px 0 rgba(255,255,255,.3)}
+.ai-mic.is-live::before{animation:aiPing 1.5s ease-out infinite}
+.ai-mic.is-live::after{animation:aiPing 1.5s ease-out .55s infinite}
+@keyframes aiPing{0%{opacity:.75;transform:scale(1)}100%{opacity:0;transform:scale(1.62)}}
+.ai-mic.is-off .ai-mic-orb{background:radial-gradient(circle at 34% 26%,#6b6478,#4a4458 60%,#332e40);box-shadow:0 10px 24px -12px rgba(0,0,0,.6)}
+
+.ai-hint{font:600 12.5px Inter;letter-spacing:.02em;color:#b9a9ee;text-align:center;transition:color .25s}
+.ai-mic.is-live~.ai-hint{color:#f5b8f0}
+.ai-heard{min-height:22px;font:500 15.5px Inter;color:#f7f3ff;text-align:center;line-height:1.4;
+  overflow-wrap:anywhere}
+.ai-result{font:500 13px Inter;color:#c9bdf0;text-align:center;line-height:1.45;min-height:16px;transition:opacity .3s}
+.ai-result b{color:#fff;font-weight:700}
+.ai-result.pop{animation:aiResultPop .5s var(--smooth)}
+@keyframes aiResultPop{from{opacity:0;transform:translateY(6px)}}
+
+/* typed fallback (also works when speech is unsupported) */
+.ai-type{display:flex;align-items:center;gap:8px;background:rgba(10,8,20,.6);
+  border:1px solid rgba(150,110,255,.30);border-radius:15px;padding:4px 4px 4px 15px;
+  transition:border-color .25s var(--smooth)}
+.ai-type:focus-within{border-color:rgba(224,64,208,.55)}
+.ai-type input{flex:1;min-width:0;background:transparent;border:0;outline:0;color:#f3efff;font:500 14.5px Inter}
+.ai-type input::placeholder{color:rgba(200,189,240,.5)}
+.ai-send{flex:none;width:40px;height:40px;border:0;border-radius:12px;cursor:pointer;color:#fff;display:grid;place-items:center;
+  background:linear-gradient(135deg,#8b5cf6,#e040d0);box-shadow:0 6px 16px -6px rgba(139,92,246,.7);
+  transition:transform .15s var(--snap),box-shadow .2s var(--smooth)}
+.ai-send svg{width:19px;height:19px}
+@media(hover:hover){ .ai-send:hover{transform:translateY(-1px);box-shadow:0 10px 22px -8px rgba(224,64,208,.7)} }
+.ai-send:active{transform:scale(.92)}
+
+.ai-chips{display:flex;flex-wrap:wrap;gap:7px;justify-content:center}
+.ai-chip{border:0;cursor:pointer;padding:7px 12px;border-radius:999px;font:600 11.5px Inter;color:#e9e2ff;
+  background:rgba(150,110,255,.14);border:1px solid rgba(150,110,255,.28);transition:transform .15s var(--snap),background .2s var(--smooth)}
+@media(hover:hover){ .ai-chip:hover{background:rgba(150,110,255,.24)} }
+.ai-chip:active{transform:scale(.94)}
+
+@media(max-width:400px){ .ai-panel{width:calc(100vw - 20px);right:10px} .ai-mic{width:96px;height:96px} .ai-mic-orb svg{width:36px;height:36px} }
+@media(prefers-reduced-motion:reduce){ .ai-tab{animation:none} .ai-mic.is-live::before,.ai-mic.is-live::after{animation:none} }
+
 /* ============================== A11y · motion ========================== */
 :focus-visible{outline:2px solid var(--lava-ink);outline-offset:2px;border-radius:10px}
 .stage :focus-visible,.act :focus-visible,.dock :focus-visible,.card.dark :focus-visible{outline-color:var(--lava-2);box-shadow:0 0 0 4px rgba(2,3,5,.55)}
+.ai-panel :focus-visible{outline-color:#c4b5fd;outline-offset:2px}
 @media(prefers-reduced-motion:reduce){ *{animation:none!important;transition-property:background-color,color,opacity!important} .act .bg{transform:none!important} }

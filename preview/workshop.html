@@ -249,6 +249,11 @@ html.dark .ws-btn.is-dark{background:radial-gradient(120% 130% at 90% -20%,rgba(
     }
   }
   input.addEventListener("input", paint);
+  // A voice/typed command from the global ASC Agent arrives as ?q= — apply it.
+  try {
+    var q = new URLSearchParams(location.search).get("q");
+    if (q) { input.value = q; setTimeout(function(){ input.scrollIntoView({ behavior:"smooth", block:"center" }); }, 200); }
+  } catch(e){}
   paint();
 
   // Mic press feedback (no real speech in the preview).
