@@ -138,7 +138,7 @@ if (document.readyState !== 'loading') syncDisc(); else addEventListener('DOMCon
   dock.innerHTML =
     '<button class="ai-tab" aria-label="ASC Agent — glasovni pomoćnik" aria-expanded="false">' + ICON.tab + '</button>' +
     '<div class="ai-scrim"></div>' +
-    '<section class="ai-panel" role="dialog" aria-modal="true" aria-label="ASC Agent" aria-hidden="true">' +
+    '<section class="ai-panel" role="dialog" aria-modal="false" aria-label="ASC Agent" aria-hidden="true">' +
       '<div class="ai-head"><span class="ai-title"><span class="dot"></span> ASC Agent</span>' +
         '<button class="ai-close" aria-label="Zatvori">' + ICON.close + '</button></div>' +
       '<div class="ai-stage">' +
@@ -161,7 +161,7 @@ if (document.readyState !== 'loading') syncDisc(); else addEventListener('DOMCon
   // Skin the agent as a random studio-tire CUTOUT (background-removed PNGs of the
   // recent-sets photos) with a random brake-caliper under-glow (yellow / orange /
   // green / red). Re-rolled every load. Transparent PNG → just the tire, no disc.
-  const TIRES = ['tire-1.png','tire-2.png','tire-3.png','tire-4.png','tire-5.png','tire-6.png'];
+  const TIRES = ['tire-1.png','tire-2.png','tire-4.png'];   // only full circular side-portraits (3/5/6 were cropped or angled)
   const GLOWS = ['#ffcf33','#ff8a1a','#3ddc84','#ff4d4d'];
   dock.style.setProperty('--tire', "url('assets/" + TIRES[Math.floor(Math.random() * TIRES.length)] + "')");
   dock.style.setProperty('--glow', GLOWS[Math.floor(Math.random() * GLOWS.length)]);
@@ -176,28 +176,34 @@ if (document.readyState !== 'loading') syncDisc(); else addEventListener('DOMCon
   if (!SR) mic.classList.add('is-off');
 
   // ---- open / close ---------------------------------------------------------
-  // Background siblings go inert while open (a real modal trap); the closed panel
-  // is inert so its controls are never phantom tab-stops. Focus returns to the
-  // tab on close (moved BEFORE aria-hidden, so nothing is stranded).
-  const bg = [...document.body.children].filter(el => el !== dock);
-  let openState = false, actTimer = null;
+  // NON-MODAL by design: the page BENEATH stays live + visible while Gemini is open
+  // (no inert, no blocking scrim) so you can watch actions land and edit beneath it
+  // without dismissing. The closed panel is inert so its controls are never phantom
+  // tab-stops. Dismiss = short-tap the tire, the panel ×, or Escape.
+  let openState = false, actTimer = null, closeT = null;
   panel.inert = true;
   const open = () => {
     if (openState) return;
-    openState = true; dock.dataset.open = 'true';
-    tab.setAttribute('aria-expanded','true'); tab.setAttribute('tabindex','-1');   // tab leaves the focus order while modal
+    openState = true;
+    clearTimeout(closeT); dock.classList.remove('ai-closing');      // cancel any in-flight roll-out
+    dock.dataset.open = 'true';
+    tab.setAttribute('aria-expanded','true'); tab.setAttribute('tabindex','-1');
     panel.setAttribute('aria-hidden','false'); panel.inert = false;
-    bg.forEach(el => { el.inert = true; });
     setTimeout(() => { try { (SR ? mic : input).focus({ preventScroll:true }); } catch(e){} }, 380);
   };
   const close = () => {
     if (!openState) return;
     openState = false; endVoice(true);
-    tab.removeAttribute('tabindex');                                // restore BEFORE focusing (focus-return needs it)
-    try { tab.focus({ preventScroll:true }); } catch(e){}           // return focus to the tab
-    dock.dataset.open = 'false'; tab.setAttribute('aria-expanded','false');
+    tab.removeAttribute('tabindex'); tab.setAttribute('aria-expanded','false');
     panel.setAttribute('aria-hidden','true'); panel.inert = true;
-    bg.forEach(el => { el.inert = false; });
+    // play the roll-OUT (entrance reversed), THEN drop the open flag so the tire
+    // tucks back behind the shell edge and the tab reappears.
+    dock.classList.add('ai-closing');
+    clearTimeout(closeT);
+    closeT = setTimeout(() => {
+      dock.classList.remove('ai-closing'); dock.dataset.open = 'false';
+      try { tab.focus({ preventScroll:true }); } catch(e){}
+    }, reduce ? 0 : 560);
   };
   tab.addEventListener('click', open);
   $('.ai-close').addEventListener('click', close);
@@ -210,7 +216,7 @@ if (document.readyState !== 'loading') syncDisc(); else addEventListener('DOMCon
   // guards every async callback, so a fast re-press can't replay a stale command
   // or clobber a newer session. RELEASE submits (like Enter); an interrupted press
   // (pointercancel) DISCARDS. Permission/no-speech hints survive finger-up.
-  let rec = null, finalText = '', interimText = '', holding = false, userStopping = false, lastError = false, token = 0, pointerUsed = false;
+  let rec = null, finalText = '', interimText = '', holding = false, userStopping = false, lastError = false, token = 0, pointerUsed = false, pressT = 0;
 
   function startRec(my){
     if (!SR || rec || my !== token) return;
@@ -278,14 +284,20 @@ if (document.readyState !== 'loading') syncDisc(); else addEventListener('DOMCon
   mic.addEventListener('contextmenu', (e) => e.preventDefault());
   mic.addEventListener('pointerdown', (e) => {
     if (e.button && e.button !== 0) return;
-    pointerUsed = true;
+    pointerUsed = true; pressT = performance.now();
     if (!SR) { input.focus(); return; }
     e.preventDefault();
     try { mic.setPointerCapture(e.pointerId); } catch(err){}
     press();
   });
   const clearPointer = () => setTimeout(() => { pointerUsed = false; }, 0);
-  mic.addEventListener('pointerup', () => { release(true); clearPointer(); });
+  mic.addEventListener('pointerup', () => {
+    const quick = performance.now() - pressT < 240;
+    const spoke = (finalText + interimText).trim();
+    if (quick && !spoke) { release(false); close(); }              // short tap on the tire = dismiss (roll back out)
+    else release(true);
+    clearPointer();
+  });
   mic.addEventListener('pointercancel', () => { release(false); clearPointer(); });  // OS interruption → abort, not Enter
   mic.addEventListener('lostpointercapture', () => { if (holding) release(true); clearPointer(); });
   // keyboard / switch users can't press-and-hold — route activation to the field.
