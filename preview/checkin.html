@@ -390,7 +390,7 @@ html.dark .btn-primary{background:linear-gradient(180deg,var(--lava-2),var(--lav
         if (pf.brand) r.querySelector('[data-t="brand"]').value = pf.brand;
       });
       if (form.animate) form.animate([{ opacity:.55 }, { opacity:1 }], { duration: 480, easing: 'ease' });
-      showToast('ASC Agent je pripremio podatke — provjeri i potvrdi.');
+      showToast(pf.edit ? ('Uređivanje ' + (pf.code || 'seta') + ' — promijeni i spremi.') : 'ASC Agent je pripremio podatke — provjeri i potvrdi.');
       setTimeout(() => { try { $('c_name').scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch(e){} }, 160);
     }
   } catch(e){}

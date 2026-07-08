@@ -477,6 +477,29 @@ html.dark .tl-item:nth-child(odd){background:rgba(244,245,247,.04)}
     var c = code || (codeEl ? codeEl.textContent.trim() : '');
     if (window.ASCQR && c && !ASCQR.printSticker(c)) alert('Dopustite skočne prozore za ispis naljepnice.');
   });
+
+  // The "Uredi" (edit) menu item → reopen this set in the check-in editor, pre-filled
+  // with what we know (owner / vehicle / plate / season / location). Reuses the same
+  // sessionStorage 'asc.prefill' bridge the ASC Agent uses.
+  var editItem = Array.prototype.filter.call(document.querySelectorAll('.sd-menu-item'), function(el){ return /uredi/i.test(el.textContent); })[0];
+  if (editItem) editItem.addEventListener('click', function(e){
+    e.preventDefault();
+    var pf = { edit: true, code: code || (codeEl ? codeEl.textContent.trim() : '') };
+    if (set) {
+      pf.customer_name = set.who || '';
+      pf.plate = set.plate || '';
+      var veh = (set.vehicle || '').trim().split(/\s+/);
+      pf.make = veh.shift() || ''; pf.model = veh.join(' ');
+      pf.season = set.season || '';
+      if (set.loc) {
+        var segs2 = set.loc.split('·').map(function(x){ return x.trim(); });
+        var pick2 = function(kw){ for (var i = 0; i < segs2.length; i++){ if (segs2[i].toLowerCase().indexOf(kw) === 0) return segs2[i].replace(/^\S+\s*/, ''); } return ''; };
+        pf.zone = pick2('zona'); pf.rack = pick2('regal'); pf.shelf = pick2('polica'); pf.slot = pick2('mjesto');
+      }
+    }
+    try { sessionStorage.setItem('asc.prefill', JSON.stringify(pf)); } catch(err){}
+    location.href = 'checkin.html?prefill=1';
+  });
 })();
 </script>
 </body>
