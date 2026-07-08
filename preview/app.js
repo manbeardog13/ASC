@@ -158,6 +158,14 @@ if (document.readyState !== 'loading') syncDisc(); else addEventListener('DOMCon
     '</section>';
   document.body.appendChild(dock);
 
+  // Skin the agent as a random studio tire (from the recent-sets stream) with a
+  // random brake-caliper under-glow (yellow / orange / green / red). Re-rolled
+  // every load. The circular crop shows only the tire (no background).
+  const TIRES = ['set-1.jpg','set-2.jpg','set-3.jpg','set-4.jpg','set-5.jpg','set-6.jpg'];
+  const GLOWS = ['#ffcf33','#ff8a1a','#3ddc84','#ff4d4d'];
+  dock.style.setProperty('--tire', "url('assets/" + TIRES[Math.floor(Math.random() * TIRES.length)] + "')");
+  dock.style.setProperty('--glow', GLOWS[Math.floor(Math.random() * GLOWS.length)]);
+
   const $ = (s) => dock.querySelector(s);
   const tab = $('.ai-tab'), panel = $('.ai-panel'), scrim = $('.ai-scrim'),
         mic = $('.ai-mic'), hint = $('.ai-hint'), heard = $('.ai-heard'),

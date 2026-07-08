@@ -389,6 +389,47 @@ html.dark .dock a.on{color:var(--lava-2)}
 .disc-body>*:first-child{margin-top:0}
 @media(prefers-reduced-motion:reduce){ .disc-panel,.disc-inner,.disc-chev{transition-duration:.001ms} }
 
+/* ===== Tire skin — the agent reads as a studio tire that rolls in ==========
+   --tire (random recent-sets photo) + --glow (random brake-caliper colour) set
+   per-load in app.js. Circular crop shows only the tire; the ::after halo is the
+   brake under-glow, gently pulsing. Same size as the old orb; PC keeps the panel
+   (input + chips), mobile shows ONLY the tire. */
+.ai-tab{width:118px;height:118px;border-radius:50%;padding:0;overflow:visible;
+  background:var(--tire,radial-gradient(circle at 34% 30%,#a78bfa,#6d28d9)) center 43%/cover no-repeat #0b0b0d;
+  box-shadow:0 14px 32px -10px rgba(0,0,0,.62),inset 0 3px 8px rgba(255,255,255,.14),inset 0 -12px 24px -8px rgba(0,0,0,.78);
+  transform:translateX(64%);animation:aiTireBreathe 3.8s ease-in-out infinite}
+.ai-tab svg,.ai-tab::before{display:none!important}
+.ai-tab::after{content:"";position:absolute;inset:-15px;z-index:-1;border-radius:50%;pointer-events:none;box-shadow:none;
+  background:radial-gradient(circle,var(--glow,#ff8a1a),transparent 66%);opacity:.5;filter:blur(7px);animation:aiTireGlow 2.6s ease-in-out infinite}
+@keyframes aiTireGlow{50%{opacity:.92;transform:scale(1.12)}}
+@keyframes aiTireBreathe{50%{transform:translateX(60%) scale(1.025)}}
+@media(hover:hover){ .ai-tab:hover{transform:translateX(50%)} }
+.ai-tab:active{transform:translateX(58%) scale(.96)}
+.ai-dock[data-open="true"] .ai-tab{transform:translateX(165%) rotate(160deg);opacity:0;animation:none}
+
+/* the open press-and-hold orb is the same tire, rolling in */
+.ai-mic-orb{background:var(--tire) center 43%/cover no-repeat #0b0b0d;
+  box-shadow:0 16px 36px -10px rgba(0,0,0,.6),inset 0 3px 8px rgba(255,255,255,.16),inset 0 -12px 24px -8px rgba(0,0,0,.78)}
+.ai-mic svg,.ai-mic-orb svg{display:none}
+.ai-mic::before,.ai-mic::after{border-color:var(--glow,#ff8a1a)!important}
+.ai-mic-orb::after{content:"";position:absolute;inset:-13px;z-index:-1;border-radius:50%;pointer-events:none;
+  background:radial-gradient(circle,var(--glow,#ff8a1a),transparent 66%);opacity:.55;filter:blur(6px);animation:aiTireGlow 2.6s ease-in-out infinite}
+.ai-mic.is-live .ai-mic-orb{transform:scale(1.06)}
+.ai-dock[data-open="true"] .ai-mic{animation:aiRollIn .66s cubic-bezier(.16,1,.3,1) both}
+@keyframes aiRollIn{0%{transform:translateX(120px) rotate(280deg) scale(.35);opacity:0}60%{opacity:1}100%{transform:none}}
+
+/* Mobile / tablet: nothing but the tire — hide the chrome + card, roll in centred */
+html[data-device="mobile"] .ai-panel,html[data-device="tablet"] .ai-panel{background:none;border:0;box-shadow:none;padding:0;overflow:visible;
+  left:50%;right:auto;width:auto;transform:translate(-50%,-50%) scale(.55);opacity:0}
+html[data-device="mobile"] .ai-panel::before,html[data-device="tablet"] .ai-panel::before{display:none}
+html[data-device="mobile"] .ai-dock[data-open="true"] .ai-panel,html[data-device="tablet"] .ai-dock[data-open="true"] .ai-panel{transform:translate(-50%,-50%) scale(1);opacity:1}
+html[data-device="mobile"] .ai-head,html[data-device="mobile"] .ai-hint,html[data-device="mobile"] .ai-heard,
+html[data-device="mobile"] .ai-result,html[data-device="mobile"] .ai-chips,html[data-device="mobile"] .ai-type,
+html[data-device="tablet"] .ai-head,html[data-device="tablet"] .ai-hint,html[data-device="tablet"] .ai-heard,
+html[data-device="tablet"] .ai-result,html[data-device="tablet"] .ai-chips,html[data-device="tablet"] .ai-type{display:none}
+html[data-device="mobile"] .ai-stage,html[data-device="tablet"] .ai-stage{padding:0;gap:0}
+@media(prefers-reduced-motion:reduce){ .ai-tab,.ai-tab::after,.ai-mic-orb::after{animation:none} .ai-dock[data-open="true"] .ai-mic{animation:none} }
+
 /* ============================== A11y · motion ========================== */
 :focus-visible{outline:2px solid var(--lava-ink);outline-offset:2px;border-radius:10px}
 .stage :focus-visible,.act :focus-visible,.dock :focus-visible,.card.dark :focus-visible{outline-color:var(--lava-2);box-shadow:0 0 0 4px rgba(2,3,5,.55)}
