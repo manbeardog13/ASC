@@ -307,7 +307,7 @@ if (document.readyState !== 'loading') syncDisc(); else addEventListener('DOMCon
         if (ev.type === 'text') { result.innerHTML = esc(ev.text); result.classList.remove('pop'); void result.offsetWidth; result.classList.add('pop'); }
         else if (ev.type === 'error') { result.textContent = ev.message; }
         else if (ev.type === 'tool') { hint.textContent = 'Radim…'; }
-      }).then((txt) => { hint.textContent = idleHint; if (txt) speak(txt); }).catch(() => { hint.textContent = idleHint; });
+      }).then((txt) => { hint.textContent = idleHint; if (txt) speak(txt); }).catch(() => { hint.textContent = idleHint; handle(text); });   // Gemini down / not deployed yet → local fallback
     } else {
       handle(text);                                     // $0 rule-based fallback
     }
