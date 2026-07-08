@@ -150,7 +150,7 @@
 /* reveal: bubble first, then the chips cascade up one-by-one just after */
 @media(hover:hover){
   .agent-card:hover .text-bubble,.agent-card:focus-within .text-bubble{opacity:1;filter:blur(0);transform:none}
-  .agent-card:hover .qchip,.agent-card:focus-within .qchip{opacity:1;transform:none;transition-delay:calc(.18s + var(--ci,0)*.09s)}
+  .agent-card:hover .qchip,.agent-card:focus-within .qchip{opacity:1;transform:none;transition-delay:calc(.16s + var(--ci,0)*.065s)}
 }
 /* touch: no hover to trigger it — just show it */
 @media(hover:none){ .text-bubble,.qchip{opacity:1!important;filter:none!important;transform:none!important} }
@@ -290,6 +290,12 @@ html.dark .notes-name,html.dark .notes-text{background:rgba(244,245,247,.05)}
               <button class="qchip" type="button" role="listitem" style="--ci:0" data-q="Nađi gume za DU 123-AB">nađi set</button>
               <button class="qchip" type="button" role="listitem" style="--ci:1" data-q="Koliko je slobodno u skladištu?">koliko je slobodno</button>
               <button class="qchip" type="button" role="listitem" style="--ci:2" data-q="Tko čeka na preuzimanje danas?">tko čeka</button>
+              <button class="qchip" type="button" role="listitem" style="--ci:3" data-q="Nađi gume po registraciji">gume po tablici</button>
+              <button class="qchip" type="button" role="listitem" style="--ci:4" data-q="Koji su podsjetnici za danas?">podsjetnici danas</button>
+              <button class="qchip" type="button" role="listitem" style="--ci:5" data-q="Koje police su slobodne?">slobodne police</button>
+              <button class="qchip" type="button" role="listitem" style="--ci:6" data-q="Koji je zadnji zaprimljeni set?">zadnji unos</button>
+              <button class="qchip" type="button" role="listitem" style="--ci:7" data-q="Napravi izvještaj smjene">izvještaj smjene</button>
+              <button class="qchip" type="button" role="listitem" style="--ci:8" data-q="Spremi SMS za preuzimanje">spremi SMS</button>
             </div>
           </div>
         </div>
