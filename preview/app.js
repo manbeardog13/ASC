@@ -22,6 +22,25 @@ document.getElementById('mode').addEventListener('click', () => {
   paintTheme();
 });
 
+// Preview navigation: wire the shared header pills + iOS dock to the real pages,
+// so every screen links to every other. Dashboard-only cards/lists are wired too
+// (gated on #agentCard); selectors that match nothing on a page are just no-ops.
+(() => {
+  const NAV = { 'Ploča': 'dashboard.html', 'Zaprimi': 'checkin.html', 'Skladište': 'warehouse.html',
+                'Kupci': 'customers.html', 'Skeniraj': 'scan.html', 'Više': 'reminders.html' };
+  document.querySelectorAll('.pill-links a, .dock a').forEach(a => {
+    const k = (a.getAttribute('aria-label') || a.textContent || '').trim();
+    if (NAV[k]) a.setAttribute('href', NAV[k]);
+  });
+  if (document.getElementById('agentCard')) {   // the dashboard
+    const link = (sel, href) => document.querySelectorAll(sel).forEach(a => { if (a.tagName === 'A') a.setAttribute('href', href); });
+    link('.act.green', 'checkin.html');
+    link('.act.red', 'reminders.html');
+    link('.stream .slide', 'set-detail.html');
+    link('.card.dark .mini', 'reminders.html');
+  }
+})();
+
 // Animated count-up + bar/meter fill (instant when reduced motion).
 function animate(){
   document.querySelectorAll('[data-count]').forEach(el => {
