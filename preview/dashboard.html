@@ -138,6 +138,15 @@
    transform only, never layout) so nothing reflows — buttery, Apple-grade. */
 .agent-reveal{position:absolute;left:26px;right:26px;bottom:26px;display:flex;flex-direction:column;gap:12px;pointer-events:none}
 @media(hover:hover){ .agent-card:hover .agent-reveal,.agent-card:focus-within .agent-reveal{pointer-events:auto} }
+/* touch has no hover → keep the chat window tappable there; and while a reply is
+   live, keep it open + interactive regardless of hover so the answer doesn't vanish. */
+html[data-device="tablet"] .agent-reveal,html[data-device="mobile"] .agent-reveal,
+.agent-card.agent-live .agent-reveal{pointer-events:auto}
+.agent-card.agent-live .text-bubble,.agent-card.agent-live .qchip{opacity:1;filter:blur(0);transform:none}
+.tb-reply{display:none;margin:0 0 2px;font:500 13.5px/1.42 Inter;color:#ece6ff;background:rgba(12,10,24,.6);
+  border:1px solid rgba(150,110,255,.26);border-radius:13px;padding:10px 13px;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
+  max-height:112px;overflow:auto;box-shadow:0 14px 34px -20px rgba(0,0,0,.7)}
+.tb-reply.on{display:block;animation:rise .4s var(--smooth) both}
 .text-bubble{position:relative;display:flex;align-items:center;gap:8px;min-height:50px;padding:0 6px 0 17px;border-radius:15px;
   background:rgba(12,10,24,.55);border:1px solid rgba(150,110,255,.3);
   -webkit-backdrop-filter:blur(12px) saturate(150%);backdrop-filter:blur(12px) saturate(150%);
@@ -551,19 +560,49 @@ document.addEventListener('click', function(e){
   })();
 </script>
 <script>
-  /* ASC Agent — chips + input helpers. The hover reveal (bubble blur-in + the
-     chips fade-rising one-by-one) is pure CSS. Here: a chip fills the input with a
-     fuller query, and the input/send is a preview affordance ($0, no backend). */
+  /* ASC Agent card — chips + input, wired to the LIVE Gemini brain (window.ASCAgent,
+     loaded by app.js). Send / Enter / a chip asks the agent; the reply shows in-card
+     (informational answers) or the agent navigates (find a set/customer). Falls back
+     to the search page if Gemini isn't configured. The hover reveal is pure CSS. */
   (() => {
     const card = document.getElementById('agentCard');
     if (!card) return;
     const input = document.getElementById('tbInput');
     const send = card.querySelector('.tb-send');
+    const reveal = card.querySelector('.agent-reveal');
     const chips = [...card.querySelectorAll('.qchip')];
     const pulse = () => { if (send && send.animate) send.animate([{ transform: 'scale(1)' }, { transform: 'scale(.9)' }, { transform: 'scale(1)' }], { duration: 220, easing: 'cubic-bezier(.22,1,.36,1)' }); };
-    chips.forEach(c => c.addEventListener('click', () => { if (input) { input.value = c.dataset.q || c.textContent; input.focus(); } }));
-    if (send) send.addEventListener('click', pulse);
-    if (input) input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); pulse(); } });
+    const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+    const reply = document.createElement('div');
+    reply.className = 'tb-reply'; reply.setAttribute('role', 'status'); reply.setAttribute('aria-live', 'polite');
+    if (reveal) reveal.insertBefore(reply, reveal.firstChild);
+    const show = (html) => { reply.innerHTML = html; reply.classList.add('on'); card.classList.add('agent-live'); };
+
+    let busy = false;
+    function ask(text) {
+      text = (text || '').trim();
+      if (!text || busy) return;
+      pulse();
+      if (window.ASCAgent && ASCAgent.configured && ASCAgent.configured()) {
+        busy = true; show('Razmišljam…');
+        ASCAgent.ask(text, (ev) => {
+          if (ev.type === 'text') reply.innerHTML = esc(ev.text);
+          else if (ev.type === 'tool') reply.textContent = 'Radim…';
+          else if (ev.type === 'error') reply.textContent = ev.message || 'Greška.';
+        }).then((txt) => { busy = false; if (txt) reply.innerHTML = esc(txt); })
+          .catch(() => { busy = false; reply.textContent = 'Veza je pukla — pokušaj ponovno.'; });
+      } else {                                   // Gemini not wired → route to search
+        show('Tražim…');
+        setTimeout(() => { location.href = 'workshop.html?q=' + encodeURIComponent(text); }, 120);
+      }
+    }
+    chips.forEach(c => c.addEventListener('click', () => { const q = c.dataset.q || c.textContent; if (input) input.value = q; ask(q); }));
+    if (send) send.addEventListener('click', () => ask(input && input.value));
+    if (input) input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); ask(input.value); }
+      else if (e.key === 'Escape') { reply.classList.remove('on'); card.classList.remove('agent-live'); input.blur(); }
+    });
   })();
 </script>
 <script>
