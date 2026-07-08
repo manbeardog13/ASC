@@ -116,6 +116,14 @@ if (document.readyState !== 'loading') syncDisc(); else addEventListener('DOMCon
 // ============================================================================
 (() => {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition || null;
+  // Load the Gemini brain + endpoint config + data (order-preserved). The panel
+  // uses Gemini when ASC_AGENT_URL is set; otherwise it falls back to the local
+  // rule-based router below. Loaded once, from the current /preview/ dir.
+  ['agent-config.js', 'qr.js', 'agent-gemini.js'].forEach((src) => {
+    if (![].some.call(document.scripts, (sc) => sc.src && sc.src.indexOf('/' + src) !== -1)) {
+      const el = document.createElement('script'); el.src = src; el.async = false; document.head.appendChild(el);
+    }
+  });
   const esc = (s) => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   const ICON = {
     tab:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 3v18M8 6.5v11M16 6.5v11M4 10v4M20 10v4"/></svg>',
@@ -249,7 +257,7 @@ if (document.readyState !== 'loading') syncDisc(); else addEventListener('DOMCon
     if (!lastError) hint.textContent = idleHint;
     const text = (finalText || interimText || '').trim();
     finalText = ''; interimText = '';                                // consume — never replay
-    if (text && text !== '…') { heard.textContent = text; handle(text); }   // release = Enter
+    if (text && text !== '…') { heard.textContent = text; submitToAgent(text); }   // release = Enter
   }
   function endVoice(silent){
     if (holding) return release(false);                              // closing mid-hold discards, never submits
@@ -278,8 +286,32 @@ if (document.readyState !== 'loading') syncDisc(); else addEventListener('DOMCon
   mic.addEventListener('click', () => { if (pointerUsed) return; input.focus(); });
 
   // ---- typed + chip fallbacks ----------------------------------------------
-  form.addEventListener('submit', (e) => { e.preventDefault(); const t = input.value.trim(); if (t) { heard.textContent = t; input.value = ''; handle(t); } });
-  dock.querySelectorAll('.ai-chip').forEach(c => c.addEventListener('click', () => { const cmd = c.dataset.cmd; heard.textContent = c.textContent; handle(cmd); }));
+  form.addEventListener('submit', (e) => { e.preventDefault(); const t = input.value.trim(); if (t) { heard.textContent = t; input.value = ''; submitToAgent(t); } });
+  dock.querySelectorAll('.ai-chip').forEach(c => c.addEventListener('click', () => { const cmd = c.dataset.cmd; heard.textContent = c.textContent; submitToAgent(cmd); }));
+
+  // Route input to Gemini when configured (agent-gemini.js), else the local
+  // rule-based router. Gemini's reply shows in the result line and is spoken.
+  function speak(text){
+    try {
+      if (!('speechSynthesis' in window) || !text) return;
+      const v = (speechSynthesis.getVoices() || []).filter(x => (x.lang || '').toLowerCase().indexOf('hr') === 0)[0];
+      if (!v) return;                                   // no Croatian voice → stay silent, don't mangle it
+      const u = new SpeechSynthesisUtterance(text); u.voice = v; u.lang = 'hr-HR'; u.rate = 1.05;
+      speechSynthesis.cancel(); speechSynthesis.speak(u);
+    } catch(e){}
+  }
+  function submitToAgent(text){
+    if (window.ASCAgent && ASCAgent.configured()) {
+      hint.textContent = 'Razmišljam…'; result.classList.remove('pop'); result.textContent = '…';
+      ASCAgent.ask(text, (ev) => {
+        if (ev.type === 'text') { result.innerHTML = esc(ev.text); result.classList.remove('pop'); void result.offsetWidth; result.classList.add('pop'); }
+        else if (ev.type === 'error') { result.textContent = ev.message; }
+        else if (ev.type === 'tool') { hint.textContent = 'Radim…'; }
+      }).then((txt) => { hint.textContent = idleHint; if (txt) speak(txt); }).catch(() => { hint.textContent = idleHint; });
+    } else {
+      handle(text);                                     // $0 rule-based fallback
+    }
+  }
 
   // ---- understand + do ------------------------------------------------------
   const NAV = [
