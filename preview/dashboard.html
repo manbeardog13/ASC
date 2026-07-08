@@ -320,14 +320,14 @@ html.dark .notes-name,html.dark .notes-text{background:rgba(244,245,247,.05)}
       <span class="bg" style="background-image:url('assets/zaprimi.jpg')"></span>
       <span class="go" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5.4v13.2M5.4 12h13.2"/></svg></span>
       <span class="tab-tl">Zaprimanje</span>
-      <div class="body"><h2>Zaprimi novi set</h2><div class="desc">Novi komplet guma na čuvanje</div></div>
+      <div class="body"><h2>Zaprimi novi set</h2></div>
     </a>
 
     <a class="act red reveal" href="#" style="animation-delay:190ms">
       <span class="bg" style="background-image:url('assets/preuzmi.jpg')"></span>
       <span class="go" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12.8l5 5L19.5 6.6"/></svg></span>
       <span class="tab-tl">Preuzimanje</span>
-      <div class="body"><h2>Preuzmi komplet</h2><div class="desc">Izdaj gume kupcu i zatvori</div></div>
+      <div class="body"><h2>Preuzmi komplet</h2></div>
     </a>
 
     <!-- ASC AGENT — a calm AI window UNDER the stage (col 1), matching its width.
@@ -342,7 +342,7 @@ html.dark .notes-name,html.dark .notes-text{background:rgba(244,245,247,.05)}
           <span class="agent-hook l3" id="agentHook3" aria-hidden="true">…</span>
           <div class="agent-reveal">
             <div class="text-bubble">
-              <input class="tb-input" id="tbInput" type="text" autocomplete="off" placeholder="Pitaj me bilo što o skladištu…" aria-label="Pitaj ASC pomoćnika">
+              <input class="tb-input" id="tbInput" type="text" autocomplete="off" placeholder="Pitaj bilo što…" aria-label="Pitaj ASC pomoćnika">
               <button class="tb-send" type="button" aria-label="Pošalji"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M13 6l6 6-6 6"/></svg></button>
             </div>
             <div class="chips" role="list">
@@ -368,7 +368,7 @@ html.dark .notes-name,html.dark .notes-text{background:rgba(244,245,247,.05)}
       <section class="notes-card" id="notesCard" aria-label="Prijedlozi tima">
         <span class="tab-tl">bilješke</span>
         <div class="notes-head">
-          <h3>Prijedlozi tima</h3>
+          <h3>Prijedlozi</h3>
           <span class="notes-count" id="notesCount" aria-label="broj prijedloga">0</span>
         </div>
         <div class="notes-list" id="notesList"></div>
@@ -389,7 +389,6 @@ html.dark .notes-name,html.dark .notes-text{background:rgba(244,245,247,.05)}
     <div class="card profile reveal" style="animation-delay:230ms">
       <span class="tab-tl">smjena</span>
       <div class="row1"><span class="pavatar">TJ</span><div><h1>Dobra večer, Toni</h1><div class="sub">Ponedjeljak, 7. srpnja</div></div></div>
-      <p>Sve spremno za smjenu — 248 kompleta u sustavu, 3 podsjetnika čekaju danas.</p>
       <div class="health">
         <div class="hstat">Veza<b class="g">Na mreži</b></div>
         <div class="hstat">Sinkr.<b data-count="0">0</b></div>
@@ -407,7 +406,7 @@ html.dark .notes-name,html.dark .notes-text{background:rgba(244,245,247,.05)}
 
     <div class="card dark reveal" style="animation-delay:310ms">
       <span class="tab-tl">podsjetnici</span>
-      <h3>Za preuzimanje <span class="count-badge">3</span></h3>
+      <h3>Preuzimanja <span class="count-badge">3</span></h3>
       <a class="mini overdue" href="#"><time>Kasni</time><b>Josip Horvat</b><span class="pl">DU-234-AB</span></a>
       <a class="mini" href="#"><time>Danas</time><b>Ana Kovačević</b><span class="pl">DU-881-KL</span></a>
       <a class="mini" href="#"><time>7. srp</time><b>Marko Babić</b><span class="pl">DU-455-MN</span></a>
@@ -417,7 +416,7 @@ html.dark .notes-name,html.dark .notes-text{background:rgba(244,245,247,.05)}
   <!-- RECENT — a live right-to-left stream. Newest auto-prepends and stays 24 h.
        Two identical copies + translateX(-50%) with per-card margins = seamless. -->
   <section class="recent reveal" style="animation-delay:350ms">
-    <div class="head"><h3>Nedavno zaprimljeno</h3><span class="live"><span class="ld"></span>uživo · 24 h</span></div>
+    <div class="head"><h3>Nedavno</h3><span class="live"><span class="ld"></span>uživo · 24 h</span></div>
     <div class="stream" aria-label="Nedavno zaprimljeni setovi — stream uživo">
       <div class="stream-track" id="streamTrack">
         <a class="slide" href="#"><span class="tab-tl">0248</span><span class="thumb" style="background-image:url('assets/set-1.jpg')"><span class="qr-sticker"><img src="assets/qr-0248.png" alt=""></span></span><div class="meta"><div class="who">Ivan Perić</div><span class="chip win">Zimske</span></div></a>

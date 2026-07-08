@@ -8,16 +8,16 @@
 
 /* ============================== Tokens · twin themes ====================== */
 :root{
-  --bg:#edf0f5; --shell:rgba(255,255,255,.42); --shell-solid:rgba(255,255,255,.66);
-  --panel:#f2f4f8; --panel-2:#ffffff;
+  --bg:#eef0f1; --shell:rgba(255,255,255,.44); --shell-solid:rgba(255,255,255,.70);
+  --panel:#f4f4f3; --panel-2:#fdfdfc;
   --ink:#020305; --ink-2:#3a3c40; --muted:#63676f;
   --lava:#ff4e1b; --lava-2:#ff8a5c; --lava-ink:#c0360d; --lava-tint:rgba(255,78,27,.11); --lava-ring:rgba(255,78,27,.30);
-  --gun:#2e2f31; --hairline:rgba(2,3,5,.07); --line:rgba(2,3,5,.10);
+  --gun:#2e2f31; --hairline:rgba(28,22,16,.06); --line:rgba(28,22,16,.09);
   --stage-1:#0b0c0e; --stage-2:#17181b; --on-stage:#f4f5f7; --on-stage-2:rgba(244,245,247,.72); --tab-surf:#f7f9fc;
   --rim-top:rgba(255,255,255,.75); --rim:rgba(255,255,255,.42);
   --green:#2fbf5b; --green-ink:#1c894a;
   --smooth:cubic-bezier(.25,1,.5,1); --snap:cubic-bezier(.22,1,.36,1);
-  --shadow-card:0 10px 30px -14px rgba(2,3,5,.35);
+  --shadow-card:0 1px 2px -1px rgba(20,18,15,.10),0 6px 16px -8px rgba(20,18,15,.15),0 20px 40px -22px rgba(20,18,15,.22);
   --gap:14px; --pad:20px; --radius:22px;
   --tap:44px; --dock-h:66px;
 }
@@ -29,7 +29,7 @@ html.dark{
   --lava-ink:#ff8a5c; --tab-surf:#0f1013; --green-ink:#57d484;
   --stage-1:#07080a; --stage-2:#101114;
   --rim-top:rgba(255,255,255,.16); --rim:rgba(255,255,255,.08);
-  --shadow-card:0 12px 34px -14px rgba(0,0,0,.6);
+  --shadow-card:0 1px 2px -1px rgba(0,0,0,.5),0 8px 20px -10px rgba(0,0,0,.55),0 24px 48px -24px rgba(0,0,0,.62);
 }
 
 /* ============================== Base reset · canvas ====================== */
@@ -43,14 +43,14 @@ body{font-family:"Inter",system-ui,sans-serif;color:var(--ink);background:var(--
 
 .canvas{position:fixed;inset:0;z-index:-1;pointer-events:none;
   background:
-    radial-gradient(58vmax 54vmax at 10% -12%,rgba(255,78,27,.16),transparent 62%),
-    radial-gradient(50vmax 46vmax at 92% 112%,rgba(255,78,27,.13),transparent 58%),
-    radial-gradient(44vmax 40vmax at 84% -8%,rgba(46,47,49,.22),transparent 60%)}
+    radial-gradient(60vmax 56vmax at 6% -14%,rgba(255,122,64,.11),transparent 60%),
+    radial-gradient(54vmax 50vmax at 98% 116%,rgba(84,120,152,.08),transparent 60%),
+    radial-gradient(44vmax 40vmax at 86% -8%,rgba(46,47,49,.12),transparent 62%)}
 html.dark .canvas{
   background:
-    radial-gradient(58vmax 54vmax at 10% -12%,rgba(255,78,27,.10),transparent 60%),
-    radial-gradient(50vmax 46vmax at 92% 112%,rgba(255,78,27,.08),transparent 56%),
-    radial-gradient(44vmax 40vmax at 84% -8%,rgba(244,245,247,.05),transparent 60%)}
+    radial-gradient(60vmax 56vmax at 6% -14%,rgba(255,110,55,.09),transparent 60%),
+    radial-gradient(54vmax 50vmax at 98% 116%,rgba(90,130,165,.07),transparent 60%),
+    radial-gradient(44vmax 40vmax at 86% -8%,rgba(244,245,247,.04),transparent 62%)}
 .grain{position:fixed;inset:0;z-index:60;pointer-events:none;opacity:.04;mix-blend-mode:overlay;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E")}
 /* Hidden for the live push (was the "Preview · nije uživo" ribbon). */
@@ -113,7 +113,7 @@ html.dark .mode i{background:transparent;box-shadow:inset 0 0 0 2.5px #f4f5f7}
   radial-gradient(120% 80% at 88% -8%, rgba(255,78,27,.22), transparent 50%)}
 .stage>:not(.photo):not(.scrim):not(.tab-corner){position:relative;z-index:2}
 .k{font-family:Inter;font-weight:600;font-size:clamp(9.5px,2.6vw,11px);line-height:1.35;letter-spacing:.06em;text-transform:uppercase;color:var(--on-stage-2)}
-.hero-num{font-family:Sora;font-weight:400;font-size:clamp(56px,6.6vw,88px);line-height:.98;letter-spacing:-.03em;margin:10px 0 4px}
+.hero-num{font-family:Sora;font-weight:500;font-size:clamp(58px,6.8vw,92px);line-height:.96;letter-spacing:-.035em;margin:10px 0 4px}
 .hero-num em{font-style:normal;font:500 14px Inter;letter-spacing:.06em;text-transform:uppercase;color:var(--on-stage-2);margin-left:8px;vertical-align:baseline}
 .cap{font-size:13.5px;color:var(--on-stage-2)}
 .stage .k,.stage .hero-num,.stage .cap,.stage .spill span{text-shadow:0 1px 4px rgba(2,3,5,.82)}
@@ -169,7 +169,7 @@ html.dark .mode i{background:transparent;box-shadow:inset 0 0 0 2.5px #f4f5f7}
 .card{position:relative;background:var(--panel);border-radius:var(--radius);padding:32px var(--pad) 18px;display:flex;flex-direction:column;transition:background 380ms var(--smooth),transform 160ms var(--snap),box-shadow 200ms var(--snap)}
 /* .tab-tl (incl. its notch) is defined in the corner-tab block above */
 .card h3{font-family:Sora;font-weight:600;font-size:15px;margin-bottom:12px;display:flex;align-items:center;gap:8px}
-.count-badge{margin-left:auto;font:800 12px Inter;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:var(--lava);color:#fff;display:inline-flex;align-items:center;justify-content:center}
+.count-badge{margin-left:auto;font:800 12px Inter;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:linear-gradient(158deg,var(--lava-2),var(--lava) 52%,var(--lava-ink));color:#fff;display:inline-flex;align-items:center;justify-content:center;box-shadow:0 2px 7px -2px rgba(255,78,27,.5),inset 0 1px 0 rgba(255,255,255,.28)}
 .card.dark{background:radial-gradient(120% 100% at 90% -20%,rgba(255,78,27,.20),transparent 55%),linear-gradient(175deg,var(--stage-1),var(--stage-2));color:var(--on-stage)}
 html.dark .card.dark{background:radial-gradient(120% 100% at 90% -20%,rgba(255,78,27,.16),transparent 55%),linear-gradient(175deg,#24252a,#1a1b1f)}
 
