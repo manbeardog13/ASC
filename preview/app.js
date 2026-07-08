@@ -187,6 +187,7 @@ if (document.readyState !== 'loading') syncDisc(); else addEventListener('DOMCon
     openState = true;
     clearTimeout(closeT); dock.classList.remove('ai-closing');      // cancel any in-flight roll-out
     dock.dataset.open = 'true';
+    heard.textContent = '';                                         // fresh session — no stale transcript bubble
     tab.setAttribute('aria-expanded','true'); tab.setAttribute('tabindex','-1');
     panel.setAttribute('aria-hidden','false'); panel.inert = false;
     setTimeout(() => { try { (SR ? mic : input).focus({ preventScroll:true }); } catch(e){} }, 380);
@@ -194,6 +195,7 @@ if (document.readyState !== 'loading') syncDisc(); else addEventListener('DOMCon
   const close = () => {
     if (!openState) return;
     openState = false; endVoice(true);
+    try { if (window.ASCAgent && ASCAgent.cancel) ASCAgent.cancel(); } catch(e){}   // dismissing cancels a pending Gemini navigation
     tab.removeAttribute('tabindex'); tab.setAttribute('aria-expanded','false');
     panel.setAttribute('aria-hidden','true'); panel.inert = true;
     // play the roll-OUT (entrance reversed), THEN drop the open flag so the tire
@@ -292,10 +294,10 @@ if (document.readyState !== 'loading') syncDisc(); else addEventListener('DOMCon
   });
   const clearPointer = () => setTimeout(() => { pointerUsed = false; }, 0);
   mic.addEventListener('pointerup', () => {
-    const quick = performance.now() - pressT < 240;
+    if (!SR) { clearPointer(); return; }                           // no speech engine → the orb tap just focuses the input (pointerdown did that)
     const spoke = (finalText + interimText).trim();
-    if (quick && !spoke) { release(false); close(); }              // short tap on the tire = dismiss (roll back out)
-    else release(true);
+    if (!spoke && !lastError) { release(false); close(); }         // released with nothing captured (and no mic error) = dismiss / roll back out
+    else release(true);                                            // spoke, or a mic error to surface → normal submit / finalize
     clearPointer();
   });
   mic.addEventListener('pointercancel', () => { release(false); clearPointer(); });  // OS interruption → abort, not Enter

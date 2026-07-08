@@ -34,7 +34,7 @@
   function fmt(x){ return x.code + ' — ' + x.who + ', ' + x.vehicle + ' ' + x.plate + ', ' + SEASON[x.season] + ', ' + STATUS[x.status] + (x.loc ? ', ' + x.loc : ''); }
 
   // ---- tool executors (return {result, after?}) -------------------------------
-  var pendingNav = null;                                   // navigations run AFTER the reply shows
+  var pendingNav = null, navTimer = null;                  // navigations run AFTER the reply shows (cancellable)
   function nav(url){ pendingNav = url; return 'Otvaram: ' + url; }
   var TOOLS = {
     search_sets: function (a) {
@@ -132,9 +132,11 @@
       });
       history.push({ role: 'user', content: results });
     }
-    if (pendingNav) { var go = pendingNav; setTimeout(function () { location.href = go; }, 650); }   // navigate after the reply shows
+    if (pendingNav) { var go = pendingNav; pendingNav = null; navTimer = setTimeout(function () { navTimer = null; location.href = go; }, 650); }   // navigate after the reply shows
     return finalText;
   }
+  // dismissing the agent (or editing beneath it) cancels a queued navigation.
+  function cancel() { if (navTimer) { clearTimeout(navTimer); navTimer = null; } pendingNav = null; }
 
-  window.ASCAgent = { ask: ask, reset: reset, configured: configured, context: contextLine };
+  window.ASCAgent = { ask: ask, reset: reset, cancel: cancel, configured: configured, context: contextLine };
 })();

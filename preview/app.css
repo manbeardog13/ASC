@@ -467,7 +467,7 @@ html[data-device="desktop"] .ai-dock.ai-closing[data-open="true"] .ai-panel{tran
 html[data-device="mobile"] .ai-panel,html[data-device="tablet"] .ai-panel{background:none;border:0;box-shadow:none;padding:0;overflow:visible;
   left:50%;right:auto;width:auto;transform:translate(-50%,-50%);opacity:0}
 html[data-device="mobile"] .ai-panel::before,html[data-device="tablet"] .ai-panel::before{display:none}
-html[data-device="mobile"] .ai-dock[data-open="true"] .ai-panel,html[data-device="tablet"] .ai-dock[data-open="true"] .ai-panel{opacity:1}
+html[data-device="mobile"] .ai-dock[data-open="true"] .ai-panel,html[data-device="tablet"] .ai-dock[data-open="true"] .ai-panel{transform:translate(-50%,-50%);opacity:1}
 html[data-device="mobile"] .ai-head,html[data-device="mobile"] .ai-hint,
 html[data-device="mobile"] .ai-result,html[data-device="mobile"] .ai-chips,html[data-device="mobile"] .ai-type,
 html[data-device="tablet"] .ai-head,html[data-device="tablet"] .ai-hint,
