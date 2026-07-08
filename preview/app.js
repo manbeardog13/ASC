@@ -196,7 +196,7 @@ if (document.readyState !== 'loading') syncDisc(); else addEventListener('DOMCon
   // without dismissing. The closed panel is inert so its controls are never phantom
   // tab-stops. Dismiss = short-tap the tire, the panel ×, or Escape.
   let openState = false, actTimer = null, closeT = null;
-  panel.inert = true;
+  panel.inert = !inlineMount;                                       // inline agent is always shown → never inert (the tab that clears it is hidden)
   const open = () => {
     if (openState) return;
     openState = true;
