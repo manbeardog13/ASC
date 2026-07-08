@@ -53,7 +53,9 @@
 /* Each streamed set shows its acquisition photo with the printed QR label stuck
    on it; the set number rides in a notched corner tab (top-left). */
 .stream .slide .thumb{position:relative}
-.stream .qr-sticker{position:absolute;right:8px;bottom:8px;z-index:2;background:#fbfbfb;padding:4px;border-radius:6px;transform:rotate(-5deg);box-shadow:0 4px 12px -3px rgba(0,0,0,.55);border:1px solid rgba(0,0,0,.06)}
+.stream .qr-sticker{position:absolute;right:8px;bottom:8px;z-index:2;background:#fbfbfb;padding:4px;border-radius:6px;transform:rotate(-5deg);box-shadow:0 4px 12px -3px rgba(0,0,0,.55);border:1px solid rgba(0,0,0,.06);cursor:pointer;transition:transform 160ms var(--snap),box-shadow 200ms var(--snap)}
+@media(hover:hover){ .stream .qr-sticker:hover{transform:rotate(-5deg) scale(1.12);box-shadow:0 8px 18px -4px rgba(0,0,0,.6)} }
+.stream .qr-sticker:active{transform:rotate(-5deg) scale(.96)}
 .stream .qr-sticker img{display:block;width:38px;height:38px;image-rendering:pixelated;border-radius:2px}
 .stream .slide .tab-tl{font-size:10px;padding:5px 9px 6px}
 
@@ -434,6 +436,20 @@ html.dark .notes-name,html.dark .notes-text{background:rgba(244,245,247,.05)}
 </nav>
 
 <script src="app.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
+<script src="qr.js"></script>
+<script>
+/* Click a QR sticker → print a real sticker instantly (capture phase beats the
+   slide's own navigation). The set code is the slide's corner number. */
+document.addEventListener('click', function(e){
+  var st = e.target.closest('.qr-sticker'); if(!st) return;
+  e.preventDefault(); e.stopPropagation();
+  var slide = st.closest('.slide'), tab = slide && slide.querySelector('.tab-tl');
+  var n = tab ? tab.textContent.trim() : '';
+  var code = /^\d{3,4}$/.test(n) ? 'ASC-2026-' + n.padStart(4, '0') : null;
+  if (code && window.ASCQR && !ASCQR.printSticker(code)) alert('Dopustite skočne prozore za ispis naljepnice.');
+}, true);
+</script>
 <script>
   /* ==========================================================================
      ASC Agent — the "alive" hook engine.

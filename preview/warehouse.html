@@ -92,7 +92,7 @@ html.dark .slot.empty{background:rgba(244,245,247,.04)}
 /* Slot detail popover — the "little window above" a cube. Tap (mobile) or hover
    (desktop) a filled/reserved cube to see who's in it + the exact location. */
 .slot.slot-active{transform:translateY(-2px);box-shadow:0 12px 24px -8px var(--lava-ring);z-index:2}
-.wh-pop{position:fixed;z-index:80;pointer-events:none;width:max-content;max-width:min(280px,90vw);
+.wh-pop{position:fixed;z-index:80;pointer-events:auto;width:max-content;max-width:min(280px,90vw);
   padding:12px 14px 13px;border-radius:15px;background:var(--panel-2);color:var(--ink);
   border:1px solid var(--line);box-shadow:0 20px 48px -16px rgba(2,3,5,.55),0 4px 12px -8px rgba(2,3,5,.4);
   opacity:0;transform:translateY(7px) scale(.96);transform-origin:bottom center;
@@ -103,8 +103,10 @@ html.dark .slot.empty{background:rgba(244,245,247,.04)}
   background:var(--panel-2);border-right:1px solid var(--line);border-bottom:1px solid var(--line);
   transform:translateX(-50%) rotate(45deg)}
 .wh-pop.below::after{bottom:auto;top:-6px;border:0;border-left:1px solid var(--line);border-top:1px solid var(--line)}
-.wh-pop-code{font:700 15px Sora;letter-spacing:-.01em;font-variant-numeric:tabular-nums}
-.wh-pop-who{font:500 12.5px Inter;color:var(--ink-2);margin-top:2px}
+.wh-pop-code{display:block;font:700 15px Sora;letter-spacing:-.01em;font-variant-numeric:tabular-nums;color:var(--ink);text-decoration:none}
+.wh-pop-who{display:block;font:600 12.5px Inter;color:var(--lava-ink);margin-top:3px;text-decoration:none}
+html.dark .wh-pop-who{color:var(--lava-2)}
+@media(hover:hover){ .wh-pop-code:hover,.wh-pop-who:hover{text-decoration:underline} }
 .wh-pop-loc{display:flex;align-items:flex-start;gap:6px;font:600 12px Inter;color:var(--lava-ink);margin-top:8px;line-height:1.35}
 html.dark .wh-pop-loc{color:var(--lava-2)}
 .wh-pop-loc svg{width:14px;height:14px;flex:none;margin-top:1px}
@@ -284,8 +286,8 @@ html.dark .wh-pop-badge.f{color:var(--lava-2)}
   function show(slot) {
     var d = detailsFor(slot);
     pop.innerHTML =
-      '<div class="wh-pop-code">' + esc(d.code) + '</div>' +
-      '<div class="wh-pop-who">' + esc(d.name) + (d.plate ? ' · ' + esc(d.plate) : '') + '</div>' +
+      '<a class="wh-pop-code" href="set-detail.html?code=' + encodeURIComponent(d.code) + '">' + esc(d.code) + '</a>' +
+      '<a class="wh-pop-who" href="customers.html?c=' + encodeURIComponent(d.name) + '">' + esc(d.name) + (d.plate ? ' · ' + esc(d.plate) : '') + ' ›</a>' +
       '<div class="wh-pop-loc">' + PINS + '<span>' + esc(d.loc) + '</span></div>' +
       '<span class="wh-pop-badge ' + (d.reserved ? 'r' : 'f') + '">' + (d.reserved ? 'Rezervirano' : 'Spremljeno') + '</span>';
     pop.hidden = false; pop.classList.remove("below");

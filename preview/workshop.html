@@ -220,7 +220,7 @@ html.dark .ws-btn.is-dark{background:radial-gradient(120% 130% at 90% -20%,rgba(
     var loc = s.loc
       ? '<span class="ws-loc"><span class="ws-loc-k">Lokacija</span><span class="ws-loc-v">'+esc(s.loc).replace(/ · /g,"<br>")+'</span></span>'
       : '<span class="ws-loc none"><span class="ws-loc-k">Lokacija</span><span class="ws-loc-v">Bez lokacije</span></span>';
-    return '<a class="ws-row" href="#">'
+    return '<a class="ws-row" href="set-detail.html?code=' + encodeURIComponent(s.code) + '">'
       + '<span class="ws-row-body">'
       +   '<b>'+esc(s.code)+'</b>'
       +   '<span class="ws-row-who">'+esc(s.who)+' · '+esc(s.plate)+'</span>'

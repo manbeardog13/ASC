@@ -50,8 +50,16 @@ document.getElementById('mode').addEventListener('click', () => {
     const link = (sel, href) => document.querySelectorAll(sel).forEach(a => { if (a.tagName === 'A') a.setAttribute('href', href); });
     link('.act.green', 'checkin.html');
     link('.act.red', 'reminders.html');
-    link('.stream .slide', 'set-detail.html');
-    link('.card.dark .mini', 'reminders.html');
+    // each recent-stream slide opens the set it shows (code from the corner number)
+    document.querySelectorAll('.stream .slide').forEach(a => {
+      const n = ((a.querySelector('.tab-tl') || {}).textContent || '').trim();
+      a.setAttribute('href', /^\d{3,4}$/.test(n) ? 'set-detail.html?code=ASC-2026-' + n.padStart(4, '0') : 'set-detail.html');
+    });
+    // each pickup reminder opens that customer's card
+    document.querySelectorAll('.card.dark .mini').forEach(a => {
+      const who = ((a.querySelector('b') || {}).textContent || '').trim();
+      a.setAttribute('href', who ? 'customers.html?c=' + encodeURIComponent(who) : 'reminders.html');
+    });
   }
 })();
 
