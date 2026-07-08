@@ -158,10 +158,10 @@ if (document.readyState !== 'loading') syncDisc(); else addEventListener('DOMCon
     '</section>';
   document.body.appendChild(dock);
 
-  // Skin the agent as a random studio tire (from the recent-sets stream) with a
-  // random brake-caliper under-glow (yellow / orange / green / red). Re-rolled
-  // every load. The circular crop shows only the tire (no background).
-  const TIRES = ['set-1.jpg','set-2.jpg','set-3.jpg','set-4.jpg','set-5.jpg','set-6.jpg'];
+  // Skin the agent as a random studio-tire CUTOUT (background-removed PNGs of the
+  // recent-sets photos) with a random brake-caliper under-glow (yellow / orange /
+  // green / red). Re-rolled every load. Transparent PNG → just the tire, no disc.
+  const TIRES = ['tire-1.png','tire-2.png','tire-3.png','tire-4.png','tire-5.png','tire-6.png'];
   const GLOWS = ['#ffcf33','#ff8a1a','#3ddc84','#ff4d4d'];
   dock.style.setProperty('--tire', "url('assets/" + TIRES[Math.floor(Math.random() * TIRES.length)] + "')");
   dock.style.setProperty('--glow', GLOWS[Math.floor(Math.random() * GLOWS.length)]);
@@ -302,6 +302,7 @@ if (document.readyState !== 'loading') syncDisc(); else addEventListener('DOMCon
   function speak(text){
     try {
       if (!('speechSynthesis' in window) || !text) return;
+      try { if (localStorage.getItem('asc.speak') === '0') return; } catch(e){}  // muted in Postavke → stay silent
       const v = (speechSynthesis.getVoices() || []).filter(x => (x.lang || '').toLowerCase().indexOf('hr') === 0)[0];
       if (!v) return;                                   // no Croatian voice → stay silent, don't mangle it
       const u = new SpeechSynthesisUtterance(text); u.voice = v; u.lang = 'hr-HR'; u.rate = 1.05;
@@ -357,4 +358,148 @@ if (document.readyState !== 'loading') syncDisc(); else addEventListener('DOMCon
     // didn't map to a screen → treat the whole phrase as a search
     act('Tražim <b>' + esc(text) + '</b>', () => { location.href = 'workshop.html?q=' + encodeURIComponent(text); });
   }
+})();
+
+// ============================================================================
+// Menu drawer — user profile + options. Injected on every page: a round avatar
+// joins the header pill; tapping it slides a right-hand sheet with two tabs.
+//   • Profil    — name / role / email / language + preference switches (theme,
+//                 notifications, agent voice). Persists to localStorage 'asc.profile'.
+//   • Postavke  — sticker SHAPE + which rows print (owner / location). Persists to
+//                 'asc.stickerShape' / 'asc.stickerOwner' / 'asc.stickerLoc', which
+//                 qr.js printSticker() reads. The theme switch mirrors the header
+//                 #mode button (single source of truth: asc.theme + html.dark).
+// ============================================================================
+(() => {
+  const pill = document.querySelector('.top .pill');
+  if (!pill || document.querySelector('.menu-btn')) return;      // no header, or already built
+
+  const mesc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const DEFAULT = { name: 'Operater ASC', role: 'Voditelj skladišta', email: '', lang: 'hr', notify: true, voice: true };
+  const readProfile = () => { try { return Object.assign({}, DEFAULT, JSON.parse(localStorage.getItem('asc.profile') || '{}')); } catch(e){ return Object.assign({}, DEFAULT); } };
+  const writeProfile = (p) => { try { localStorage.setItem('asc.profile', JSON.stringify(p)); } catch(e){} };
+  const getPref = (k, d) => { try { const v = localStorage.getItem(k); return v == null ? d : v; } catch(e){ return d; } };
+  const setPref = (k, v) => { try { localStorage.setItem(k, v); } catch(e){} };
+  const initials = (name) => (String(name || '').trim().split(/\s+/).map(w => w[0]).filter(Boolean).slice(0, 2).join('') || 'A').toUpperCase();
+  const isDark = () => root.classList.contains('dark');
+  const row = (t, d, key, on) =>
+    '<div class="md-row"><div class="md-rt"><div class="t">' + mesc(t) + '</div><div class="d">' + mesc(d) + '</div></div>' +
+    '<button class="md-sw" type="button" role="switch" data-sw="' + key + '" aria-checked="' + (on ? 'true' : 'false') + '" aria-label="' + mesc(t) + '"></button></div>';
+
+  let profile = readProfile();
+  const SHAPES = [['rounded', 'Zaobljeni'], ['soft', 'Meki'], ['sharp', 'Oštri'], ['notch', 'Zarezani']];
+  const shape = getPref('asc.stickerShape', 'rounded');
+  const showOwner = getPref('asc.stickerOwner', '1') !== '0';
+  const showLoc = getPref('asc.stickerLoc', '1') !== '0';
+
+  // avatar launcher in the header pill
+  const btn = document.createElement('button');
+  btn.type = 'button'; btn.className = 'menu-btn'; btn.setAttribute('aria-label', 'Izbornik i profil');
+  btn.textContent = initials(profile.name);
+  pill.appendChild(btn);
+
+  const scrim = document.createElement('div'); scrim.className = 'menu-scrim';
+  const drawer = document.createElement('aside');
+  drawer.className = 'menu-drawer'; drawer.setAttribute('role', 'dialog'); drawer.setAttribute('aria-modal', 'true'); drawer.setAttribute('aria-label', 'Izbornik'); drawer.setAttribute('aria-hidden', 'true');
+  drawer.innerHTML =
+    '<header class="md-head">' +
+      '<div class="md-avatar" data-avatar>' + mesc(initials(profile.name)) + '</div>' +
+      '<div class="md-id"><b data-name>' + mesc(profile.name) + '</b><span data-role>' + mesc(profile.role) + '</span></div>' +
+      '<button class="md-close" type="button" aria-label="Zatvori"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>' +
+    '</header>' +
+    '<nav class="md-tabs"><button class="md-tab on" type="button" data-tab="profile">Profil</button><button class="md-tab" type="button" data-tab="options">Postavke</button></nav>' +
+    '<div class="md-body">' +
+      '<section class="md-panel" data-panel="profile">' +
+        '<div class="md-field"><label for="mp-name">Ime</label><input id="mp-name" type="text" data-f="name" value="' + mesc(profile.name) + '" autocomplete="name"></div>' +
+        '<div class="md-field"><label for="mp-role">Uloga</label><input id="mp-role" type="text" data-f="role" value="' + mesc(profile.role) + '"></div>' +
+        '<div class="md-field"><label for="mp-email">Email</label><input id="mp-email" type="email" data-f="email" value="' + mesc(profile.email) + '" placeholder="ime@asc.hr" autocomplete="email"></div>' +
+        '<div class="md-field"><label for="mp-lang">Jezik</label><select id="mp-lang" data-f="lang"><option value="hr">Hrvatski</option><option value="en">English</option></select></div>' +
+        '<div class="md-section-t">Preferencije</div>' +
+        row('Tamna tema', 'Prebaci svijetli / tamni izgled', 'theme', isDark()) +
+        row('Obavijesti', 'Podsjetnici za preuzimanje', 'notify', profile.notify) +
+        row('Glasovni odgovori', 'ASC Agent odgovara naglas', 'voice', profile.voice) +
+        '<button class="md-logout" type="button" data-logout>Odjava</button>' +
+        '<div class="md-saved" data-saved aria-live="polite">Spremljeno ✓</div>' +
+      '</section>' +
+      '<section class="md-panel" data-panel="options" hidden>' +
+        '<div class="md-section-t">Oblik naljepnice</div>' +
+        '<div class="md-shapes">' + SHAPES.map(([k, lb]) => '<button class="md-shape" type="button" data-shape="' + k + '" aria-pressed="' + (k === shape ? 'true' : 'false') + '"><span class="sw ' + k + '"></span><span class="lb">' + lb + '</span></button>').join('') + '</div>' +
+        '<div class="md-hint">Primjenjuje se na sve nove naljepnice koje generiraš.</div>' +
+        '<div class="md-section-t">Sadržaj naljepnice</div>' +
+        row('Prikaži vlasnika', 'Ime, vozilo i registracija', 'o-owner', showOwner) +
+        row('Prikaži lokaciju', 'Zona · regal · polica', 'o-loc', showLoc) +
+      '</section>' +
+    '</div>';
+  document.body.appendChild(scrim);
+  document.body.appendChild(drawer);
+
+  const q = (s) => drawer.querySelector(s);
+  const savedEl = q('[data-saved]'); let savedT;
+  const flashSaved = () => { if (!savedEl) return; savedEl.classList.add('on'); clearTimeout(savedT); savedT = setTimeout(() => savedEl.classList.remove('on'), 1400); };
+  const syncTheme = () => { const sw = drawer.querySelector('[data-sw="theme"]'); if (sw) sw.setAttribute('aria-checked', isDark() ? 'true' : 'false'); };
+  const setDark = (on) => { root.classList.toggle('dark', on); try { localStorage.setItem('asc.theme', on ? 'dark' : 'light'); } catch(e){} if (typeof paintTheme === 'function') paintTheme(); };
+  const applyIdentity = () => { const ini = initials(profile.name); btn.textContent = ini; q('[data-avatar]').textContent = ini; q('[data-name]').textContent = profile.name || '—'; q('[data-role]').textContent = profile.role || ''; };
+
+  // Modal focus management (mirrors the agent dock): the closed drawer is inert so
+  // its controls are never phantom tab-stops; open → background inert + focus moves
+  // into the sheet; close → focus returns to the avatar launcher.
+  const mbg = [...document.body.children].filter(el => el !== drawer && el !== scrim);
+  drawer.inert = true;
+  const open = () => {
+    document.body.classList.add('menu-open');
+    drawer.setAttribute('aria-hidden', 'false'); drawer.inert = false;
+    mbg.forEach(el => { el.inert = true; });
+    syncTheme();
+    setTimeout(() => { try { q('.md-close').focus({ preventScroll: true }); } catch(e){} }, 60);
+  };
+  const close = () => {
+    document.body.classList.remove('menu-open');
+    mbg.forEach(el => { el.inert = false; });                       // restore reachability BEFORE focusing the launcher
+    try { btn.focus({ preventScroll: true }); } catch(e){}
+    drawer.setAttribute('aria-hidden', 'true'); drawer.inert = true;
+  };
+  btn.addEventListener('click', open);
+  q('.md-close').addEventListener('click', close);
+  scrim.addEventListener('click', close);
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && document.body.classList.contains('menu-open')) close(); });
+
+  drawer.querySelectorAll('.md-tab').forEach(tb => tb.addEventListener('click', () => {
+    drawer.querySelectorAll('.md-tab').forEach(x => x.classList.toggle('on', x === tb));
+    drawer.querySelectorAll('.md-panel').forEach(p => { p.hidden = p.getAttribute('data-panel') !== tb.getAttribute('data-tab'); });
+  }));
+
+  drawer.querySelectorAll('[data-f]').forEach(inp => {
+    if (inp.tagName === 'SELECT') inp.value = profile[inp.getAttribute('data-f')] || 'hr';
+    const onChange = () => { profile[inp.getAttribute('data-f')] = inp.value; writeProfile(profile); applyIdentity(); flashSaved(); };
+    inp.addEventListener('input', onChange); inp.addEventListener('change', onChange);
+  });
+
+  drawer.querySelectorAll('.md-sw').forEach(sw => sw.addEventListener('click', () => {
+    const key = sw.getAttribute('data-sw'); const on = sw.getAttribute('aria-checked') !== 'true';
+    sw.setAttribute('aria-checked', on ? 'true' : 'false');
+    if (key === 'theme') setDark(on);
+    else if (key === 'notify') { profile.notify = on; writeProfile(profile); }
+    else if (key === 'voice') { profile.voice = on; writeProfile(profile); setPref('asc.speak', on ? '1' : '0'); }
+    else if (key === 'o-owner') setPref('asc.stickerOwner', on ? '1' : '0');
+    else if (key === 'o-loc') setPref('asc.stickerLoc', on ? '1' : '0');
+    flashSaved();
+  }));
+
+  drawer.querySelectorAll('.md-shape').forEach(sh => sh.addEventListener('click', () => {
+    drawer.querySelectorAll('.md-shape').forEach(x => x.setAttribute('aria-pressed', x === sh ? 'true' : 'false'));
+    setPref('asc.stickerShape', sh.getAttribute('data-shape')); flashSaved();
+  }));
+
+  q('[data-logout]').addEventListener('click', () => {
+    try { localStorage.removeItem('asc.profile'); } catch(e){}
+    profile = readProfile();
+    drawer.querySelectorAll('[data-f]').forEach(inp => { inp.value = profile[inp.getAttribute('data-f')] || (inp.tagName === 'SELECT' ? 'hr' : ''); });
+    setPref('asc.speak', profile.voice ? '1' : '0');                 // keep the mute-flag in sync with the reset profile
+    const setSw = (key, on) => { const s = drawer.querySelector('.md-sw[data-sw="' + key + '"]'); if (s) s.setAttribute('aria-checked', on ? 'true' : 'false'); };
+    setSw('notify', profile.notify); setSw('voice', profile.voice); syncTheme();
+    applyIdentity(); flashSaved();
+  });
+
+  const modeBtn = document.getElementById('mode');       // keep the switch honest if the header toggle is used
+  if (modeBtn) modeBtn.addEventListener('click', () => setTimeout(syncTheme, 0));
 })();

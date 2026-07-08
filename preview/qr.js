@@ -92,36 +92,85 @@
     return qr.createSvgTag({ cellSize: cellSize || 6, margin: 2, scalable: true });
   }
 
-  // ---- print a sticker — opens a clean print window, instantly ----------------
+  // ---- sticker → in-app overlay (iPhone-safe: always a way back) --------------
+  // The old version did window.open()+auto window.print(): on iOS that spawns a
+  // new tab with the print sheet and NO way back into the app (you had to kill it).
+  // Now the label renders as a full-screen sheet INSIDE the page, with a top-left
+  // Back button (also ESC / backdrop tap / OS back-swipe). Printing is an explicit
+  // button; scoped @media print rules in app.css show only the label. Shape + which
+  // rows to show come from the Postavke menu (localStorage), read here.
+  var stickerPushed = false, stickerPop = null, stickerPrev = null, stickerBg = null;
+  function stickerPref(k, d) { try { var v = localStorage.getItem(k); return v == null ? d : v; } catch(e){ return d; } }
+  function stickerKey(e) {
+    if (e.key === 'Escape') { e.preventDefault(); closeSticker(); return; }
+    if (e.key === 'Tab') {                                   // keep focus inside the sheet
+      var m = document.querySelector('.sticker-modal'); if (!m) return;
+      var f = m.querySelectorAll('button'); if (!f.length) return;
+      var first = f[0], last = f[f.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+  }
+  function closeSticker(fromPop) {
+    var m = document.querySelector('.sticker-modal'); if (!m) return;
+    document.removeEventListener('keydown', stickerKey, true);
+    if (stickerPop) { window.removeEventListener('popstate', stickerPop); stickerPop = null; }
+    if (stickerBg) { stickerBg.forEach(function (el) { try { el.inert = false; } catch(e){} }); stickerBg = null; }  // un-inert the background
+    if (m.parentNode) m.parentNode.removeChild(m);
+    document.documentElement.classList.remove('sticker-lock');
+    try { if (stickerPrev && stickerPrev.focus) stickerPrev.focus({ preventScroll: true }); } catch(e){}   // return focus to the trigger
+    stickerPrev = null;
+    if (stickerPushed && !fromPop) { stickerPushed = false; try { history.back(); } catch(e){} }
+    else stickerPushed = false;
+  }
   function printSticker(code) {
     var set = BY_CODE[code] || { code: code, who: '', vehicle: '', plate: '', season: '', loc: '' };
     var qrMarkup = svg(code, 8) || ('<div style="font:900 20px monospace">' + esc(code) + '</div>');
     var season = SEASON[set.season] || '';
-    var win = window.open('', '_blank', 'width=440,height=660');
-    if (!win) return false;                  // pop-up blocked — caller shows a hint
-    win.document.write('<!doctype html><html lang="hr"><head><meta charset="utf-8"><title>' + esc(code) + '</title>'
-      + '<style>*{box-sizing:border-box}html,body{margin:0}'
-      + 'body{font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;padding:16px;color:#000;background:#fff;display:flex;flex-direction:column;align-items:center}'
-      + '.label{width:2.6in;border:3px solid #000;border-radius:18px;padding:14px 14px 12px;text-align:center}'
-      + '.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}'
-      + '.brand{font-weight:900;letter-spacing:1px;font-size:15px}'
-      + '.season{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;border:1.5px solid #000;border-radius:999px;padding:3px 9px}'
-      + '.qr{width:1.9in;height:1.9in;margin:2px auto 8px}.qr svg{width:100%;height:100%;display:block}'
-      + '.code{font-size:23px;font-weight:900;letter-spacing:.5px;font-variant-numeric:tabular-nums}'
-      + '.who{font-size:14px;font-weight:700;margin-top:8px}.sub{font-size:11px;color:#333;margin-top:2px;line-height:1.35}'
-      + '.loc{margin-top:8px;font-size:13px;font-weight:800;letter-spacing:.3px;border-top:2px dashed #000;padding-top:7px}'
-      + '.loc .lk{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:#333;display:block;margin-bottom:1px}'
-      + '.foot{margin-top:8px;font-size:8.5px;color:#555}@media print{body{padding:0}.noprint{display:none}}</style></head><body>'
-      + '<div class="label"><div class="top"><span class="brand">ASC</span>' + (season ? '<span class="season">' + esc(season) + '</span>' : '') + '</div>'
-      + '<div class="qr">' + qrMarkup + '</div>'
-      + '<div class="code">' + esc(code) + '</div>'
-      + (set.who ? '<div class="who">' + esc(set.who) + '</div>' : '')
-      + '<div class="sub">' + esc([set.vehicle, set.plate].filter(Boolean).join(' · ')) + '</div>'
-      + (set.loc ? '<div class="loc"><span class="lk">Lokacija</span>' + esc(set.loc) + '</div>' : '')
-      + '<div class="foot">Skenirajte kamerom telefona · ' + esc(code) + '</div></div>'
-      + '<div class="noprint" style="margin-top:16px"><button onclick="window.print()" style="padding:11px 22px;font-size:14px;border-radius:12px;border:0;background:#ff4e1b;color:#fff;font-weight:800;cursor:pointer">Ispiši naljepnicu</button></div>'
-      + '<scr' + 'ipt>window.onload=function(){setTimeout(function(){try{window.focus();window.print();}catch(e){}},250);};</scr' + 'ipt></body></html>');
-    win.document.close();
+    var shape = String(stickerPref('asc.stickerShape', 'rounded')).replace(/[^a-z]/g, '') || 'rounded';
+    var showOwner = stickerPref('asc.stickerOwner', '1') !== '0';
+    var showLoc = stickerPref('asc.stickerLoc', '1') !== '0';
+    var trigger = document.activeElement;    // restore focus here on close
+    var hadPush = stickerPushed;             // reuse our history entry instead of stacking a new one
+    closeSticker(true);                      // tear down any sheet already open WITHOUT touching history
+
+    var m = document.createElement('div');
+    m.className = 'sticker-modal';
+    m.setAttribute('role', 'dialog'); m.setAttribute('aria-modal', 'true'); m.setAttribute('aria-label', 'Naljepnica ' + code);
+    m.innerHTML =
+      '<div class="sm-chrome">' +
+        '<button class="sm-back" type="button" aria-label="Natrag">' +
+          '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg><span>Natrag</span></button>' +
+        '<button class="sm-print" type="button">' +
+          '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V3h12v6M6 18H4a2 2 0 01-2-2v-4a2 2 0 012-2h16a2 2 0 012 2v4a2 2 0 01-2 2h-2M7 14h10v7H7z"/></svg><span>Ispiši</span></button>' +
+      '</div>' +
+      '<div class="sm-scroll">' +
+        '<div class="sm-label sm-shape-' + esc(shape) + '">' +
+          '<div class="sm-top"><span class="sm-brand">ASC</span>' + (season ? '<span class="sm-season">' + esc(season) + '</span>' : '') + '</div>' +
+          '<div class="sm-qr">' + qrMarkup + '</div>' +
+          '<div class="sm-code">' + esc(code) + '</div>' +
+          (showOwner && set.who ? '<div class="sm-who">' + esc(set.who) + '</div>' : '') +
+          (showOwner ? '<div class="sm-sub">' + esc([set.vehicle, set.plate].filter(Boolean).join(' · ')) + '</div>' : '') +
+          (showLoc && set.loc ? '<div class="sm-loc"><span class="sm-lk">Lokacija</span>' + esc(set.loc) + '</div>' : '') +
+          '<div class="sm-foot">Skenirajte kamerom telefona · ' + esc(code) + '</div>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(m);
+    document.documentElement.classList.add('sticker-lock');
+    stickerPrev = (trigger && trigger !== document.body) ? trigger : null;
+    stickerBg = [].filter.call(document.body.children, function (el) { return el !== m; });   // background goes inert (real modal trap)
+    stickerBg.forEach(function (el) { try { el.inert = true; } catch(e){} });
+
+    m.querySelector('.sm-back').addEventListener('click', function () { closeSticker(); });
+    m.querySelector('.sm-print').addEventListener('click', function () { try { window.print(); } catch(e){} });
+    m.addEventListener('click', function (e) { if (e.target === m || e.target.className === 'sm-scroll') closeSticker(); });
+    document.addEventListener('keydown', stickerKey, true);
+    setTimeout(function () { try { m.querySelector('.sm-back').focus({ preventScroll: true }); } catch(e){} }, 30);  // move focus INTO the dialog
+    // history: reuse the entry we already own (replace case), else push a fresh one, so the
+    // iOS back-swipe / Android back closes the sheet without stacking dead entries.
+    if (hadPush) { stickerPushed = true; }
+    else { try { history.pushState({ ascSticker: 1 }, ''); stickerPushed = true; } catch(e) { stickerPushed = false; } }
+    if (stickerPushed) { stickerPop = function () { closeSticker(true); }; window.addEventListener('popstate', stickerPop); }
     return true;
   }
 
