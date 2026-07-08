@@ -22,6 +22,8 @@
   var LIST = [
     S('ASC-2026-0248', 'ivan',  'DU-234-AB', 'VW Golf VII',    'winter',     'in_storage',  'Zona A · Regal 4 · Polica 2 · Mjesto 12'),
     S('ASC-2026-0247', 'ana',   'DU-881-KL', 'Škoda Octavia',  'summer',     'in_storage',  'Zona B · Regal 1 · Polica 4'),
+    S('ASC-2026-0250', 'ana',   'DU-410-AK', 'BMW X1',         'winter',     'in_storage',  'Zona B · Regal 3 · Polica 1'),
+    S('ASC-2026-0251', 'ana',   'DU-233-AN', 'Fiat 500',       'all_season', 'reserved',    ''),
     S('ASC-2026-0246', 'marko', 'DU-455-MN', 'Audi A4',        'winter',     'in_storage',  'Zona A · Regal 3 · Polica 2'),
     S('ASC-2026-0245', 'petra', 'DU-662-PP', 'Renault Clio',   'all_season', 'in_storage',  'Zona C · Regal 2 · Polica 1'),
     S('ASC-2026-0244', 'luka',  'DU-733-XY', 'BMW 320d',       'summer',     'in_storage',  'Zona B · Regal 4 · Polica 3'),

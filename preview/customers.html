@@ -99,6 +99,39 @@ html.dark .cstat .v .ic{color:var(--lava-2)}
 .stt.store{background:rgba(46,47,49,.12);color:var(--gun)} html.dark .stt.store{background:rgba(244,245,247,.10);color:#c9ccd2}
 .stt.res{background:var(--lava-tint);color:var(--lava-ink)}
 .stt.out{background:rgba(99,103,111,.16);color:var(--muted)}
+
+/* ---- Database: customer → car → set nested drop-downs (uses shared .disc) ---- */
+#clist{display:flex;flex-direction:column;gap:10px}
+.disc-cust>.disc-head>.disc-ico{font:650 13px Inter;letter-spacing:.02em}
+.disc-cust>.disc-head .disc-titles small{font-weight:500}
+.disc-car{border-radius:14px;background:var(--panel-2);box-shadow:none;border:1px solid var(--line)}
+html.dark .disc-car{background:rgba(244,245,247,.04)}
+.disc-car+.disc-car{margin-top:8px}
+.disc-car>.disc-head{min-height:50px;padding:9px 12px;font-size:14px}
+.disc-car>.disc-head>.disc-ico{width:30px;height:30px;border-radius:9px;background:var(--panel);color:var(--lava-ink);box-shadow:none}
+html.dark .disc-car>.disc-head>.disc-ico{background:rgba(244,245,247,.06);color:var(--lava-2)}
+.disc-car>.disc-head>.disc-ico svg{width:16px;height:16px}
+.cust-contact{display:flex;gap:8px;margin:2px 0 12px;flex-wrap:wrap}
+.cust-contact a{display:inline-flex;align-items:center;gap:7px;min-height:38px;padding:0 13px;border-radius:11px;
+  background:var(--panel-2);border:1px solid var(--line);color:var(--ink);font:600 12.5px Inter;text-decoration:none}
+html.dark .cust-contact a{background:rgba(244,245,247,.05)}
+.cust-contact a:active{transform:scale(.97)}
+.cust-contact a svg{width:15px;height:15px;color:var(--muted)}
+.set-row{display:flex;align-items:center;gap:10px;padding:11px 2px;border-top:1px dashed var(--line)}
+.set-row:first-child{border-top:0}
+.set-open{flex:1;display:flex;align-items:center;gap:9px;min-width:0;text-decoration:none;color:var(--ink)}
+.set-open:active{transform:translateX(2px)}
+.set-open .code{font:700 12.5px Inter;letter-spacing:.02em;white-space:nowrap}
+.set-tags{display:flex;gap:6px;flex-wrap:wrap;margin-left:auto}
+.set-tags .chip,.set-tags .stt{margin-top:0}
+.set-sticker{flex:none;width:40px;height:40px;border-radius:12px;border:1px solid var(--lava-ring);cursor:pointer;
+  background:var(--lava-tint);color:var(--lava-ink);display:grid;place-items:center;
+  transition:transform 150ms var(--snap),background 160ms var(--snap)}
+html.dark .set-sticker{color:var(--lava-2)}
+@media(hover:hover){ .set-sticker:hover{background:var(--lava);color:#fff} }
+.set-sticker:active{transform:scale(.9)}
+.set-sticker svg{width:19px;height:19px}
+@media(max-width:520px){ .set-tags{width:100%;margin-left:0;order:3} .set-row{flex-wrap:wrap} }
 </style>
 </head>
 <body>
@@ -131,18 +164,11 @@ html.dark .cstat .v .ic{color:var(--lava-2)}
     <input id="search" type="search" placeholder="Traži ime ili telefon…" autocomplete="off" aria-label="Traži ime ili telefon">
   </div>
 
-  <!-- LIST | DETAIL -->
-  <section class="cwrap">
-    <div class="card reveal" style="animation-delay:150ms">
-      <span class="tab-tl">popis</span>
-      <h3>Kupci <span class="count-badge" id="listCount">7</span></h3>
-      <div id="clist" class="clist" role="list" aria-label="Popis kupaca"></div>
-    </div>
-
-    <div class="card reveal" id="detail" style="animation-delay:200ms">
-      <span class="tab-tl">karton</span>
-      <!-- detail content injected by page script -->
-    </div>
+  <!-- DATABASE: alphabetical customers → cars → sets, all collapsible drop-downs -->
+  <section class="card reveal" style="animation-delay:150ms">
+    <span class="tab-tl">baza</span>
+    <h3>Kupci i kompleti <span class="count-badge" id="listCount">7</span></h3>
+    <div id="clist" class="clist" aria-label="Kupci"></div>
   </section>
 </main>
 
@@ -155,9 +181,12 @@ html.dark .cstat .v .ic{color:var(--lava-2)}
 </nav>
 
 <script src="app.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
+<script src="qr.js"></script>
 <script>
-/* ---- Customers page behaviour (search + select). Shared theme/dock/count-up
-   live in app.js; this only drives this screen's list ↔ detail. ---- */
+/* ---- Customers = the database: alphabetical, nested fluid drop-downs
+   (customer → cars → sets), simplified first / expandable, with a
+   generate-sticker action on every asset. Shared .disc lives in app.css+app.js. */
 (function(){
   var reduce = matchMedia('(prefers-reduced-motion:reduce)').matches;
 
@@ -181,8 +210,10 @@ html.dark .cstat .v .ic{color:var(--lava-2)}
       { code:'ASC-2026-0246', season:'winter',    status:'in_storage', vehicle:'Audi A4',    plate:'DU-455-MN' },
       { code:'ASC-2026-0231', season:'summer',    status:'in_storage', vehicle:'VW Passat',  plate:'DU-902-MB' },
       { code:'ASC-2026-0155', season:'all_season',status:'reserved',   vehicle:'Audi A4',    plate:'DU-455-MN' } ] },
-    { id:'ana', name:'Ana Kovačević', phone:'098 881 2244', email:'ana.kovacevic@email.hr', vehicles:1, sets:[
-      { code:'ASC-2026-0247', season:'summer', status:'in_storage', vehicle:'Škoda Octavia', plate:'DU-881-KL' } ] },
+    { id:'ana', name:'Ana Kovačević', phone:'098 881 2244', email:'ana.kovacevic@email.hr', vehicles:3, sets:[
+      { code:'ASC-2026-0247', season:'summer',     status:'in_storage', vehicle:'Škoda Octavia', plate:'DU-881-KL' },
+      { code:'ASC-2026-0250', season:'winter',     status:'in_storage', vehicle:'BMW X1',        plate:'DU-410-AK' },
+      { code:'ASC-2026-0251', season:'all_season', status:'reserved',   vehicle:'Fiat 500',      plate:'DU-233-AN' } ] },
     { id:'ivan', name:'Ivan Perić', phone:'091 234 5678', email:'ivan.peric@email.hr', vehicles:1, sets:[
       { code:'ASC-2026-0248', season:'winter', status:'in_storage', vehicle:'VW Golf VII', plate:'DU-234-AB' },
       { code:'ASC-2026-0142', season:'summer', status:'checked_out', vehicle:'VW Golf VII', plate:'DU-234-AB' } ] },
@@ -199,97 +230,95 @@ html.dark .cstat .v .ic{color:var(--lava-2)}
   ];
 
   var listEl = document.getElementById('clist');
-  var detailEl = document.getElementById('detail');
   var countEl = document.getElementById('listCount');
   var searchEl = document.getElementById('search');
-  var selectedId = CUSTOMERS[0].id;
   var query = '';
-  var preselected = false;
-  // Deep-link: ?id=<ownerId> or ?c=<name> preselects a customer (links from
-  // set-detail owner, dashboard, workshop, etc. land straight on their card).
-  try {
-    var qp = new URLSearchParams(location.search);
-    var byId = qp.get('id'), byName = (qp.get('c') || '').toLowerCase().trim();
-    var match = byId ? CUSTOMERS.filter(function(c){ return c.id === byId; })[0] : null;
-    if (!match && byName) match = CUSTOMERS.filter(function(c){ return c.name.toLowerCase() === byName; })[0]
-                              || CUSTOMERS.filter(function(c){ return c.name.toLowerCase().indexOf(byName) !== -1; })[0];
-    if (match) { selectedId = match.id; preselected = true; }
-  } catch(e){}
 
-  function activeSets(c){ return c.sets.filter(function(s){ return s.status !== 'checked_out'; }); }
-
-  function filteredCustomers(){
-    var q = query.toLowerCase().trim();
-    return CUSTOMERS.filter(function(c){ return !q || (c.name+' '+c.phone).toLowerCase().indexOf(q) !== -1; });
-  }
-
-  function renderList(){
-    var q = query.toLowerCase().trim();
-    var rows = filteredCustomers();
-    countEl.textContent = q ? (rows.length + ' od ' + CUSTOMERS.length) : String(CUSTOMERS.length);
-
-    if(!rows.length){
-      listEl.innerHTML = '<div class="cempty"><div class="ei"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></div><h4>Nema rezultata</h4><p>Ništa ne odgovara upitu „'+esc(query)+'”. Pokušajte s imenom ili telefonom.</p></div>';
-      return;
-    }
-    listEl.innerHTML = rows.map(function(c){
-      var n = activeSets(c).length;
-      var spec = (c.phone || 'Bez telefona') + ' · ' + esc(c.sets[0].vehicle);
-      return '<a class="crow'+(c.id===selectedId?' sel':'')+'" role="listitem" href="#" data-id="'+c.id+'">'
-        + '<span class="cav" aria-hidden="true">'+initials(c.name)+'</span>'
-        + '<div class="body"><div class="who">'+esc(c.name)+'</div><div class="spec">'+spec+'</div></div>'
-        + '<div class="cnt"><b>'+n+'</b><span>'+setsNoun(n)+'</span></div></a>';
-    }).join('');
-  }
+  var CHEV = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>';
+  var CAR  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 16.5V13l1.7-4.2A2 2 0 018.6 7.5h6.8a2 2 0 011.9 1.3L19 13v3.5"/><path d="M4 13h16"/><circle cx="7.5" cy="16.5" r="1.4"/><circle cx="16.5" cy="16.5" r="1.4"/></svg>';
+  var QRI  = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 3h7v7H3V3zm2 2v3h3V5H5zm9-2h7v7h-7V3zm2 2v3h3V5h-3zM3 14h7v7H3v-7zm2 2v3h3v-3H5zm9-2h3v3h-3v-3zm3 3h4v2h-2v2h-2v-4zm-3 3h3v2h-3v-2zm4 2h2v2h-2v-2z"/></svg>';
 
   function chip(kind, map){ var m=map[kind]; return '<span class="'+m.c+'">'+m.l+'</span>'; }
   function statusChip(kind){ var m=STATUS[kind]; return '<span class="stt '+m.c+'">'+m.l+'</span>'; }
+  function pluralV(n){ return n===1 ? 'vozilo' : 'vozila'; }
 
-  function renderDetail(){
-    var c = filteredCustomers().filter(function(x){ return x.id===selectedId; })[0];
-    if(!c){
-      detailEl.innerHTML = '<span class="tab-tl">karton</span>'
-        + '<div class="cempty"><div class="ei"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.4"/><path d="M5.5 20a6.5 6.5 0 0113 0"/></svg></div><p>Odaberite kupca s popisa</p></div>';
-      return;
-    }
-    var phoneRow = c.phone
-      ? '<a class="inforow" href="tel:'+esc(c.phone.replace(/\s/g,''))+'"><span class="ic"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5C4 4.7 4.7 4 5.5 4H8l1.6 4L7.8 9.6a12 12 0 006.6 6.6L16 14.4 20 16v2.5c0 .8-.7 1.5-1.5 1.5A15.5 15.5 0 014 5.5z"/></svg></span><span class="lbl">Telefon</span><span class="val">'+esc(c.phone)+'</span></a>'
-      : '<div class="inforow"><span class="ic"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5C4 4.7 4.7 4 5.5 4H8l1.6 4L7.8 9.6a12 12 0 006.6 6.6L16 14.4 20 16v2.5c0 .8-.7 1.5-1.5 1.5A15.5 15.5 0 014 5.5z"/></svg></span><span class="lbl">Telefon</span><span class="val">—</span></div>';
-    var emailRow = c.email
-      ? '<a class="inforow" href="mailto:'+esc(c.email)+'"><span class="ic"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2.4"/><path d="M3.6 6.5L12 12l8.4-5.5"/></svg></span><span class="lbl">E-pošta</span><span class="val">'+esc(c.email)+'</span></a>'
-      : '<div class="inforow"><span class="ic"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2.4"/><path d="M3.6 6.5L12 12l8.4-5.5"/></svg></span><span class="lbl">E-pošta</span><span class="val">—</span></div>';
-
-    var sets = c.sets;
-    var setsHtml = sets.length
-      ? '<div class="clist">'+sets.map(function(s){
-          return '<a class="srow" href="set-detail.html?code='+encodeURIComponent(s.code)+'" aria-label="'+esc(s.code)+'">'
-            + '<div class="toprow"><span class="code">'+esc(s.code)+'</span>'+statusChip(s.status)+chip(s.season,SEASON)+'</div>'
-            + '<div class="spec">'+esc(s.vehicle+' · '+s.plate)+'</div></a>';
-        }).join('')+'</div>'
-      : '<p class="cempty" style="padding:14px 0">Nema aktivnih kompleta.</p>';
-
-    detailEl.innerHTML = '<span class="tab-tl">karton</span>'
-      + '<div class="cust-name">'+esc(c.name)+'</div>'
-      + '<div class="cust-sub">Kupac · Dubrovnik</div>'
-      + '<div class="inforows">'+phoneRow+emailRow+'</div>'
-      + '<div class="cstats">'
-        + '<div class="cstat"><span class="l">Vozila</span><span class="v"><span class="ic"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 16.5V13l1.7-4.2A2 2 0 018.6 7.5h6.8a2 2 0 011.9 1.3L19 13v3.5"/><path d="M4 13h16"/><circle cx="7.5" cy="16.5" r="1.4"/><circle cx="16.5" cy="16.5" r="1.4"/></svg></span>'+c.vehicles+'</span></div>'
-        + '<div class="cstat"><span class="l">Spremljeni kompleti</span><span class="v"><span class="ic"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8l8-4 8 4-8 4-8-4z"/><path d="M4 8v8l8 4 8-4V8"/><path d="M12 12v8"/></svg></span>'+sets.length+'</span></div>'
-      + '</div>'
-      + '<div class="cmod"><div class="cmod-head"><h4>Kompleti guma</h4>'+(sets.length?'<span class="count-badge">'+sets.length+'</span>':'')+'</div>'+setsHtml+'</div>';
+  // Group a customer's sets by car (plate + vehicle), preserving order.
+  function carsOf(c){
+    var by = {}, order = [];
+    c.sets.forEach(function(s){ var k=s.plate+'|'+s.vehicle; if(!by[k]){ by[k]={vehicle:s.vehicle,plate:s.plate,sets:[]}; order.push(k); } by[k].sets.push(s); });
+    return order.map(function(k){ return by[k]; });
+  }
+  function setRow(s){
+    return '<div class="set-row">'
+      + '<a class="set-open" href="set-detail.html?code='+encodeURIComponent(s.code)+'"><span class="code">'+esc(s.code)+'</span>'
+      +   '<span class="set-tags">'+statusChip(s.status)+chip(s.season,SEASON)+'</span></a>'
+      + '<button class="set-sticker" type="button" data-sticker="'+esc(s.code)+'" title="Generiraj naljepnicu" aria-label="Generiraj naljepnicu za '+esc(s.code)+'">'+QRI+'</button>'
+      + '</div>';
+  }
+  function carDisc(car){
+    var n = car.sets.length;
+    return '<div class="disc disc-car" data-open="false">'
+      + '<button class="disc-head" type="button" aria-expanded="false"><span class="disc-ico" aria-hidden="true">'+CAR+'</span>'
+      +   '<span class="disc-titles"><span>'+esc(car.vehicle)+'</span><small>'+esc(car.plate)+'</small></span>'
+      +   '<span class="disc-sub"><b>'+n+'</b> '+setsNoun(n)+'</span><span class="disc-chev">'+CHEV+'</span></button>'
+      + '<div class="disc-panel"><div class="disc-inner"><div class="disc-body">'+car.sets.map(setRow).join('')+'</div></div></div></div>';
+  }
+  function contactRow(c){
+    var out = '';
+    if (c.phone) out += '<a href="tel:'+esc(c.phone.replace(/\s/g,''))+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5C4 4.7 4.7 4 5.5 4H8l1.6 4L7.8 9.6a12 12 0 006.6 6.6L16 14.4 20 16v2.5c0 .8-.7 1.5-1.5 1.5A15.5 15.5 0 014 5.5z"/></svg>'+esc(c.phone)+'</a>';
+    if (c.email) out += '<a href="mailto:'+esc(c.email)+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2.4"/><path d="M3.6 6.5L12 12l8.4-5.5"/></svg>E-pošta</a>';
+    return out ? '<div class="cust-contact">'+out+'</div>' : '';
+  }
+  function custDisc(c){
+    var cars = carsOf(c), nSets = c.sets.length;
+    return '<div class="disc disc-cust" data-open="false" data-id="'+esc(c.id)+'" data-name="'+esc(c.name.toLowerCase())+'">'
+      + '<button class="disc-head" type="button" aria-expanded="false"><span class="disc-ico" aria-hidden="true">'+initials(c.name)+'</span>'
+      +   '<span class="disc-titles"><span>'+esc(c.name)+'</span><small>'+cars.length+' '+pluralV(cars.length)+' · '+nSets+' '+setsNoun(nSets)+'</small></span>'
+      +   '<span class="disc-chev">'+CHEV+'</span></button>'
+      + '<div class="disc-panel"><div class="disc-inner"><div class="disc-body">'+contactRow(c)+cars.map(carDisc).join('')+'</div></div></div></div>';
   }
 
-  listEl.addEventListener('click', function(e){
-    var row = e.target.closest('.crow'); if(!row) return; e.preventDefault();
-    selectedId = row.getAttribute('data-id');
-    renderList(); renderDetail();
-    if(window.matchMedia('(max-width:900px)').matches) detailEl.scrollIntoView({behavior:reduce?'auto':'smooth',block:'start'});
-  });
-  searchEl.addEventListener('input', function(e){ query = e.target.value; renderList(); renderDetail(); });
+  function render(){
+    var q = query.toLowerCase().trim();
+    var rows = CUSTOMERS.filter(function(c){ return !q || (c.name+' '+c.phone).toLowerCase().indexOf(q)!==-1; })
+                        .slice().sort(function(a,b){ return a.name.localeCompare(b.name,'hr'); });
+    countEl.textContent = q ? (rows.length+' od '+CUSTOMERS.length) : String(CUSTOMERS.length);
+    if(!rows.length){
+      listEl.innerHTML = '<div class="cempty"><div class="ei"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></div><h4>Nema rezultata</h4><p>Ništa ne odgovara upitu „'+esc(query)+'”.</p></div>';
+      return;
+    }
+    listEl.innerHTML = rows.map(custDisc).join('');
+  }
 
-  renderList();
-  renderDetail();
-  if (preselected && window.matchMedia('(max-width:900px)').matches) detailEl.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+  searchEl.addEventListener('input', function(e){ query = e.target.value; render(); });
+
+  // Generate a QR sticker straight from any set row inside the drop-downs.
+  listEl.addEventListener('click', function(e){
+    var btn = e.target.closest('[data-sticker]'); if(!btn) return;
+    e.preventDefault(); e.stopPropagation();
+    var code = btn.getAttribute('data-sticker');
+    if (window.ASCQR && !ASCQR.printSticker(code)) alert('Dopustite skočne prozore za ispis naljepnice.');
+  });
+
+  render();
+
+  // Deep-link: ?id / ?c opens (expands) that customer and scrolls to them.
+  try {
+    var qp = new URLSearchParams(location.search);
+    var byId = qp.get('id'), byName = (qp.get('c')||'').toLowerCase().trim();
+    var target = null;
+    if (byId) target = listEl.querySelector('.disc-cust[data-id="'+(window.CSS && CSS.escape ? CSS.escape(byId) : byId)+'"]');
+    if (!target && byName){
+      var all = [].slice.call(listEl.querySelectorAll('.disc-cust'));
+      target = all.filter(function(d){ return d.getAttribute('data-name')===byName; })[0]
+            || all.filter(function(d){ return d.getAttribute('data-name').indexOf(byName)!==-1; })[0];
+    }
+    if (target){
+      target.dataset.open = 'true';
+      target.querySelector('.disc-head').setAttribute('aria-expanded','true');
+      setTimeout(function(){ target.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' }); }, 140);
+    }
+  } catch(e){}
 })();
 </script>
 </body>

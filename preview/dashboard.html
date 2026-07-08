@@ -449,6 +449,27 @@ document.addEventListener('click', function(e){
   var code = /^\d{3,4}$/.test(n) ? 'ASC-2026-' + n.padStart(4, '0') : null;
   if (code && window.ASCQR && !ASCQR.printSticker(code)) alert('Dopustite skočne prozore za ispis naljepnice.');
 }, true);
+
+/* The stage card is no longer just statistics — every stat is clickable. The
+   headline count opens the whole database (customers → cars → sets); the meter
+   opens the warehouse map; each spill jumps to today's relevant screen. */
+(function(){
+  function clickable(el, href, label){
+    if (!el) return;
+    el.style.cursor = 'pointer';
+    el.setAttribute('role', 'link'); el.setAttribute('tabindex', '0');
+    if (label) el.setAttribute('aria-label', label);
+    var go = function(){ location.href = href; };
+    el.addEventListener('click', go);
+    el.addEventListener('keydown', function(e){ if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } });
+  }
+  clickable(document.querySelector('.stage .hero-num'), 'customers.html', 'Otvori bazu svih kompleta');
+  clickable(document.querySelector('.stage .meter'), 'warehouse.html', 'Otvori kartu skladišta');
+  var spillHref = ['checkin.html', 'reminders.html', 'reminders.html'];
+  document.querySelectorAll('.stage .spill').forEach(function(b, i){
+    b.addEventListener('click', function(){ location.href = spillHref[i] || 'customers.html'; });
+  });
+})();
 </script>
 <script>
   /* ==========================================================================
