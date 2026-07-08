@@ -115,15 +115,8 @@ html.dark .tire-edit-row{background:rgba(244,245,247,.04)}
 .tire-edit-row:last-child{margin-bottom:0}
 .tire-grid{display:grid;grid-template-columns:78px 1.5fr 1fr 1.1fr;gap:8px;align-items:center}
 .tire-grid input,.tire-grid select{min-height:40px;padding:9px 11px;font-size:13px;min-width:0}
-.tire-stud{justify-self:end;white-space:nowrap;gap:8px;font-size:12px}
-.tire-stud input{width:40px;height:24px}
-.tire-stud input::after{width:18px;height:18px;top:3px;left:3px}
-.tire-stud input:checked::after{transform:translateX(16px)}
 @media(max-width:720px){
   .tire-grid{grid-template-columns:1fr 1fr;gap:9px}
-  .tire-grid select{grid-column:1}
-  .tire-grid [data-t="size"]{grid-column:1 / -1}
-  .tire-stud{grid-column:1 / -1;justify-self:start}
 }
 
 /* Scan-sidewall status banner */

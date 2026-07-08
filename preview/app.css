@@ -489,7 +489,8 @@ html[data-device="mobile"] .ai-heard:not(:empty)::after,html[data-device="tablet
    violet mic orb to talk, release to act. Tab / scrim / chips / type are hidden. */
 .ci-agent{margin:14px 0 4px}
 .ai-dock.ai-inline{position:static;inset:auto;z-index:auto;pointer-events:auto;display:block}
-.ai-inline .ai-tab,.ai-inline .ai-scrim,.ai-inline .ai-close,.ai-inline .ai-chips,.ai-inline .ai-type{display:none}
+.ai-inline .ai-tab,.ai-inline .ai-scrim,.ai-inline .ai-close,.ai-inline .ai-chips{display:none}
+.ai-inline .ai-type{margin-top:12px;width:100%}   /* keep a typed fallback if speech is unavailable / mic denied */
 .ai-inline .ai-panel{position:static;transform:none!important;opacity:1!important;width:auto;max-width:none;max-height:none;overflow:visible;margin:0;padding:18px 18px 20px}
 .ai-inline .ai-panel::before{display:none}
 .ai-inline .ai-head{margin-bottom:4px;justify-content:center}
