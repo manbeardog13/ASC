@@ -108,6 +108,14 @@ html.dark .code-field input{background:rgba(244,245,247,.05)}
   font-size:12px;line-height:1.5;color:var(--muted)}
 .tip svg{width:16px;height:16px;flex:none;margin-top:1px;color:var(--lava-ink)}
 html.dark .tip svg{color:var(--lava-2)}
+
+/* live camera layer — html5-qrcode injects a <video>; keep the AR overlay on top */
+.vf-reader{position:absolute;inset:0;z-index:0;background:#000}
+.vf-reader video{width:100%!important;height:100%!important;object-fit:cover;display:block}
+.vf .grid,.vf .vig,.vf .live,.vf .line,.vf .frame,.vf .cue{z-index:2}
+.vf.scanning .grid,.vf.scanning .vig,.vf.scanning .qr{opacity:0;transition:opacity .45s var(--smooth)}
+.vf.hit .frame .cx{border-color:var(--green);filter:drop-shadow(0 0 10px rgba(47,191,91,.75))}
+.vf.vf-off{cursor:pointer}
 </style>
 </head>
 <body>
@@ -181,17 +189,65 @@ html.dark .tip svg{color:var(--lava-2)}
 </nav>
 
 <script src="app.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="qr.js"></script>
 <script>
-/* Page-only wiring — mirrors js/views/scan.js interactions, no external deps.
-   The shared app.js already handles theme toggle + dock tint. */
+/* Real scanning: live camera (html5-qrcode) + photo + manual code — all resolve
+   to a canonical ASC code (via ASCQR) and open set-detail.html?code=. */
 (function(){
   var manual = document.getElementById('manual');
-  var open = document.getElementById('openManual');
-  var photo = document.getElementById('photoBtn');
-  var openCode = function(){ /* preview: navigation is inert */ };
-  open.addEventListener('click', openCode);
-  photo.addEventListener('click', function(){ manual.focus(); });
-  manual.addEventListener('keydown', function(e){ if(e.key === 'Enter'){ e.preventDefault(); openCode(); } });
+  var openBtn = document.getElementById('openManual');
+  var photoBtn = document.getElementById('photoBtn');
+  var vf = document.querySelector('.vf');
+  var cue = vf.querySelector('.cue');
+  var flashT;
+
+  function go(code){ if(code){ location.href = 'set-detail.html?code=' + encodeURIComponent(code); } }
+  function cueText(t){ if(cue) cue.textContent = t; }
+  function flash(t){ cueText(t); clearTimeout(flashT); flashT = setTimeout(function(){ cueText('Poravnajte QR unutar okvira'); }, 2600); }
+
+  // ---- manual code ----
+  function openManual(){
+    var code = window.ASCQR ? ASCQR.normalize(manual.value, true) : null;
+    if(code){ go(code); }
+    else { manual.focus(); if(manual.select) manual.select(); flash('Neispravan kôd — npr. ASC-2026-0042'); }
+  }
+  openBtn.addEventListener('click', openManual);
+  manual.addEventListener('keydown', function(e){ if(e.key === 'Enter'){ e.preventDefault(); openManual(); } });
+
+  // ---- photo fallback (native camera → decodes even where live camera is blocked) ----
+  var fileInput = document.createElement('input');
+  fileInput.type = 'file'; fileInput.accept = 'image/*'; fileInput.setAttribute('capture','environment'); fileInput.style.display = 'none';
+  document.body.appendChild(fileInput);
+  photoBtn.addEventListener('click', function(){ fileInput.click(); });
+  fileInput.addEventListener('change', function(){
+    var f = fileInput.files && fileInput.files[0];
+    fileInput.value = '';
+    if(!f || !window.ASCQR) return;
+    cueText('Čitam fotografiju…');
+    ASCQR.scanFile(f).then(function(code){ if(code) go(code); else flash('Na fotografiji nema QR koda.'); },
+                          function(){ flash('Fotografiju nije moguće pročitati.'); });
+  });
+
+  // ---- live camera ----
+  function startCamera(){
+    if(!window.ASCQR) return;
+    var reader = document.getElementById('reader');
+    if(!reader){ reader = document.createElement('div'); reader.id = 'reader'; reader.className = 'vf-reader'; vf.insertBefore(reader, vf.firstChild); }
+    vf.classList.remove('vf-off'); vf.classList.add('scanning');
+    ASCQR.scanInto('reader', function(code){
+      if(code){ vf.classList.add('hit'); cueText('Otvaram…'); go(code); }
+      else { flash('To nije ASC naljepnica.'); }
+    }, function(err){
+      vf.classList.remove('scanning'); vf.classList.add('vf-off');
+      cueText(err && err.message === 'nolib'
+        ? 'Skener se ne može učitati — snimi fotografiju ili upiši kôd'
+        : 'Dodirni za kameru — ili snimi fotografiju / upiši kôd');
+    });
+  }
+  if (document.readyState !== 'loading') startCamera(); else addEventListener('DOMContentLoaded', startCamera);
+  // tap the viewfinder to (re)try the camera after granting permission
+  vf.addEventListener('click', function(){ if(vf.classList.contains('vf-off')) startCamera(); });
 })();
 </script>
 </body>

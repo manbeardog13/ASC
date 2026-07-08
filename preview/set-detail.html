@@ -400,6 +400,8 @@ html.dark .tl-item:nth-child(odd){background:rgba(244,245,247,.04)}
 </nav>
 
 <script src="app.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
+<script src="qr.js"></script>
 <script>
 /* Page-local wiring only — count-up/dock/theme come from app.js. */
 (function(){
@@ -433,6 +435,48 @@ html.dark .tl-item:nth-child(odd){background:rgba(244,245,247,.04)}
   });
   fields.forEach((f) => f.addEventListener('input', syncPreview));
   syncPreview();
+})();
+</script>
+<script>
+/* Deep-link / scan target: fill the set identity from ?code, wire the sticker
+   ("Naljepnica") to print instantly, and make the owner a link to their card. */
+(function(){
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+  var SEASON_CLS = { winter:'win', summer:'', all_season:'all' };
+  var q = function(s){ return document.querySelector(s); };
+  var codeEl = q('.detail-head .code');
+  var code = window.ASCQR ? ASCQR.normalize(new URLSearchParams(location.search).get('code'), true) : null;
+  if (!code) code = codeEl ? codeEl.textContent.trim() : null;      // default: the template set
+  var set = (code && window.ASCQR) ? ASCQR.lookup(code) : null;
+
+  function setChipText(chip, text){ var last = chip.lastChild; if(last && last.nodeType===3) last.textContent = text; else chip.appendChild(document.createTextNode(text)); }
+
+  if (code && codeEl) { codeEl.textContent = code; document.title = 'ASC — ' + code; }
+  if (set) {
+    var whoEl = q('.detail-head .who');
+    if (whoEl) whoEl.innerHTML = '<a href="customers.html?id=' + encodeURIComponent(set.owner) + '" style="color:inherit;text-decoration:none">' + esc(set.who) + ' ›</a>';
+    var chips = document.querySelectorAll('.detail-chips .chip');
+    if (chips[0]) setChipText(chips[0], ASCQR.STATUS[set.status] || set.status);
+    if (chips[1]) { setChipText(chips[1], ASCQR.SEASON[set.season] || set.season); chips[1].classList.remove('win','all'); if (SEASON_CLS[set.season]) chips[1].classList.add(SEASON_CLS[set.season]); }
+    var kv = document.querySelectorAll('.kv > div .v');
+    if (kv[0]) kv[0].textContent = set.vehicle;
+    if (kv[1]) kv[1].textContent = set.plate;
+    if (set.loc) {
+      var segs = set.loc.split('·').map(function(x){ return x.trim(); });
+      var pick = function(kw){ for (var i=0;i<segs.length;i++){ if (segs[i].toLowerCase().indexOf(kw)===0) return segs[i].replace(/^\S+\s*/,''); } return null; };
+      var cells = document.querySelectorAll('.loc-block .loc-value');
+      var vals = [pick('zona'), pick('regal'), pick('polica'), pick('mjesto')];
+      cells.forEach(function(c,i){ if (vals[i]) c.textContent = vals[i]; else if (vals[i]===null && i>=1) { c.textContent='—'; c.parentElement.classList.add('loc-cell-empty'); } });
+    }
+  }
+
+  // The sticker menu item → generate + print instantly.
+  var stickerItem = Array.prototype.filter.call(document.querySelectorAll('.sd-menu-item'), function(el){ return /naljepnic/i.test(el.textContent); })[0];
+  if (stickerItem) stickerItem.addEventListener('click', function(e){
+    e.preventDefault();
+    var c = code || (codeEl ? codeEl.textContent.trim() : '');
+    if (window.ASCQR && c && !ASCQR.printSticker(c)) alert('Dopustite skočne prozore za ispis naljepnice.');
+  });
 })();
 </script>
 </body>

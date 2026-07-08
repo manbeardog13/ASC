@@ -204,6 +204,17 @@ html.dark .cstat .v .ic{color:var(--lava-2)}
   var searchEl = document.getElementById('search');
   var selectedId = CUSTOMERS[0].id;
   var query = '';
+  var preselected = false;
+  // Deep-link: ?id=<ownerId> or ?c=<name> preselects a customer (links from
+  // set-detail owner, dashboard, workshop, etc. land straight on their card).
+  try {
+    var qp = new URLSearchParams(location.search);
+    var byId = qp.get('id'), byName = (qp.get('c') || '').toLowerCase().trim();
+    var match = byId ? CUSTOMERS.filter(function(c){ return c.id === byId; })[0] : null;
+    if (!match && byName) match = CUSTOMERS.filter(function(c){ return c.name.toLowerCase() === byName; })[0]
+                              || CUSTOMERS.filter(function(c){ return c.name.toLowerCase().indexOf(byName) !== -1; })[0];
+    if (match) { selectedId = match.id; preselected = true; }
+  } catch(e){}
 
   function activeSets(c){ return c.sets.filter(function(s){ return s.status !== 'checked_out'; }); }
 
@@ -251,7 +262,7 @@ html.dark .cstat .v .ic{color:var(--lava-2)}
     var sets = c.sets;
     var setsHtml = sets.length
       ? '<div class="clist">'+sets.map(function(s){
-          return '<a class="srow" href="#" aria-label="'+esc(s.code)+'">'
+          return '<a class="srow" href="set-detail.html?code='+encodeURIComponent(s.code)+'" aria-label="'+esc(s.code)+'">'
             + '<div class="toprow"><span class="code">'+esc(s.code)+'</span>'+statusChip(s.status)+chip(s.season,SEASON)+'</div>'
             + '<div class="spec">'+esc(s.vehicle+' · '+s.plate)+'</div></a>';
         }).join('')+'</div>'
@@ -278,6 +289,7 @@ html.dark .cstat .v .ic{color:var(--lava-2)}
 
   renderList();
   renderDetail();
+  if (preselected && window.matchMedia('(max-width:900px)').matches) detailEl.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
 })();
 </script>
 </body>
