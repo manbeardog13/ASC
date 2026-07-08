@@ -248,30 +248,33 @@ html.dark .dock a.on{color:var(--lava-2)}
 .ai-dock *{box-sizing:border-box}
 
 /* the tucked tab */
-.ai-tab{position:fixed;right:0;top:41%;z-index:66;pointer-events:auto;
+.ai-tab{position:fixed;right:env(safe-area-inset-right,0px);top:41%;z-index:66;pointer-events:auto;
   width:34px;height:92px;padding:0;border:0;cursor:pointer;color:#fff;display:grid;place-items:center;
   border-radius:17px 0 0 17px;
   background:linear-gradient(152deg,#a78bfa,#8b5cf6 46%,#6d28d9);
   box-shadow:-7px 12px 28px -10px rgba(96,42,196,.72),inset 0 1px 0 rgba(255,255,255,.22),inset 1px 0 0 rgba(255,255,255,.12);
-  animation:aiTabBreathe 3.6s ease-in-out infinite;
   transition:transform .55s cubic-bezier(.16,1,.3,1),width .4s var(--smooth),box-shadow .4s var(--smooth),opacity .4s var(--smooth)}
-.ai-tab svg{width:19px;height:19px}
-.ai-tab::before{content:"";position:absolute;left:6px;top:12px;bottom:12px;width:2px;border-radius:2px;
+.ai-tab svg{width:19px;height:19px;position:relative;z-index:1}
+.ai-tab::before{content:"";position:absolute;left:6px;top:12px;bottom:12px;width:2px;border-radius:2px;z-index:1;
   background:linear-gradient(#fff,rgba(255,255,255,.2));opacity:.5}
-@keyframes aiTabBreathe{50%{box-shadow:-7px 12px 34px -8px rgba(150,96,255,.9),inset 0 1px 0 rgba(255,255,255,.22),inset 1px 0 0 rgba(255,255,255,.12)}}
+/* breathe = a composited ::after opacity pulse (never animate box-shadow → no per-frame repaint) */
+.ai-tab::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+  box-shadow:-7px 12px 34px -8px rgba(150,96,255,.9);opacity:.35;
+  animation:aiTabBreathe 3.6s ease-in-out infinite}
+@keyframes aiTabBreathe{50%{opacity:.85}}
 @media(hover:hover){ .ai-tab:hover{width:42px;box-shadow:-9px 14px 32px -8px rgba(224,64,208,.72)} }
 .ai-tab:active{transform:scale(.95)}
 .ai-dock[data-open="true"] .ai-tab{transform:translateX(130%);opacity:0;pointer-events:none;animation:none}
 
 /* soft scrim to focus + tap-to-close (very light — not a heavy modal) */
-.ai-scrim{position:fixed;inset:0;z-index:65;pointer-events:none;opacity:0;
+.ai-scrim{position:fixed;inset:0;z-index:65;pointer-events:none;opacity:0;touch-action:none;
   background:radial-gradient(120% 90% at 100% 50%,rgba(20,10,45,.5),rgba(4,3,10,.28) 60%,transparent);
   transition:opacity .5s var(--smooth)}
 .ai-dock[data-open="true"] .ai-scrim{opacity:1;pointer-events:auto}
 
 /* the panel */
-.ai-panel{position:fixed;right:10px;top:50%;z-index:66;pointer-events:auto;
-  width:min(360px,90vw);max-height:calc(100dvh - 90px);overflow-y:auto;-webkit-overflow-scrolling:touch;
+.ai-panel{position:fixed;right:calc(10px + env(safe-area-inset-right,0px));top:50%;z-index:66;pointer-events:auto;
+  width:min(360px,90vw);max-height:calc(100dvh - 90px);overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;
   transform:translate(calc(100% + 26px),-50%);
   transition:transform .58s cubic-bezier(.16,1,.3,1);will-change:transform;
   border-radius:26px;padding:16px 16px 14px;color:#f4f0ff;
@@ -345,7 +348,7 @@ html.dark .dock a.on{color:var(--lava-2)}
 .ai-chip:active{transform:scale(.94)}
 
 @media(max-width:400px){ .ai-panel{width:calc(100vw - 20px);right:10px} .ai-mic{width:96px;height:96px} .ai-mic-orb svg{width:36px;height:36px} }
-@media(prefers-reduced-motion:reduce){ .ai-tab{animation:none} .ai-mic.is-live::before,.ai-mic.is-live::after{animation:none} }
+@media(prefers-reduced-motion:reduce){ .ai-tab::after{animation:none} .ai-mic.is-live::before,.ai-mic.is-live::after{animation:none} }
 
 /* ============================== A11y · motion ========================== */
 :focus-visible{outline:2px solid var(--lava-ink);outline-offset:2px;border-radius:10px}

@@ -104,14 +104,14 @@ if (document.readyState !== 'loading') animate(); else addEventListener('DOMCont
   dock.innerHTML =
     '<button class="ai-tab" aria-label="ASC Agent — glasovni pomoćnik" aria-expanded="false">' + ICON.tab + '</button>' +
     '<div class="ai-scrim"></div>' +
-    '<section class="ai-panel" role="dialog" aria-label="ASC Agent" aria-hidden="true">' +
+    '<section class="ai-panel" role="dialog" aria-modal="true" aria-label="ASC Agent" aria-hidden="true">' +
       '<div class="ai-head"><span class="ai-title"><span class="dot"></span> ASC Agent</span>' +
         '<button class="ai-close" aria-label="Zatvori">' + ICON.close + '</button></div>' +
       '<div class="ai-stage">' +
         '<button class="ai-mic" aria-label="Drži i govori">' + ICON.mic + '<span class="ai-mic-orb">' + ICON.mic + '</span></button>' +
-        '<p class="ai-hint"></p>' +
+        '<p class="ai-hint" aria-live="polite"></p>' +
         '<div class="ai-heard"></div>' +
-        '<div class="ai-result"></div>' +
+        '<div class="ai-result" role="status" aria-live="polite"></div>' +
       '</div>' +
       '<div class="ai-chips">' +
         '<button class="ai-chip" data-cmd="skladište">Skladište</button>' +
@@ -134,23 +134,46 @@ if (document.readyState !== 'loading') animate(); else addEventListener('DOMCont
   if (!SR) mic.classList.add('is-off');
 
   // ---- open / close ---------------------------------------------------------
+  // Background siblings go inert while open (a real modal trap); the closed panel
+  // is inert so its controls are never phantom tab-stops. Focus returns to the
+  // tab on close (moved BEFORE aria-hidden, so nothing is stranded).
+  const bg = [...document.body.children].filter(el => el !== dock);
   let openState = false;
-  const open = () => { openState = true; dock.dataset.open = 'true'; tab.setAttribute('aria-expanded','true'); panel.setAttribute('aria-hidden','false'); setTimeout(() => { try { (SR ? mic : input).focus({ preventScroll:true }); } catch(e){} }, 380); };
-  const close = () => { openState = false; dock.dataset.open = 'false'; tab.setAttribute('aria-expanded','false'); panel.setAttribute('aria-hidden','true'); endVoice(true); };
+  panel.inert = true;
+  const open = () => {
+    if (openState) return;
+    openState = true; dock.dataset.open = 'true';
+    tab.setAttribute('aria-expanded','true'); panel.setAttribute('aria-hidden','false'); panel.inert = false;
+    bg.forEach(el => { el.inert = true; });
+    setTimeout(() => { try { (SR ? mic : input).focus({ preventScroll:true }); } catch(e){} }, 380);
+  };
+  const close = () => {
+    if (!openState) return;
+    openState = false; endVoice(true);
+    try { tab.focus({ preventScroll:true }); } catch(e){}          // return focus BEFORE hiding
+    dock.dataset.open = 'false'; tab.setAttribute('aria-expanded','false');
+    panel.setAttribute('aria-hidden','true'); panel.inert = true;
+    bg.forEach(el => { el.inert = false; });
+  };
   tab.addEventListener('click', open);
   $('.ai-close').addEventListener('click', close);
   scrim.addEventListener('click', close);
   addEventListener('keydown', (e) => { if (e.key === 'Escape' && openState) { e.stopPropagation(); close(); } });
 
   // ---- press-and-hold voice (walkie-talkie) --------------------------------
-  let rec = null, finalText = '', interimText = '', holding = false, pendingFinalize = false;
+  // Robust across engines: iOS Safari ignores `continuous` and ends mid-hold, so
+  // a SPONTANEOUS end while still held RESTARTS (keep-alive). A session `token`
+  // guards every async callback, so a fast re-press can't replay a stale command
+  // or clobber a newer session. RELEASE submits (like Enter); an interrupted press
+  // (pointercancel) DISCARDS. Permission/no-speech hints survive finger-up.
+  let rec = null, finalText = '', interimText = '', holding = false, userStopping = false, lastError = false, token = 0, pointerUsed = false;
 
-  function startVoice(){
-    if (!SR || rec) return;
-    finalText = ''; interimText = ''; heard.textContent = '…'; result.textContent = ''; result.classList.remove('pop');
-    rec = new SR();
-    rec.lang = 'hr-HR'; rec.continuous = true; rec.interimResults = true; rec.maxAlternatives = 1;
-    rec.onresult = (e) => {
+  function startRec(my){
+    if (!SR || rec || my !== token) return;
+    const r = new SR();
+    r.lang = 'hr-HR'; r.continuous = true; r.interimResults = true; r.maxAlternatives = 1;
+    r.onresult = (e) => {
+      if (my !== token) return;
       interimText = '';
       for (let i = e.resultIndex; i < e.results.length; i++) {
         const txt = e.results[i][0].transcript;
@@ -158,40 +181,67 @@ if (document.readyState !== 'loading') animate(); else addEventListener('DOMCont
       }
       heard.textContent = (finalText + interimText).trim() || '…';
     };
-    rec.onerror = (e) => {
-      if (e.error === 'not-allowed' || e.error === 'service-not-allowed') { hint.textContent = 'Dopusti mikrofon u pregledniku'; }
-      else if (e.error === 'no-speech') { hint.textContent = 'Nisam čula — pokušaj ponovno'; }
+    r.onerror = (e) => {
+      if (my !== token) return;
+      if (e.error === 'not-allowed' || e.error === 'service-not-allowed') { lastError = true; hint.textContent = 'Dopusti mikrofon u pregledniku'; }
+      else if (e.error === 'no-speech') { lastError = true; hint.textContent = 'Nisam čula — pokušaj ponovno'; }
     };
-    rec.onend = () => { rec = null; mic.classList.remove('is-live'); if (pendingFinalize) { pendingFinalize = false; doFinalize(); } };
-    try { rec.start(); mic.classList.add('is-live'); hint.textContent = 'Slušam…'; }
-    catch(e){ rec = null; mic.classList.remove('is-live'); }
+    r.onend = () => {
+      if (rec === r) rec = null;
+      if (my !== token) return;                                       // superseded by a newer press
+      if (holding && !userStopping && !lastError) { startRec(my); return; }  // engine ended mid-hold → keep listening
+      mic.classList.remove('is-live');
+      finalize(my);
+    };
+    rec = r;
+    try { r.start(); mic.classList.add('is-live'); if (!lastError) hint.textContent = 'Slušam…'; }
+    catch(e){ if (rec === r) rec = null; }
+  }
+  function press(){
+    if (!SR) { input.focus(); return; }
+    holding = true; userStopping = false; lastError = false;
+    finalText = ''; interimText = '';
+    heard.textContent = '…'; result.textContent = ''; result.classList.remove('pop');
+    const my = ++token;
+    if (rec) { try { rec.abort(); } catch(e){} rec = null; }         // discard any draining recognizer
+    startRec(my);
+  }
+  function release(submit){
+    if (!holding) return;
+    holding = false; userStopping = true;
+    mic.classList.remove('is-live');                                 // stop the pulse immediately (both paths)
+    if (!lastError) hint.textContent = idleHint;
+    if (!submit) { ++token; if (rec) { try { rec.abort(); } catch(e){} } return; }  // interrupted → discard, never Enter
+    if (rec) { try { rec.stop(); } catch(e){ finalize(token); } }    // stop → onend → finalize
+    else finalize(token);
+  }
+  function finalize(my){
+    if (my !== token) return;
+    mic.classList.remove('is-live');
+    if (!lastError) hint.textContent = idleHint;
+    const text = (finalText || interimText || '').trim();
+    finalText = ''; interimText = '';                                // consume — never replay
+    if (text && text !== '…') { heard.textContent = text; handle(text); }   // release = Enter
   }
   function endVoice(silent){
-    holding = false;
-    if (rec) { pendingFinalize = !silent; try { rec.stop(); } catch(e){ pendingFinalize = false; } }
-    else if (!silent) { doFinalize(); }
-    if (silent) { mic.classList.remove('is-live'); hint.textContent = idleHint; }
-  }
-  function doFinalize(){
-    mic.classList.remove('is-live');
-    hint.textContent = idleHint;
-    const text = (finalText || interimText || '').trim();
-    if (text && text !== '…') { heard.textContent = text; handle(text); }   // release = Enter
+    if (holding) return release(false);                              // closing mid-hold discards, never submits
+    if (silent) { mic.classList.remove('is-live'); if (!lastError) hint.textContent = idleHint; }
   }
 
   mic.addEventListener('contextmenu', (e) => e.preventDefault());
   mic.addEventListener('pointerdown', (e) => {
     if (e.button && e.button !== 0) return;
+    pointerUsed = true;
     if (!SR) { input.focus(); return; }
     e.preventDefault();
-    holding = true;
     try { mic.setPointerCapture(e.pointerId); } catch(err){}
-    startVoice();
+    press();
   });
-  const releaseHold = () => { if (holding) endVoice(false); };
-  mic.addEventListener('pointerup', releaseHold);
-  mic.addEventListener('pointercancel', releaseHold);
-  mic.addEventListener('lostpointercapture', releaseHold);
+  mic.addEventListener('pointerup', () => release(true));
+  mic.addEventListener('pointercancel', () => release(false));       // OS interruption → abort, not Enter
+  mic.addEventListener('lostpointercapture', () => { if (holding) release(true); });
+  // keyboard / switch users can't press-and-hold — route activation to the field
+  mic.addEventListener('click', () => { if (pointerUsed) { pointerUsed = false; return; } input.focus(); });
 
   // ---- typed + chip fallbacks ----------------------------------------------
   form.addEventListener('submit', (e) => { e.preventDefault(); const t = input.value.trim(); if (t) { heard.textContent = t; input.value = ''; handle(t); } });

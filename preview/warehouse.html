@@ -213,7 +213,7 @@ html.dark .wh-pop-badge.f{color:var(--lava-2)}
           var cls = st === "R" ? "reserved" : "filled";
           var dot = st === "R" ? '<span class="rdot" aria-hidden="true"></span>' : '';
           var lab = d.name + " · " + d.plate + " · " + d.code;
-          return '<a class="slot ' + cls + '" href="#" aria-label="' + esc(lab) + '">' + pos + dot + '</a>';
+          return '<a class="slot ' + cls + '" href="#" role="button" aria-label="' + esc(lab) + '">' + pos + dot + '</a>';
         }).join("");
         return '<div class="wh-shelf"><span class="wh-shelf-lab">Polica ' + esc(sh.s) + '</span><div class="slots">' + cells + '</div></div>';
       }).join("");
@@ -325,7 +325,9 @@ html.dark .wh-pop-badge.f{color:var(--lava-2)}
       if (slot && !(e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest(".slot"))) hide();
     });
   }
-  document.addEventListener("click", function (e) {
+  // Dismiss on a tap anywhere else. Bound to pointerdown, not click: iOS Safari
+  // fires no click on non-interactive background, so click-only never dismissed.
+  document.addEventListener("pointerdown", function (e) {
     if (active && !e.target.closest(".slot") && !e.target.closest(".wh-pop")) hide();
   });
   addEventListener("scroll", hide, { passive: true });
