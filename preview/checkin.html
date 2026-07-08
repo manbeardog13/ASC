@@ -398,6 +398,32 @@ html.dark .btn-primary{background:linear-gradient(180deg,var(--lava-2),var(--lav
     if(!$('c_name').value.trim()){ $('c_name').focus(); showToast('Ime kupca je obavezno.'); return; }
     showToast('Spremljeno ASC-2026-0249');
   });
+
+  // ---- ASC Agent (Gemini) prefill ------------------------------------------
+  // create_tire_set stashes what the user dictated in sessionStorage + sends us
+  // here; fill the form so the employee just checks + confirms.
+  try {
+    const pf = JSON.parse(sessionStorage.getItem('asc.prefill') || 'null');
+    if (pf) {
+      sessionStorage.removeItem('asc.prefill');
+      const setVal = (id, v) => { if (v != null && v !== '' && $(id)) $(id).value = v; };
+      setVal('c_name', pf.customer_name); setVal('c_phone', pf.phone); setVal('c_email', pf.email);
+      setVal('v_make', pf.make); setVal('v_model', pf.model); setVal('v_year', pf.year);
+      setVal('v_plate', pf.plate ? String(pf.plate).toUpperCase() : '');
+      setVal('s_zone', pf.zone); setVal('s_rack', pf.rack); setVal('s_shelf', pf.shelf); setVal('s_slot', pf.slot);
+      setVal('s_notes', pf.notes);
+      if (pf.season) { const sb = form.querySelector('[data-season="' + pf.season + '"]'); if (sb) sb.click(); }
+      const qty = Math.max(1, Math.min(8, Number(pf.quantity) || 4));
+      $('s_qty').value = qty; renderTires(qty);
+      if (pf.tire_size || pf.brand) tiresBox.querySelectorAll('.tire-edit-row').forEach((r) => {
+        if (pf.tire_size) r.querySelector('[data-t="size"]').value = pf.tire_size;
+        if (pf.brand) r.querySelector('[data-t="brand"]').value = pf.brand;
+      });
+      if (form.animate) form.animate([{ opacity:.55 }, { opacity:1 }], { duration: 480, easing: 'ease' });
+      showToast('ASC Agent je pripremio podatke — provjeri i potvrdi.');
+      setTimeout(() => { try { $('c_name').scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch(e){} }, 160);
+    }
+  } catch(e){}
 })();
 </script>
 </body>
