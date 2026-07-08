@@ -421,9 +421,12 @@ if (document.readyState !== 'loading') syncDisc(); else addEventListener('DOMCon
       '<div class="md-id"><b data-name>' + mesc(profile.name) + '</b><span data-role>' + mesc(profile.role) + '</span></div>' +
       '<button class="md-close" type="button" aria-label="Zatvori"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>' +
     '</header>' +
-    '<nav class="md-tabs"><button class="md-tab on" type="button" data-tab="profile">Profil</button><button class="md-tab" type="button" data-tab="options">Postavke</button></nav>' +
+    '<nav class="md-tabs"><button class="md-tab on" type="button" data-tab="menu">Izbornik</button><button class="md-tab" type="button" data-tab="profile">Profil</button><button class="md-tab" type="button" data-tab="options">Postavke</button></nav>' +
     '<div class="md-body">' +
-      '<section class="md-panel" data-panel="profile">' +
+      '<section class="md-panel" data-panel="menu">' +
+        '<nav class="md-links">' + [['customers.html','Kupci'],['workshop.html','Radionica'],['reminders.html','Podsjetnici'],['assistant.html','ASC Agent'],['users.html','Korisnici'],['recycle.html','Koš za smeće']].map(l => '<a class="md-link" href="' + l[0] + '"><span>' + l[1] + '</span><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></a>').join('') + '</nav>' +
+      '</section>' +
+      '<section class="md-panel" data-panel="profile" hidden>' +
         '<div class="md-field"><label for="mp-name">Ime</label><input id="mp-name" type="text" data-f="name" value="' + mesc(profile.name) + '" autocomplete="name"></div>' +
         '<div class="md-field"><label for="mp-role">Uloga</label><input id="mp-role" type="text" data-f="role" value="' + mesc(profile.role) + '"></div>' +
         '<div class="md-field"><label for="mp-email">Email</label><input id="mp-email" type="email" data-f="email" value="' + mesc(profile.email) + '" placeholder="ime@asc.hr" autocomplete="email"></div>' +
@@ -459,7 +462,12 @@ if (document.readyState !== 'loading') syncDisc(); else addEventListener('DOMCon
   // into the sheet; close → focus returns to the avatar launcher.
   const mbg = [...document.body.children].filter(el => el !== drawer && el !== scrim);
   drawer.inert = true;
-  const open = () => {
+  const activate = (name) => {
+    drawer.querySelectorAll('.md-tab').forEach(x => x.classList.toggle('on', x.getAttribute('data-tab') === name));
+    drawer.querySelectorAll('.md-panel').forEach(p => { p.hidden = p.getAttribute('data-panel') !== name; });
+  };
+  const open = (tab) => {
+    if (typeof tab === 'string') activate(tab);
     document.body.classList.add('menu-open');
     drawer.setAttribute('aria-hidden', 'false'); drawer.inert = false;
     mbg.forEach(el => { el.inert = true; });
@@ -472,15 +480,13 @@ if (document.readyState !== 'loading') syncDisc(); else addEventListener('DOMCon
     try { btn.focus({ preventScroll: true }); } catch(e){}
     drawer.setAttribute('aria-hidden', 'true'); drawer.inert = true;
   };
-  btn.addEventListener('click', open);
+  btn.addEventListener('click', () => open('profile'));
+  document.querySelectorAll('.dock a').forEach(a => { if ((a.getAttribute('aria-label') || '').trim() === 'Više') a.addEventListener('click', (e) => { e.preventDefault(); open('menu'); }); });
   q('.md-close').addEventListener('click', close);
   scrim.addEventListener('click', close);
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && document.body.classList.contains('menu-open')) close(); });
 
-  drawer.querySelectorAll('.md-tab').forEach(tb => tb.addEventListener('click', () => {
-    drawer.querySelectorAll('.md-tab').forEach(x => x.classList.toggle('on', x === tb));
-    drawer.querySelectorAll('.md-panel').forEach(p => { p.hidden = p.getAttribute('data-panel') !== tb.getAttribute('data-tab'); });
-  }));
+  drawer.querySelectorAll('.md-tab').forEach(tb => tb.addEventListener('click', () => activate(tb.getAttribute('data-tab'))));
 
   drawer.querySelectorAll('[data-f]').forEach(inp => {
     if (inp.tagName === 'SELECT') inp.value = profile[inp.getAttribute('data-f')] || 'hr';

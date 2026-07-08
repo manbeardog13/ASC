@@ -113,7 +113,7 @@ html.dark .sugg{background:rgba(244,245,247,.05)}
 .tire-edit-row{padding:12px;border-radius:14px;background:var(--panel-2);border:1px solid var(--hairline);margin-bottom:10px}
 html.dark .tire-edit-row{background:rgba(244,245,247,.04)}
 .tire-edit-row:last-child{margin-bottom:0}
-.tire-grid{display:grid;grid-template-columns:78px 1.5fr 1fr 1fr 1.1fr auto;gap:8px;align-items:center}
+.tire-grid{display:grid;grid-template-columns:78px 1.5fr 1fr 1.1fr;gap:8px;align-items:center}
 .tire-grid input,.tire-grid select{min-height:40px;padding:9px 11px;font-size:13px;min-width:0}
 .tire-stud{justify-self:end;white-space:nowrap;gap:8px;font-size:12px}
 .tire-stud input{width:40px;height:24px}
@@ -182,10 +182,6 @@ html.dark .btn-primary{background:linear-gradient(180deg,var(--lava-2),var(--lav
     <span class="tab-corner">danas · Dubrovnik</span>
     <div class="htop">
       <span class="eyebrow"><span class="led"></span>Zaprimanje · Novi set</span>
-      <button type="button" id="voiceFill" class="voice-cta">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M6 11a6 6 0 0012 0M12 17v4"/></svg>
-        Glasovni unos
-      </button>
     </div>
     <div class="htext">
       <h1>Spremi gume</h1>
@@ -272,12 +268,7 @@ html.dark .btn-primary{background:linear-gradient(180deg,var(--lava-2),var(--lav
         <legend>Gume</legend>
         <div class="row-between">
           <span class="hint">Ispunite što možete — prazna polja se preskaču.</span>
-          <button type="button" id="ss_photoBtn" class="btn small">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.5A2.5 2.5 0 016.5 6h1.2l1-1.6h4.6l1 1.6h1.2A2.5 2.5 0 0118 8.5v8A2.5 2.5 0 0115.5 19h-9A2.5 2.5 0 014 16.5z"/><circle cx="11" cy="12" r="3.2"/></svg>
-            Skeniraj bok gume
-          </button>
         </div>
-        <p id="ocrStatus" class="banner banner-info is-hidden"></p>
         <div id="tires">
           <datalist id="commonSizes"><option value="195/65R15"><option value="205/55R16"><option value="205/60R16"><option value="215/55R17"><option value="225/45R17"><option value="225/40R18"><option value="235/45R18"><option value="235/35R19"></datalist>
           <!-- tire rows injected by script -->
@@ -324,9 +315,7 @@ html.dark .btn-primary{background:linear-gradient(180deg,var(--lava-2),var(--lav
         <select data-t="position" aria-label="Pozicija">${opts}</select>
         <input data-t="size" list="commonSizes" placeholder="225/45R17" value="${v.size||''}" aria-label="Dimenzija gume">
         <input data-t="tread_mm" type="number" inputmode="decimal" step="0.1" min="0" placeholder="Profil mm" value="${v.tread||''}" aria-label="Profil mm">
-        <input data-t="dot_code" placeholder="DOT 2524" value="${v.dot||''}" aria-label="DOT kôd">
         <input data-t="brand" placeholder="Marka (nije obavezno)" value="${v.brand||''}" aria-label="Marka">
-        <label class="switch tire-stud"><input data-t="studded" type="checkbox"${v.studded?' checked':''}> Čavlane</label>
       </div>`;
     return el;
   }
@@ -336,9 +325,7 @@ html.dark .btn-primary{background:linear-gradient(180deg,var(--lava-2),var(--lav
       position:r.querySelector('[data-t="position"]').value,
       size:r.querySelector('[data-t="size"]').value.trim(),
       tread:r.querySelector('[data-t="tread_mm"]').value,
-      dot:r.querySelector('[data-t="dot_code"]').value.trim(),
       brand:r.querySelector('[data-t="brand"]').value.trim(),
-      studded:r.querySelector('[data-t="studded"]').checked,
     }));
   }
   function renderTires(n, existing){
@@ -369,29 +356,10 @@ html.dark .btn-primary{background:linear-gradient(180deg,var(--lava-2),var(--lav
     });
   });
 
-  // ---- Scan sidewall (mock OCR, grounded in i18n copy) --------------------
-  const status = $('ocrStatus');
-  $('ss_photoBtn').addEventListener('click', ()=>{
-    status.classList.remove('is-hidden','banner-ok'); status.classList.add('banner-info');
-    status.textContent = 'Očitavanje boka gume…';
-    setTimeout(()=>{ status.textContent = 'Očitavanje boka gume… 60%'; }, 650);
-    setTimeout(()=>{
-      const rows = [...tiresBox.querySelectorAll('.tire-edit-row')];
-      const target = rows.find((r)=>!r.querySelector('[data-t="size"]').value.trim()) || rows[0];
-      target.querySelector('[data-t="size"]').value = '225/45R17';
-      target.querySelector('[data-t="dot_code"]').value = 'DOT 2524';
-      target.animate && target.animate([{background:'rgba(255,78,27,.16)'},{background:'transparent'}],{duration:1200,easing:'ease'});
-      status.classList.remove('banner-info'); status.classList.add('banner-ok');
-      status.textContent = 'Ispunjena guma ' + (rows.indexOf(target)+1) + ': dimenzija 225/45R17, DOT 2524. Molimo provjerite.';
-    }, 1300);
-  });
-
-  // ---- Toast + voice-fill + submit (mock) ----------------------------------
+  // ---- Toast + submit (mock) -----------------------------------------------
   const toast = $('toast'), toastMsg = $('toastMsg');
   let toastT = null;
   function showToast(msg){ toastMsg.textContent = msg; toast.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(()=>toast.classList.remove('show'), 3200); }
-
-  $('voiceFill').addEventListener('click', ()=>{ showToast('Glasovni unos završen — provjerite polja.'); });
 
   form.addEventListener('submit', (e)=>{
     e.preventDefault();
