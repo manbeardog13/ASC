@@ -13,7 +13,7 @@
   --ink:#020305; --ink-2:#3a3c40; --muted:#63676f;
   --lava:#ff4e1b; --lava-2:#ff8a5c; --lava-ink:#c0360d; --lava-tint:rgba(255,78,27,.11); --lava-ring:rgba(255,78,27,.30);
   --gun:#2e2f31; --hairline:rgba(2,3,5,.07); --line:rgba(2,3,5,.10);
-  --stage-1:#0b0c0e; --stage-2:#17181b; --on-stage:#f4f5f7; --on-stage-2:rgba(244,245,247,.72); --tab-surf:rgba(255,255,255,.86);
+  --stage-1:#0b0c0e; --stage-2:#17181b; --on-stage:#f4f5f7; --on-stage-2:rgba(244,245,247,.72); --tab-surf:#f7f9fc;
   --rim-top:rgba(255,255,255,.75); --rim:rgba(255,255,255,.42);
   --green:#2fbf5b; --green-ink:#1c894a;
   --smooth:cubic-bezier(.25,1,.5,1); --snap:cubic-bezier(.22,1,.36,1);
@@ -26,7 +26,7 @@ html.dark{
   --panel:#1d1e22; --panel-2:#26272b;
   --ink:#f4f5f7; --ink-2:#d6d8dc; --muted:rgba(244,245,247,.62);
   --hairline:rgba(244,245,247,.09); --line:rgba(244,245,247,.12);
-  --lava-ink:#ff8a5c; --tab-surf:rgba(30,31,36,.92); --green-ink:#57d484;
+  --lava-ink:#ff8a5c; --tab-surf:#0f1013; --green-ink:#57d484;
   --stage-1:#07080a; --stage-2:#101114;
   --rim-top:rgba(255,255,255,.16); --rim:rgba(255,255,255,.08);
   --shadow-card:0 12px 34px -14px rgba(0,0,0,.6);
@@ -86,7 +86,11 @@ html.dark .mode i{background:transparent;box-shadow:inset 0 0 0 2.5px #f4f5f7}
 /* Hanssen notched corner tabs — the label nests INTO the card corner, and the
    inter-card gap curves around it via inverse-rounded notches (the ::before /
    ::after radial-gradients paint the gap colour back in). */
-.tab-corner,.tab-tl{position:absolute;z-index:4;font:600 10.5px Inter;letter-spacing:.04em;color:var(--ink-2);background:var(--tab-surf);padding:7px 13px 8px;white-space:nowrap}
+/* Corner tabs render as UPPERCASE eyebrow labels (matches the .badge / live-dot
+   label system) — never rely on source casing. --tab-surf is an OPAQUE gap colour
+   (the app background between cards) so the notch reads as a clean cutout and never
+   shows the card art bleeding through; keep it opaque per theme. */
+.tab-corner,.tab-tl{position:absolute;z-index:4;font:600 10.5px Inter;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-2);background:var(--tab-surf);padding:7px 13px 8px;white-space:nowrap}
 .tab-corner{bottom:0;right:0;border-radius:14px 0 0 0}
 .tab-tl{top:0;left:0;border-radius:0 0 14px 0}
 .tab-corner::before,.tab-corner::after,.tab-tl::before,.tab-tl::after{content:"";position:absolute;width:14px;height:14px}
