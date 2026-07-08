@@ -22,6 +22,16 @@ document.getElementById('mode').addEventListener('click', () => {
   paintTheme();
 });
 
+// The logo is always a way home — click (or Enter/Space) → dashboard, from any page.
+(() => {
+  const logo = document.querySelector('.logo');
+  if (!logo) return;
+  logo.style.cursor = 'pointer'; logo.setAttribute('role', 'link'); logo.setAttribute('tabindex', '0'); logo.setAttribute('aria-label', 'ASC — početna');
+  const go = () => { location.href = 'dashboard.html'; };
+  logo.addEventListener('click', go);
+  logo.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } });
+})();
+
 // Device tier — capability-based (touch + width via matchMedia), NOT UA sniffing.
 // Sets html[data-device] = desktop | tablet | mobile so CSS can adapt each tier
 // (e.g. the agent window lays out statically on touch, where there is no hover to
@@ -132,6 +142,11 @@ if (document.readyState !== 'loading') syncDisc(); else addEventListener('DOMCon
     send: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M12 5l7 7-7 7"/></svg>'
   };
 
+  // Gemini lives ONLY inside #asc-agent (the check-in page) now — integrated,
+  // press-and-hold. No floating side dock anywhere. (The brain — agent-gemini.js
+  // etc. — is loaded above on every page, so the dashboard card + sticker still work.)
+  const inlineMount = document.getElementById('asc-agent');
+  if (!inlineMount) return;
   const dock = document.createElement('div');
   dock.className = 'ai-dock';
   dock.dataset.open = 'false';
@@ -156,7 +171,7 @@ if (document.readyState !== 'loading') syncDisc(); else addEventListener('DOMCon
       '<form class="ai-type"><input type="text" placeholder="…ili upiši što trebaš" autocomplete="off" aria-label="Upiši naredbu">' +
         '<button class="ai-send" type="submit" aria-label="Pošalji">' + ICON.send + '</button></form>' +
     '</section>';
-  document.body.appendChild(dock);
+  inlineMount.appendChild(dock); dock.classList.add('ai-inline');
 
   // Skin the agent as a random studio-tire CUTOUT (background-removed PNGs of the
   // recent-sets photos) with a random brake-caliper under-glow (yellow / orange /
@@ -296,8 +311,7 @@ if (document.readyState !== 'loading') syncDisc(); else addEventListener('DOMCon
   mic.addEventListener('pointerup', () => {
     if (!SR) { clearPointer(); return; }                           // no speech engine → the orb tap just focuses the input (pointerdown did that)
     const spoke = (finalText + interimText).trim();
-    if (!spoke && !lastError) { release(false); close(); }         // released with nothing captured (and no mic error) = dismiss / roll back out
-    else release(true);                                            // spoke, or a mic error to surface → normal submit / finalize
+    release(spoke || lastError ? true : false);                    // spoke / mic-error → submit-finalize; else just discard (inline agent stays put)
     clearPointer();
   });
   mic.addEventListener('pointercancel', () => { release(false); clearPointer(); });  // OS interruption → abort, not Enter

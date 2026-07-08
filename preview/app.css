@@ -484,6 +484,21 @@ html[data-device="mobile"] .ai-heard:empty,html[data-device="tablet"] .ai-heard:
 html[data-device="mobile"] .ai-heard:not(:empty)::after,html[data-device="tablet"] .ai-heard:not(:empty)::after{content:"";position:absolute;left:50%;bottom:-6px;width:13px;height:13px;transform:translateX(-50%) rotate(45deg);background:rgba(22,16,42,.95);border-right:1px solid rgba(150,110,255,.34);border-bottom:1px solid rgba(150,110,255,.34)}
 @media(prefers-reduced-motion:reduce){ .ai-tab,.ai-tab::after{animation:none} .ai-dock[data-open="true"] .ai-mic{animation:none} .ai-mic.is-live ~ .ai-heard:not(:empty)::before,.ai-heard:not(:empty){animation:none} }
 
+/* ===== Inline agent — Gemini integrated into check-in (no floating side dock).
+   The dock is appended into #asc-agent and shown statically: press-and-hold the
+   violet mic orb to talk, release to act. Tab / scrim / chips / type are hidden. */
+.ci-agent{margin:14px 0 4px}
+.ai-dock.ai-inline{position:static;inset:auto;z-index:auto;pointer-events:auto;display:block}
+.ai-inline .ai-tab,.ai-inline .ai-scrim,.ai-inline .ai-close,.ai-inline .ai-chips,.ai-inline .ai-type{display:none}
+.ai-inline .ai-panel{position:static;transform:none!important;opacity:1!important;width:auto;max-width:none;max-height:none;overflow:visible;margin:0;padding:18px 18px 20px}
+.ai-inline .ai-panel::before{display:none}
+.ai-inline .ai-head{margin-bottom:4px;justify-content:center}
+.ai-inline .ai-stage{display:flex;flex-direction:column;align-items:center;gap:12px;padding:6px 0 0}
+.ai-inline .ai-mic-orb{background:linear-gradient(150deg,#a78bfa,#8b5cf6 46%,#6d28d9)!important;box-shadow:0 14px 30px -12px rgba(124,58,237,.7),inset 0 2px 0 rgba(255,255,255,.22)!important;animation:none!important}
+.ai-inline .ai-mic-orb::after{display:none!important}
+.ai-inline .ai-mic svg{display:none}
+.ai-inline .ai-mic-orb svg{display:block;width:32px;height:32px;color:#fff}
+
 /* ===== Sticker sheet — in-app label view (replaces the iOS-trapping popup) ====
    Full-screen dimmed sheet with a top-left Back button; the label itself is a
    physical black-on-white sticker (stays light in either theme). Print button
