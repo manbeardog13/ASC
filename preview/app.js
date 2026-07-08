@@ -22,6 +22,20 @@ document.getElementById('mode').addEventListener('click', () => {
   paintTheme();
 });
 
+// Device tier — capability-based (touch + width via matchMedia), NOT UA sniffing.
+// Sets html[data-device] = desktop | tablet | mobile so CSS can adapt each tier
+// (e.g. the agent window lays out statically on touch, where there is no hover to
+// reveal it). Re-evaluated on resize/rotate.
+(() => {
+  const setDevice = () => {
+    const touch = matchMedia('(hover: none)').matches || matchMedia('(pointer: coarse)').matches;
+    const device = touch ? (innerWidth <= 640 ? 'mobile' : 'tablet') : 'desktop';
+    if (root.getAttribute('data-device') !== device) root.setAttribute('data-device', device);
+  };
+  setDevice();
+  addEventListener('resize', setDevice, { passive: true });
+})();
+
 // Preview navigation: wire the shared header pills + iOS dock to the real pages,
 // so every screen links to every other. Dashboard-only cards/lists are wired too
 // (gated on #agentCard); selectors that match nothing on a page are just no-ops.

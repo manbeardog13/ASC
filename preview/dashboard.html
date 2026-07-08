@@ -161,9 +161,44 @@
   .agent-card:hover .text-bubble,.agent-card:focus-within .text-bubble{opacity:1;filter:blur(0);transform:none;transition-delay:.24s}
   .agent-card:hover .qchip,.agent-card:focus-within .qchip{opacity:1;transform:none;transition-delay:calc(.34s + var(--ci,0)*.055s)}
 }
-/* touch: no hover to trigger it — just show it */
-@media(hover:none){ .text-bubble,.qchip{opacity:1!important;filter:none!important;transform:none!important} }
-@media(max-width:760px){ .agent-body{padding:26px 20px 20px} }
+/* ===== RESPONSIVE — adapt the agent window to each device tier ==============
+   Capability-based detection (NOT user-agent sniffing): app.js reads matchMedia
+   hover/pointer + width and sets html[data-device] = desktop | tablet | mobile
+   (re-evaluated on resize/rotate).
+   · desktop (a mouse → real hover): the hover-to-reveal window above.
+   · tablet / mobile (touch → no hover): nothing to hover, so the window is laid
+     out STATICALLY in normal flow (headline → input → chips) — it can't overlap
+     the lines the way the hover-only reveal did (that was the mobile bug).
+   @media(hover:none) is the pre-JS / JS-off CSS safety net; [data-device] is the
+   precise per-tier control. */
+@media (hover: none){
+  .agent-card{min-height:auto}
+  .agent-body{justify-content:flex-start;gap:16px;padding:32px 22px 22px}
+  .agent-hook.l2,.agent-hook.l3{display:none}
+  .agent-reveal{position:static;inset:auto;pointer-events:auto;gap:11px}
+  .text-bubble,.qchip{opacity:1;filter:none;transform:none;transition:none}
+}
+/* real narrow-touch phones get the compact treatment immediately (no pre-JS reflow) */
+@media (hover: none) and (max-width: 640px){
+  .agent-body{padding:26px 18px 18px;gap:13px}
+  .agent-hook.l1{font-size:16px;max-width:none}
+  .text-bubble{min-height:46px}
+  .qchip{min-height:34px;padding:0 13px;font-size:12px}
+  .chips .qchip:nth-child(n+7){display:none}
+}
+html[data-device="tablet"] .agent-card,html[data-device="mobile"] .agent-card{min-height:auto}
+html[data-device="tablet"] .agent-body,html[data-device="mobile"] .agent-body{justify-content:flex-start;gap:16px;padding:32px 22px 22px}
+html[data-device="tablet"] .agent-hook.l2,html[data-device="tablet"] .agent-hook.l3,
+html[data-device="mobile"] .agent-hook.l2,html[data-device="mobile"] .agent-hook.l3{display:none}
+html[data-device="tablet"] .agent-reveal,html[data-device="mobile"] .agent-reveal{position:static;inset:auto;pointer-events:auto;gap:11px}
+html[data-device="tablet"] .text-bubble,html[data-device="tablet"] .qchip,
+html[data-device="mobile"] .text-bubble,html[data-device="mobile"] .qchip{opacity:1;filter:none;transform:none;transition:none}
+/* mobile — tighter than tablet, and cap the chips so the card stays compact */
+html[data-device="mobile"] .agent-body{padding:26px 18px 18px;gap:13px}
+html[data-device="mobile"] .agent-hook.l1{font-size:16px;max-width:none}
+html[data-device="mobile"] .text-bubble{min-height:46px}
+html[data-device="mobile"] .qchip{min-height:34px;padding:0 13px;font-size:12px}
+html[data-device="mobile"] .chips .qchip:nth-child(n+7){display:none}
 @media(prefers-reduced-motion:reduce){
   .agent-card::before{animation:none}
   .agent-hook{transition:opacity .3s linear}
