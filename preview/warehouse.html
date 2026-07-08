@@ -89,32 +89,44 @@ html.dark .slot.empty{background:rgba(244,245,247,.04)}
 
 @media(max-width:460px){ .wh-shelf{grid-template-columns:1fr;gap:6px} .wh-shelf-lab{padding-top:0} }
 
-/* Slot detail popover — the "little window above" a cube. Tap (mobile) or hover
-   (desktop) a filled/reserved cube to see who's in it + the exact location. */
-.slot.slot-active{transform:translateY(-2px);box-shadow:0 12px 24px -8px var(--lava-ring);z-index:2}
-.wh-pop{position:fixed;z-index:80;pointer-events:auto;width:max-content;max-width:min(280px,90vw);
-  padding:12px 14px 13px;border-radius:15px;background:var(--panel-2);color:var(--ink);
-  border:1px solid var(--line);box-shadow:0 20px 48px -16px rgba(2,3,5,.55),0 4px 12px -8px rgba(2,3,5,.4);
-  opacity:0;transform:translateY(7px) scale(.96);transform-origin:bottom center;
-  transition:opacity .22s var(--smooth),transform .28s cubic-bezier(.16,1,.3,1)}
-.wh-pop.show{opacity:1;transform:none}
-.wh-pop.below{transform-origin:top center}
-.wh-pop::after{content:"";position:absolute;left:var(--caret,50%);bottom:-6px;width:12px;height:12px;
-  background:var(--panel-2);border-right:1px solid var(--line);border-bottom:1px solid var(--line);
-  transform:translateX(-50%) rotate(45deg)}
-.wh-pop.below::after{bottom:auto;top:-6px;border:0;border-left:1px solid var(--line);border-top:1px solid var(--line)}
-.wh-pop-code{display:block;font:700 15px Sora;letter-spacing:-.01em;font-variant-numeric:tabular-nums;color:var(--ink);text-decoration:none}
-.wh-pop-who{display:block;font:600 12.5px Inter;color:var(--lava-ink);margin-top:3px;text-decoration:none}
-html.dark .wh-pop-who{color:var(--lava-2)}
-@media(hover:hover){ .wh-pop-code:hover,.wh-pop-who:hover{text-decoration:underline} }
-.wh-pop-loc{display:flex;align-items:flex-start;gap:6px;font:600 12px Inter;color:var(--lava-ink);margin-top:8px;line-height:1.35}
-html.dark .wh-pop-loc{color:var(--lava-2)}
-.wh-pop-loc svg{width:14px;height:14px;flex:none;margin-top:1px}
-.wh-pop-badge{display:inline-block;margin-top:9px;padding:3px 10px;border-radius:999px;font:700 10px Inter;letter-spacing:.03em;text-transform:uppercase}
-.wh-pop-badge.f{background:var(--lava-tint);color:var(--lava-ink)}
-html.dark .wh-pop-badge.f{color:var(--lava-2)}
-.wh-pop-badge.r{background:rgba(99,103,111,.16);color:var(--muted)}
-@media(prefers-reduced-motion:reduce){ .wh-pop{transition:opacity .18s linear} }
+/* Press-hold PEEK + drag-up-to-open. Hold a lot → a card lifts with the
+   customer's basic info + a "drag up to open" grip. Keep holding & drag UP past
+   the threshold, release → jump to that customer in the database. Release in
+   place (or a plain tap) → the card just shows; nothing opens. --lift/--armp are
+   driven live from JS as the finger drags. */
+.slot.slot-peeking{transform:scale(.88);box-shadow:0 0 0 3px var(--lava-ring);z-index:3}
+.wh-peek{position:fixed;z-index:85;width:max-content;max-width:min(300px,92vw);border-radius:18px;overflow:hidden;
+  background:var(--panel-2);color:var(--ink);border:1px solid var(--line);pointer-events:none;
+  box-shadow:0 26px 64px -18px rgba(2,3,5,.62),0 6px 16px -8px rgba(2,3,5,.4);
+  opacity:0;transform:translateY(10px) scale(.94);transform-origin:bottom center;
+  -webkit-user-select:none;user-select:none;touch-action:none;
+  transition:opacity .2s var(--smooth),transform .3s cubic-bezier(.16,1,.3,1),box-shadow .22s var(--smooth),border-color .18s}
+.wh-peek.show{opacity:1;transform:translateY(var(--lift,0px)) scale(1)}
+.wh-peek.show.live{transition:opacity .2s var(--smooth),box-shadow .22s,border-color .18s}  /* live: track the finger 1:1, no transform easing */
+.wh-peek.below{transform-origin:top center}
+.wh-peek.armed{border-color:var(--lava);box-shadow:0 34px 78px -16px var(--lava-ring),0 0 0 2px var(--lava)}
+.wh-peek-grip{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;padding:9px 12px 6px;
+  background:linear-gradient(180deg,var(--lava-tint),transparent);overflow:hidden}
+.wh-peek-grip::after{content:"";position:absolute;left:0;bottom:0;height:3px;width:var(--armp,0%);background:var(--lava);transition:width .04s linear}
+.wh-peek-bar{width:34px;height:4px;border-radius:2px;background:var(--lava-ring)}
+.wh-peek.armed .wh-peek-bar{background:var(--lava)}
+.wh-peek-arrow{color:var(--lava-ink);line-height:0;transition:transform .2s var(--snap)}
+.wh-peek-arrow svg{width:16px;height:16px}
+.wh-peek.armed .wh-peek-arrow{transform:translateY(-3px)}
+html.dark .wh-peek-arrow{color:var(--lava-2)}
+.wh-peek-hint{font:700 9px Inter;letter-spacing:.06em;text-transform:uppercase;color:var(--lava-ink)}
+html.dark .wh-peek-hint{color:var(--lava-2)}
+.wh-peek.armed .wh-peek-hint{color:var(--lava)}
+.wh-peek-body{padding:11px 15px 14px}
+.wh-peek-who{font:700 16px Sora;letter-spacing:-.01em}
+.wh-peek-car{font:600 12.5px Inter;color:var(--ink-2);margin-top:2px;font-variant-numeric:tabular-nums}
+.wh-peek-meta{display:flex;align-items:flex-start;gap:6px;font:600 11.5px Inter;color:var(--lava-ink);margin-top:8px;line-height:1.35}
+html.dark .wh-peek-meta{color:var(--lava-2)}
+.wh-peek-meta svg{width:14px;height:14px;flex:none;margin-top:1px}
+.wh-peek-badge{display:inline-block;margin-top:9px;padding:3px 10px;border-radius:999px;font:700 10px Inter;letter-spacing:.03em;text-transform:uppercase}
+.wh-peek-badge.f{background:var(--lava-tint);color:var(--lava-ink)} html.dark .wh-peek-badge.f{color:var(--lava-2)}
+.wh-peek-badge.r{background:rgba(99,103,111,.16);color:var(--muted)}
+@media(prefers-reduced-motion:reduce){ .wh-peek{transition:opacity .18s linear} .slot.slot-peeking{transition:none} }
 </style>
 </head>
 <body>
@@ -175,11 +187,21 @@ html.dark .wh-pop-badge.f{color:var(--lava-2)}
   var CHEV = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>';
   var PIN  = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21.2s-7-5.5-7-11a7 7 0 0114 0c0 5.5-7 11-7 11z"/><circle cx="12" cy="10" r="2.4"/></svg>';
 
-  var NAMES = ["Ivan Perić","Ana Kovačević","Marko Babić","Petra Novak","Luka Marić","Josip Horvat","Ivana Jurić","Nikola Vuković","Marija Šimić","Tomislav Knežević","Iva Radić","Ante Bakić","Maja Lučić","Frane Vlašić","Klara Barišić","Damir Kovač","Lucija Matić","Roko Grgić","Petar Šarić","Tea Marković"];
-  var PLATES = ["DU-234-AB","DU-881-KL","DU-455-MN","DU-107-CD","DU-620-EF","DU-903-GH","DU-512-IJ","DU-744-OP","DU-368-QR","DU-159-ST","DU-826-UV","DU-471-WX","DU-093-YZ","DU-538-AC","DU-660-BD","DU-215-CE","DU-782-DF","DU-334-EG","DU-901-FH","DU-047-GI"];
+  // Every occupied lot is a REAL customer from the database (id matches
+  // customers.html), so the peek's drag-up-to-open lands on their actual card.
+  var DBUSERS = [
+    { uid:"ana",   name:"Ana Kovačević", plate:"DU-881-KL" },
+    { uid:"ivan",  name:"Ivan Perić",    plate:"DU-234-AB" },
+    { uid:"ivana", name:"Ivana Jurić",   plate:"DU-509-IJ" },
+    { uid:"josip", name:"Josip Horvat",  plate:"DU-118-JH" },
+    { uid:"luka",  name:"Luka Marić",    plate:"DU-733-XY" },
+    { uid:"marko", name:"Marko Babić",   plate:"DU-455-MN" },
+    { uid:"petra", name:"Petra Novak",   plate:"DU-662-PP" }
+  ];
   var seq = 248, p = 0;
   function occ() {
-    var o = { name: NAMES[p % NAMES.length], plate: PLATES[p % PLATES.length], code: "ASC-2026-" + String(seq).padStart(4, "0") };
+    var u = DBUSERS[p % DBUSERS.length];
+    var o = { uid: u.uid, name: u.name, plate: u.plate, code: "ASC-2026-" + String(seq).padStart(4, "0") };
     p++; seq--; return o;
   }
   function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); }
@@ -215,7 +237,7 @@ html.dark .wh-pop-badge.f{color:var(--lava-2)}
           var cls = st === "R" ? "reserved" : "filled";
           var dot = st === "R" ? '<span class="rdot" aria-hidden="true"></span>' : '';
           var lab = d.name + " · " + d.plate + " · " + d.code;
-          return '<a class="slot ' + cls + '" href="#" role="button" aria-label="' + esc(lab) + '">' + pos + dot + '</a>';
+          return '<a class="slot ' + cls + '" href="#" role="button" data-uid="' + esc(d.uid) + '" aria-label="' + esc(lab) + '">' + pos + dot + '</a>';
         }).join("");
         return '<div class="wh-shelf"><span class="wh-shelf-lab">Polica ' + esc(sh.s) + '</span><div class="slots">' + cells + '</div></div>';
       }).join("");
@@ -258,82 +280,122 @@ html.dark .wh-pop-badge.f{color:var(--lava-2)}
     pill.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); } });
   });
 
-  // ---- Slot detail popover: the "little window above" a cube ----------------
-  // Mobile has no hover, so TAP a filled/reserved cube to reveal who's in it +
-  // the exact location. Desktop shows it on hover too. Tap again / away / scroll
-  // dismisses. Positioned above the cube (flips below near the top edge).
+  // ---- Press-and-hold PEEK + drag-up-to-open --------------------------------
+  // Hold an occupied lot → a card lifts with the customer's basic info + a
+  // "drag up to open" grip. Keep holding and drag your finger UP past the
+  // threshold, then release → jump to that customer's page in the database.
+  // Release in place (or a plain tap) → the card just shows; nothing opens, so
+  // you can hold the next lot and keep looking. Every lot is a real DB customer.
   var PINS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21.2s-7-5.5-7-11a7 7 0 0114 0c0 5.5-7 11-7 11z"/><circle cx="12" cy="10" r="2.4"/></svg>';
-  var pop = document.createElement("div");
-  pop.className = "wh-pop"; pop.setAttribute("role", "tooltip"); pop.hidden = true;
-  document.body.appendChild(pop);
-  var active = null, canHover = false;
-  try { canHover = matchMedia("(hover: hover)").matches; } catch (e) {}
+  var peek = document.createElement("div");
+  peek.className = "wh-peek"; peek.setAttribute("role", "dialog"); peek.hidden = true;
+  document.body.appendChild(peek);
 
-  function firstText(el) { return el && el.childNodes[0] ? el.childNodes[0].textContent.trim() : (el ? el.textContent.trim() : ""); }
-  function detailsFor(slot) {
-    var parts = (slot.getAttribute("aria-label") || "").split(" · ");
-    var pos = (slot.textContent || "").trim();
-    var zone = firstText(slot.closest(".wh-zone") && slot.closest(".wh-zone").querySelector(".wh-name"));
-    var rackEl = slot.closest(".wh-rack"), shelfEl = slot.closest(".wh-shelf");
+  function firstText(el){ return el && el.childNodes[0] ? el.childNodes[0].textContent.trim() : (el ? el.textContent.trim() : ""); }
+  function detailsFor(s){
+    var parts = (s.getAttribute("aria-label") || "").split(" · ");
+    var pos = (s.textContent || "").trim();
+    var zone = firstText(s.closest(".wh-zone") && s.closest(".wh-zone").querySelector(".wh-name"));
+    var rackEl = s.closest(".wh-rack"), shelfEl = s.closest(".wh-shelf");
     var rack = rackEl ? rackEl.querySelector(".wh-rack-head .r").textContent.trim() : "";
     var shelf = shelfEl ? shelfEl.querySelector(".wh-shelf-lab").textContent.trim() : "";
     return {
+      uid: s.getAttribute("data-uid") || "",
       name: parts[0] || "", plate: parts[1] || "", code: parts[2] || "",
-      reserved: slot.classList.contains("reserved"),
+      reserved: s.classList.contains("reserved"),
       loc: [zone, rack, shelf, "Mjesto " + pos].filter(Boolean).join(" · ")
     };
   }
-  function show(slot) {
-    var d = detailsFor(slot);
-    pop.innerHTML =
-      '<a class="wh-pop-code" href="set-detail.html?code=' + encodeURIComponent(d.code) + '">' + esc(d.code) + '</a>' +
-      '<a class="wh-pop-who" href="customers.html?c=' + encodeURIComponent(d.name) + '">' + esc(d.name) + (d.plate ? ' · ' + esc(d.plate) : '') + ' ›</a>' +
-      '<div class="wh-pop-loc">' + PINS + '<span>' + esc(d.loc) + '</span></div>' +
-      '<span class="wh-pop-badge ' + (d.reserved ? 'r' : 'f') + '">' + (d.reserved ? 'Rezervirano' : 'Spremljeno') + '</span>';
-    pop.hidden = false; pop.classList.remove("below");
-    pop.style.left = "-9999px"; pop.style.top = "0px";           // measure off-screen
-    var r = slot.getBoundingClientRect(), pw = pop.offsetWidth, ph = pop.offsetHeight;
+
+  var map = document.getElementById("map");
+  var peeked = null, cand = null, startY = 0, holdT = null, holding = false, peeking = false, armed = false, pid = null;
+  var HOLD = 260, THRESH = 56, MAXLIFT = 78;
+
+  function buildPeek(d){
+    peek.dataset.uid = d.uid; peek.dataset.name = d.name;
+    peek.innerHTML =
+      '<div class="wh-peek-grip"><span class="wh-peek-bar"></span>'
+        + '<span class="wh-peek-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V6M6 12l6-6 6 6"/></svg></span>'
+        + '<span class="wh-peek-hint">Povuci gore za otvaranje</span></div>'
+      + '<div class="wh-peek-body"><div class="wh-peek-who">' + esc(d.name) + '</div>'
+        + '<div class="wh-peek-car">' + esc(d.plate) + '</div>'
+        + '<div class="wh-peek-meta">' + PINS + '<span>' + esc(d.loc) + '</span></div>'
+        + '<span class="wh-peek-badge ' + (d.reserved ? "r" : "f") + '">' + (d.reserved ? "Rezervirano" : "Spremljeno") + '</span></div>';
+  }
+  function positionPeek(s){
+    peek.style.left = "-9999px"; peek.style.top = "0px"; peek.classList.remove("below");
+    var r = s.getBoundingClientRect(), pw = peek.offsetWidth, ph = peek.offsetHeight;
     var cx = r.left + r.width / 2;
     var left = Math.max(8, Math.min(cx - pw / 2, innerWidth - 8 - pw));
-    var top = r.top - ph - 11;
-    if (top < 8) { top = r.bottom + 11; pop.classList.add("below"); }
-    pop.style.setProperty("--caret", (cx - left) + "px");
-    pop.style.left = left + "px"; pop.style.top = top + "px";
-    void pop.offsetWidth;                                  // reflow so the fade/scale transition plays
-    pop.classList.add("show");
-    if (active && active !== slot) active.classList.remove("slot-active");
-    active = slot; slot.classList.add("slot-active");
+    var top = r.top - ph - 14;
+    if (top < 8) { top = r.bottom + 14; peek.classList.add("below"); }
+    peek.style.left = left + "px"; peek.style.top = top + "px";
   }
-  function hide() {
-    if (!active) return;
-    pop.classList.remove("show");
-    active.classList.remove("slot-active"); active = null;
-    setTimeout(function () { if (!active) pop.hidden = true; }, 240);
+  function openPeek(s, live){
+    var d = detailsFor(s); buildPeek(d);
+    peek.hidden = false; peek.style.setProperty("--lift", "0px"); peek.style.setProperty("--armp", "0%");
+    peek.classList.remove("armed"); peek.classList.toggle("live", !!live);
+    peek.style.pointerEvents = live ? "none" : "auto";
+    positionPeek(s);
+    void peek.offsetWidth; peek.classList.add("show");
+    if (peeked && peeked !== s) peeked.classList.remove("slot-peeking");
+    peeked = s; s.classList.add("slot-peeking");
+    try { if (navigator.vibrate) navigator.vibrate(9); } catch(e){}
   }
-  var map = document.getElementById("map");
-  map.addEventListener("click", function (e) {
-    var slot = e.target.closest(".slot.filled, .slot.reserved");
-    if (!slot) return;
-    e.preventDefault();                          // block the placeholder # jump
-    if (active === slot) hide(); else show(slot);   // tap toggles — works on every device
+  function closePeek(){
+    peek.classList.remove("show", "armed", "live");
+    if (peeked) peeked.classList.remove("slot-peeking");
+    peeked = null; peeking = false; armed = false;
+    setTimeout(function(){ if (!peeked) peek.hidden = true; }, 230);
+  }
+  function openUser(){
+    var uid = peek.dataset.uid, name = peek.dataset.name;
+    try { if (navigator.vibrate) navigator.vibrate([12, 26, 12]); } catch(e){}
+    closePeek();
+    location.href = uid ? ("customers.html?id=" + encodeURIComponent(uid)) : ("customers.html?c=" + encodeURIComponent(name));
+  }
+
+  map.addEventListener("click", function(e){ if (e.target.closest(".slot.filled, .slot.reserved")) e.preventDefault(); });
+  map.addEventListener("pointerdown", function(e){
+    var s = e.target.closest(".slot.filled, .slot.reserved"); if (!s) return;
+    cand = s; startY = e.clientY; pid = e.pointerId; holding = true; peeking = false; armed = false;
+    holdT = setTimeout(function(){
+      if (!holding) return;
+      peeking = true; try { map.setPointerCapture(pid); } catch(err){}
+      openPeek(cand, true);
+    }, HOLD);
   });
-  if (canHover) {
-    map.addEventListener("mouseover", function (e) {
-      var slot = e.target.closest(".slot.filled, .slot.reserved");
-      if (slot && slot !== active) show(slot);
-    });
-    map.addEventListener("mouseout", function (e) {
-      var slot = e.target.closest(".slot.filled, .slot.reserved");
-      if (slot && !(e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest(".slot"))) hide();
-    });
-  }
-  // Dismiss on a tap anywhere else. Bound to pointerdown, not click: iOS Safari
-  // fires no click on non-interactive background, so click-only never dismissed.
-  document.addEventListener("pointerdown", function (e) {
-    if (active && !e.target.closest(".slot") && !e.target.closest(".wh-pop")) hide();
+  map.addEventListener("pointermove", function(e){
+    if (!holding) return;
+    var dy = startY - e.clientY;
+    if (!peeking){
+      if (Math.abs(e.clientY - startY) > 14){ clearTimeout(holdT); holding = false; }   // moving = scrolling, not a hold
+      return;
+    }
+    e.preventDefault();
+    var lift = Math.max(0, Math.min(dy, MAXLIFT));
+    peek.style.setProperty("--lift", (-lift) + "px");
+    var pr = Math.max(0, Math.min(1, dy / THRESH));
+    peek.style.setProperty("--armp", (pr * 100) + "%");
+    var was = armed; armed = dy >= THRESH;
+    if (armed !== was){ peek.classList.toggle("armed", armed); try { if (armed && navigator.vibrate) navigator.vibrate(16); } catch(e2){} }
   });
-  addEventListener("scroll", hide, { passive: true });
-  addEventListener("resize", hide);
+  function endPointer(){
+    clearTimeout(holdT);
+    if (peeking){ if (armed) openUser(); else closePeek(); }
+    else if (holding && cand){ openPeek(cand, false); }        // quick tap → static info card
+    holding = false; cand = null;
+  }
+  map.addEventListener("pointerup", endPointer);
+  map.addEventListener("pointercancel", function(){ clearTimeout(holdT); if (peeking) closePeek(); holding = false; cand = null; });
+
+  // Static card (a quick tap): tap it to open the user; tap away / scroll dismisses.
+  peek.addEventListener("click", function(){ if (!peeking) openUser(); });
+  document.addEventListener("pointerdown", function(e){
+    if (peeked && !peeking && !e.target.closest(".slot") && !e.target.closest(".wh-peek")) closePeek();
+  });
+  addEventListener("scroll", function(){ if (!peeking) closePeek(); }, { passive: true });
+  addEventListener("resize", function(){ if (!peeking) closePeek(); });
 })();
 </script>
 <script src="app.js"></script>

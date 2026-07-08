@@ -61,6 +61,10 @@ document.getElementById('mode').addEventListener('click', () => {
       a.setAttribute('href', who ? 'customers.html?c=' + encodeURIComponent(who) : 'reminders.html');
     });
   }
+  // Workshop action grid + reminder set-codes were inert href="#" (audit) — wire them.
+  const WSB = { 'Skeniraj': 'scan.html', 'Zaprimi': 'checkin.html', 'Skladište': 'warehouse.html', 'ASC Agent': 'assistant.html', 'Za preuzimanje': 'reminders.html' };
+  document.querySelectorAll('.ws-btn').forEach(a => { const s = a.querySelector('span'); const t = s ? s.textContent.trim() : ''; if (WSB[t]) a.setAttribute('href', WSB[t]); });
+  document.querySelectorAll('.rr-code').forEach(a => { const c = a.textContent.trim(); if (/^ASC-/.test(c)) a.setAttribute('href', 'set-detail.html?code=' + encodeURIComponent(c)); });
 })();
 
 // Animated count-up + bar/meter fill (instant when reduced motion).

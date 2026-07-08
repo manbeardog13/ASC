@@ -237,7 +237,7 @@ html.dark .tip svg{color:var(--lava-2)}
     vf.classList.remove('vf-off'); vf.classList.add('scanning');
     ASCQR.scanInto('reader', function(code){
       if(code){ vf.classList.add('hit'); cueText('Otvaram…'); go(code); }
-      else { flash('To nije ASC naljepnica.'); }
+      else { cueText('To nije ASC naljepnica — tražim dalje…'); setTimeout(startCamera, 650); }   // decode stopped the camera; auto-resume
     }, function(err){
       vf.classList.remove('scanning'); vf.classList.add('vf-off');
       cueText(err && err.message === 'nolib'
