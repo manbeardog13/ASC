@@ -80,6 +80,20 @@ dtabs.forEach(t => t.addEventListener('click', e => {
 
 if (document.readyState !== 'loading') animate(); else addEventListener('DOMContentLoaded', animate);
 
+// Fluid disclosures (.disc) — tap a header to reveal its content; the height
+// springs open (CSS grid). Delegated, so it also drives lists built after load.
+function syncDisc(){ document.querySelectorAll('.disc > .disc-head').forEach(h => h.setAttribute('aria-expanded', h.parentElement.dataset.open === 'true' ? 'true' : 'false')); }
+document.addEventListener('click', (e) => {
+  const head = e.target.closest('.disc-head');
+  if (!head) return;
+  const d = head.closest('.disc');
+  if (!d) return;
+  const open = d.dataset.open !== 'true';
+  d.dataset.open = open ? 'true' : 'false';
+  head.setAttribute('aria-expanded', open ? 'true' : 'false');
+});
+if (document.readyState !== 'loading') syncDisc(); else addEventListener('DOMContentLoaded', syncDisc);
+
 // ============================================================================
 // Global ASC Agent — right-edge voice dock (all pages).
 // Tucked tab → tap opens the panel (slides out from the edge). The orb is
@@ -138,19 +152,21 @@ if (document.readyState !== 'loading') animate(); else addEventListener('DOMCont
   // is inert so its controls are never phantom tab-stops. Focus returns to the
   // tab on close (moved BEFORE aria-hidden, so nothing is stranded).
   const bg = [...document.body.children].filter(el => el !== dock);
-  let openState = false;
+  let openState = false, actTimer = null;
   panel.inert = true;
   const open = () => {
     if (openState) return;
     openState = true; dock.dataset.open = 'true';
-    tab.setAttribute('aria-expanded','true'); panel.setAttribute('aria-hidden','false'); panel.inert = false;
+    tab.setAttribute('aria-expanded','true'); tab.setAttribute('tabindex','-1');   // tab leaves the focus order while modal
+    panel.setAttribute('aria-hidden','false'); panel.inert = false;
     bg.forEach(el => { el.inert = true; });
     setTimeout(() => { try { (SR ? mic : input).focus({ preventScroll:true }); } catch(e){} }, 380);
   };
   const close = () => {
     if (!openState) return;
     openState = false; endVoice(true);
-    try { tab.focus({ preventScroll:true }); } catch(e){}          // return focus BEFORE hiding
+    tab.removeAttribute('tabindex');                                // restore BEFORE focusing (focus-return needs it)
+    try { tab.focus({ preventScroll:true }); } catch(e){}           // return focus to the tab
     dock.dataset.open = 'false'; tab.setAttribute('aria-expanded','false');
     panel.setAttribute('aria-hidden','true'); panel.inert = true;
     bg.forEach(el => { el.inert = false; });
@@ -225,6 +241,9 @@ if (document.readyState !== 'loading') animate(); else addEventListener('DOMCont
   }
   function endVoice(silent){
     if (holding) return release(false);                              // closing mid-hold discards, never submits
+    ++token;                                                         // invalidate a released-but-still-draining session
+    if (rec) { try { rec.abort(); } catch(e){} }                    // kill the pending onend → can't navigate after close
+    clearTimeout(actTimer);                                          // and cancel a queued navigation
     if (silent) { mic.classList.remove('is-live'); if (!lastError) hint.textContent = idleHint; }
   }
 
@@ -237,11 +256,14 @@ if (document.readyState !== 'loading') animate(); else addEventListener('DOMCont
     try { mic.setPointerCapture(e.pointerId); } catch(err){}
     press();
   });
-  mic.addEventListener('pointerup', () => release(true));
-  mic.addEventListener('pointercancel', () => release(false));       // OS interruption → abort, not Enter
-  mic.addEventListener('lostpointercapture', () => { if (holding) release(true); });
-  // keyboard / switch users can't press-and-hold — route activation to the field
-  mic.addEventListener('click', () => { if (pointerUsed) { pointerUsed = false; return; } input.focus(); });
+  const clearPointer = () => setTimeout(() => { pointerUsed = false; }, 0);
+  mic.addEventListener('pointerup', () => { release(true); clearPointer(); });
+  mic.addEventListener('pointercancel', () => { release(false); clearPointer(); });  // OS interruption → abort, not Enter
+  mic.addEventListener('lostpointercapture', () => { if (holding) release(true); clearPointer(); });
+  // keyboard / switch users can't press-and-hold — route activation to the field.
+  // A real touch's synthetic click fires BEFORE the macrotask above clears the
+  // flag (so it's suppressed); a bare keyboard/AT click sees it already cleared.
+  mic.addEventListener('click', () => { if (pointerUsed) return; input.focus(); });
 
   // ---- typed + chip fallbacks ----------------------------------------------
   form.addEventListener('submit', (e) => { e.preventDefault(); const t = input.value.trim(); if (t) { heard.textContent = t; input.value = ''; handle(t); } });
@@ -260,7 +282,7 @@ if (document.readyState !== 'loading') animate(); else addEventListener('DOMCont
     [/(reciklir|recikla|otpad|zbrin|recycle)/, 'recycle.html', 'Reciklažu'],
     [/(asistent|assistant|pomo[ćc]nik|razgovor)/, 'assistant.html', 'ASC Agenta'],
   ];
-  function act(html, fn){ result.innerHTML = html; result.classList.remove('pop'); void result.offsetWidth; result.classList.add('pop'); setTimeout(fn, reduce ? 120 : 620); }
+  function act(html, fn){ result.innerHTML = html; result.classList.remove('pop'); void result.offsetWidth; result.classList.add('pop'); clearTimeout(actTimer); actTimer = setTimeout(fn, reduce ? 120 : 620); }
   function search(term){
     const box = document.getElementById('wsSearch');
     if (box) { box.value = term; box.dispatchEvent(new Event('input', { bubbles:true })); box.scrollIntoView({ behavior:'smooth', block:'center' }); close(); }

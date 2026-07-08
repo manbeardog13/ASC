@@ -350,6 +350,45 @@ html.dark .dock a.on{color:var(--lava-2)}
 @media(max-width:400px){ .ai-panel{width:calc(100vw - 20px);right:10px} .ai-mic{width:96px;height:96px} .ai-mic-orb svg{width:36px;height:36px} }
 @media(prefers-reduced-motion:reduce){ .ai-tab::after{animation:none} .ai-mic.is-live::before,.ai-mic.is-live::after{animation:none} }
 
+/* ============================== Disclosure — fluid drop-down =============
+   Apple-style progressive disclosure: show a calm summary, TAP to reveal the
+   detail — instead of dumping every row at once. Height animates via CSS grid
+   (0fr→1fr, no JS measuring); the content settles with a soft fade+lift and the
+   chevron springs. Wire-up: app.js delegates .disc-head clicks (works for
+   dynamically built lists too). Structure:
+     <div class="disc" data-open="false">
+       <button class="disc-head">…<span class="disc-sub">3</span><span class="disc-chev">▾</span></button>
+       <div class="disc-panel"><div class="disc-inner"><div class="disc-body">…</div></div></div>
+     </div>  */
+.disc{position:relative;border-radius:18px;background:var(--panel);overflow:clip;
+  box-shadow:var(--shadow-card);transition:background 380ms var(--smooth),box-shadow 220ms var(--snap)}
+.disc + .disc{margin-top:10px}
+.disc-head{width:100%;display:flex;align-items:center;gap:12px;min-height:56px;cursor:pointer;border:0;
+  background:transparent;color:var(--ink);text-align:left;padding:12px 15px;
+  font-family:Sora;font-weight:600;font-size:15px;letter-spacing:-.01em;
+  transition:background 160ms var(--snap)}
+@media(hover:hover){ .disc-head:hover{background:var(--panel-2)} }
+.disc-head:active{background:var(--panel-2)}
+.disc-head>.disc-ico{flex:none;width:34px;height:34px;border-radius:11px;display:grid;place-items:center;color:#fff;
+  background:radial-gradient(circle at 32% 28%,var(--lava-2),var(--lava) 64%,#d6390c);box-shadow:0 6px 16px rgba(255,78,27,.28)}
+.disc-head>.disc-ico svg{width:18px;height:18px}
+.disc-titles{display:flex;flex-direction:column;gap:2px;min-width:0}
+.disc-titles small{font:500 11.5px Inter;color:var(--muted);letter-spacing:0}
+.disc-sub{margin-left:auto;flex:none;font:600 12.5px Inter;color:var(--muted);white-space:nowrap}
+.disc-sub b{color:var(--lava-ink);font-weight:800} html.dark .disc-sub b{color:var(--lava-2)}
+.disc-chev{flex:none;width:22px;height:22px;margin-left:6px;display:grid;place-items:center;color:var(--muted);
+  transition:transform .5s cubic-bezier(.34,1.26,.5,1)}
+.disc-chev svg{width:15px;height:15px}
+.disc[data-open="true"]>.disc-head .disc-chev{transform:rotate(180deg)}
+.disc-panel{display:grid;grid-template-rows:0fr;transition:grid-template-rows .5s var(--snap)}
+.disc[data-open="true"]>.disc-panel{grid-template-rows:1fr}
+.disc-inner{overflow:hidden;min-height:0;
+  opacity:0;transform:translateY(-7px);transition:opacity .32s var(--smooth),transform .44s var(--snap)}
+.disc[data-open="true"]>.disc-panel>.disc-inner{opacity:1;transform:none;transition-delay:.06s,.06s}
+.disc-body{padding:0 15px 15px}
+.disc-body>*:first-child{margin-top:0}
+@media(prefers-reduced-motion:reduce){ .disc-panel,.disc-inner,.disc-chev{transition-duration:.001ms} }
+
 /* ============================== A11y · motion ========================== */
 :focus-visible{outline:2px solid var(--lava-ink);outline-offset:2px;border-radius:10px}
 .stage :focus-visible,.act :focus-visible,.dock :focus-visible,.card.dark :focus-visible{outline-color:var(--lava-2);box-shadow:0 0 0 4px rgba(2,3,5,.55)}
