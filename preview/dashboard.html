@@ -69,7 +69,7 @@
 /* Real notch: the label's exact box is SUBTRACTED from the card via mask, so the
    true background shows through — guaranteed clean. --tw/--th from JS (measures
    the label). The label is an overlay (.notch-tab), OUTSIDE the mask. */
-.agent-card{position:relative;border-radius:24px;overflow:hidden;
+.agent-card{position:relative;border-radius:24px;overflow:hidden;display:flex;flex-direction:column;min-height:322px;
   background:linear-gradient(165deg,#0e0b1c,#131024 58%,#0a0912);
   border:1px solid rgba(150,100,255,.22);box-shadow:var(--shadow-card);
   transition:border-color .5s var(--smooth),box-shadow .5s var(--smooth);
@@ -106,27 +106,36 @@
   filter:blur(34px);animation:agAurora 15s ease-in-out infinite alternate}
 @keyframes agAurora{to{transform:translate(7%,-6%) rotate(10deg) scale(1.12)}}
 
-/* single-column body: just the rotating hook, then the hover-revealed window
-   (top padding nudged so the hook sits lower, clear of the notch) */
-.agent-body{position:relative;z-index:1;display:flex;flex-direction:column;gap:16px;padding:42px 26px 24px;color:#f4f5f7}
-
-/* the loved rotating hook — redesigned: luminous gradient ink, refined Sora, glow */
-.agent-hook{font-family:"Sora",Inter;font-weight:500;font-size:clamp(20px,2.3vw,26px);
-  line-height:1.28;letter-spacing:-.014em;max-width:32ch;min-height:2.4em;
-  background:linear-gradient(96deg,#ffffff 0%,#e7dcff 44%,#b7a3ff 76%,#8ee6ff 100%);
+/* body fills the card; THREE cycling hook lines are spread with equal gaps —
+   l1 left, l2 right, l3 left. On hover the 2nd + 3rd fade-blur out and the chat
+   window (bubble + chips) takes their place. */
+.agent-body{position:relative;z-index:1;flex:1;display:flex;flex-direction:column;justify-content:space-between;padding:40px 26px 30px;color:#f4f5f7}
+.agent-hook{font-family:"Sora",Inter;font-weight:500;font-size:clamp(15px,1.65vw,19px);
+  line-height:1.32;letter-spacing:-.012em;max-width:30ch;
+  background:linear-gradient(96deg,#ffffff 0%,#e7dcff 46%,#b7a3ff 78%,#8ee6ff 100%);
   -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;
-  filter:drop-shadow(0 2px 15px rgba(139,92,246,.3));
-  transition:opacity .48s var(--smooth),transform .48s var(--smooth);
+  filter:drop-shadow(0 2px 13px rgba(139,92,246,.28));
+  transition:opacity .48s var(--smooth),transform .48s var(--smooth),filter .48s var(--smooth);
   will-change:opacity,transform}
-/* sequential swap (never both at once): outro = fade out + lift away; then the
-   new line starts below+hidden and RISES + fades in. */
+.agent-hook.l1{align-self:flex-start;text-align:left}
+.agent-hook.l2{align-self:flex-end;text-align:right;opacity:.9}
+.agent-hook.l3{align-self:flex-start;text-align:left;opacity:.9}
+/* sequential swap for a single line: outro = fade out + lift; intro = rise + fade in */
 .agent-hook.out{opacity:0;transform:translateY(-7px)}
-.agent-hook.in{opacity:0;transform:translateY(12px);transition:none}
+.agent-hook.in{opacity:0;transform:translateY(13px);transition:none}
+/* hover: the 2nd + 3rd lines quickly fade-blur out (then the window appears) */
+@media(hover:hover){
+  .agent-card:hover .agent-hook.l2,.agent-card:focus-within .agent-hook.l2,
+  .agent-card:hover .agent-hook.l3,.agent-card:focus-within .agent-hook.l3{
+    opacity:0;transform:translateY(-4px);filter:blur(7px) drop-shadow(0 2px 13px rgba(139,92,246,0));
+    transition:opacity .3s var(--smooth),transform .3s var(--smooth),filter .3s var(--smooth)}
+}
 
 /* the hover-revealed chat window: the bubble BLUR-FADES in, then the three
    suggestion chips fade-RISE one after another. Space is reserved (opacity /
    transform only, never layout) so nothing reflows — buttery, Apple-grade. */
-.agent-reveal{display:flex;flex-direction:column;gap:12px}
+.agent-reveal{position:absolute;left:26px;right:26px;bottom:26px;display:flex;flex-direction:column;gap:12px;pointer-events:none}
+@media(hover:hover){ .agent-card:hover .agent-reveal,.agent-card:focus-within .agent-reveal{pointer-events:auto} }
 .text-bubble{position:relative;display:flex;align-items:center;gap:8px;min-height:50px;padding:0 6px 0 17px;border-radius:15px;
   background:rgba(12,10,24,.55);border:1px solid rgba(150,110,255,.3);
   -webkit-backdrop-filter:blur(12px) saturate(150%);backdrop-filter:blur(12px) saturate(150%);
@@ -149,8 +158,8 @@
 @media(hover:hover){ .qchip:hover{border-color:rgba(224,64,208,.55);background:rgba(150,110,255,.22)} }
 /* reveal: bubble first, then the chips cascade up one-by-one just after */
 @media(hover:hover){
-  .agent-card:hover .text-bubble,.agent-card:focus-within .text-bubble{opacity:1;filter:blur(0);transform:none}
-  .agent-card:hover .qchip,.agent-card:focus-within .qchip{opacity:1;transform:none;transition-delay:calc(.16s + var(--ci,0)*.065s)}
+  .agent-card:hover .text-bubble,.agent-card:focus-within .text-bubble{opacity:1;filter:blur(0);transform:none;transition-delay:.24s}
+  .agent-card:hover .qchip,.agent-card:focus-within .qchip{opacity:1;transform:none;transition-delay:calc(.34s + var(--ci,0)*.055s)}
 }
 /* touch: no hover to trigger it — just show it */
 @media(hover:none){ .text-bubble,.qchip{opacity:1!important;filter:none!important;transform:none!important} }
@@ -158,6 +167,7 @@
 @media(prefers-reduced-motion:reduce){
   .agent-card::before{animation:none}
   .agent-hook{transition:opacity .3s linear}
+  .agent-card:hover .agent-hook.l2,.agent-card:hover .agent-hook.l3,.agent-card:focus-within .agent-hook.l2,.agent-card:focus-within .agent-hook.l3{filter:none!important;transform:none!important}
   .text-bubble,.qchip{transition:opacity .25s linear!important;filter:none!important;transform:none!important}
   .agent-card:hover .qchip,.agent-card:focus-within .qchip{transition-delay:0s!important}
 }
@@ -280,7 +290,9 @@ html.dark .notes-name,html.dark .notes-text{background:rgba(244,245,247,.05)}
       <span class="notch-tab" id="agentTab">agent</span>
       <section class="agent-card" id="agentCard" role="group" aria-label="ASC pomoćnik — AI za skladište guma">
         <div class="agent-body">
-          <span class="agent-hook" id="agentHook">…</span>
+          <span class="agent-hook l1" id="agentHook">…</span>
+          <span class="agent-hook l2" id="agentHook2" aria-hidden="true">…</span>
+          <span class="agent-hook l3" id="agentHook3" aria-hidden="true">…</span>
           <div class="agent-reveal">
             <div class="text-bubble">
               <input class="tb-input" id="tbInput" type="text" autocomplete="off" placeholder="Pitaj me bilo što o skladištu…" aria-label="Pitaj ASC pomoćnika">
@@ -398,8 +410,8 @@ html.dark .notes-name,html.dark .notes-text{background:rgba(244,245,247,.05)}
      the fetch fails (e.g. opened over file://).
      ========================================================================== */
   (() => {
-    const hookEl = document.getElementById('agentHook');
-    if (!hookEl) return;
+    const els = [document.getElementById('agentHook'), document.getElementById('agentHook2'), document.getElementById('agentHook3')].filter(Boolean);
+    if (!els.length) return;
 
     const FALLBACK = [
       "Koliko kompleta čeka na preuzimanje ovaj tjedan?",
@@ -415,24 +427,33 @@ html.dark .notes-name,html.dark .notes-text{background:rgba(244,245,247,.05)}
     const DAY = Math.floor(Date.now() / 86400000);
 
     const begin = (list) => {
-      const hooks = (Array.isArray(list) && list.length) ? list.slice() : FALLBACK.slice();
+      const pool = (Array.isArray(list) && list.length) ? list.slice() : FALLBACK.slice();
       // day-seeded shuffle: stable within the day, different sequence each day
       const r = mul(DAY ^ 0x9E3779B1);
-      for (let k = hooks.length - 1; k > 0; k--) { const j = (r() * (k + 1)) | 0; const t = hooks[k]; hooks[k] = hooks[j]; hooks[j] = t; }
-      let i = (Math.random() * hooks.length) | 0;   // fresh entry point each visit
-      hookEl.textContent = hooks[i];
+      for (let k = pool.length - 1; k > 0; k--) { const j = (r() * (k + 1)) | 0; const t = pool[k]; pool[k] = pool[j]; pool[j] = t; }
+      let ptr = (Math.random() * pool.length) | 0;
+      const next = () => pool[(ptr++) % pool.length];   // distinct lines, no immediate repeats
       const reduce = matchMedia('(prefers-reduced-motion:reduce)').matches;
-      if (!reduce && hooks.length > 1) setInterval(() => {
-        i = (i + 1) % hooks.length;                 // walk the day's order — no repeats
-        hookEl.classList.add('out');                // OUTRO: fade out + lift away…
-        setTimeout(() => {                          // …then, once it's fully gone:
-          hookEl.textContent = hooks[i];
-          hookEl.classList.remove('out');
-          hookEl.classList.add('in');               // jump below + hidden (no transition)
-          void hookEl.offsetWidth;                  // reflow so the start state sticks
-          hookEl.classList.remove('in');            // INTRO: rise + fade in
-        }, 520);                                    // wait out the .48s outro first
-      }, 10400);                                    // ~50% less frequent than before (was 5200)
+
+      // fill the three lines (hidden-below to start, unless reduced motion)
+      els.forEach((el) => { el.textContent = next(); if (!reduce) el.classList.add('in'); });
+      if (reduce || pool.length < 2) return;            // static three lines
+      void els[0].offsetWidth;                          // reflow so the .in start sticks
+      // ENTRANCE: rise + fade in, one after the other
+      els.forEach((el, k) => setTimeout(() => el.classList.remove('in'), 90 + k * 240));
+
+      // CYCLE: swap the next line every ~4.6s (rolling, normal pace)
+      const swap = (el) => {
+        el.classList.add('out');                        // fade out + lift away
+        setTimeout(() => {
+          el.textContent = next();
+          el.classList.remove('out'); el.classList.add('in');
+          void el.offsetWidth;
+          el.classList.remove('in');                    // rise + fade in
+        }, 500);
+      };
+      let turn = 0;
+      setInterval(() => { swap(els[turn % els.length]); turn++; }, 4600);
     };
 
     fetch('assets/agent-hooks.json', { cache: 'no-store' })
