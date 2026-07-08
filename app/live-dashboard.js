@@ -1,0 +1,114 @@
+// ============================================================================
+// live-dashboard.js — fills the redesigned dashboard with REAL shop data from
+// Supabase (via ../js/db.js). The auth gate in app.js already guarantees a
+// session before this runs. Every write is guarded: if a fetch fails, the page
+// keeps its existing markup instead of blanking.
+// ============================================================================
+import { getSession, loadMyProfile, healthStats, countsByStatus, listStorageSets } from '../js/db.js';
+
+const SEASON_LABEL = { winter: 'Zimske', summer: 'Ljetne', all_season: 'Cjelogodišnje' };
+const SEASON_CLASS = { winter: 'win', summer: '', all_season: 'all' };
+const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const q = (s, r = document) => r.querySelector(s);
+const qa = (s, r = document) => [...r.querySelectorAll(s)];
+
+function greeting() {
+  const h = new Date().getHours();
+  return h < 6 ? 'Dobra noć' : h < 12 ? 'Dobro jutro' : h < 18 ? 'Dobar dan' : 'Dobra večer';
+}
+function initials(name) {
+  return (String(name || '').trim().split(/\s+/).map((w) => w[0]).filter(Boolean).slice(0, 2).join('') || 'ASC').toUpperCase();
+}
+function code4(code) { const m = String(code || '').match(/(\d{3,4})\s*$/); return m ? m[1] : (code || ''); }
+function daysBadge(dateStr) {
+  const d = new Date(dateStr); d.setHours(0, 0, 0, 0);
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const diff = Math.round((d - today) / 864e5);
+  if (diff < 0) return 'Kasni';
+  if (diff === 0) return 'Danas';
+  if (diff === 1) return 'Sutra';
+  return d.toLocaleDateString('hr-HR', { day: 'numeric', month: 'short' });
+}
+
+// Set a number, cancelling the count-up so it doesn't fight our real value.
+function setNum(el, val) { if (!el) return; el.removeAttribute('data-count'); el.textContent = String(val); }
+
+(async () => {
+  const session = await getSession().catch(() => null);
+  if (!session) return;                       // the gate in app.js handles the redirect
+
+  // ---- Greeting + avatar from the signed-in profile ----
+  loadMyProfile().then((p) => {
+    const name = p && p.full_name ? String(p.full_name).trim() : '';
+    const h1 = q('.profile .row1 h1');
+    if (h1) h1.textContent = greeting() + (name ? ', ' + name.split(/\s+/)[0] : '');
+    const av = q('.profile .pavatar');
+    if (av && name) av.textContent = initials(name);
+  }).catch(() => {});
+
+  let health, counts, sets;
+  try {
+    [health, counts, sets] = await Promise.all([healthStats(), countsByStatus(), listStorageSets()]);
+  } catch (e) {
+    console.warn('[live] dashboard data failed — keeping placeholder markup:', e);
+    return;
+  }
+
+  // ---- Hero: real inventory + caption + activity spills ----
+  setNum(q('.hero-num [data-count]'), health.inventory);
+  const cap = q('.stage .cap');
+  if (cap) cap.textContent = 'na čuvanju · ' + counts.reserved + ' rezervirano · ' + counts.checked_out + ' preuzeto';
+
+  const now = new Date();
+  const in7 = new Date(now.getTime() + 7 * 864e5);
+  const upcoming = sets.filter((s) => s.status === 'in_storage' && s.expected_out_date && new Date(s.expected_out_date) <= in7);
+  const spills = qa('.spills .spill b');
+  setNum(spills[0], health.todayCheckIns);
+  setNum(spills[1], health.todayPickups);
+  setNum(spills[2], upcoming.length);
+
+  // ---- Recent stream: newest sets fill the real slides (keep the tire photos as decoration) ----
+  const recent = [...sets].sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at)).slice(0, 6);
+  const realSlides = qa('.stream-track .slide:not([aria-hidden])');
+  realSlides.forEach((slide, i) => {
+    const s = recent[i];
+    if (!s) { slide.style.display = 'none'; return; }
+    slide.setAttribute('href', 'set-detail.html?code=' + encodeURIComponent(s.public_code));
+    const tab = q('.tab-tl', slide); if (tab) tab.textContent = code4(s.public_code);
+    const who = q('.meta .who', slide); if (who) who.textContent = s.vehicle?.customer?.name || 'Kupac';
+    const chip = q('.meta .chip', slide);
+    if (chip) { chip.textContent = SEASON_LABEL[s.season] || s.season || ''; chip.className = 'chip ' + (SEASON_CLASS[s.season] || ''); }
+  });
+  // Mirror the real slides into the duplicate track (marquee needs 2 identical halves).
+  const dupSlides = qa('.stream-track .slide[aria-hidden]');
+  dupSlides.forEach((slide, i) => {
+    const src = realSlides[i];
+    if (!src || src.style.display === 'none') { slide.style.display = 'none'; return; }
+    slide.setAttribute('href', src.getAttribute('href'));
+    const tab = q('.tab-tl', slide), stab = q('.tab-tl', src); if (tab && stab) tab.textContent = stab.textContent;
+    const who = q('.meta .who', slide), swho = q('.meta .who', src); if (who && swho) who.textContent = swho.textContent;
+    const chip = q('.meta .chip', slide), schip = q('.meta .chip', src); if (chip && schip) { chip.textContent = schip.textContent; chip.className = schip.className; }
+  });
+
+  // ---- Reminders: soonest upcoming pickups (overdue first) ----
+  const dueSoon = sets
+    .filter((s) => s.status !== 'checked_out' && s.expected_out_date)
+    .sort((a, b) => new Date(a.expected_out_date) - new Date(b.expected_out_date))
+    .slice(0, 3);
+  const remCard = q('.card.dark');
+  if (remCard) {
+    const badge = q('.count-badge', remCard);
+    if (badge) badge.textContent = String(upcoming.length || dueSoon.length);
+    const minis = qa('.mini', remCard);
+    minis.forEach((mini, i) => {
+      const s = dueSoon[i];
+      if (!s) { mini.style.display = 'none'; return; }
+      const overdue = new Date(s.expected_out_date) < new Date(new Date().toDateString());
+      mini.className = 'mini' + (overdue ? ' overdue' : '');
+      mini.setAttribute('href', 'set-detail.html?code=' + encodeURIComponent(s.public_code));
+      const t = q('time', mini); if (t) t.textContent = daysBadge(s.expected_out_date);
+      const b = q('b', mini); if (b) b.textContent = s.vehicle?.customer?.name || 'Kupac';
+      const pl = q('.pl', mini); if (pl) pl.textContent = s.vehicle?.plate || s.public_code;
+    });
+  }
+})();

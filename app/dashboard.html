@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ASC — Ploča (preview)</title>
+<meta name="theme-color" content="#edf0f5">
+<script>try{if(localStorage.getItem('asc.theme')==='dark'){document.documentElement.classList.add('dark');document.querySelector('meta[name="theme-color"]').content='#020305';}}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;650;700;800&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+<!--
+  ASC dashboard — CLEAN-ROOM REBUILD v2 (isolated preview).
+  Shared design system lives in app.css + app.js (v6 "Hanssen"): tokens, glass
+  shell, header, notched corner tabs, stage hero, action cards, card surfaces,
+  slider, iOS dock, theme toggle + count-up animations. Only the dashboard's own
+  layout grids (.hero / .trio / .recent header) stay inline below. Dedicated
+  imagery: zaprimi.jpg (green) = check-in, preuzmi.jpg (red) = pickup — used ONLY
+  there. Numbers are placeholders.
+-->
+<link rel="stylesheet" href="app.css">
+<style>
+/* ---- Dashboard-page-specific layout only (shared rules live in app.css) ---- */
+
+/* HERO grid: stage spans 2 rows beside two action cards; the AI card sits in a
+   3rd row UNDER the stage, inheriting the stage's (column-1) width. */
+.hero{display:grid;grid-template-columns:1.5fr 1fr;grid-template-rows:1fr 1fr auto;gap:var(--gap)}
+.hero .stage{grid-column:1;grid-row:1 / 3}
+.hero .act.green{grid-column:2;grid-row:1}
+.hero .act.red{grid-column:2;grid-row:2}
+@media(max-width:900px){ .hero{grid-template-columns:1fr;grid-template-rows:auto} .hero .stage{grid-column:auto;grid-row:auto} .hero .act.green,.hero .act.red{grid-column:auto;grid-row:auto} }
+
+/* TRIO row (equal height): profile | season | reminders */
+.trio{display:grid;grid-template-columns:1fr 1fr 1fr;gap:var(--gap);margin-top:var(--gap)}
+@media(max-width:900px){ .trio{grid-template-columns:1fr} }
+
+/* Recent-sets section header (the .slider/.slide/.chip cards live in app.css) */
+.recent{margin-top:var(--gap)}
+.recent .head{display:flex;align-items:baseline;justify-content:space-between;margin:0 4px 10px}
+.recent .head h3{font:600 15px Sora}
+.recent .head .live{display:inline-flex;align-items:center;gap:6px;font:600 10.5px Inter;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.recent .head .live .ld{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 7px 1px rgba(47,191,91,.6);animation:breathe 2.2s ease-in-out infinite}
+/* Live stream marquee — seamless (dup track + translateX(-50%) with per-card
+   margins), constant linear speed, GPU transform, edge-fade masks. */
+.stream{position:relative;overflow:hidden;padding:2px 0 8px;
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000 5%,#000 95%,transparent);
+          mask-image:linear-gradient(90deg,transparent,#000 5%,#000 95%,transparent)}
+.stream-track{display:flex;width:max-content;will-change:transform;animation:streamMove 34s linear infinite}
+.stream-track .slide{flex:0 0 auto;position:relative;margin-right:12px}
+@keyframes streamMove{to{transform:translateX(-50%)}}
+@media(hover:hover){ .stream:hover .stream-track{animation-play-state:paused} }
+@media(prefers-reduced-motion:reduce){ .stream-track{animation:none} .stream{overflow-x:auto;-webkit-mask-image:none;mask-image:none} }
+/* Each streamed set shows its acquisition photo with the printed QR label stuck
+   on it; the set number rides in a notched corner tab (top-left). */
+.stream .slide .thumb{position:relative}
+.stream .qr-sticker{position:absolute;right:8px;bottom:8px;z-index:2;background:#fbfbfb;padding:4px;border-radius:6px;transform:rotate(-5deg);box-shadow:0 4px 12px -3px rgba(0,0,0,.55);border:1px solid rgba(0,0,0,.06);cursor:pointer;transition:transform 160ms var(--snap),box-shadow 200ms var(--snap)}
+@media(hover:hover){ .stream .qr-sticker:hover{transform:rotate(-5deg) scale(1.12);box-shadow:0 8px 18px -4px rgba(0,0,0,.6)} }
+.stream .qr-sticker:active{transform:rotate(-5deg) scale(.96)}
+.stream .qr-sticker img{display:block;width:38px;height:38px;image-rendering:pixelated;border-radius:2px}
+.stream .slide .tab-tl{font-size:10px;padding:5px 9px 6px}
+
+/* ===== ASC Agent card — an "intelligent" agent surface ======================
+   No click-to-expand any more. The rotating hook (loved — refreshed daily by the
+   engine at the bottom of the page) sits on the left; a tall type box BLURS into
+   existence on the right on hover / focus. The old "bulb" spark is now a smoothly
+   spinning tire. Notched corner tab kept (the ASC signature). Deliberately
+   off-palette — this is the AI affordance. */
+.agent-shell{position:relative}
+.hero .agent-shell{grid-column:1;grid-row:3}
+@media(max-width:900px){ .hero .agent-shell{grid-column:auto;grid-row:auto} }
+/* Real notch: the label's exact box is SUBTRACTED from the card via mask, so the
+   true background shows through — guaranteed clean. --tw/--th from JS (measures
+   the label). The label is an overlay (.notch-tab), OUTSIDE the mask. */
+.agent-card{position:relative;border-radius:24px;overflow:hidden;display:flex;flex-direction:column;min-height:322px;
+  background:linear-gradient(165deg,#0e0b1c,#131024 58%,#0a0912);
+  border:1px solid rgba(150,100,255,.22);box-shadow:var(--shadow-card);
+  transition:border-color .5s var(--smooth),box-shadow .5s var(--smooth);
+  --r:14px;
+  /* 6 mask layers, XOR-composited (all regions disjoint):
+     1 base · 2 top band · 3 left band · 4 deep-corner round (convex) ·
+     5 top-edge fillet · 6 left-edge fillet (the two concave transitions that
+     make the gap sweep smoothly around the tab — the Apple-grade detail). */
+  -webkit-mask:
+    linear-gradient(#000,#000),
+    linear-gradient(#000,#000) 0 0/var(--tw,0px) calc(var(--th,0px) - var(--r)) no-repeat,
+    linear-gradient(#000,#000) 0 calc(var(--th,0px) - var(--r))/calc(var(--tw,0px) - var(--r)) var(--r) no-repeat,
+    radial-gradient(circle var(--r) at 0 0,#000 calc(var(--r) - .6px),#0000 var(--r)) calc(var(--tw,0px) - var(--r)) calc(var(--th,0px) - var(--r))/var(--r) var(--r) no-repeat,
+    radial-gradient(circle var(--r) at 100% 100%,#0000 calc(var(--r) - .6px),#000 var(--r)) var(--tw,0px) 0/var(--r) var(--r) no-repeat,
+    radial-gradient(circle var(--r) at 100% 100%,#0000 calc(var(--r) - .6px),#000 var(--r)) 0 var(--th,0px)/var(--r) var(--r) no-repeat;
+  -webkit-mask-composite:xor,xor,xor,xor,xor;
+  mask:
+    linear-gradient(#000,#000),
+    linear-gradient(#000,#000) 0 0/var(--tw,0px) calc(var(--th,0px) - var(--r)) no-repeat,
+    linear-gradient(#000,#000) 0 calc(var(--th,0px) - var(--r))/calc(var(--tw,0px) - var(--r)) var(--r) no-repeat,
+    radial-gradient(circle var(--r) at 0 0,#000 calc(var(--r) - .6px),#0000 var(--r)) calc(var(--tw,0px) - var(--r)) calc(var(--th,0px) - var(--r))/var(--r) var(--r) no-repeat,
+    radial-gradient(circle var(--r) at 100% 100%,#0000 calc(var(--r) - .6px),#000 var(--r)) var(--tw,0px) 0/var(--r) var(--r) no-repeat,
+    radial-gradient(circle var(--r) at 100% 100%,#0000 calc(var(--r) - .6px),#000 var(--r)) 0 var(--th,0px)/var(--r) var(--r) no-repeat;
+  mask-composite:exclude,exclude,exclude,exclude,exclude}
+/* the label floats in the cut, sitting directly on the real background behind */
+.notch-tab{position:absolute;top:0;left:0;z-index:6;font:600 10.5px Inter;letter-spacing:.07em;
+  text-transform:uppercase;color:var(--ink-2);padding:7px 13px 8px;white-space:nowrap;pointer-events:none}
+@media(hover:hover){ .agent-card:hover{border-color:rgba(170,120,255,.42);box-shadow:0 22px 50px -22px rgba(90,50,200,.6),var(--shadow-card)} }
+.agent-card::before{content:"";position:absolute;inset:-35%;z-index:0;pointer-events:none;opacity:.55;
+  background:
+    radial-gradient(38% 46% at 22% 32%,rgba(130,70,255,.55),transparent 60%),
+    radial-gradient(40% 48% at 78% 38%,rgba(232,64,208,.42),transparent 60%),
+    radial-gradient(46% 54% at 58% 82%,rgba(50,100,255,.42),transparent 62%);
+  filter:blur(34px);animation:agAurora 15s ease-in-out infinite alternate}
+@keyframes agAurora{to{transform:translate(7%,-6%) rotate(10deg) scale(1.12)}}
+
+/* body fills the card; THREE cycling hook lines are spread with equal gaps —
+   l1 left, l2 right, l3 left. On hover the 2nd + 3rd fade-blur out and the chat
+   window (bubble + chips) takes their place. */
+.agent-body{position:relative;z-index:1;flex:1;display:flex;flex-direction:column;justify-content:space-between;padding:40px 26px 30px;color:#f4f5f7}
+.agent-hook{font-family:"Sora",Inter;font-weight:500;font-size:clamp(15px,1.65vw,19px);
+  line-height:1.32;letter-spacing:-.012em;max-width:30ch;
+  background:linear-gradient(96deg,#ffffff 0%,#e7dcff 46%,#b7a3ff 78%,#8ee6ff 100%);
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;
+  filter:drop-shadow(0 2px 13px rgba(139,92,246,.28));
+  transition:opacity .48s var(--smooth),transform .48s var(--smooth),filter .48s var(--smooth);
+  will-change:opacity,transform}
+.agent-hook.l1{align-self:flex-start;text-align:left}
+.agent-hook.l2{align-self:flex-end;text-align:right;opacity:.9}
+.agent-hook.l3{align-self:flex-start;text-align:left;opacity:.9}
+/* sequential swap for a single line: outro = fade out + lift; intro = rise + fade in */
+.agent-hook.out{opacity:0;transform:translateY(-7px)}
+.agent-hook.in{opacity:0;transform:translateY(13px);transition:none}
+/* hover: the 2nd + 3rd lines quickly fade-blur out (then the window appears) */
+@media(hover:hover){
+  .agent-card:hover .agent-hook.l2,.agent-card:focus-within .agent-hook.l2,
+  .agent-card:hover .agent-hook.l3,.agent-card:focus-within .agent-hook.l3{
+    opacity:0;transform:translateY(-4px);filter:blur(7px) drop-shadow(0 2px 13px rgba(139,92,246,0));
+    transition:opacity .3s var(--smooth),transform .3s var(--smooth),filter .3s var(--smooth)}
+}
+
+/* the hover-revealed chat window: the bubble BLUR-FADES in, then the three
+   suggestion chips fade-RISE one after another. Space is reserved (opacity /
+   transform only, never layout) so nothing reflows — buttery, Apple-grade. */
+.agent-reveal{position:absolute;left:26px;right:26px;bottom:26px;display:flex;flex-direction:column;gap:12px;pointer-events:none}
+@media(hover:hover){ .agent-card:hover .agent-reveal,.agent-card:focus-within .agent-reveal{pointer-events:auto} }
+/* touch has no hover → keep the chat window tappable there; and while a reply is
+   live, keep it open + interactive regardless of hover so the answer doesn't vanish. */
+html[data-device="tablet"] .agent-reveal,html[data-device="mobile"] .agent-reveal,
+.agent-card.agent-live .agent-reveal{pointer-events:auto}
+.agent-card.agent-live .text-bubble,.agent-card.agent-live .qchip{opacity:1;filter:blur(0);transform:none}
+.agent-card.agent-live .agent-hook.l2,.agent-card.agent-live .agent-hook.l3{opacity:0}
+.tb-reply{display:none;margin:0 0 2px;font:500 13.5px/1.42 Inter;color:#ece6ff;background:rgba(12,10,24,.6);
+  border:1px solid rgba(150,110,255,.26);border-radius:13px;padding:10px 13px;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
+  max-height:112px;overflow:auto;box-shadow:0 14px 34px -20px rgba(0,0,0,.7)}
+.tb-reply.on{display:block;animation:rise .4s var(--smooth) both}
+.text-bubble{position:relative;display:flex;align-items:center;gap:8px;min-height:50px;padding:0 6px 0 17px;border-radius:15px;
+  background:rgba(12,10,24,.55);border:1px solid rgba(150,110,255,.3);
+  -webkit-backdrop-filter:blur(12px) saturate(150%);backdrop-filter:blur(12px) saturate(150%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 18px 42px -22px rgba(0,0,0,.72);
+  opacity:0;filter:blur(16px);transform:translateY(12px) scale(.98);
+  transition:opacity .55s cubic-bezier(.16,1,.3,1),filter .55s cubic-bezier(.16,1,.3,1),transform .55s cubic-bezier(.16,1,.3,1),border-color .3s var(--smooth);
+  will-change:opacity,filter,transform}
+.tb-input{flex:1;min-width:0;background:transparent;border:0;outline:0;color:#f3efff;font:500 14.5px Inter}
+.tb-input::placeholder{color:rgba(233,224,255,.46)}
+.tb-send{flex:none;width:38px;height:38px;border-radius:11px;border:0;cursor:pointer;display:grid;place-items:center;color:#fff;
+  background:linear-gradient(135deg,#8b5cf6,#e040d0);box-shadow:0 6px 16px -6px rgba(139,92,246,.7);
+  transition:transform 150ms var(--snap),box-shadow .2s var(--smooth)}
+@media(hover:hover){ .tb-send:hover{transform:translateY(-1px);box-shadow:0 10px 22px -8px rgba(224,64,208,.7)} }
+.tb-send:active{transform:scale(.92)}
+.chips{display:flex;flex-wrap:wrap;gap:9px}
+.qchip{display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:0 15px;border-radius:999px;cursor:pointer;
+  background:rgba(150,110,255,.12);border:1px solid rgba(150,110,255,.3);color:#e9e2ff;font:600 12.5px Inter;letter-spacing:.005em;
+  opacity:0;transform:translateY(14px);
+  transition:opacity .5s cubic-bezier(.16,1,.3,1),transform .5s cubic-bezier(.16,1,.3,1),border-color .2s var(--smooth),background .2s var(--smooth)}
+@media(hover:hover){ .qchip:hover{border-color:rgba(224,64,208,.55);background:rgba(150,110,255,.22)} }
+/* reveal: bubble first, then the chips cascade up one-by-one just after */
+@media(hover:hover){
+  .agent-card:hover .text-bubble,.agent-card:focus-within .text-bubble{opacity:1;filter:blur(0);transform:none;transition-delay:.24s}
+  .agent-card:hover .qchip,.agent-card:focus-within .qchip{opacity:1;transform:none;transition-delay:calc(.34s + var(--ci,0)*.055s)}
+}
+/* ===== RESPONSIVE — adapt the agent window to each device tier ==============
+   Capability-based detection (NOT user-agent sniffing): app.js reads matchMedia
+   hover/pointer + width and sets html[data-device] = desktop | tablet | mobile
+   (re-evaluated on resize/rotate).
+   · desktop (a mouse → real hover): the hover-to-reveal window above.
+   · tablet / mobile (touch → no hover): nothing to hover, so the window is laid
+     out STATICALLY in normal flow (headline → input → chips) — it can't overlap
+     the lines the way the hover-only reveal did (that was the mobile bug).
+   @media(hover:none) is the pre-JS / JS-off CSS safety net; [data-device] is the
+   precise per-tier control. */
+@media (hover: none){
+  .agent-card{min-height:auto}
+  .agent-body{justify-content:flex-start;gap:16px;padding:32px 22px 22px}
+  .agent-hook.l2,.agent-hook.l3{display:none}
+  .agent-reveal{position:static;inset:auto;pointer-events:auto;gap:11px}
+  .text-bubble,.qchip{opacity:1;filter:none;transform:none;transition:none}
+}
+/* real narrow-touch phones get the compact treatment immediately (no pre-JS reflow) */
+@media (hover: none) and (max-width: 640px){
+  .agent-body{padding:26px 18px 18px;gap:13px}
+  .agent-hook.l1{font-size:16px;max-width:none}
+  .text-bubble{min-height:46px}
+  .qchip{min-height:34px;padding:0 13px;font-size:12px}
+  .chips .qchip:nth-child(n+7){display:none}
+}
+html[data-device="tablet"] .agent-card,html[data-device="mobile"] .agent-card{min-height:auto}
+html[data-device="tablet"] .agent-body,html[data-device="mobile"] .agent-body{justify-content:flex-start;gap:16px;padding:32px 22px 22px}
+html[data-device="tablet"] .agent-hook.l2,html[data-device="tablet"] .agent-hook.l3,
+html[data-device="mobile"] .agent-hook.l2,html[data-device="mobile"] .agent-hook.l3{display:none}
+html[data-device="tablet"] .agent-reveal,html[data-device="mobile"] .agent-reveal{position:static;inset:auto;pointer-events:auto;gap:11px}
+html[data-device="tablet"] .text-bubble,html[data-device="tablet"] .qchip,
+html[data-device="mobile"] .text-bubble,html[data-device="mobile"] .qchip{opacity:1;filter:none;transform:none;transition:none}
+/* mobile — tighter than tablet, and cap the chips so the card stays compact */
+html[data-device="mobile"] .agent-body{padding:26px 18px 18px;gap:13px}
+html[data-device="mobile"] .agent-hook.l1{font-size:16px;max-width:none}
+html[data-device="mobile"] .text-bubble{min-height:46px}
+html[data-device="mobile"] .qchip{min-height:34px;padding:0 13px;font-size:12px}
+html[data-device="mobile"] .chips .qchip:nth-child(n+7){display:none}
+@media(prefers-reduced-motion:reduce){
+  .agent-card::before{animation:none}
+  .agent-hook{transition:opacity .3s linear}
+  .agent-card:hover .agent-hook.l2,.agent-card:hover .agent-hook.l3,.agent-card:focus-within .agent-hook.l2,.agent-card:focus-within .agent-hook.l3{filter:none!important;transform:none!important}
+  .text-bubble,.qchip{transition:opacity .25s linear!important;filter:none!important;transform:none!important}
+  .agent-card:hover .qchip,.agent-card:focus-within .qchip{transition-delay:0s!important}
+}
+
+/* ===== General corner CUT — the same real mask subtraction as the agent card,
+   applied by JS to the other cards so every notch reveals the TRUE background
+   instead of a painted --tab-surf patch (kills the corner "leakage"). The JS
+   measures each tab, moves it to an overlay, and masks its card. Top-left tabs
+   only for now; the animated stream slides keep the painted notch. ===== */
+.notch-cut{--r:14px;
+  -webkit-mask:
+    linear-gradient(#000,#000),
+    linear-gradient(#000,#000) 0 0/var(--tw,0px) calc(var(--th,0px) - var(--r)) no-repeat,
+    linear-gradient(#000,#000) 0 calc(var(--th,0px) - var(--r))/calc(var(--tw,0px) - var(--r)) var(--r) no-repeat,
+    radial-gradient(circle var(--r) at 0 0,#000 calc(var(--r) - .6px),#0000 var(--r)) calc(var(--tw,0px) - var(--r)) calc(var(--th,0px) - var(--r))/var(--r) var(--r) no-repeat,
+    radial-gradient(circle var(--r) at 100% 100%,#0000 calc(var(--r) - .6px),#000 var(--r)) var(--tw,0px) 0/var(--r) var(--r) no-repeat,
+    radial-gradient(circle var(--r) at 100% 100%,#0000 calc(var(--r) - .6px),#000 var(--r)) 0 var(--th,0px)/var(--r) var(--r) no-repeat;
+  -webkit-mask-composite:xor,xor,xor,xor,xor;
+  mask:
+    linear-gradient(#000,#000),
+    linear-gradient(#000,#000) 0 0/var(--tw,0px) calc(var(--th,0px) - var(--r)) no-repeat,
+    linear-gradient(#000,#000) 0 calc(var(--th,0px) - var(--r))/calc(var(--tw,0px) - var(--r)) var(--r) no-repeat,
+    radial-gradient(circle var(--r) at 0 0,#000 calc(var(--r) - .6px),#0000 var(--r)) calc(var(--tw,0px) - var(--r)) calc(var(--th,0px) - var(--r))/var(--r) var(--r) no-repeat,
+    radial-gradient(circle var(--r) at 100% 100%,#0000 calc(var(--r) - .6px),#000 var(--r)) var(--tw,0px) 0/var(--r) var(--r) no-repeat,
+    radial-gradient(circle var(--r) at 100% 100%,#0000 calc(var(--r) - .6px),#000 var(--r)) 0 var(--th,0px)/var(--r) var(--r) no-repeat;
+  mask-composite:exclude,exclude,exclude,exclude,exclude}
+.notch-cut-tab{background:transparent!important;z-index:20}
+.notch-cut-tab::before,.notch-cut-tab::after{display:none!important}
+
+/* ===== Notes / suggestions card — next to the AI card (hero col 2 / row 3).
+   The team writes suggestions WITH THEIR NAME for the owner to review & dismiss.
+   Persists in localStorage ($0 preview demo; wire to Supabase on the live port
+   for real multi-user collection). On-palette utility card (Lava accent). ===== */
+.notes-shell{position:relative}
+.hero .notes-shell{grid-column:2;grid-row:3}
+@media(max-width:900px){ .hero .notes-shell{grid-column:auto;grid-row:auto} }
+.notes-card{position:relative;height:100%;min-height:212px;border-radius:24px;overflow:hidden;display:flex;flex-direction:column;
+  background:var(--panel);box-shadow:var(--shadow-card);padding:30px 20px 18px;transition:background .38s var(--smooth)}
+.notes-head{display:flex;align-items:center;gap:9px;margin-bottom:12px}
+.notes-head h3{font:600 15px Sora;color:var(--ink)}
+.notes-count{margin-left:auto;font:800 12px Inter;min-width:20px;height:20px;padding:0 6px;border-radius:999px;
+  background:var(--lava);color:#fff;display:inline-flex;align-items:center;justify-content:center}
+.notes-list{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:8px;margin:0 -2px;padding:0 2px 2px;min-height:60px;scrollbar-width:thin}
+.note{position:relative;background:var(--panel-2);border-radius:12px;padding:10px 30px 11px 12px;
+  animation:noteIn .32s var(--smooth) both}
+html.dark .note{background:rgba(244,245,247,.05)}
+@keyframes noteIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+.note-top{display:flex;align-items:baseline;gap:8px;margin-bottom:3px}
+.note-author{font:650 12px Inter;color:var(--ink)}
+.note-time{font:500 10.5px Inter;color:var(--muted);white-space:nowrap}
+.note-text{font:400 12.5px/1.45 Inter;color:var(--ink-2);word-break:break-word}
+.note-x{position:absolute;top:7px;right:7px;width:19px;height:19px;border:0;border-radius:50%;cursor:pointer;
+  background:transparent;color:var(--muted);display:grid;place-items:center;font:400 14px/1 Inter;transition:background .18s,color .18s,transform 120ms var(--snap)}
+@media(hover:hover){ .note-x:hover{background:var(--lava-tint);color:var(--lava-ink)} }
+.note-x:active{transform:scale(.85)}
+.notes-empty{font:500 12.5px Inter;color:var(--muted);padding:12px 4px}
+.notes-form{margin-top:12px;padding-top:12px;border-top:1px solid var(--hairline);display:flex;flex-direction:column;gap:8px}
+.notes-name,.notes-text{border:1px solid var(--line);border-radius:10px;background:var(--panel-2);padding:9px 11px;font:500 12.5px Inter;color:var(--ink);outline:none;transition:border-color .2s var(--smooth)}
+html.dark .notes-name,html.dark .notes-text{background:rgba(244,245,247,.05)}
+.notes-name:focus,.notes-text:focus{border-color:var(--lava-ring)}
+.notes-name::placeholder,.notes-text::placeholder{color:var(--muted)}
+.notes-row{display:flex;gap:8px}
+.notes-text{flex:1;min-width:0}
+.notes-add{flex:none;width:38px;border:0;border-radius:10px;cursor:pointer;background:var(--lava);color:#fff;font:400 20px/1 Inter;
+  transition:transform 150ms var(--snap),background .2s var(--smooth)}
+@media(hover:hover){ .notes-add:hover{background:var(--lava-2)} }
+.notes-add:active{transform:scale(.92)}
+</style>
+</head>
+<body>
+<div class="canvas" aria-hidden="true"></div>
+<div class="grain" aria-hidden="true"></div>
+<span class="preview-tag">Preview · nije uživo</span>
+
+<main class="shell">
+  <header class="top">
+    <img class="logo" src="assets/logo.png" alt="ASC — Auto servisni centar">
+    <nav class="pill" aria-label="Glavna navigacija">
+      <span class="pill-links"><a class="on" href="#">Ploča</a><a href="#">Zaprimi</a><a href="#">Skladište</a><a href="#">Kupci</a></span>
+      <button class="mode" id="mode" aria-label="Promijeni temu"><i></i></button>
+    </nav>
+  </header>
+
+  <!-- HERO: stage (spans 2 rows) + two stacked action cards, heights aligned -->
+  <section class="hero">
+    <div class="stage reveal" style="animation-delay:110ms">
+      <span class="photo" aria-hidden="true"></span>
+      <span class="scrim" aria-hidden="true"></span>
+      <span class="k">Skladište · Hotel za gume · Dubrovnik</span>
+      <div class="hero-num"><span data-count="248">0</span><em>setova</em></div>
+      <div class="cap">na čuvanju · 0 rezervirano · 92 % ostaje</div>
+      <div class="meter"><i data-w="92"></i></div>
+      <div class="space"></div>
+      <div class="spills">
+        <button type="button" class="spill"><b data-count="4">0</b><span>Zaprimljeno</span></button>
+        <button type="button" class="spill"><b data-count="2">0</b><span>Preuzeto</span></button>
+        <button type="button" class="spill"><b data-count="17">0</b><span>Uskoro</span></button>
+      </div>
+      <span class="tab-corner">danas · Dubrovnik</span>
+    </div>
+
+    <a class="act green reveal" href="#" style="animation-delay:150ms">
+      <span class="bg" style="background-image:url('assets/zaprimi.jpg')"></span>
+      <span class="go" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5.4v13.2M5.4 12h13.2"/></svg></span>
+      <span class="tab-tl">Zaprimanje</span>
+      <div class="body"><h2>Zaprimi novi set</h2></div>
+    </a>
+
+    <a class="act red reveal" href="#" style="animation-delay:190ms">
+      <span class="bg" style="background-image:url('assets/preuzmi.jpg')"></span>
+      <span class="go" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12.8l5 5L19.5 6.6"/></svg></span>
+      <span class="tab-tl">Preuzimanje</span>
+      <div class="body"><h2>Preuzmi komplet</h2></div>
+    </a>
+
+    <!-- ASC AGENT — a calm AI window UNDER the stage (col 1), matching its width.
+         Resting: just the rotating hook. On hover the chat bubble blur-fades in,
+         then the three suggestion chips fade-rise one by one. Notch = real mask cut. -->
+    <div class="agent-shell reveal" id="agentShell" style="animation-delay:230ms">
+      <span class="notch-tab" id="agentTab">agent</span>
+      <section class="agent-card" id="agentCard" role="group" aria-label="ASC pomoćnik — AI za skladište guma">
+        <div class="agent-body">
+          <span class="agent-hook l1" id="agentHook">…</span>
+          <span class="agent-hook l2" id="agentHook2" aria-hidden="true">…</span>
+          <span class="agent-hook l3" id="agentHook3" aria-hidden="true">…</span>
+          <div class="agent-reveal">
+            <div class="text-bubble">
+              <input class="tb-input" id="tbInput" type="text" autocomplete="off" placeholder="Pitaj bilo što…" aria-label="Pitaj ASC pomoćnika">
+              <button class="tb-send" type="button" aria-label="Pošalji"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M13 6l6 6-6 6"/></svg></button>
+            </div>
+            <div class="chips" role="list">
+              <button class="qchip" type="button" role="listitem" style="--ci:0" data-q="Nađi gume za DU 123-AB">nađi set</button>
+              <button class="qchip" type="button" role="listitem" style="--ci:1" data-q="Koliko je slobodno u skladištu?">koliko je slobodno</button>
+              <button class="qchip" type="button" role="listitem" style="--ci:2" data-q="Tko čeka na preuzimanje danas?">tko čeka</button>
+              <button class="qchip" type="button" role="listitem" style="--ci:3" data-q="Nađi gume po registraciji">gume po tablici</button>
+              <button class="qchip" type="button" role="listitem" style="--ci:4" data-q="Koji su podsjetnici za danas?">podsjetnici danas</button>
+              <button class="qchip" type="button" role="listitem" style="--ci:5" data-q="Koje police su slobodne?">slobodne police</button>
+              <button class="qchip" type="button" role="listitem" style="--ci:6" data-q="Koji je zadnji zaprimljeni set?">zadnji unos</button>
+              <button class="qchip" type="button" role="listitem" style="--ci:7" data-q="Napravi izvještaj smjene">izvještaj smjene</button>
+              <button class="qchip" type="button" role="listitem" style="--ci:8" data-q="Spremi SMS za preuzimanje">spremi SMS</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- NOTES / SUGGESTIONS — next to the AI card (col 2). The team writes
+         suggestions WITH THEIR NAME for the owner to review & dismiss.
+         Persists in localStorage ($0 preview; wire to Supabase on the live port). -->
+    <div class="notes-shell reveal" id="notesShell" style="animation-delay:270ms">
+      <section class="notes-card" id="notesCard" aria-label="Prijedlozi tima">
+        <span class="tab-tl">bilješke</span>
+        <div class="notes-head">
+          <h3>Prijedlozi</h3>
+          <span class="notes-count" id="notesCount" aria-label="broj prijedloga">0</span>
+        </div>
+        <div class="notes-list" id="notesList"></div>
+        <form class="notes-form" id="notesForm" autocomplete="off">
+          <input class="notes-name" id="notesName" type="text" placeholder="Tvoje ime" aria-label="Tvoje ime" maxlength="40">
+          <div class="notes-row">
+            <input class="notes-text" id="notesText" type="text" placeholder="Prijedlog ili primjedba…" aria-label="Prijedlog" maxlength="240">
+            <button class="notes-add" type="submit" aria-label="Dodaj prijedlog">+</button>
+          </div>
+        </form>
+      </section>
+    </div>
+  </section>
+
+  <!-- TRIO: profile | season | reminders (equal height) -->
+
+  <section class="trio">
+    <div class="card profile reveal" style="animation-delay:230ms">
+      <span class="tab-tl">smjena</span>
+      <div class="row1"><span class="pavatar">TJ</span><div><h1>Dobra večer, Toni</h1><div class="sub">Ponedjeljak, 7. srpnja</div></div></div>
+      <div class="health">
+        <div class="hstat">Veza<b class="g">Na mreži</b></div>
+        <div class="hstat">Sinkr.<b data-count="0">0</b></div>
+        <div class="hstat">Kopija<b>5 h</b></div>
+      </div>
+    </div>
+
+    <div class="card reveal" style="animation-delay:270ms">
+      <span class="tab-tl">zauzeće</span>
+      <h3>Po sezoni</h3>
+      <div class="obar"><div class="t"><span>Zimske</span><b data-count="141">0</b></div><div class="bar"><i data-w="78"></i></div></div>
+      <div class="obar"><div class="t"><span>Ljetne</span><b data-count="89">0</b></div><div class="bar"><i data-w="49"></i></div></div>
+      <div class="obar"><div class="t"><span>Cjelogodišnje</span><b data-count="18">0</b></div><div class="bar"><i data-w="10" style="opacity:.5"></i></div></div>
+    </div>
+
+    <div class="card dark reveal" style="animation-delay:310ms">
+      <span class="tab-tl">podsjetnici</span>
+      <h3>Preuzimanja <span class="count-badge">3</span></h3>
+      <a class="mini overdue" href="#"><time>Kasni</time><b>Josip Horvat</b><span class="pl">DU-234-AB</span></a>
+      <a class="mini" href="#"><time>Danas</time><b>Ana Kovačević</b><span class="pl">DU-881-KL</span></a>
+      <a class="mini" href="#"><time>7. srp</time><b>Marko Babić</b><span class="pl">DU-455-MN</span></a>
+    </div>
+  </section>
+
+  <!-- RECENT — a live right-to-left stream. Newest auto-prepends and stays 24 h.
+       Two identical copies + translateX(-50%) with per-card margins = seamless. -->
+  <section class="recent reveal" style="animation-delay:350ms">
+    <div class="head"><h3>Nedavno</h3><span class="live"><span class="ld"></span>uživo · 24 h</span></div>
+    <div class="stream" aria-label="Nedavno zaprimljeni setovi — stream uživo">
+      <div class="stream-track" id="streamTrack">
+        <a class="slide" href="#"><span class="tab-tl">0248</span><span class="thumb" style="background-image:url('assets/set-1.jpg')"><span class="qr-sticker"><img src="assets/qr-0248.png" alt=""></span></span><div class="meta"><div class="who">Ivan Perić</div><span class="chip win">Zimske</span></div></a>
+        <a class="slide" href="#"><span class="tab-tl">0247</span><span class="thumb" style="background-image:url('assets/set-2.jpg')"><span class="qr-sticker"><img src="assets/qr-0247.png" alt=""></span></span><div class="meta"><div class="who">Ana Kovačević</div><span class="chip">Ljetne</span></div></a>
+        <a class="slide" href="#"><span class="tab-tl">0246</span><span class="thumb" style="background-image:url('assets/set-3.jpg')"><span class="qr-sticker"><img src="assets/qr-0246.png" alt=""></span></span><div class="meta"><div class="who">Marko Babić</div><span class="chip win">Zimske</span></div></a>
+        <a class="slide" href="#"><span class="tab-tl">0245</span><span class="thumb" style="background-image:url('assets/set-4.jpg')"><span class="qr-sticker"><img src="assets/qr-0245.png" alt=""></span></span><div class="meta"><div class="who">Petra Novak</div><span class="chip all">Cjelogodišnje</span></div></a>
+        <a class="slide" href="#"><span class="tab-tl">0244</span><span class="thumb" style="background-image:url('assets/set-5.jpg')"><span class="qr-sticker"><img src="assets/qr-0244.png" alt=""></span></span><div class="meta"><div class="who">Luka Marić</div><span class="chip">Ljetne</span></div></a>
+        <a class="slide" href="#"><span class="tab-tl">0243</span><span class="thumb" style="background-image:url('assets/set-6.jpg')"><span class="qr-sticker"><img src="assets/qr-0243.png" alt=""></span></span><div class="meta"><div class="who">Josip Horvat</div><span class="chip win">Zimske</span></div></a>
+        <a class="slide" aria-hidden="true" tabindex="-1" href="#"><span class="tab-tl">0248</span><span class="thumb" style="background-image:url('assets/set-1.jpg')"><span class="qr-sticker"><img src="assets/qr-0248.png" alt=""></span></span><div class="meta"><div class="who">Ivan Perić</div><span class="chip win">Zimske</span></div></a>
+        <a class="slide" aria-hidden="true" tabindex="-1" href="#"><span class="tab-tl">0247</span><span class="thumb" style="background-image:url('assets/set-2.jpg')"><span class="qr-sticker"><img src="assets/qr-0247.png" alt=""></span></span><div class="meta"><div class="who">Ana Kovačević</div><span class="chip">Ljetne</span></div></a>
+        <a class="slide" aria-hidden="true" tabindex="-1" href="#"><span class="tab-tl">0246</span><span class="thumb" style="background-image:url('assets/set-3.jpg')"><span class="qr-sticker"><img src="assets/qr-0246.png" alt=""></span></span><div class="meta"><div class="who">Marko Babić</div><span class="chip win">Zimske</span></div></a>
+        <a class="slide" aria-hidden="true" tabindex="-1" href="#"><span class="tab-tl">0245</span><span class="thumb" style="background-image:url('assets/set-4.jpg')"><span class="qr-sticker"><img src="assets/qr-0245.png" alt=""></span></span><div class="meta"><div class="who">Petra Novak</div><span class="chip all">Cjelogodišnje</span></div></a>
+        <a class="slide" aria-hidden="true" tabindex="-1" href="#"><span class="tab-tl">0244</span><span class="thumb" style="background-image:url('assets/set-5.jpg')"><span class="qr-sticker"><img src="assets/qr-0244.png" alt=""></span></span><div class="meta"><div class="who">Luka Marić</div><span class="chip">Ljetne</span></div></a>
+        <a class="slide" aria-hidden="true" tabindex="-1" href="#"><span class="tab-tl">0243</span><span class="thumb" style="background-image:url('assets/set-6.jpg')"><span class="qr-sticker"><img src="assets/qr-0243.png" alt=""></span></span><div class="meta"><div class="who">Josip Horvat</div><span class="chip win">Zimske</span></div></a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<nav class="dock" aria-label="Sekcije">
+  <a class="dtab on" href="#" aria-label="Ploča"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.2 10.6L12 4l7.8 6.6"/><path d="M5.8 9.4V19a2 2 0 002 2h8.4a2 2 0 002-2V9.4"/></svg>Ploča</a>
+  <a class="dtab" href="#" aria-label="Zaprimi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5.4v13.2M5.4 12h13.2"/></svg>Zaprimi</a>
+  <a class="dtab" href="#" aria-label="Skeniraj"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.2V6.4A2.4 2.4 0 016.4 4h1.8M15.8 4h1.8A2.4 2.4 0 0120 6.4v1.8M20 15.8v1.8a2.4 2.4 0 01-2.4 2.4h-1.8M8.2 20H6.4A2.4 2.4 0 014 17.6v-1.8"/><path d="M7.2 12h9.6"/></svg>Skeniraj</a>
+  <a class="dtab" href="#" aria-label="Skladište"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21.2s-7-5.5-7-11a7 7 0 0114 0c0 5.5-7 11-7 11z"/><circle cx="12" cy="10" r="2.4"/></svg>Skladište</a>
+  <a class="dtab" href="#" aria-label="Više"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8.6 6.4H21M8.6 12H21M8.6 17.6H21"/><path d="M3.6 6.4h.01M3.6 12h.01M3.6 17.6h.01"/></svg>Više</a>
+</nav>
+
+<script src="app.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
+<script src="qr.js"></script>
+<script>
+/* Click a QR sticker → print a real sticker instantly (capture phase beats the
+   slide's own navigation). The set code is the slide's corner number. */
+document.addEventListener('click', function(e){
+  var st = e.target.closest('.qr-sticker'); if(!st) return;
+  e.preventDefault(); e.stopPropagation();
+  var slide = st.closest('.slide'), tab = slide && slide.querySelector('.tab-tl');
+  var n = tab ? tab.textContent.trim() : '';
+  var code = /^\d{3,4}$/.test(n) ? 'ASC-2026-' + n.padStart(4, '0') : null;
+  if (code && window.ASCQR && !ASCQR.printSticker(code)) alert('Dopustite skočne prozore za ispis naljepnice.');
+}, true);
+
+/* The stage card is no longer just statistics — every stat is clickable. The
+   headline count opens the whole database (customers → cars → sets); the meter
+   opens the warehouse map; each spill jumps to today's relevant screen. */
+(function(){
+  function clickable(el, href, label){
+    if (!el) return;
+    el.style.cursor = 'pointer';
+    el.setAttribute('role', 'link'); el.setAttribute('tabindex', '0');
+    if (label) el.setAttribute('aria-label', label);
+    var go = function(){ location.href = href; };
+    el.addEventListener('click', go);
+    el.addEventListener('keydown', function(e){ if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } });
+  }
+  clickable(document.querySelector('.stage .hero-num'), 'customers.html', 'Otvori bazu svih kompleta');
+  clickable(document.querySelector('.stage .meter'), 'warehouse.html', 'Otvori kartu skladišta');
+  var spillHref = ['checkin.html', 'reminders.html', 'reminders.html'];
+  document.querySelectorAll('.stage .spill').forEach(function(b, i){
+    b.addEventListener('click', function(){ location.href = spillHref[i] || 'customers.html'; });
+  });
+})();
+</script>
+<script>
+  /* ==========================================================================
+     ASC Agent — the "alive" hook engine.
+     The rotating invitations are LOVED, so the pool is refreshed EVERY DAY by
+     tools/refresh-agent-hooks.md (prepend 20 fresh lines, drop the 20 oldest).
+     The dashboard just fetches assets/agent-hooks.json and walks it in a
+     day-seeded order — so even the same pool shows a different sequence each day
+     and never replays yesterday's loop. A small embedded set is the fallback if
+     the fetch fails (e.g. opened over file://).
+     ========================================================================== */
+  (() => {
+    const els = [document.getElementById('agentHook'), document.getElementById('agentHook2'), document.getElementById('agentHook3')].filter(Boolean);
+    if (!els.length) return;
+
+    const FALLBACK = [
+      "Koliko kompleta čeka na preuzimanje ovaj tjedan?",
+      "Reci mi registraciju — naći ću gume u sekundi.",
+      "Tražiš nešto? Znam gdje leži svaka guma.",
+      "Koga danas treba nazvati za preuzimanje?",
+      "Zaprimi set glasom — samo reci, ja zapisujem.",
+      "Pitaj me bilo što — tu sam, na mreži."
+    ];
+
+    // mulberry32 — deterministic per-day seed for the display order
+    const mul = (a) => () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+    const DAY = Math.floor(Date.now() / 86400000);
+
+    const begin = (list) => {
+      const pool = (Array.isArray(list) && list.length) ? list.slice() : FALLBACK.slice();
+      // day-seeded shuffle: stable within the day, different sequence each day
+      const r = mul(DAY ^ 0x9E3779B1);
+      for (let k = pool.length - 1; k > 0; k--) { const j = (r() * (k + 1)) | 0; const t = pool[k]; pool[k] = pool[j]; pool[j] = t; }
+      let ptr = (Math.random() * pool.length) | 0;
+      const next = () => pool[(ptr++) % pool.length];   // distinct lines, no immediate repeats
+      const reduce = matchMedia('(prefers-reduced-motion:reduce)').matches;
+
+      // fill the three lines (hidden-below to start, unless reduced motion)
+      els.forEach((el) => { el.textContent = next(); if (!reduce) el.classList.add('in'); });
+      if (reduce || pool.length < 2) return;            // static three lines
+      void els[0].offsetWidth;                          // reflow so the .in start sticks
+      // ENTRANCE: rise + fade in, one after the other
+      els.forEach((el, k) => setTimeout(() => el.classList.remove('in'), 90 + k * 240));
+
+      // CYCLE: swap the next line every ~4.6s (rolling, normal pace)
+      const swap = (el) => {
+        el.classList.add('out');                        // fade out + lift away
+        setTimeout(() => {
+          el.textContent = next();
+          el.classList.remove('out'); el.classList.add('in');
+          void el.offsetWidth;
+          el.classList.remove('in');                    // rise + fade in
+        }, 500);
+      };
+      let turn = 0;
+      setInterval(() => { swap(els[turn % els.length]); turn++; }, 4600);
+    };
+
+    fetch('assets/agent-hooks.json', { cache: 'no-store' })
+      .then((res) => res.ok ? res.json() : Promise.reject(res.status))
+      .then((data) => begin(data && data.hooks))
+      .catch(() => begin(FALLBACK));
+  })();
+
+  /* Notch tab — measure the overlay label and hand its exact box to the card so
+     the mask subtracts precisely that footprint (re-measures after fonts/resize). */
+  (() => {
+    const card = document.getElementById('agentCard');
+    const tab = document.getElementById('agentTab');
+    if (!card || !tab) return;
+    const sync = () => {
+      card.style.setProperty('--tw', tab.offsetWidth + 'px');
+      card.style.setProperty('--th', tab.offsetHeight + 'px');
+    };
+    sync();
+    addEventListener('load', sync);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(sync);
+    if (window.ResizeObserver) new ResizeObserver(sync).observe(tab);
+  })();
+</script>
+<script>
+  /* ASC Agent card — chips + input, wired to the LIVE Gemini brain (window.ASCAgent,
+     loaded by app.js). Send / Enter / a chip asks the agent; the reply shows in-card
+     (informational answers) or the agent navigates (find a set/customer). Falls back
+     to the search page if Gemini isn't configured. The hover reveal is pure CSS. */
+  (() => {
+    const card = document.getElementById('agentCard');
+    if (!card) return;
+    const input = document.getElementById('tbInput');
+    const send = card.querySelector('.tb-send');
+    const reveal = card.querySelector('.agent-reveal');
+    const chips = [...card.querySelectorAll('.qchip')];
+    const pulse = () => { if (send && send.animate) send.animate([{ transform: 'scale(1)' }, { transform: 'scale(.9)' }, { transform: 'scale(1)' }], { duration: 220, easing: 'cubic-bezier(.22,1,.36,1)' }); };
+    const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+    const reply = document.createElement('div');
+    reply.className = 'tb-reply'; reply.setAttribute('role', 'status'); reply.setAttribute('aria-live', 'polite');
+    if (reveal) reveal.insertBefore(reply, reveal.firstChild);
+    const show = (html) => { reply.innerHTML = html; reply.classList.add('on'); card.classList.add('agent-live'); };
+
+    let busy = false;
+    function ask(text) {
+      text = (text || '').trim();
+      if (!text || busy) return;
+      pulse();
+      if (window.ASCAgent && ASCAgent.configured && ASCAgent.configured()) {
+        busy = true; show('Razmišljam…');
+        ASCAgent.ask(text, (ev) => {
+          if (ev.type === 'text') reply.innerHTML = esc(ev.text);
+          else if (ev.type === 'tool') reply.textContent = 'Radim…';
+          else if (ev.type === 'error') reply.textContent = ev.message || 'Greška.';
+        }).then((txt) => { busy = false; if (txt) reply.innerHTML = esc(txt); })
+          .catch(() => { busy = false; reply.textContent = 'Veza je pukla — pokušaj ponovno.'; });
+      } else {                                   // Gemini not wired → route to search
+        show('Tražim…');
+        setTimeout(() => { location.href = 'workshop.html?q=' + encodeURIComponent(text); }, 120);
+      }
+    }
+    chips.forEach(c => c.addEventListener('click', () => { const q = c.dataset.q || c.textContent; if (input) input.value = q; ask(q); }));
+    if (send) send.addEventListener('click', () => ask(input && input.value));
+    if (input) input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); ask(input.value); }
+      else if (e.key === 'Escape') { reply.classList.remove('on'); card.classList.remove('agent-live'); input.blur(); }
+    });
+  })();
+</script>
+<script>
+  /* Corner CUT — apply the SAME real mask subtraction as the agent card to the
+     other cards' notches, so each corner reveals the true background instead of a
+     painted --tab-surf patch (kills the "leakage"). Each top-left tab moves to an
+     overlay in its (relative) container; the card is masked; positions re-sync on
+     resize / font load. Skips the agent card (already cut) and the animated stream. */
+  (() => {
+    const items = [];
+    document.querySelectorAll('.tab-tl').forEach((tab) => {
+      const card = tab.parentElement;
+      if (!card || card.id === 'agentCard' || card.closest('.stream-track')) return;
+      const container = card.parentElement;
+      if (getComputedStyle(container).position === 'static') container.style.position = 'relative';
+      tab.classList.add('notch-cut-tab');
+      container.appendChild(tab);            // position:absolute → out of flow, no layout impact
+      card.classList.add('notch-cut');
+      items.push({ tab, card });
+    });
+    const place = () => items.forEach(({ tab, card }) => {
+      card.style.setProperty('--tw', tab.offsetWidth + 'px');
+      card.style.setProperty('--th', tab.offsetHeight + 'px');
+      tab.style.left = card.offsetLeft + 'px';
+      tab.style.top = card.offsetTop + 'px';
+    });
+    place();
+    addEventListener('load', place);
+    addEventListener('resize', place);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(place);
+  })();
+</script>
+<script>
+  /* Notes / suggestions — the team adds suggestions (WITH their name); the owner
+     reviews and dismisses them. Persists in localStorage ($0 preview demo — on the
+     live port, POST to Supabase so suggestions collect across everyone's devices). */
+  (() => {
+    const listEl = document.getElementById('notesList');
+    const form = document.getElementById('notesForm');
+    const nameEl = document.getElementById('notesName');
+    const textEl = document.getElementById('notesText');
+    const countEl = document.getElementById('notesCount');
+    if (!listEl || !form) return;
+    const KEY = 'asc.notes', NAMEKEY = 'asc.notes.name';
+
+    const load = () => { try { const v = JSON.parse(localStorage.getItem(KEY)); return Array.isArray(v) ? v : null; } catch (e) { return null; } };
+    const save = () => { try { localStorage.setItem(KEY, JSON.stringify(notes)); } catch (e) {} };
+    const esc = (s) => { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; };
+    const ago = (ts) => {
+      const s = Math.max(1, (Date.now() - ts) / 1000);
+      if (s < 60) return 'upravo sad';
+      const m = s / 60; if (m < 60) return 'prije ' + Math.round(m) + ' min';
+      const h = m / 60; if (h < 24) return 'prije ' + Math.round(h) + ' h';
+      const d = Math.round(h / 24); return 'prije ' + d + (d === 1 ? ' dan' : ' dana');
+    };
+
+    let notes = load();
+    if (!notes) {   // seed on first-ever load (owner can dismiss these examples)
+      notes = [
+        { id: 101, author: 'Marko', text: 'Dodaj brzi gumb za SMS podsjetnik kupcu.', ts: Date.now() - 2 * 3600e3 },
+        { id: 102, author: 'Ana', text: 'Može li filter po sezoni na Skladištu?', ts: Date.now() - 26 * 3600e3 }
+      ];
+      save();
+    }
+    const savedName = localStorage.getItem(NAMEKEY); if (savedName && nameEl) nameEl.value = savedName;
+
+    function render() {
+      countEl.textContent = notes.length;
+      if (!notes.length) { listEl.innerHTML = '<div class="notes-empty">Još nema prijedloga — dodaj prvi.</div>'; return; }
+      listEl.innerHTML = notes.map((n) =>
+        '<div class="note" data-id="' + n.id + '">' +
+        '<button class="note-x" type="button" aria-label="Ukloni prijedlog">×</button>' +
+        '<div class="note-top"><b class="note-author">' + esc(n.author) + '</b><time class="note-time">' + ago(n.ts) + '</time></div>' +
+        '<p class="note-text">' + esc(n.text) + '</p>' +
+        '</div>'
+      ).join('');
+    }
+    render();
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const author = (nameEl.value || '').trim() || 'Anonimno';
+      const text = (textEl.value || '').trim();
+      if (!text) { textEl.focus(); return; }
+      notes.unshift({ id: Date.now(), author: author, text: text, ts: Date.now() });
+      save(); try { localStorage.setItem(NAMEKEY, author); } catch (e) {}
+      render(); textEl.value = ''; textEl.focus(); listEl.scrollTop = 0;
+    });
+    listEl.addEventListener('click', (e) => {
+      const x = e.target.closest('.note-x'); if (!x) return;
+      const id = Number(x.closest('.note').dataset.id);
+      notes = notes.filter((n) => n.id !== id); save(); render();
+    });
+  })();
+</script>
+<!-- LIVE: override the mock numbers/stream/reminders with real Supabase data. -->
+<script type="module" src="live-dashboard.js"></script>
+</body>
+</html>

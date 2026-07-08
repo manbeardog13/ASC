@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ASC — Zaprimi (preview)</title>
+<meta name="theme-color" content="#edf0f5">
+<script>try{if(localStorage.getItem('asc.theme')==='dark'){document.documentElement.classList.add('dark');document.querySelector('meta[name="theme-color"]').content='#020305';}}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;650;700;800&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+<!--
+  ASC check-in (Zaprimi) — isolated preview. Shared design system lives in
+  app.css + app.js (v6 "Hanssen"): tokens, glass shell, header, notched corner
+  tabs, card surfaces, iOS dock, theme toggle + count-up. Only the check-in
+  form's own layout (hero, fields, segmented, switch, tire rows) is inline below.
+  Dedicated imagery: zaprimi.jpg (green) belongs to check-in ONLY. Copy grounded
+  in js/i18n.js (hr). Placeholder data is illustrative.
+-->
+<link rel="stylesheet" href="app.css">
+<style>
+/* ---- Check-in-page-specific layout only (shared rules live in app.css) ---- */
+
+/* Green tire hero — dark stage treatment, compact; zaprimi.jpg belongs here */
+.ci-hero{position:relative;border-radius:var(--radius);overflow:hidden;
+  background:linear-gradient(175deg,var(--stage-1),var(--stage-2));color:var(--on-stage);
+  padding:24px 24px 22px;border-top:1px solid rgba(255,255,255,.10);box-shadow:var(--shadow-card);
+  margin-bottom:var(--gap)}
+.ci-hero .photo{position:absolute;inset:0;z-index:0;background:url('assets/zaprimi.jpg') center right/cover;transform:scale(1.04)}
+.ci-hero .scrim{position:absolute;inset:0;z-index:1;background:
+  linear-gradient(102deg,var(--stage-1) 22%,rgba(7,8,10,.78) 38%,rgba(7,8,10,.30) 64%,rgba(7,8,10,.05) 82%,rgba(7,8,10,.42) 100%),
+  linear-gradient(0deg,var(--stage-1) 4%,rgba(7,8,10,.85) 16%,transparent 52%),
+  radial-gradient(120% 80% at 12% -10%,rgba(47,191,91,.20),transparent 52%)}
+.ci-hero>:not(.photo):not(.scrim):not(.tab-corner){position:relative;z-index:2}
+.ci-hero .htop{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.ci-hero .eyebrow{display:inline-flex;align-items:center;gap:8px;font:600 10.5px Inter;letter-spacing:.1em;text-transform:uppercase;color:var(--on-stage-2)}
+.ci-hero .led{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 9px 1px rgba(47,191,91,.75);animation:breathe 2.6s ease-in-out infinite}
+.ci-hero h1{font:600 clamp(26px,6.4vw,34px) Sora;letter-spacing:-.02em;margin:13px 0 5px}
+.ci-hero .lead{font-size:13px;color:var(--on-stage-2);max-width:34ch}
+.ci-hero .htext,.ci-hero .eyebrow,.ci-hero .ci-stats b,.ci-hero .ci-stats span{text-shadow:0 1px 4px rgba(2,3,5,.7)}
+.ci-stats{display:flex;gap:9px;margin-top:18px;flex-wrap:wrap}
+.ci-stats>div{background:rgba(244,245,247,.08);border-top:1px solid rgba(255,255,255,.09);border-radius:13px;padding:10px 13px;min-width:96px}
+.ci-stats b{display:block;font:500 18px Sora;line-height:1;letter-spacing:-.01em}
+.ci-stats .code{font:700 14px Inter;letter-spacing:.01em}
+.ci-stats span{display:block;margin-top:5px;font:500 10px Inter;letter-spacing:.03em;color:var(--on-stage-2)}
+.voice-cta{display:inline-flex;align-items:center;gap:8px;min-height:38px;padding:0 14px;border-radius:19px;
+  background:rgba(244,245,247,.12);border:1px solid rgba(255,255,255,.20);color:var(--on-stage);
+  font:600 12.5px Inter;cursor:pointer;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+  transition:transform .15s var(--snap),background .15s var(--snap)}
+@media(hover:hover){.voice-cta:hover{transform:translateY(-1px);background:rgba(244,245,247,.2)}}
+.voice-cta:active{transform:scale(.96)}
+
+/* Form scaffolding */
+form#ci{display:block}
+.card.stack{gap:0}
+.card.stack + .card.stack{margin-top:var(--gap)}
+.card.stack fieldset{border:0;display:flex;flex-direction:column;gap:13px}
+.card.stack fieldset + fieldset{margin-top:20px;padding-top:20px;border-top:1px solid var(--hairline)}
+.card.stack legend{float:none;display:flex;align-items:center;gap:8px;font:600 11.5px Inter;letter-spacing:.08em;text-transform:uppercase;color:var(--lava-ink);margin-bottom:2px}
+.card.stack legend::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--lava)}
+html.dark .card.stack legend{color:var(--lava-2)}
+
+/* Fields / inputs */
+.field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.field .label{font:600 10.5px Inter;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.field input,.field select,.field textarea,.tire-grid input,.tire-grid select{
+  width:100%;min-height:44px;padding:11px 13px;border-radius:12px;border:1px solid var(--line);
+  background:var(--panel-2);color:var(--ink);font:500 14px Inter;transition:border-color .15s var(--snap),box-shadow .15s var(--snap),background .15s;
+  -webkit-appearance:none;appearance:none;font-variant-numeric:tabular-nums}
+html.dark .field input,html.dark .field select,html.dark .field textarea,html.dark .tire-grid input,html.dark .tire-grid select{background:rgba(244,245,247,.05)}
+.field textarea{min-height:64px;resize:vertical;line-height:1.5}
+.field select,.tire-grid select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%2363676f' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M2.5 4.5L6 8l3.5-3.5'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px}
+html.dark .field select,html.dark .tire-grid select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%23a0a4ad' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M2.5 4.5L6 8l3.5-3.5'/%3E%3C/svg%3E")}
+.field input::placeholder,.tire-grid input::placeholder{color:var(--muted);opacity:.75}
+.field input:focus,.field select:focus,.field textarea:focus,.tire-grid input:focus,.tire-grid select:focus{
+  outline:0;border-color:var(--lava);box-shadow:0 0 0 3px var(--lava-tint)}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+@media(max-width:640px){.grid-4{grid-template-columns:1fr 1fr}}
+
+/* Segmented control (season) */
+.segmented{display:flex;gap:6px;background:var(--panel-2);padding:5px;border-radius:15px;border:1px solid var(--hairline)}
+html.dark .segmented{background:rgba(244,245,247,.05)}
+.segmented button{flex:1 1 0;min-width:0;display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:40px;border:0;border-radius:11px;
+  background:transparent;color:var(--muted);font:600 12px Inter;cursor:pointer;transition:background .18s var(--snap),color .18s var(--snap),transform .12s var(--snap)}
+.segmented button svg{width:16px;height:16px}
+.segmented button:active{transform:scale(.96)}
+.segmented button[aria-pressed="true"]{background:var(--lava-tint);color:var(--lava-ink);box-shadow:inset 0 0 0 1px var(--lava-ring)}
+html.dark .segmented button[aria-pressed="true"]{color:var(--lava-2)}
+
+/* iOS-style switch (reuses tokens) */
+.switch{display:inline-flex;align-items:center;gap:11px;cursor:pointer;font:500 13.5px Inter;color:var(--ink-2)}
+.switch input{position:relative;width:46px;height:27px;border-radius:999px;background:var(--line);flex:none;cursor:pointer;
+  -webkit-appearance:none;appearance:none;transition:background .22s var(--snap)}
+.switch input::after{content:"";position:absolute;top:3px;left:3px;width:21px;height:21px;border-radius:50%;background:#fff;
+  box-shadow:0 1px 3px rgba(2,3,5,.35);transition:transform .22s var(--snap)}
+.switch input:checked{background:var(--lava)}
+.switch input:checked::after{transform:translateX(19px)}
+.switch input:focus-visible{outline:2px solid var(--lava-ink);outline-offset:2px}
+
+/* Recent-location suggestion chips */
+.suggestions{display:flex;flex-wrap:wrap;gap:8px}
+.sugg{display:inline-flex;align-items:center;gap:6px;padding:8px 12px;border-radius:999px;border:1px solid var(--line);
+  background:var(--panel-2);color:var(--ink-2);font:600 11.5px Inter;cursor:pointer;transition:transform .14s var(--snap),border-color .14s,color .14s}
+html.dark .sugg{background:rgba(244,245,247,.05)}
+.sugg svg{width:13px;height:13px;color:var(--muted)}
+@media(hover:hover){.sugg:hover{border-color:var(--lava-ring);color:var(--lava-ink);transform:translateY(-1px)}}
+.sugg:active{transform:scale(.96)}
+
+/* Tire rows */
+.row-between{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.hint{font:500 13px Inter;color:var(--muted)}
+.tire-edit-row{padding:12px;border-radius:14px;background:var(--panel-2);border:1px solid var(--hairline);margin-bottom:10px}
+html.dark .tire-edit-row{background:rgba(244,245,247,.04)}
+.tire-edit-row:last-child{margin-bottom:0}
+.tire-grid{display:grid;grid-template-columns:78px 1.5fr 1fr 1.1fr;gap:8px;align-items:center}
+.tire-grid input,.tire-grid select{min-height:40px;padding:9px 11px;font-size:13px;min-width:0}
+@media(max-width:720px){
+  .tire-grid{grid-template-columns:1fr 1fr;gap:9px}
+}
+
+/* Scan-sidewall status banner */
+.banner{display:flex;align-items:center;gap:10px;padding:11px 14px;border-radius:12px;font:500 13px Inter;margin-top:12px}
+.banner svg{flex:none;width:18px;height:18px}
+.banner-info{background:var(--lava-tint);color:var(--lava-ink);border:1px solid var(--lava-ring)}
+html.dark .banner-info{color:var(--lava-2)}
+.banner-ok{background:rgba(47,191,91,.12);color:var(--green-ink);border:1px solid rgba(47,191,91,.3)}
+html.dark .banner-ok{color:var(--green-ink)}
+.is-hidden{display:none}
+
+/* Buttons + action bar */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:46px;padding:0 18px;border-radius:23px;
+  border:1px solid var(--line);background:var(--panel-2);color:var(--ink);font:600 13.5px Inter;text-decoration:none;cursor:pointer;
+  transition:transform .15s var(--snap),background .15s var(--snap),box-shadow .2s var(--snap)}
+.btn svg{width:18px;height:18px}
+html.dark .btn{background:rgba(244,245,247,.06)}
+@media(hover:hover){.btn:hover{transform:translateY(-1px);background:var(--panel)}}
+.btn:active{transform:scale(.97);transition-duration:80ms}
+.btn.small{min-height:38px;padding:0 14px;font-size:12.5px;border-radius:19px}
+.btn-primary{background:linear-gradient(180deg,var(--lava-2),var(--lava));color:#fff;border-color:transparent;box-shadow:0 10px 24px -10px rgba(255,78,27,.7)}
+html.dark .btn-primary{background:linear-gradient(180deg,var(--lava-2),var(--lava));color:#fff}
+@media(hover:hover){.btn-primary:hover{background:linear-gradient(180deg,var(--lava-2),var(--lava));box-shadow:0 14px 30px -10px rgba(255,78,27,.8)}}
+.action-bar{display:flex;gap:12px;align-items:center;margin-top:18px}
+.action-bar .btn-primary{flex:1}
+.action-bar .btn.ghost{flex:none}
+
+/* A toast confirmation (mock save) */
+.toast{position:fixed;left:50%;bottom:calc(var(--dock-h) + env(safe-area-inset-bottom,0px) + 22px);transform:translate(-50%,14px);
+  z-index:80;display:flex;align-items:center;gap:10px;max-width:calc(100% - 32px);
+  background:var(--gun);color:#f4f5f7;padding:12px 18px;border-radius:16px;font:600 13px Inter;
+  box-shadow:0 16px 40px -12px rgba(2,3,5,.55);opacity:0;pointer-events:none;transition:opacity .3s var(--smooth),transform .3s var(--smooth)}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.toast .dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px 1px rgba(47,191,91,.7)}
+@media(min-width:1021px){.toast{bottom:26px}}
+</style>
+</head>
+<body>
+<div class="canvas" aria-hidden="true"></div>
+<div class="grain" aria-hidden="true"></div>
+<span class="preview-tag">Preview · nije uživo</span>
+
+<main class="shell">
+  <header class="top">
+    <img class="logo" src="assets/logo.png" alt="ASC — Auto servisni centar">
+    <nav class="pill" aria-label="Glavna navigacija">
+      <span class="pill-links"><a href="dashboard.html">Ploča</a><a href="#">Zaprimi</a><a href="#">Skladište</a><a href="#">Kupci</a></span>
+      <button class="mode" id="mode" aria-label="Promijeni temu"><i></i></button>
+    </nav>
+  </header>
+
+  <!-- GREEN HERO — check-in only (assets/zaprimi.jpg) -->
+  <header class="ci-hero reveal">
+    <span class="photo" aria-hidden="true"></span>
+    <span class="scrim" aria-hidden="true"></span>
+    <span class="tab-corner">danas · Dubrovnik</span>
+    <div class="htop">
+      <span class="eyebrow"><span class="led"></span>Zaprimanje · Novi set</span>
+    </div>
+    <div class="htext">
+      <h1>Spremi gume</h1>
+      <p class="lead">Hotel za gume · Dubrovnik — novi komplet na čuvanje</p>
+    </div>
+    <div class="ci-stats">
+      <div><b data-count="248">0</b><span>NA ČUVANJU</span></div>
+      <div><b data-count="12">0</b><span>DANAS ZAPRIMLJENO</span></div>
+      <div><b class="code">ASC-2026-0249</b><span>NOVI KÔD</span></div>
+    </div>
+  </header>
+
+  <div id="asc-agent" class="ci-agent"></div>
+
+  <form id="ci" novalidate>
+    <!-- 01 · Customer + Vehicle -->
+    <section class="card stack">
+      <span class="tab-tl">01 · kupac</span>
+      <fieldset>
+        <legend>Kupac</legend>
+        <label class="field"><span class="label">Ime</span><input id="c_name" autocomplete="off" placeholder="Ivan Perić" required></label>
+        <div class="grid-2">
+          <label class="field"><span class="label">Telefon</span><input id="c_phone" type="tel" inputmode="tel" autocomplete="off" placeholder="+385 91 234 5678"></label>
+          <label class="field"><span class="label">E-pošta</span><input id="c_email" type="email" autocomplete="off" placeholder="ivan.peric@email.hr"></label>
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>Vozilo</legend>
+        <div class="grid-4">
+          <label class="field"><span class="label">Marka</span><input id="v_make" autocomplete="off" placeholder="Volkswagen"></label>
+          <label class="field"><span class="label">Model</span><input id="v_model" autocomplete="off" placeholder="Passat"></label>
+          <label class="field"><span class="label">Godina</span><input id="v_year" type="number" inputmode="numeric" min="1950" max="2100" placeholder="2019"></label>
+          <label class="field"><span class="label">Registracija</span><input id="v_plate" autocomplete="off" placeholder="DU-234-AB" style="text-transform:uppercase"></label>
+        </div>
+      </fieldset>
+    </section>
+
+    <!-- 02 · Season + Location + Details -->
+    <section class="card stack">
+      <span class="tab-tl">02 · sezona</span>
+      <fieldset>
+        <legend>Sezona</legend>
+        <div class="segmented" role="group" aria-label="Sezona">
+          <button type="button" data-season="winter" aria-pressed="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M4 6l16 12M20 6L4 18M12 5l3 2M12 5l-3 2M12 19l3-2M12 19l-3-2M5 9l.5 3M19 9l-.5 3M5 15l.5-3M19 15l-.5-3"/></svg>Zimske</button>
+          <button type="button" data-season="summer" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2.6M12 19.4V22M2 12h2.6M19.4 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M19.1 4.9l-1.8 1.8M6.7 17.3l-1.8 1.8"/></svg>Ljetne</button>
+          <button type="button" data-season="all_season" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.4"/><path d="M12 3.6v16.8"/></svg>Cjelogodišnje</button>
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>Lokacija u skladištu</legend>
+        <div class="grid-4">
+          <label class="field"><span class="label">Zona</span><input id="s_zone" autocomplete="off" placeholder="A"></label>
+          <label class="field"><span class="label">Regal</span><input id="s_rack" autocomplete="off" placeholder="03"></label>
+          <label class="field"><span class="label">Polica</span><input id="s_shelf" autocomplete="off" placeholder="2"></label>
+          <label class="field"><span class="label">Mjesto</span><input id="s_slot" autocomplete="off" placeholder="14"></label>
+        </div>
+        <div class="suggestions" id="recentLoc" aria-label="Nedavne lokacije">
+          <button type="button" class="sugg" data-loc="A·03·2·14"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-5.5-7-11a7 7 0 0114 0c0 5.5-7 11-7 11z"/><circle cx="12" cy="10" r="2.4"/></svg>A · 03 · 2 · 14</button>
+          <button type="button" class="sugg" data-loc="B·01·3·07"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-5.5-7-11a7 7 0 0114 0c0 5.5-7 11-7 11z"/><circle cx="12" cy="10" r="2.4"/></svg>B · 01 · 3 · 07</button>
+          <button type="button" class="sugg" data-loc="C·05·1·22"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-5.5-7-11a7 7 0 0114 0c0 5.5-7 11-7 11z"/><circle cx="12" cy="10" r="2.4"/></svg>C · 05 · 1 · 22</button>
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>Detalji</legend>
+        <div class="grid-2">
+          <label class="field"><span class="label">Broj guma</span><input id="s_qty" type="number" inputmode="numeric" min="1" max="8" value="4"></label>
+          <label class="field"><span class="label">Očekivano preuzimanje</span><input id="s_out" type="date"></label>
+        </div>
+        <label class="switch"><input id="s_onrims" type="checkbox"> Na naplacima / felgama</label>
+        <div class="grid-2" id="rimWrap" hidden>
+          <label class="field"><span class="label">Vrsta naplatka</span>
+            <select id="s_rimtype"><option value="">—</option><option value="steel">Čelični</option><option value="alloy">Aluminijski</option></select></label>
+        </div>
+        <div class="grid-2">
+          <label class="field"><span class="label">Cijena čuvanja</span><input id="s_fee" type="number" inputmode="decimal" step="0.01" min="0" placeholder="40.00"></label>
+          <label class="switch" style="align-self:end;padding-bottom:11px"><input id="s_paid" type="checkbox"> Plaćeno</label>
+        </div>
+        <label class="field"><span class="label">Napomene</span><textarea id="s_notes" rows="2" placeholder="Npr. sezonska zamjena, poziv prije preuzimanja…"></textarea></label>
+      </fieldset>
+    </section>
+
+    <!-- 03 · Tires -->
+    <section class="card stack">
+      <span class="tab-tl">03 · gume</span>
+      <fieldset>
+        <legend>Gume</legend>
+        <div class="row-between">
+          <span class="hint">Ispunite što možete — prazna polja se preskaču.</span>
+        </div>
+        <div id="tires">
+          <datalist id="commonSizes"><option value="195/65R15"><option value="205/55R16"><option value="205/60R16"><option value="215/55R17"><option value="225/45R17"><option value="225/40R18"><option value="235/45R18"><option value="235/35R19"></datalist>
+          <!-- tire rows injected by script -->
+        </div>
+      </fieldset>
+    </section>
+
+    <div class="action-bar">
+      <a class="btn ghost" href="dashboard.html">Odustani</a>
+      <button class="btn btn-primary" type="submit">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.2L12 3l8.5 5.2v7.6L12 21l-8.5-5.2z"/><path d="M3.7 8.3L12 13l8.3-4.7M12 13v8"/></svg>
+        Spremi gume
+      </button>
+    </div>
+  </form>
+</main>
+
+<div class="toast" id="toast" role="status" aria-live="polite"><span class="dot"></span><span id="toastMsg"></span></div>
+
+<nav class="dock" aria-label="Sekcije">
+  <a class="dtab" href="dashboard.html" aria-label="Ploča"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.2 10.6L12 4l7.8 6.6"/><path d="M5.8 9.4V19a2 2 0 002 2h8.4a2 2 0 002-2V9.4"/></svg>Ploča</a>
+  <a class="dtab on" href="#" aria-label="Zaprimi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5.4v13.2M5.4 12h13.2"/></svg>Zaprimi</a>
+  <a class="dtab" href="#" aria-label="Skeniraj"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.2V6.4A2.4 2.4 0 016.4 4h1.8M15.8 4h1.8A2.4 2.4 0 0120 6.4v1.8M20 15.8v1.8a2.4 2.4 0 01-2.4 2.4h-1.8M8.2 20H6.4A2.4 2.4 0 014 17.6v-1.8"/><path d="M7.2 12h9.6"/></svg>Skeniraj</a>
+  <a class="dtab" href="#" aria-label="Skladište"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21.2s-7-5.5-7-11a7 7 0 0114 0c0 5.5-7 11-7 11z"/><circle cx="12" cy="10" r="2.4"/></svg>Skladište</a>
+  <a class="dtab" href="#" aria-label="Više"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8.6 6.4H21M8.6 12H21M8.6 17.6H21"/><path d="M3.6 6.4h.01M3.6 12h.01M3.6 17.6h.01"/></svg>Više</a>
+</nav>
+
+<script src="app.js"></script>
+<script>
+/* Check-in-page behaviour only. Shared theme toggle + count-up live in app.js. */
+(function(){
+  const form = document.getElementById('ci');
+  const $ = (id) => document.getElementById(id);
+  const POSITIONS = ["FL","FR","RL","RR","spare"];
+
+  // ---- Tire rows -----------------------------------------------------------
+  function tireRow(i, v){
+    v = v || {};
+    const opts = POSITIONS.map((p)=>`<option value="${p}"${p===(v.position||POSITIONS[i]||'spare')?' selected':''}>${p}</option>`).join('');
+    const el = document.createElement('div');
+    el.className = 'tire-edit-row';
+    el.innerHTML =
+      `<div class="tire-grid">
+        <select data-t="position" aria-label="Pozicija">${opts}</select>
+        <input data-t="size" list="commonSizes" placeholder="225/45R17" value="${v.size||''}" aria-label="Dimenzija gume">
+        <input data-t="tread_mm" type="number" inputmode="decimal" step="0.1" min="0" placeholder="Profil mm" value="${v.tread||''}" aria-label="Profil mm">
+        <input data-t="brand" placeholder="Marka (nije obavezno)" value="${v.brand||''}" aria-label="Marka">
+      </div>`;
+    return el;
+  }
+  const tiresBox = $('tires');
+  function collect(){
+    return [...tiresBox.querySelectorAll('.tire-edit-row')].map((r)=>({
+      position:r.querySelector('[data-t="position"]').value,
+      size:r.querySelector('[data-t="size"]').value.trim(),
+      tread:r.querySelector('[data-t="tread_mm"]').value,
+      brand:r.querySelector('[data-t="brand"]').value.trim(),
+    }));
+  }
+  function renderTires(n, existing){
+    existing = existing || [];
+    tiresBox.querySelectorAll('.tire-edit-row').forEach((r)=>r.remove());
+    n = Math.max(1, Math.min(8, Number(n)||4));
+    for(let i=0;i<n;i++) tiresBox.appendChild(tireRow(i, existing[i]));
+  }
+  renderTires(4);
+  $('s_qty').addEventListener('change', ()=>renderTires($('s_qty').value, collect()));
+
+  // ---- Season segmented ----------------------------------------------------
+  form.querySelectorAll('[data-season]').forEach((btn)=>{
+    btn.addEventListener('click', ()=>{
+      form.querySelectorAll('[data-season]').forEach((b)=>b.setAttribute('aria-pressed', String(b===btn)));
+    });
+  });
+
+  // ---- On-rims reveal + date min ------------------------------------------
+  $('s_onrims').addEventListener('change', (e)=>{ $('rimWrap').hidden = !e.target.checked; });
+  $('s_out').min = new Date().toISOString().slice(0,10);
+
+  // ---- Recent-location chips ----------------------------------------------
+  document.querySelectorAll('#recentLoc [data-loc]').forEach((btn)=>{
+    btn.addEventListener('click', ()=>{
+      const [z,r,s,sl] = btn.dataset.loc.split('·');
+      $('s_zone').value=z; $('s_rack').value=r; $('s_shelf').value=s; $('s_slot').value=sl;
+    });
+  });
+
+  // ---- Toast + submit (mock) -----------------------------------------------
+  const toast = $('toast'), toastMsg = $('toastMsg');
+  let toastT = null;
+  function showToast(msg){ toastMsg.textContent = msg; toast.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(()=>toast.classList.remove('show'), 3200); }
+
+  form.addEventListener('submit', (e)=>{
+    e.preventDefault();
+    if(!$('c_name').value.trim()){ $('c_name').focus(); showToast('Ime kupca je obavezno.'); return; }
+    showToast('Spremljeno ASC-2026-0249');
+  });
+
+  // ---- ASC Agent (Gemini) prefill ------------------------------------------
+  // create_tire_set stashes what the user dictated in sessionStorage + sends us
+  // here; fill the form so the employee just checks + confirms.
+  try {
+    const pf = JSON.parse(sessionStorage.getItem('asc.prefill') || 'null');
+    if (pf) {
+      sessionStorage.removeItem('asc.prefill');
+      const setVal = (id, v) => { if (v != null && v !== '' && $(id)) $(id).value = v; };
+      setVal('c_name', pf.customer_name); setVal('c_phone', pf.phone); setVal('c_email', pf.email);
+      setVal('v_make', pf.make); setVal('v_model', pf.model); setVal('v_year', pf.year);
+      setVal('v_plate', pf.plate ? String(pf.plate).toUpperCase() : '');
+      setVal('s_zone', pf.zone); setVal('s_rack', pf.rack); setVal('s_shelf', pf.shelf); setVal('s_slot', pf.slot);
+      setVal('s_notes', pf.notes);
+      if (pf.season) { const sb = form.querySelector('[data-season="' + pf.season + '"]'); if (sb) sb.click(); }
+      const qty = Math.max(1, Math.min(8, Number(pf.quantity) || 4));
+      $('s_qty').value = qty; renderTires(qty);
+      if (pf.tire_size || pf.brand) tiresBox.querySelectorAll('.tire-edit-row').forEach((r) => {
+        if (pf.tire_size) r.querySelector('[data-t="size"]').value = pf.tire_size;
+        if (pf.brand) r.querySelector('[data-t="brand"]').value = pf.brand;
+      });
+      if (form.animate) form.animate([{ opacity:.55 }, { opacity:1 }], { duration: 480, easing: 'ease' });
+      showToast(pf.edit ? ('Uređivanje ' + (pf.code || 'seta') + ' — promijeni i spremi.') : 'ASC Agent je pripremio podatke — provjeri i potvrdi.');
+      setTimeout(() => { try { $('c_name').scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch(e){} }, 160);
+    }
+  } catch(e){}
+})();
+</script>
+</body>
+</html>

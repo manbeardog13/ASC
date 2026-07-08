@@ -1,0 +1,623 @@
+/* =========================================================================
+   ASC design system · v6 "Hanssen" — shared reusable stylesheet
+   Extracted VERBATIM from dashboard.html. Values are locked — do not rewrite.
+   Palette: Cloud Ash #EDF0F5 · Black Core #020305 · Lava Rush #FF4E1B ·
+   Gunmetal #2E2F31 · green #2fbf5b (online/success only). Inter + Sora.
+   Twin light/dark themes toggled by html.dark.
+   ========================================================================= */
+
+/* ============================== Tokens · twin themes ====================== */
+:root{
+  --bg:#eef0f1; --shell:rgba(255,255,255,.44); --shell-solid:rgba(255,255,255,.70);
+  --panel:#f4f4f3; --panel-2:#fdfdfc;
+  --ink:#020305; --ink-2:#3a3c40; --muted:#63676f;
+  --lava:#ff4e1b; --lava-2:#ff8a5c; --lava-ink:#c0360d; --lava-tint:rgba(255,78,27,.11); --lava-ring:rgba(255,78,27,.30);
+  --gun:#2e2f31; --hairline:rgba(28,22,16,.06); --line:rgba(28,22,16,.09);
+  --stage-1:#0b0c0e; --stage-2:#17181b; --on-stage:#f4f5f7; --on-stage-2:rgba(244,245,247,.72); --tab-surf:#f7f9fc;
+  --rim-top:rgba(255,255,255,.75); --rim:rgba(255,255,255,.42);
+  --green:#2fbf5b; --green-ink:#1c894a;
+  --smooth:cubic-bezier(.25,1,.5,1); --snap:cubic-bezier(.22,1,.36,1);
+  --shadow-card:0 1px 2px -1px rgba(20,18,15,.10),0 6px 16px -8px rgba(20,18,15,.15),0 20px 40px -22px rgba(20,18,15,.22);
+  --gap:14px; --pad:20px; --radius:22px;
+  --tap:44px; --dock-h:66px;
+}
+html.dark{
+  --bg:#020305; --shell:rgba(23,24,28,.55); --shell-solid:rgba(23,24,28,.86);
+  --panel:#1d1e22; --panel-2:#26272b;
+  --ink:#f4f5f7; --ink-2:#d6d8dc; --muted:rgba(244,245,247,.62);
+  --hairline:rgba(244,245,247,.09); --line:rgba(244,245,247,.12);
+  --lava-ink:#ff8a5c; --tab-surf:#0f1013; --green-ink:#57d484;
+  --stage-1:#07080a; --stage-2:#101114;
+  --rim-top:rgba(255,255,255,.16); --rim:rgba(255,255,255,.08);
+  --shadow-card:0 1px 2px -1px rgba(0,0,0,.5),0 8px 20px -10px rgba(0,0,0,.55),0 24px 48px -24px rgba(0,0,0,.62);
+}
+
+/* ============================== Base reset · canvas ====================== */
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{min-height:100%}
+body{font-family:"Inter",system-ui,sans-serif;color:var(--ink);background:var(--bg);
+  padding:24px 18px calc(var(--dock-h) + env(safe-area-inset-bottom,0px) + 40px);
+  -webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums;
+  transition:background 380ms var(--smooth),color 380ms var(--smooth)}
+@media(min-width:1021px){ body{padding:30px 26px} }
+
+.canvas{position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:
+    radial-gradient(60vmax 56vmax at 6% -14%,rgba(255,122,64,.11),transparent 60%),
+    radial-gradient(54vmax 50vmax at 98% 116%,rgba(84,120,152,.08),transparent 60%),
+    radial-gradient(44vmax 40vmax at 86% -8%,rgba(46,47,49,.12),transparent 62%)}
+html.dark .canvas{
+  background:
+    radial-gradient(60vmax 56vmax at 6% -14%,rgba(255,110,55,.09),transparent 60%),
+    radial-gradient(54vmax 50vmax at 98% 116%,rgba(90,130,165,.07),transparent 60%),
+    radial-gradient(44vmax 40vmax at 86% -8%,rgba(244,245,247,.04),transparent 62%)}
+.grain{position:fixed;inset:0;z-index:60;pointer-events:none;opacity:.04;mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E")}
+/* Hidden for the live push (was the "Preview · nije uživo" ribbon). */
+.preview-tag{display:none!important;position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:70;font:700 10px Inter;letter-spacing:.14em;text-transform:uppercase;background:var(--gun);color:#f4f5f7;padding:4px 12px;border-radius:0 0 10px 10px;opacity:.9}
+
+/* ============================== Glass shell ============================== */
+.shell{max-width:1180px;margin:0 auto;border-radius:32px;position:relative;z-index:2;
+  background:var(--shell-solid);border:1px solid var(--rim);border-top-color:var(--rim-top);
+  box-shadow:0 25px 50px rgba(2,3,5,.22);padding:var(--gap);animation:sheetIn 550ms var(--smooth) both;transition:background 380ms var(--smooth)}
+@media(min-width:1021px){ .shell{padding:18px} }
+@supports ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  .shell{background:var(--shell);-webkit-backdrop-filter:blur(30px) saturate(150%) brightness(108%);backdrop-filter:blur(30px) saturate(150%) brightness(108%)}
+}
+@media(prefers-reduced-transparency:reduce){ .shell{background:var(--panel-2)!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important} .canvas{display:none} }
+@keyframes sheetIn{from{opacity:0;transform:translateY(24px) scale(.985)}}
+@keyframes rise{from{opacity:0;transform:translateY(12px)}}
+.reveal{animation:rise 620ms var(--smooth) both}
+
+/* ============================== Top bar (real logo) ====================== */
+.top{display:flex;align-items:center;gap:14px;height:40px;margin-bottom:var(--gap);padding:0 4px}
+.logo{height:26px;width:auto;display:block;filter:drop-shadow(0 3px 8px rgba(255,78,27,.28))}
+.pill{margin-left:auto;display:flex;align-items:center;gap:2px;background:rgba(2,3,5,.88);color:#f4f5f7;border-radius:20px;padding:6px 8px;font:500 12.5px Inter;border-top:1px solid rgba(255,255,255,.14)}
+html.dark .pill{background:rgba(244,245,247,.10)}
+.pill a{position:relative;color:#f4f5f7;opacity:.62;padding:6px 11px;border-radius:13px;text-decoration:none;transition:opacity 150ms var(--snap),background 150ms var(--snap)}
+.pill a.on{opacity:1;background:rgba(244,245,247,.14)}
+@media(hover:hover){ .pill a:hover{opacity:1} }
+.mode{border:0;cursor:pointer;width:38px;height:38px;border-radius:50%;flex:none;background:var(--panel);display:grid;place-items:center;position:relative;transition:transform 380ms var(--smooth),background 380ms var(--smooth)}
+@media(hover:hover){ .mode:hover{background:var(--panel-2)} }
+.mode:active{transform:scale(.92)}
+.mode i{width:12px;height:12px;border-radius:50%;background:var(--ink);display:block;transition:background 380ms ease,box-shadow 380ms ease}
+html.dark .mode i{background:transparent;box-shadow:inset 0 0 0 2.5px #f4f5f7}
+
+/* ============================== Notched corner tabs ===================== */
+/* Hanssen notched corner tabs — the label nests INTO the card corner, and the
+   inter-card gap curves around it via inverse-rounded notches (the ::before /
+   ::after radial-gradients paint the gap colour back in). */
+/* Corner tabs render as UPPERCASE eyebrow labels (matches the .badge / live-dot
+   label system) — never rely on source casing. --tab-surf is an OPAQUE gap colour
+   (the app background between cards) so the notch reads as a clean cutout and never
+   shows the card art bleeding through; keep it opaque per theme. */
+.tab-corner,.tab-tl{position:absolute;z-index:4;font:600 10.5px Inter;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-2);background:var(--tab-surf);padding:7px 13px 8px;white-space:nowrap}
+.tab-corner{bottom:0;right:0;border-radius:14px 0 0 0}
+.tab-tl{top:0;left:0;border-radius:0 0 14px 0}
+.tab-corner::before,.tab-corner::after,.tab-tl::before,.tab-tl::after{content:"";position:absolute;width:14px;height:14px}
+.tab-corner::after{left:-14px;bottom:0;background:radial-gradient(circle at 0 0,transparent 14px,var(--tab-surf) 14.5px)}
+.tab-corner::before{right:0;top:-14px;background:radial-gradient(circle at 0 0,transparent 14px,var(--tab-surf) 14.5px)}
+.tab-tl::after{right:-14px;top:0;background:radial-gradient(circle at 100% 100%,transparent 14px,var(--tab-surf) 14.5px)}
+.tab-tl::before{left:0;bottom:-14px;background:radial-gradient(circle at 100% 100%,transparent 14px,var(--tab-surf) 14.5px)}
+
+/* ============================== Stage hero ============================== */
+.stage{position:relative;border-radius:var(--radius);overflow:hidden;min-height:452px;
+  background:linear-gradient(175deg,var(--stage-1) 0%,var(--stage-2) 100%);
+  color:var(--on-stage);padding:32px 28px 28px;display:flex;flex-direction:column;border-top:1px solid rgba(255,255,255,.10)}
+@media(max-width:900px){ .stage{min-height:auto;padding:30px 22px 26px} }
+/* cinematic tire hero: photo + a scrim that keeps the left/bottom dark for text */
+.stage .photo{position:absolute;inset:0;z-index:0;background:url('assets/hero.jpg') center right/cover;transform:scale(1.03)}
+.stage .scrim{position:absolute;inset:0;z-index:1;background:
+  linear-gradient(102deg, var(--stage-1) 20%, rgba(7,8,10,.80) 34%, rgba(7,8,10,.34) 60%, rgba(7,8,10,.05) 81%, rgba(7,8,10,.42) 100%),
+  linear-gradient(0deg, var(--stage-1) 3%, rgba(7,8,10,.88) 14%, transparent 46%),
+  radial-gradient(120% 80% at 88% -8%, rgba(255,78,27,.22), transparent 50%)}
+.stage>:not(.photo):not(.scrim):not(.tab-corner){position:relative;z-index:2}
+.k{font-family:Inter;font-weight:600;font-size:clamp(9.5px,2.6vw,11px);line-height:1.35;letter-spacing:.06em;text-transform:uppercase;color:var(--on-stage-2)}
+.hero-num{font-family:Sora;font-weight:500;font-size:clamp(58px,6.8vw,92px);line-height:.96;letter-spacing:-.035em;margin:10px 0 4px}
+.hero-num em{font-style:normal;font:500 14px Inter;letter-spacing:.06em;text-transform:uppercase;color:var(--on-stage-2);margin-left:8px;vertical-align:baseline}
+.cap{font-size:13.5px;color:var(--on-stage-2)}
+.stage .k,.stage .hero-num,.stage .cap,.stage .spill span{text-shadow:0 1px 4px rgba(2,3,5,.82)}
+.meter{margin-top:15px;height:8px;border-radius:4px;background:rgba(244,245,247,.14);overflow:hidden;max-width:460px}
+.meter i{display:block;height:100%;width:0;border-radius:4px;background:linear-gradient(90deg,var(--lava-2),var(--lava));transition:width 1100ms var(--smooth)}
+.space{flex:1;min-height:18px}
+.spills{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+.spill{text-align:left;background:rgba(244,245,247,.08);border:0;border-radius:14px;padding:12px 10px;border-top:1px solid rgba(255,255,255,.09);color:var(--on-stage);transition:transform 150ms var(--snap),background 150ms var(--snap);cursor:pointer}
+@media(hover:hover){ .spill:hover{transform:translateY(-2px);background:rgba(244,245,247,.14)} }
+.spill:active{transform:scale(.97);transition-duration:80ms}
+.spill b{display:block;font-family:Sora;font-weight:500;font-size:21px;line-height:1}
+.spill span{font-size:10px;color:var(--on-stage-2);display:block;margin-top:4px}
+.cta{display:flex;align-items:center;justify-content:center;gap:10px;min-height:50px;border-radius:25px;background:rgba(244,245,247,.94);color:#020305;text-decoration:none;font:600 14px Inter;transition:transform 150ms var(--snap),box-shadow 200ms var(--snap);position:relative}
+@media(hover:hover){ .cta:hover{transform:translateY(-2px);box-shadow:0 12px 26px -10px rgba(0,0,0,.5)} }
+.cta:active{transform:scale(.98);transition-duration:80ms}
+.cta .dot{width:9px;height:9px;border-radius:50%;background:var(--lava);box-shadow:0 0 8px 2px var(--lava-ring);animation:breathe 2.4s ease-in-out infinite}
+@keyframes breathe{50%{transform:scale(1.3);opacity:.8}}
+/* "Pitaj ASC Agenta" — compact translucent glass pill that shimmers in lava,
+   with a green "online" light. Hugs its content (no full-width stretch). */
+.cta.agent{display:inline-flex;align-self:flex-start;width:auto;min-height:42px;padding:0 17px;gap:9px;border-radius:21px;
+  background:rgba(244,245,247,.10);color:var(--on-stage);font:600 13px Inter;
+  border:1px solid rgba(255,255,255,.20);overflow:hidden;
+  -webkit-backdrop-filter:blur(10px) saturate(140%);backdrop-filter:blur(10px) saturate(140%);
+  box-shadow:0 6px 20px -10px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.14)}
+/* Flowing wave lines inside the pill: blue -> magenta -> purple, each line drifts
+   at its own rate. Clipped by the pill's overflow:hidden. No orange. */
+.cta-waves{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.agwave{fill:none;stroke:url(#agw);stroke-linecap:round}
+.agwave.a1{stroke-width:1.7;opacity:.75;animation:agFlow 5.3s linear infinite}
+.agwave.a2{stroke-width:1.3;opacity:.5;animation:agFlow 7.9s linear infinite}
+.agwave.a3{stroke-width:1.5;opacity:.62;animation:agFlow 6.4s linear infinite reverse}
+@keyframes agFlow{to{transform:translateX(-120px)}}
+@media(hover:hover){ .cta.agent:hover{transform:translateY(-1px);background:rgba(244,245,247,.16);border-color:rgba(170,90,255,.55)} }
+.cta.agent .dot{background:var(--green);box-shadow:0 0 8px 2px rgba(47,191,91,.55)}
+
+/* ============================== Action cards (dedicated imagery) ========= */
+.act{position:relative;border-radius:var(--radius);overflow:hidden;min-height:180px;display:flex;align-items:flex-end;text-decoration:none;color:#fff;isolation:isolate;box-shadow:var(--shadow-card);transition:transform 160ms var(--snap),box-shadow 220ms var(--snap)}
+.act .bg{position:absolute;inset:0;background-size:cover;background-position:center;transform:scale(1.01);transition:transform 500ms var(--smooth);z-index:-2}
+.act::after{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(180deg,rgba(2,3,5,.12) 0%,rgba(2,3,5,.34) 42%,rgba(2,3,5,.88) 100%)}
+@media(hover:hover){ .act:hover{transform:translateY(-3px);box-shadow:0 20px 40px -16px rgba(2,3,5,.6)} .act:hover .bg{transform:scale(1.06)} }
+.act:active{transform:scale(.985);transition-duration:90ms}
+.act .body{position:relative;padding:16px 18px;width:100%}
+.act .eyebrow{font:600 10.5px Inter;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.74);display:flex;align-items:center;gap:7px}
+.act .eyebrow .led{width:7px;height:7px;border-radius:50%}
+.act.green .eyebrow .led{background:var(--green);box-shadow:0 0 8px 1px rgba(47,191,91,.7)}
+.act.red .eyebrow .led{background:var(--lava);box-shadow:0 0 8px 1px var(--lava-ring)}
+.act h2{font:600 21px Sora;letter-spacing:-.01em;margin:5px 0 2px}
+.act .desc{font:500 12.5px Inter;color:rgba(255,255,255,.76)}
+.act .go{position:absolute;top:14px;right:14px;width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.14);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.22);color:#fff;transition:background 160ms var(--snap),transform 160ms var(--snap)}
+@media(hover:hover){ .act:hover .go{transform:translateX(2px)} .act.red:hover .go{background:var(--lava)} .act.green:hover .go{background:var(--green)} }
+
+/* ============================== Card surface ============================ */
+.card{position:relative;background:var(--panel);border-radius:var(--radius);padding:32px var(--pad) 18px;display:flex;flex-direction:column;transition:background 380ms var(--smooth),transform 160ms var(--snap),box-shadow 200ms var(--snap)}
+/* .tab-tl (incl. its notch) is defined in the corner-tab block above */
+.card h3{font-family:Sora;font-weight:600;font-size:15px;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.count-badge{margin-left:auto;font:800 12px Inter;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:linear-gradient(158deg,var(--lava-2),var(--lava) 52%,var(--lava-ink));color:#fff;display:inline-flex;align-items:center;justify-content:center;box-shadow:0 2px 7px -2px rgba(255,78,27,.5),inset 0 1px 0 rgba(255,255,255,.28)}
+.card.dark{background:radial-gradient(120% 100% at 90% -20%,rgba(255,78,27,.20),transparent 55%),linear-gradient(175deg,var(--stage-1),var(--stage-2));color:var(--on-stage)}
+html.dark .card.dark{background:radial-gradient(120% 100% at 90% -20%,rgba(255,78,27,.16),transparent 55%),linear-gradient(175deg,#24252a,#1a1b1f)}
+
+/* profile card */
+.row1{display:flex;align-items:center;gap:13px;margin-bottom:12px}
+.pavatar{width:44px;height:44px;border-radius:50%;flex:none;background:radial-gradient(circle at 32% 30%,var(--lava-2),var(--lava) 62%,#d6390c);color:#fff;display:grid;place-items:center;font:650 14px Inter;box-shadow:0 6px 16px rgba(255,78,27,.35)}
+.profile h1{font-family:Sora;font-weight:600;font-size:18px;letter-spacing:-.01em}
+.profile .sub{font-size:12px;color:var(--muted)}
+.profile p{font-size:13px;line-height:1.55;color:var(--ink-2);flex:1}
+.health{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:14px;padding-top:13px;border-top:1px solid var(--hairline)}
+.hstat{background:var(--panel-2);border-radius:12px;padding:9px 10px;font-size:10.5px;color:var(--muted);display:flex;flex-direction:column;gap:2px;min-width:0}
+html.dark .hstat{background:rgba(244,245,247,.05)}
+.hstat b{font:700 12px Inter;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hstat .g{color:var(--green-ink)}
+
+/* season bars */
+.obar{margin-bottom:12px}
+.obar:last-child{margin-bottom:0}
+.obar .t{display:flex;justify-content:space-between;align-items:baseline;font-size:12px;color:var(--muted);margin-bottom:6px}
+.obar .t b{color:var(--ink);font:500 14px Sora}
+.obar .bar{height:6px;border-radius:3px;background:rgba(2,3,5,.08);overflow:hidden}
+html.dark .obar .bar{background:rgba(244,245,247,.10)}
+.obar .bar i{display:block;height:100%;width:0;border-radius:3px;background:linear-gradient(90deg,var(--lava-2),var(--lava));transition:width 1100ms var(--smooth)}
+
+/* reminders list */
+.mini{display:flex;align-items:center;gap:10px;padding:10px 6px;border-radius:10px;border-bottom:1px solid rgba(244,245,247,.09);font-size:13px;color:var(--on-stage);text-decoration:none;transition:background 150ms var(--snap),transform 150ms var(--snap)}
+.mini:last-child{border-bottom:0}
+@media(hover:hover){ .mini:hover{background:rgba(244,245,247,.08);transform:translateX(3px)} }
+.mini:active{transform:scale(.99);transition-duration:80ms}
+.mini time{font:600 11px Inter;color:var(--on-stage-2);min-width:46px;flex:none}
+.mini b{min-width:0;flex:1 1 auto;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mini .pl{margin-left:auto;font:600 11px Inter;color:var(--on-stage-2);flex:none}
+.mini.overdue time{color:var(--lava-2);font-weight:700}
+
+/* ============================== Slider cards ============================ */
+.slider{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;padding:2px 4px 8px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.slider::-webkit-scrollbar{display:none}
+.slide{flex:0 0 auto;width:164px;scroll-snap-align:start;border-radius:18px;overflow:hidden;background:var(--panel);text-decoration:none;color:var(--ink);box-shadow:var(--shadow-card);transition:transform 160ms var(--snap),box-shadow 220ms var(--snap)}
+@media(hover:hover){ .slide:hover{transform:translateY(-3px);box-shadow:0 18px 36px -16px rgba(2,3,5,.5)} }
+.slide:active{transform:scale(.98);transition-duration:90ms}
+.slide .thumb{display:block;height:100px;background-size:cover;background-position:center}
+.slide .meta{padding:11px 12px 13px}
+.slide .code{font:700 12.5px Inter}
+.slide .who{font:500 12px Inter;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chip{display:inline-flex;align-items:center;margin-top:8px;padding:3px 9px;border-radius:999px;font:600 10.5px Inter;background:var(--lava-tint);color:var(--lava-ink)}
+.chip.win{background:rgba(46,47,49,.12);color:var(--gun)} html.dark .chip.win{background:rgba(244,245,247,.10);color:#c9ccd2}
+.chip.all{background:rgba(99,103,111,.16);color:var(--muted)}
+
+/* ============================== Dock — iOS tab bar ====================== */
+/* Flat translucent tab bar: five equal tabs, icon + label, tint-only active.
+   No protruding button, no sliding pill — reads as a native iOS tab bar. */
+.dock{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(10px + env(safe-area-inset-bottom,0px));z-index:50;
+  display:flex;align-items:stretch;width:calc(100% - 24px);max-width:430px;padding:5px;
+  border-radius:26px;background:rgba(250,250,252,.72);border:.5px solid rgba(255,255,255,.55);
+  box-shadow:0 10px 34px -10px rgba(2,3,5,.26);
+  -webkit-backdrop-filter:blur(24px) saturate(180%);backdrop-filter:blur(24px) saturate(180%)}
+html.dark .dock{background:rgba(30,30,34,.62);border-color:rgba(255,255,255,.10);box-shadow:0 10px 34px -10px rgba(0,0,0,.62)}
+.dock a{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+  min-height:46px;border-radius:20px;text-decoration:none;color:var(--muted);
+  font:500 10px Inter;letter-spacing:.005em;transition:color 200ms var(--snap),opacity 100ms linear}
+.dock a.on{color:var(--lava-ink)}
+html.dark .dock a.on{color:var(--lava-2)}
+.dock a svg{width:25px;height:25px}
+.dock a:active{opacity:.4}
+@media(min-width:1021px){ .dock{display:none} }
+@media(max-width:1020px){ .pill-links{display:none} .pill{background:transparent;border:0;padding:0;margin-left:auto} }
+
+/* ============================== Global ASC Agent — right-edge voice dock ===
+   Injected by app.js on EVERY screen. Tucked as a slim tab on the right edge;
+   tap opens a violet-glass panel that slides out (still hugging the edge). The
+   big orb is press-and-HOLD to talk (Web Speech, hr-HR) — release acts like
+   Enter and the agent routes the intent (navigate / search). Off-palette violet
+   = the AI affordance (matches the dashboard agent card). Always dark, both
+   themes. Animations are transform/opacity only — GPU, 60fps, Apple-grade. */
+/* Closed: the dock sits BELOW the shell (z-index:2) so the tire tucks behind the
+   card's edge with no background gap. Open: it lifts above everything. */
+.ai-dock{position:fixed;inset:0;z-index:1;pointer-events:none;
+  font-family:"Inter",system-ui,sans-serif}
+.ai-dock[data-open="true"]{z-index:80}
+.ai-dock *{box-sizing:border-box}
+
+/* the tucked tab */
+.ai-tab{position:fixed;right:env(safe-area-inset-right,0px);top:41%;z-index:66;pointer-events:auto;
+  width:34px;height:92px;padding:0;border:0;cursor:pointer;color:#fff;display:grid;place-items:center;
+  border-radius:17px 0 0 17px;
+  background:linear-gradient(152deg,#a78bfa,#8b5cf6 46%,#6d28d9);
+  box-shadow:-7px 12px 28px -10px rgba(96,42,196,.72),inset 0 1px 0 rgba(255,255,255,.22),inset 1px 0 0 rgba(255,255,255,.12);
+  transition:transform .55s cubic-bezier(.16,1,.3,1),width .4s var(--smooth),box-shadow .4s var(--smooth),opacity .4s var(--smooth)}
+.ai-tab svg{width:19px;height:19px;position:relative;z-index:1}
+.ai-tab::before{content:"";position:absolute;left:6px;top:12px;bottom:12px;width:2px;border-radius:2px;z-index:1;
+  background:linear-gradient(#fff,rgba(255,255,255,.2));opacity:.5}
+/* breathe = a composited ::after opacity pulse (never animate box-shadow → no per-frame repaint) */
+.ai-tab::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+  box-shadow:-7px 12px 34px -8px rgba(150,96,255,.9);opacity:.35;
+  animation:aiTabBreathe 3.6s ease-in-out infinite}
+@keyframes aiTabBreathe{50%{opacity:.85}}
+@media(hover:hover){ .ai-tab:hover{width:42px;box-shadow:-9px 14px 32px -8px rgba(224,64,208,.72)} }
+.ai-tab:active{transform:scale(.95)}
+.ai-dock[data-open="true"] .ai-tab{transform:translateX(130%);opacity:0;pointer-events:none;animation:none}
+
+/* scrim DISABLED — Gemini is non-modal, so the page beneath stays fully visible
+   and interactive (no dim, no blocking). Kept as an inert element for structure. */
+.ai-scrim{position:fixed;inset:0;z-index:65;pointer-events:none;opacity:0;display:none}
+.ai-dock[data-open="true"] .ai-scrim{opacity:0;pointer-events:none}
+
+/* the panel */
+.ai-panel{position:fixed;right:calc(10px + env(safe-area-inset-right,0px));top:50%;z-index:66;pointer-events:auto;
+  width:min(360px,90vw);max-height:calc(100dvh - 90px);overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;
+  transform:translate(calc(100% + 26px),-50%);
+  transition:transform .58s cubic-bezier(.16,1,.3,1);will-change:transform;
+  border-radius:26px;padding:16px 16px 14px;color:#f4f0ff;
+  background:linear-gradient(168deg,#150f2b,#0e0b1c 58%,#0a0912);
+  border:1px solid rgba(150,110,255,.30);
+  box-shadow:0 34px 80px -26px rgba(70,26,170,.8),0 8px 24px -12px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.07);
+  display:flex;flex-direction:column;gap:13px}
+.ai-panel::-webkit-scrollbar{display:none}
+.ai-dock[data-open="true"] .ai-panel{transform:translate(0,-50%)}
+.ai-panel::before{content:"";position:absolute;inset:-1px;border-radius:inherit;pointer-events:none;z-index:0;opacity:.6;
+  background:radial-gradient(60% 44% at 22% 8%,rgba(139,92,246,.32),transparent 62%),radial-gradient(56% 42% at 88% 4%,rgba(224,64,208,.24),transparent 60%)}
+.ai-panel>*{position:relative;z-index:1}
+
+.ai-head{display:flex;align-items:center;justify-content:space-between}
+.ai-title{display:flex;align-items:center;gap:9px;font:600 14px Sora;letter-spacing:-.01em}
+.ai-title .dot{width:8px;height:8px;border-radius:50%;background:#3ddc84;box-shadow:0 0 9px 1px rgba(61,220,132,.6);animation:breathe 2.6s ease-in-out infinite}
+.ai-close{width:32px;height:32px;flex:none;border:0;border-radius:50%;cursor:pointer;color:#cdbff5;
+  background:rgba(150,110,255,.16);display:grid;place-items:center;transition:transform .2s var(--snap),background .2s var(--snap)}
+.ai-close svg{width:16px;height:16px}
+@media(hover:hover){ .ai-close:hover{background:rgba(150,110,255,.28)} }
+.ai-close:active{transform:scale(.9)}
+
+.ai-stage{display:flex;flex-direction:column;align-items:center;gap:11px;padding:6px 0 2px}
+
+/* press-and-hold mic — the star */
+.ai-mic{position:relative;width:108px;height:108px;flex:none;border:0;border-radius:50%;cursor:pointer;padding:0;
+  background:transparent;touch-action:none;-webkit-touch-callout:none;user-select:none;-webkit-user-select:none;
+  -webkit-tap-highlight-color:transparent}
+.ai-mic-orb{position:absolute;inset:0;border-radius:50%;display:grid;place-items:center;color:#fff;
+  background:radial-gradient(circle at 34% 26%,#c4b5fd,#8b5cf6 50%,#6d28d9);
+  box-shadow:0 16px 38px -10px rgba(139,92,246,.75),inset 0 2px 0 rgba(255,255,255,.28),inset 0 -6px 14px -6px rgba(60,20,150,.6);
+  transition:transform .32s cubic-bezier(.16,1,.3,1),background .3s var(--smooth),box-shadow .3s var(--smooth)}
+.ai-mic-orb svg{width:40px;height:40px}
+.ai-mic::before,.ai-mic::after{content:"";position:absolute;inset:2px;border-radius:50%;border:2px solid rgba(224,64,208,.75);opacity:0;pointer-events:none}
+.ai-mic:active .ai-mic-orb{transform:scale(.965)}
+.ai-mic.is-live .ai-mic-orb{transform:scale(1.05);
+  background:radial-gradient(circle at 34% 26%,#f5d0fe,#e040d0 52%,#a21caf);
+  box-shadow:0 18px 46px -8px rgba(224,64,208,.85),inset 0 2px 0 rgba(255,255,255,.3)}
+.ai-mic.is-live::before{animation:aiPing 1.5s ease-out infinite}
+.ai-mic.is-live::after{animation:aiPing 1.5s ease-out .55s infinite}
+@keyframes aiPing{0%{opacity:.75;transform:scale(1)}100%{opacity:0;transform:scale(1.62)}}
+.ai-mic.is-off .ai-mic-orb{background:radial-gradient(circle at 34% 26%,#6b6478,#4a4458 60%,#332e40);box-shadow:0 10px 24px -12px rgba(0,0,0,.6)}
+
+.ai-hint{font:600 12.5px Inter;letter-spacing:.02em;color:#b9a9ee;text-align:center;transition:color .25s}
+.ai-mic.is-live~.ai-hint{color:#f5b8f0}
+.ai-heard{min-height:22px;font:500 15.5px Inter;color:#f7f3ff;text-align:center;line-height:1.4;
+  overflow-wrap:anywhere}
+.ai-result{font:500 13px Inter;color:#c9bdf0;text-align:center;line-height:1.45;min-height:16px;transition:opacity .3s}
+.ai-result b{color:#fff;font-weight:700}
+.ai-result.pop{animation:aiResultPop .5s var(--smooth)}
+@keyframes aiResultPop{from{opacity:0;transform:translateY(6px)}}
+
+/* typed fallback (also works when speech is unsupported) */
+.ai-type{display:flex;align-items:center;gap:8px;background:rgba(10,8,20,.6);
+  border:1px solid rgba(150,110,255,.30);border-radius:15px;padding:4px 4px 4px 15px;
+  transition:border-color .25s var(--smooth)}
+.ai-type:focus-within{border-color:rgba(224,64,208,.55)}
+.ai-type input{flex:1;min-width:0;background:transparent;border:0;outline:0;color:#f3efff;font:500 14.5px Inter}
+.ai-type input::placeholder{color:rgba(200,189,240,.5)}
+.ai-send{flex:none;width:40px;height:40px;border:0;border-radius:12px;cursor:pointer;color:#fff;display:grid;place-items:center;
+  background:linear-gradient(135deg,#8b5cf6,#e040d0);box-shadow:0 6px 16px -6px rgba(139,92,246,.7);
+  transition:transform .15s var(--snap),box-shadow .2s var(--smooth)}
+.ai-send svg{width:19px;height:19px}
+@media(hover:hover){ .ai-send:hover{transform:translateY(-1px);box-shadow:0 10px 22px -8px rgba(224,64,208,.7)} }
+.ai-send:active{transform:scale(.92)}
+
+.ai-chips{display:flex;flex-wrap:wrap;gap:7px;justify-content:center}
+.ai-chip{border:0;cursor:pointer;padding:7px 12px;border-radius:999px;font:600 11.5px Inter;color:#e9e2ff;
+  background:rgba(150,110,255,.14);border:1px solid rgba(150,110,255,.28);transition:transform .15s var(--snap),background .2s var(--smooth)}
+@media(hover:hover){ .ai-chip:hover{background:rgba(150,110,255,.24)} }
+.ai-chip:active{transform:scale(.94)}
+
+@media(max-width:400px){ .ai-panel{width:calc(100vw - 20px);right:10px} .ai-mic{width:96px;height:96px} .ai-mic-orb svg{width:36px;height:36px} }
+@media(prefers-reduced-motion:reduce){ .ai-tab::after{animation:none} .ai-mic.is-live::before,.ai-mic.is-live::after{animation:none} }
+
+/* ============================== Disclosure — fluid drop-down =============
+   Apple-style progressive disclosure: show a calm summary, TAP to reveal the
+   detail — instead of dumping every row at once. Height animates via CSS grid
+   (0fr→1fr, no JS measuring); the content settles with a soft fade+lift and the
+   chevron springs. Wire-up: app.js delegates .disc-head clicks (works for
+   dynamically built lists too). Structure:
+     <div class="disc" data-open="false">
+       <button class="disc-head">…<span class="disc-sub">3</span><span class="disc-chev">▾</span></button>
+       <div class="disc-panel"><div class="disc-inner"><div class="disc-body">…</div></div></div>
+     </div>  */
+.disc{position:relative;border-radius:18px;background:var(--panel);overflow:clip;
+  box-shadow:var(--shadow-card);transition:background 380ms var(--smooth),box-shadow 220ms var(--snap)}
+.disc + .disc{margin-top:10px}
+.disc-head{width:100%;display:flex;align-items:center;gap:12px;min-height:56px;cursor:pointer;border:0;
+  background:transparent;color:var(--ink);text-align:left;padding:12px 15px;
+  font-family:Sora;font-weight:600;font-size:15px;letter-spacing:-.01em;
+  transition:background 160ms var(--snap)}
+@media(hover:hover){ .disc-head:hover{background:var(--panel-2)} }
+.disc-head:active{background:var(--panel-2)}
+.disc-head>.disc-ico{flex:none;width:34px;height:34px;border-radius:11px;display:grid;place-items:center;color:#fff;
+  background:radial-gradient(circle at 32% 28%,var(--lava-2),var(--lava) 64%,#d6390c);box-shadow:0 6px 16px rgba(255,78,27,.28)}
+.disc-head>.disc-ico svg{width:18px;height:18px}
+.disc-titles{display:flex;flex-direction:column;gap:2px;min-width:0}
+.disc-titles small{font:500 11.5px Inter;color:var(--muted);letter-spacing:0}
+.disc-sub{margin-left:auto;flex:none;font:600 12.5px Inter;color:var(--muted);white-space:nowrap}
+.disc-sub b{color:var(--lava-ink);font-weight:800} html.dark .disc-sub b{color:var(--lava-2)}
+.disc-chev{flex:none;width:22px;height:22px;margin-left:6px;display:grid;place-items:center;color:var(--muted);
+  transition:transform .5s cubic-bezier(.34,1.26,.5,1)}
+.disc-chev svg{width:15px;height:15px}
+.disc[data-open="true"]>.disc-head .disc-chev{transform:rotate(180deg)}
+.disc-panel{display:grid;grid-template-rows:0fr;transition:grid-template-rows .5s var(--snap)}
+.disc[data-open="true"]>.disc-panel{grid-template-rows:1fr}
+.disc-inner{overflow:hidden;min-height:0;
+  opacity:0;transform:translateY(-7px);transition:opacity .32s var(--smooth),transform .44s var(--snap)}
+.disc[data-open="true"]>.disc-panel>.disc-inner{opacity:1;transform:none;transition-delay:.06s,.06s}
+.disc-body{padding:0 15px 15px}
+.disc-body>*:first-child{margin-top:0}
+@media(prefers-reduced-motion:reduce){ .disc-panel,.disc-inner,.disc-chev{transition-duration:.001ms} }
+
+/* ===== Tire skin — the agent IS a real studio-tire cutout that rolls in ======
+   --tire (a random background-removed tire PNG, tire-1..6.png) + --glow (random
+   brake-caliper colour) are set per-load in app.js. The PNG is already cut out
+   (transparent) so there is no disc — just the tire. It sits ~1/6 out the right
+   edge, breathing, with the brake UNDER-glow pooled BEHIND (z-index:-1) and BELOW
+   it — never over it. Mobile shows only the tire; while listening the live
+   transcript types out above it. PC keeps the panel (input + chips). */
+.ai-tab{width:157px;height:157px;border-radius:50%;padding:0;overflow:visible;
+  background:var(--tire,radial-gradient(circle at 34% 30%,#a78bfa,#6d28d9)) center 44%/cover no-repeat;
+  box-shadow:0 22px 30px -6px var(--glow,#ff8a1a),0 16px 30px -14px rgba(0,0,0,.6);
+  transform:translateX(82%);animation:aiTireBreathe 3.8s ease-in-out infinite}
+.ai-tab svg,.ai-tab::before{display:none!important}
+/* under-glow: a colour pool sitting BEHIND (z-index:-1) and BELOW the tire */
+.ai-tab::after{content:"";position:absolute;left:8%;right:8%;top:80%;height:60%;z-index:-1;pointer-events:none;border-radius:50%;box-shadow:none;
+  background:radial-gradient(ellipse at 50% 22%,var(--glow,#ff8a1a),transparent 70%);opacity:.72;filter:blur(11px);animation:aiTireGlow 2.6s ease-in-out infinite}
+@keyframes aiTireGlow{50%{opacity:1;transform:scaleX(1.1)}}
+@keyframes aiTireBreathe{50%{transform:translateX(80%) scale(1.02)}}
+@media(hover:hover){ .ai-tab:hover{transform:translateX(74%)} }
+.ai-tab:active{transform:translateX(80%) scale(.97)}
+.ai-dock[data-open="true"] .ai-tab{transform:translateX(168%) rotate(160deg);opacity:0;animation:none}
+/* Desktop: dock the tire into the SHELL's right edge (not the far screen gutter),
+   straddling it — inner half tucked behind the card (dock z1 < shell z2), outer half
+   proud in the gutter, no background gap. No screen-edge concealment; ::after glows. */
+html[data-device="desktop"] .ai-tab{right:max(4px, calc(max(26px, (100vw - 1180px)/2) - 74px));transform:none;animation:none}
+@media(hover:hover){ html[data-device="desktop"] .ai-tab:hover{transform:scale(1.06)} }
+html[data-device="desktop"] .ai-tab:active{transform:scale(.96)}
+
+/* the open press-and-hold orb is the same tire, rolling in, glowing from beneath */
+.ai-mic-orb{background:var(--tire) center 44%/cover no-repeat;
+  box-shadow:0 18px 26px -6px var(--glow,#ff8a1a),0 16px 30px -12px rgba(0,0,0,.5),inset 0 3px 8px rgba(255,255,255,.14),inset 0 -12px 24px -8px rgba(0,0,0,.55)}
+.ai-mic svg,.ai-mic-orb svg{display:none}
+.ai-mic::before,.ai-mic::after{border-color:var(--glow,#ff8a1a)!important}
+.ai-mic.is-live .ai-mic-orb{transform:scale(1.06)}
+
+/* ===== Apple-grade rolling entrance/exit — NO-SLIP: rotate = 0.72987°/px * travel
+   (r=78.5px), rolling-left = negative (CCW). translate + rotate share ONE transform
+   and one easing per segment, so the tread never slips. Entrance: anticipation nudge
+   OUT → rapid roll → pronounced decel + micro settle. Exit: quicker, accelerate away.
+   Per the motion-research spec. Distances differ mobile (240px) vs desktop (120px). */
+:root{--roll-settle:cubic-bezier(.16,1,.3,1)}
+@supports (animation-timing-function:linear(0,1)){
+  :root{--roll-settle:linear(0,.009,.035,.078,.135,.206,.285,.371,.46,.548,.633,.712,.783,.845,.897,.938,.969,.991,1.005,1.013,1.016,1.015,1.012,1.008,1.004,1.001,.999,.998,.999,1)}
+}
+.ai-mic{transform-origin:50% 50%;backface-visibility:hidden}
+.ai-dock[data-open="true"]:not(.ai-closing) .ai-mic{animation:aiRollIn 600ms both;will-change:transform}
+.ai-dock.ai-closing[data-open="true"] .ai-mic{animation:aiRollOut 460ms both;will-change:transform}
+html[data-device="desktop"] .ai-dock[data-open="true"]:not(.ai-closing) .ai-mic{animation:aiRollInDesk 580ms cubic-bezier(.16,1,.3,1) both}
+html[data-device="desktop"] .ai-dock.ai-closing[data-open="true"] .ai-mic{animation:aiRollOutDesk 460ms cubic-bezier(.5,0,.75,0) both}
+/* on close, slide the desktop panel back out to the shell edge (it carries the orb) */
+html[data-device="desktop"] .ai-dock.ai-closing[data-open="true"] .ai-panel{transform:translate(calc(100% + 26px),-50%);transition:transform .46s cubic-bezier(.5,0,.75,0)}
+@keyframes aiRollIn{
+  0%{transform:translateX(240px) rotate(175.17deg);opacity:0;animation-timing-function:cubic-bezier(.33,1,.68,1)}
+  14%{transform:translateX(252px) rotate(183.93deg);opacity:1;animation-timing-function:var(--roll-settle)}
+  100%{transform:translateX(0) rotate(0)}
+}
+@keyframes aiRollOut{
+  0%{transform:translateX(0) rotate(0);opacity:1;animation-timing-function:cubic-bezier(.33,1,.68,1)}
+  12%{transform:translateX(-10px) rotate(-7.3deg);opacity:1;animation-timing-function:cubic-bezier(.5,0,.75,0)}
+  100%{transform:translateX(240px) rotate(175.17deg);opacity:0}
+}
+/* Desktop: the PANEL carries the orb in via its slide (≈386px), so the orb only
+   ROTATES — coupled to that 386px travel (386*0.72987 = 281.7deg) = it rolls as the
+   panel brings it in, with zero horizontal overflow to be clipped by overflow-y:auto. */
+@keyframes aiRollInDesk{0%{transform:rotate(281.7deg);opacity:0}14%{opacity:1}100%{transform:rotate(0)}}
+@keyframes aiRollOutDesk{0%{transform:rotate(0);opacity:1}100%{transform:rotate(281.7deg);opacity:0}}
+
+/* while listening, a live "recording" dot pulses before the streaming transcript */
+.ai-mic.is-live ~ .ai-heard:not(:empty)::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:7px;vertical-align:1px;background:var(--glow,#ff8a1a);box-shadow:0 0 8px 1px var(--glow,#ff8a1a);animation:aiCaret 1.1s ease-in-out infinite}
+@keyframes aiCaret{50%{opacity:.3}}
+
+/* Mobile / tablet: nothing but the tire — hide the chrome + card, roll in centred,
+   float the live transcript ABOVE the tire while listening. */
+html[data-device="mobile"] .ai-panel,html[data-device="tablet"] .ai-panel{background:none;border:0;box-shadow:none;padding:0;overflow:visible;
+  left:50%;right:auto;width:auto;transform:translate(-50%,-50%);opacity:0}
+html[data-device="mobile"] .ai-panel::before,html[data-device="tablet"] .ai-panel::before{display:none}
+html[data-device="mobile"] .ai-dock[data-open="true"] .ai-panel,html[data-device="tablet"] .ai-dock[data-open="true"] .ai-panel{transform:translate(-50%,-50%);opacity:1}
+html[data-device="mobile"] .ai-head,html[data-device="mobile"] .ai-hint,
+html[data-device="mobile"] .ai-result,html[data-device="mobile"] .ai-chips,html[data-device="mobile"] .ai-type,
+html[data-device="tablet"] .ai-head,html[data-device="tablet"] .ai-hint,
+html[data-device="tablet"] .ai-result,html[data-device="tablet"] .ai-chips,html[data-device="tablet"] .ai-type{display:none}
+html[data-device="mobile"] .ai-stage,html[data-device="tablet"] .ai-stage{padding:0;gap:16px;display:flex;flex-direction:column;align-items:center;justify-content:center}
+html[data-device="mobile"] .ai-heard,html[data-device="tablet"] .ai-heard{display:block;order:-1;max-width:82vw;text-align:center}
+html[data-device="mobile"] .ai-heard:empty,html[data-device="tablet"] .ai-heard:empty{display:none}
+/* the live transcript is a real speech BUBBLE (floats above the tire on mobile) */
+.ai-heard:not(:empty){align-self:center;max-width:min(320px,82vw);margin:2px auto 0;
+  background:rgba(22,16,42,.95);border:1px solid rgba(150,110,255,.34);border-radius:18px;padding:10px 15px;
+  color:#f4f0ff;font:600 15.5px/1.34 Sora;letter-spacing:-.01em;position:relative;
+  box-shadow:0 16px 34px -14px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.06);animation:aiBubbleIn .28s var(--smooth) both}
+@keyframes aiBubbleIn{from{opacity:0;transform:translateY(6px) scale(.94)}}
+html[data-device="mobile"] .ai-heard:not(:empty)::after,html[data-device="tablet"] .ai-heard:not(:empty)::after{content:"";position:absolute;left:50%;bottom:-6px;width:13px;height:13px;transform:translateX(-50%) rotate(45deg);background:rgba(22,16,42,.95);border-right:1px solid rgba(150,110,255,.34);border-bottom:1px solid rgba(150,110,255,.34)}
+@media(prefers-reduced-motion:reduce){ .ai-tab,.ai-tab::after{animation:none} .ai-dock[data-open="true"] .ai-mic{animation:none} .ai-mic.is-live ~ .ai-heard:not(:empty)::before,.ai-heard:not(:empty){animation:none} }
+
+/* ===== Inline agent — Gemini integrated into check-in (no floating side dock).
+   The dock is appended into #asc-agent and shown statically: press-and-hold the
+   violet mic orb to talk, release to act. Tab / scrim / chips / type are hidden. */
+.ci-agent{margin:14px 0 4px}
+.ai-dock.ai-inline{position:static;inset:auto;z-index:auto;pointer-events:auto;display:block}
+.ai-inline .ai-tab,.ai-inline .ai-scrim,.ai-inline .ai-close,.ai-inline .ai-chips{display:none}
+.ai-inline .ai-type{margin-top:12px;width:100%}   /* keep a typed fallback if speech is unavailable / mic denied */
+.ai-inline .ai-panel{position:static;transform:none!important;opacity:1!important;width:auto;max-width:none;max-height:none;overflow:visible;margin:0;padding:18px 18px 20px}
+.ai-inline .ai-panel::before{display:none}
+.ai-inline .ai-head{margin-bottom:4px;justify-content:center}
+.ai-inline .ai-stage{display:flex;flex-direction:column;align-items:center;gap:12px;padding:6px 0 0}
+.ai-inline .ai-mic-orb{background:linear-gradient(150deg,#a78bfa,#8b5cf6 46%,#6d28d9)!important;box-shadow:0 14px 30px -12px rgba(124,58,237,.7),inset 0 2px 0 rgba(255,255,255,.22)!important;animation:none!important}
+.ai-inline .ai-mic-orb::after{display:none!important}
+.ai-inline .ai-mic svg{display:none}
+.ai-inline .ai-mic-orb svg{display:block;width:32px;height:32px;color:#fff}
+
+/* ===== Sticker sheet — in-app label view (replaces the iOS-trapping popup) ====
+   Full-screen dimmed sheet with a top-left Back button; the label itself is a
+   physical black-on-white sticker (stays light in either theme). Print button
+   uses the scoped @media print block far below (only the label prints). */
+html.sticker-lock, html.sticker-lock body{ overflow:hidden }
+.sticker-modal{position:fixed;inset:0;z-index:120;display:flex;flex-direction:column;
+  background:rgba(6,7,10,.72);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+  animation:smIn .26s var(--smooth) both}
+@keyframes smIn{from{opacity:0}}
+.sm-chrome{flex:none;display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:calc(env(safe-area-inset-top,0px) + 12px) calc(env(safe-area-inset-right,0px) + 14px) 12px calc(env(safe-area-inset-left,0px) + 14px)}
+.sm-back,.sm-print{display:inline-flex;align-items:center;gap:7px;border:0;cursor:pointer;
+  font:700 14px Inter;padding:11px 16px;border-radius:14px;color:#f4f5f7;transition:transform 140ms var(--snap)}
+.sm-back{background:rgba(244,245,247,.15);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+.sm-print{background:var(--lava);color:#fff;box-shadow:0 6px 18px -6px rgba(255,78,27,.7)}
+.sm-back:active,.sm-print:active{transform:scale(.95)}
+.sm-scroll{flex:1;min-height:0;overflow:auto;-webkit-overflow-scrolling:touch;display:flex;align-items:center;justify-content:center;padding:8px 16px 28px}
+.sm-label{width:264px;background:#fff;color:#000;border:3px solid #000;border-radius:18px;
+  padding:16px 16px 13px;text-align:center;box-shadow:0 30px 70px -22px rgba(0,0,0,.75);animation:rise .4s var(--smooth) both}
+.sm-shape-rounded{border-radius:18px}
+.sm-shape-soft{border-radius:30px}
+.sm-shape-sharp{border-radius:2px}
+.sm-shape-notch{border-radius:6px;clip-path:polygon(26px 0,100% 0,100% 100%,0 100%,0 26px)}
+.sm-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:9px}
+.sm-brand{font-weight:900;letter-spacing:1px;font-size:16px}
+.sm-season{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;border:1.5px solid #000;border-radius:999px;padding:3px 10px}
+.sm-qr{width:200px;height:200px;margin:2px auto 9px}.sm-qr svg{width:100%;height:100%;display:block}
+.sm-code{font-size:24px;font-weight:900;letter-spacing:.5px;font-variant-numeric:tabular-nums}
+.sm-who{font-size:14px;font-weight:700;margin-top:9px}
+.sm-sub{font-size:11.5px;color:#333;margin-top:2px;line-height:1.35}
+.sm-loc{margin-top:9px;font-size:13px;font-weight:800;letter-spacing:.3px;border-top:2px dashed #000;padding-top:8px}
+.sm-loc .sm-lk{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:#333;display:block;margin-bottom:1px}
+.sm-foot{margin-top:9px;font-size:8.5px;color:#555}
+
+/* ===== Menu drawer — avatar launcher + profile / options sheet ================ */
+.menu-btn{border:0;cursor:pointer;width:38px;height:38px;border-radius:50%;flex:none;overflow:hidden;
+  display:grid;place-items:center;font:800 13px Inter;letter-spacing:.02em;color:#fff;
+  background:linear-gradient(150deg,var(--lava),var(--lava-ink));box-shadow:0 3px 10px -3px rgba(255,78,27,.55);
+  transition:transform 380ms var(--smooth)}
+.menu-btn:active{transform:scale(.92)}
+@media(hover:hover){ .menu-btn:hover{transform:translateY(-1px)} }
+.menu-scrim{position:fixed;inset:0;z-index:115;background:rgba(6,7,10,.5);opacity:0;visibility:hidden;
+  transition:opacity .3s var(--smooth),visibility .3s;-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)}
+.menu-drawer{position:fixed;top:0;right:0;z-index:116;height:100vh;height:100dvh;width:min(400px,92vw);
+  display:flex;flex-direction:column;background:var(--shell-solid);border-left:1px solid var(--rim);
+  box-shadow:-24px 0 60px -20px rgba(2,3,5,.5);transform:translateX(102%);transition:transform .42s var(--smooth);
+  padding-bottom:env(safe-area-inset-bottom,0px)}
+@supports ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  .menu-drawer{background:var(--shell);-webkit-backdrop-filter:blur(30px) saturate(150%);backdrop-filter:blur(30px) saturate(150%)}
+}
+body.menu-open{overflow:hidden}
+body.menu-open .menu-scrim{opacity:1;visibility:visible}
+body.menu-open .menu-drawer{transform:none}
+.md-head{flex:none;display:flex;align-items:center;gap:12px;padding:calc(env(safe-area-inset-top,0px) + 18px) calc(env(safe-area-inset-right,0px) + 18px) 16px 18px;border-bottom:1px solid var(--line)}
+.md-avatar{width:48px;height:48px;border-radius:50%;flex:none;display:grid;place-items:center;font:800 17px Inter;color:#fff;
+  background:linear-gradient(150deg,var(--lava),var(--lava-ink));box-shadow:0 4px 14px -4px rgba(255,78,27,.6)}
+.md-id{flex:1;min-width:0}
+.md-id b{display:block;font:700 15.5px Sora;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.md-id span{display:block;font:500 12px Inter;color:var(--muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.md-close{flex:none;width:36px;height:36px;border-radius:50%;border:0;cursor:pointer;background:var(--panel);color:var(--ink);display:grid;place-items:center;transition:transform 140ms var(--snap)}
+.md-close:active{transform:scale(.92)}
+.md-tabs{flex:none;display:flex;gap:4px;padding:12px 14px 0;border-bottom:1px solid var(--line)}
+.md-tab{flex:1;border:0;cursor:pointer;font:700 13px Inter;padding:10px;border-radius:12px 12px 0 0;background:transparent;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .2s,border-color .2s}
+.md-tab.on{color:var(--ink);border-bottom-color:var(--lava)}
+.md-body{flex:1;min-height:0;overflow:auto;-webkit-overflow-scrolling:touch;padding:16px 18px 24px}
+.md-panel{display:flex;flex-direction:column;gap:13px;animation:rise .4s var(--smooth) both}
+.md-panel[hidden]{display:none}
+.md-field{display:flex;flex-direction:column;gap:6px}
+.md-field label{font:600 11.5px Inter;letter-spacing:.02em;text-transform:uppercase;color:var(--muted)}
+.md-field input,.md-field select{font:500 14px Inter;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:11px 13px;outline:none;transition:border-color .2s;-webkit-appearance:none;appearance:none}
+.md-field select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%2363676f' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 13px center;padding-right:34px}
+html.dark .md-field select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%23c9ccd2' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E")}
+.md-field input:focus,.md-field select:focus{border-color:var(--lava-ring)}
+.md-section-t{font:700 12px Inter;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin:4px 0 0}
+.md-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;background:var(--panel);border:1px solid var(--line);border-radius:14px}
+.md-rt{min-width:0}
+.md-row .t{font:600 14px Inter;color:var(--ink)}
+.md-row .d{font:500 12px Inter;color:var(--muted);margin-top:2px}
+.md-sw{flex:none;width:46px;height:28px;border-radius:999px;border:0;cursor:pointer;background:var(--line);position:relative;transition:background .25s var(--smooth)}
+.md-sw::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 2px 5px rgba(0,0,0,.3);transition:transform .25s var(--smooth)}
+.md-sw[aria-checked="true"]{background:var(--green)}
+.md-sw[aria-checked="true"]::after{transform:translateX(18px)}
+.md-hint{font:500 12px Inter;color:var(--muted);line-height:1.4}
+.md-links{display:flex;flex-direction:column;gap:7px}
+.md-link{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:13px 15px;border-radius:13px;background:var(--panel);border:1px solid var(--line);color:var(--ink);text-decoration:none;font:600 14.5px Inter;transition:background .2s,transform .12s}
+.md-link:active{transform:scale(.985)}
+@media(hover:hover){ .md-link:hover{background:var(--panel-2);border-color:var(--lava-ring)} }
+.md-link svg{color:var(--muted);flex:none}
+.md-shapes{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.md-shape{cursor:pointer;border:1.5px solid var(--line);border-radius:14px;background:var(--panel);padding:12px 6px 9px;display:flex;flex-direction:column;align-items:center;gap:8px;transition:border-color .2s,background .2s,transform .15s}
+.md-shape:active{transform:scale(.96)}
+.md-shape[aria-pressed="true"]{border-color:var(--lava);background:var(--lava-tint)}
+.md-shape .sw{width:34px;height:34px;background:var(--ink);opacity:.85}
+.md-shape .sw.rounded{border-radius:9px}
+.md-shape .sw.soft{border-radius:14px}
+.md-shape .sw.sharp{border-radius:1px}
+.md-shape .sw.notch{border-radius:4px;clip-path:polygon(11px 0,100% 0,100% 100%,0 100%,0 11px)}
+.md-shape .lb{font:600 10.5px Inter;color:var(--ink)}
+.md-logout{margin-top:4px;border:1px solid var(--line);background:transparent;color:var(--lava-ink);font:700 13.5px Inter;padding:12px;border-radius:12px;cursor:pointer;transition:transform 140ms var(--snap)}
+.md-logout:active{transform:scale(.98)}
+.md-saved{font:600 12px Inter;color:var(--green-ink);opacity:0;transition:opacity .2s;min-height:15px}
+.md-saved.on{opacity:1}
+
+/* Print: only the sticker label — but ONLY while a sticker sheet is actually open
+   (html.sticker-lock). With no sticker up, `html` lacks the class, so every page
+   prints normally instead of coming out blank. Body-level layers are direct
+   children of <body>, so this hides them all cleanly. */
+@media print{
+  html.sticker-lock,html.sticker-lock body{background:#fff!important}
+  html.sticker-lock body > *:not(.sticker-modal){display:none!important}
+  html.sticker-lock .sticker-modal{position:static!important;display:block!important;background:#fff!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;animation:none!important}
+  html.sticker-lock .sm-chrome{display:none!important}
+  html.sticker-lock .sm-scroll{display:block!important;overflow:visible!important;padding:0!important}
+  html.sticker-lock .sm-label{box-shadow:none!important;margin:0 auto!important;animation:none!important}
+}
+
+/* ============================== A11y · motion ========================== */
+:focus-visible{outline:2px solid var(--lava-ink);outline-offset:2px;border-radius:10px}
+.stage :focus-visible,.act :focus-visible,.dock :focus-visible,.card.dark :focus-visible{outline-color:var(--lava-2);box-shadow:0 0 0 4px rgba(2,3,5,.55)}
+.ai-panel :focus-visible{outline-color:#c4b5fd;outline-offset:2px}
+@media(prefers-reduced-motion:reduce){ *{animation:none!important;transition-property:background-color,color,opacity!important} .act .bg{transform:none!important} }

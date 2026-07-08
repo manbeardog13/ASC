@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ASC — Skeniraj (preview)</title>
+<meta name="theme-color" content="#edf0f5">
+<script>try{if(localStorage.getItem('asc.theme')==='dark'){document.documentElement.classList.add('dark');document.querySelector('meta[name="theme-color"]').content='#020305';}}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;650;700;800&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+<!--
+  ASC scan screen — isolated preview. Shared design system lives in app.css +
+  app.js (v6 "Hanssen"): tokens, glass shell, header, notched corner tabs, card
+  surfaces, iOS dock, theme toggle + count-up. Only this screen's own layout
+  (centered scan card + premium camera viewfinder) is inline below. Copy from
+  js/views/scan.js; Croatian strings from i18n.js (hr). No green/red imagery here
+  (those belong to check-in / pickup only). Numbers are placeholders.
+-->
+<link rel="stylesheet" href="app.css">
+<style>
+/* ---- Scan-page-specific layout only (shared rules live in app.css) ---- */
+
+/* Section context header, mirrors the dashboard's stage eyebrow + heading */
+.scan-head{margin:2px 4px 14px}
+.scan-head .k{color:var(--muted);font:600 10.5px Inter;letter-spacing:.09em;text-transform:uppercase}
+.scan-head h1{font-family:Sora;font-weight:600;font-size:clamp(21px,5vw,26px);letter-spacing:-.01em;margin-top:5px}
+
+/* Centered column so the scan card reads as a single focused task */
+.scan{max-width:560px;margin:0 auto}
+.scan-card{align-items:stretch;padding-top:34px}
+.scan-card > .lead{font-size:13.5px;line-height:1.5;color:var(--muted);text-align:center;margin-bottom:16px}
+
+/* ---- Premium camera viewfinder ---- */
+.vf{position:relative;border-radius:var(--radius);overflow:hidden;aspect-ratio:5/4;
+  background:radial-gradient(120% 90% at 88% -12%,rgba(255,78,27,.22),transparent 52%),linear-gradient(172deg,var(--stage-1) 0%,var(--stage-2) 100%);
+  border-top:1px solid rgba(255,255,255,.10);box-shadow:inset 0 1px 0 rgba(255,255,255,.06),var(--shadow-card)}
+@media(max-width:420px){ .vf{aspect-ratio:4/4} }
+
+/* faint sensor grid + vignette to make the dark panel feel like a live feed */
+.vf .grid{position:absolute;inset:0;opacity:.5;
+  background-image:linear-gradient(rgba(244,245,247,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(244,245,247,.05) 1px,transparent 1px);
+  background-size:34px 34px;-webkit-mask-image:radial-gradient(70% 70% at 50% 50%,#000 40%,transparent 78%);mask-image:radial-gradient(70% 70% at 50% 50%,#000 40%,transparent 78%)}
+.vf .vig{position:absolute;inset:0;background:radial-gradient(78% 70% at 50% 46%,transparent 52%,rgba(2,3,5,.55) 100%)}
+
+/* the framing reticle: a rounded window with four animated lava corner brackets */
+.vf .frame{position:absolute;inset:0;margin:auto;width:62%;aspect-ratio:1;max-width:230px}
+.vf .cx{position:absolute;width:34px;height:34px;border:3px solid var(--lava);filter:drop-shadow(0 0 10px var(--lava-ring))}
+.vf .cx.tl{top:0;left:0;border-right:0;border-bottom:0;border-radius:12px 0 0 0}
+.vf .cx.tr{top:0;right:0;border-left:0;border-bottom:0;border-radius:0 12px 0 0}
+.vf .cx.bl{bottom:0;left:0;border-right:0;border-top:0;border-radius:0 0 0 12px}
+.vf .cx.br{bottom:0;right:0;border-left:0;border-top:0;border-radius:0 0 12px 0}
+.vf .frame{animation:reticle 2.6s ease-in-out infinite}
+@keyframes reticle{0%,100%{transform:scale(1)}50%{transform:scale(.955)}}
+
+/* faint QR glyph centred in the window as a "waiting for a code" hint */
+.vf .qr{position:absolute;inset:0;margin:auto;width:74px;height:74px;color:rgba(244,245,247,.34)}
+
+/* the sweeping scan line + its soft leading glow */
+.vf .line{position:absolute;left:19%;right:19%;top:0;height:2px;border-radius:2px;
+  background:linear-gradient(90deg,transparent,var(--lava-2),var(--lava),var(--lava-2),transparent);
+  box-shadow:0 0 16px 3px var(--lava-ring);animation:sweep 2.8s cubic-bezier(.6,0,.4,1) infinite}
+@keyframes sweep{0%{top:19%;opacity:0}12%{opacity:1}88%{opacity:1}100%{top:81%;opacity:0}}
+
+/* live badge, top-left, pulsing green dot = camera online */
+.vf .live{position:absolute;top:14px;left:14px;z-index:3;display:inline-flex;align-items:center;gap:7px;
+  padding:6px 11px;border-radius:999px;background:rgba(2,3,5,.42);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
+  border:1px solid rgba(255,255,255,.14);font:600 10.5px Inter;letter-spacing:.06em;text-transform:uppercase;color:var(--on-stage)}
+.vf .live .led{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px 1px rgba(47,191,91,.75);animation:breathe 2.4s ease-in-out infinite}
+
+/* helper caption pinned to the bottom of the feed */
+.vf .cue{position:absolute;left:0;right:0;bottom:14px;z-index:3;text-align:center;
+  font:600 11.5px Inter;color:var(--on-stage-2);text-shadow:0 1px 4px rgba(2,3,5,.8)}
+
+/* ---- Controls ---- */
+.photo-btn{margin-top:14px;width:100%;display:flex;align-items:center;justify-content:center;gap:9px;min-height:50px;
+  border-radius:16px;cursor:pointer;background:var(--panel-2);color:var(--ink);border:1px solid var(--line);
+  font:600 14px Inter;transition:transform 150ms var(--snap),background 160ms var(--snap),box-shadow 200ms var(--snap)}
+html.dark .photo-btn{background:rgba(244,245,247,.05)}
+@media(hover:hover){ .photo-btn:hover{transform:translateY(-2px);box-shadow:0 12px 24px -14px rgba(2,3,5,.5)} }
+.photo-btn:active{transform:scale(.98);transition-duration:80ms}
+.photo-btn svg{width:19px;height:19px}
+
+/* "…or type a code" divider */
+.orline{display:flex;align-items:center;gap:12px;margin:18px 2px 12px;color:var(--muted);font:600 11px Inter;letter-spacing:.06em;text-transform:uppercase}
+.orline::before,.orline::after{content:"";height:1px;flex:1;background:var(--line)}
+
+/* code field: qr glyph + monospace-ish input, matched to the shell language */
+.code-field{position:relative;display:flex;align-items:center}
+.code-field .qr{position:absolute;left:15px;width:20px;height:20px;color:var(--muted);pointer-events:none}
+.code-field input{width:100%;min-height:52px;border-radius:16px;border:1px solid var(--line);background:var(--panel-2);
+  color:var(--ink);font:600 15px Inter;letter-spacing:.02em;padding:0 16px 0 46px;transition:border-color 160ms var(--snap),box-shadow 160ms var(--snap)}
+html.dark .code-field input{background:rgba(244,245,247,.05)}
+.code-field input::placeholder{color:var(--muted);font-weight:500;letter-spacing:0}
+.code-field input:focus{outline:0;border-color:var(--lava);box-shadow:0 0 0 3px var(--lava-tint)}
+
+/* primary open action, modelled on the dashboard .cta but lava-filled */
+.open-btn{margin-top:10px;width:100%;min-height:52px;border:0;cursor:pointer;border-radius:16px;
+  background:linear-gradient(180deg,var(--lava-2),var(--lava));color:#fff;font:650 14.5px Inter;letter-spacing:.01em;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  box-shadow:0 12px 26px -12px var(--lava-ring);transition:transform 150ms var(--snap),box-shadow 200ms var(--snap)}
+@media(hover:hover){ .open-btn:hover{transform:translateY(-2px);box-shadow:0 16px 30px -12px var(--lava-ring)} }
+.open-btn:active{transform:scale(.985);transition-duration:80ms}
+.open-btn svg{width:18px;height:18px}
+
+/* tip line — quiet, informational */
+.tip{display:flex;gap:9px;margin-top:16px;padding-top:15px;border-top:1px solid var(--hairline);
+  font-size:12px;line-height:1.5;color:var(--muted)}
+.tip svg{width:16px;height:16px;flex:none;margin-top:1px;color:var(--lava-ink)}
+html.dark .tip svg{color:var(--lava-2)}
+
+/* live camera layer — html5-qrcode injects a <video>; keep the AR overlay on top */
+.vf-reader{position:absolute;inset:0;z-index:0;background:#000}
+.vf-reader video{width:100%!important;height:100%!important;object-fit:cover;display:block}
+.vf .grid,.vf .vig,.vf .live,.vf .line,.vf .frame,.vf .cue{z-index:2}
+.vf.scanning .grid,.vf.scanning .vig,.vf.scanning .qr{opacity:0;transition:opacity .45s var(--smooth)}
+.vf.hit .frame .cx{border-color:var(--green);filter:drop-shadow(0 0 10px rgba(47,191,91,.75))}
+.vf.vf-off{cursor:pointer}
+</style>
+</head>
+<body>
+<div class="canvas" aria-hidden="true"></div>
+<div class="grain" aria-hidden="true"></div>
+<span class="preview-tag">Preview · nije uživo</span>
+
+<main class="shell">
+  <header class="top">
+    <img class="logo" src="assets/logo.png" alt="ASC — Auto servisni centar">
+    <nav class="pill" aria-label="Glavna navigacija">
+      <span class="pill-links"><a href="dashboard.html">Ploča</a><a href="#">Zaprimi</a><a href="#">Skladište</a><a href="#">Kupci</a></span>
+      <button class="mode" id="mode" aria-label="Promijeni temu"><i></i></button>
+    </nav>
+  </header>
+
+  <section class="scan">
+    <div class="scan-head reveal">
+      <span class="k">Hotel za gume · Dubrovnik</span>
+      <h1>Skeniraj naljepnicu</h1>
+    </div>
+
+    <div class="card scan-card reveal" style="animation-delay:110ms">
+      <span class="tab-tl">skeniranje</span>
+      <p class="lead">Usmjerite kameru na QR naljepnicu kompleta.</p>
+
+      <!-- Premium camera viewfinder -->
+      <div class="vf" role="img" aria-label="Prikaz kamere za skeniranje QR naljepnice">
+        <span class="grid" aria-hidden="true"></span>
+        <span class="vig" aria-hidden="true"></span>
+        <span class="live"><span class="led"></span>Kamera</span>
+        <span class="line" aria-hidden="true"></span>
+        <div class="frame" aria-hidden="true">
+          <span class="cx tl"></span><span class="cx tr"></span><span class="cx bl"></span><span class="cx br"></span>
+          <svg class="qr" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 3h7v7H3V3zm2 2v3h3V5H5zm9-2h7v7h-7V3zm2 2v3h3V5h-3zM3 14h7v7H3v-7zm2 2v3h3v-3H5zm9-2h3v3h-3v-3zm3 3h4v2h-2v2h-2v-4zm-3 3h3v2h-3v-2zm4 2h2v2h-2v-2z"/></svg>
+        </div>
+        <span class="cue">Poravnajte QR unutar okvira</span>
+      </div>
+
+      <!-- Take a photo instead -->
+      <button type="button" id="photoBtn" class="photo-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.5A2 2 0 016 6.5h1.2l.9-1.4A1.5 1.5 0 019.4 4.4h5.2a1.5 1.5 0 011.3.7l.9 1.4H18a2 2 0 012 2v8.6a2 2 0 01-2 2H6a2 2 0 01-2-2V8.5z"/><circle cx="12" cy="12.8" r="3.4"/></svg>
+        Umjesto toga snimi fotografiju
+      </button>
+
+      <!-- …or type a code -->
+      <div class="orline">ili</div>
+      <div class="code-field">
+        <svg class="qr" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 3h7v7H3V3zm2 2v3h3V5H5zm9-2h7v7h-7V3zm2 2v3h3V5h-3zM3 14h7v7H3v-7zm2 2v3h3v-3H5zm9-2h3v3h-3v-3zm3 3h4v2h-2v2h-2v-4zm-3 3h3v2h-3v-2zm4 2h2v2h-2v-2z"/></svg>
+        <input id="manual" placeholder="Upišite kôd (ASC-2026-0042)" aria-label="Upišite kôd (ASC-2026-0042)" autocomplete="off" spellcheck="false">
+      </div>
+      <button id="openManual" class="open-btn" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M13 6l6 6-6 6"/></svg>
+        Otvori
+      </button>
+
+      <p class="tip">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><path d="M12 7.6h.01"/></svg>
+        <span>Savjet: i standardna aplikacija Kamera skenira naljepnicu — automatski otvara zapis.</span>
+      </p>
+    </div>
+  </section>
+</main>
+
+<nav class="dock" aria-label="Sekcije">
+  <a class="dtab" href="dashboard.html" aria-label="Ploča"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.2 10.6L12 4l7.8 6.6"/><path d="M5.8 9.4V19a2 2 0 002 2h8.4a2 2 0 002-2V9.4"/></svg>Ploča</a>
+  <a class="dtab" href="#" aria-label="Zaprimi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5.4v13.2M5.4 12h13.2"/></svg>Zaprimi</a>
+  <a class="dtab on" href="#" aria-label="Skeniraj"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.2V6.4A2.4 2.4 0 016.4 4h1.8M15.8 4h1.8A2.4 2.4 0 0120 6.4v1.8M20 15.8v1.8a2.4 2.4 0 01-2.4 2.4h-1.8M8.2 20H6.4A2.4 2.4 0 014 17.6v-1.8"/><path d="M7.2 12h9.6"/></svg>Skeniraj</a>
+  <a class="dtab" href="#" aria-label="Skladište"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21.2s-7-5.5-7-11a7 7 0 0114 0c0 5.5-7 11-7 11z"/><circle cx="12" cy="10" r="2.4"/></svg>Skladište</a>
+  <a class="dtab" href="#" aria-label="Više"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8.6 6.4H21M8.6 12H21M8.6 17.6H21"/><path d="M3.6 6.4h.01M3.6 12h.01M3.6 17.6h.01"/></svg>Više</a>
+</nav>
+
+<script src="app.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="qr.js"></script>
+<script>
+/* Real scanning: live camera (html5-qrcode) + photo + manual code — all resolve
+   to a canonical ASC code (via ASCQR) and open set-detail.html?code=. */
+(function(){
+  var manual = document.getElementById('manual');
+  var openBtn = document.getElementById('openManual');
+  var photoBtn = document.getElementById('photoBtn');
+  var vf = document.querySelector('.vf');
+  var cue = vf.querySelector('.cue');
+  var flashT;
+
+  function go(code){ if(code){ location.href = 'set-detail.html?code=' + encodeURIComponent(code); } }
+  function cueText(t){ if(cue) cue.textContent = t; }
+  function flash(t){ cueText(t); clearTimeout(flashT); flashT = setTimeout(function(){ cueText('Poravnajte QR unutar okvira'); }, 2600); }
+
+  // ---- manual code ----
+  function openManual(){
+    var code = window.ASCQR ? ASCQR.normalize(manual.value, true) : null;
+    if(code){ go(code); }
+    else { manual.focus(); if(manual.select) manual.select(); flash('Neispravan kôd — npr. ASC-2026-0042'); }
+  }
+  openBtn.addEventListener('click', openManual);
+  manual.addEventListener('keydown', function(e){ if(e.key === 'Enter'){ e.preventDefault(); openManual(); } });
+
+  // ---- photo fallback (native camera → decodes even where live camera is blocked) ----
+  var fileInput = document.createElement('input');
+  fileInput.type = 'file'; fileInput.accept = 'image/*'; fileInput.setAttribute('capture','environment'); fileInput.style.display = 'none';
+  document.body.appendChild(fileInput);
+  photoBtn.addEventListener('click', function(){ fileInput.click(); });
+  fileInput.addEventListener('change', function(){
+    var f = fileInput.files && fileInput.files[0];
+    fileInput.value = '';
+    if(!f || !window.ASCQR) return;
+    cueText('Čitam fotografiju…');
+    ASCQR.scanFile(f).then(function(code){ if(code) go(code); else flash('Na fotografiji nema QR koda.'); },
+                          function(){ flash('Fotografiju nije moguće pročitati.'); });
+  });
+
+  // ---- live camera ----
+  function startCamera(){
+    if(!window.ASCQR) return;
+    var reader = document.getElementById('reader');
+    if(!reader){ reader = document.createElement('div'); reader.id = 'reader'; reader.className = 'vf-reader'; vf.insertBefore(reader, vf.firstChild); }
+    vf.classList.remove('vf-off'); vf.classList.add('scanning');
+    ASCQR.scanInto('reader', function(code){
+      if(code){ vf.classList.add('hit'); cueText('Otvaram…'); go(code); }
+      else { cueText('To nije ASC naljepnica — tražim dalje…'); setTimeout(startCamera, 650); }   // decode stopped the camera; auto-resume
+    }, function(err){
+      vf.classList.remove('scanning'); vf.classList.add('vf-off');
+      cueText(err && err.message === 'nolib'
+        ? 'Skener se ne može učitati — snimi fotografiju ili upiši kôd'
+        : 'Dodirni za kameru — ili snimi fotografiju / upiši kôd');
+    });
+  }
+  if (document.readyState !== 'loading') startCamera(); else addEventListener('DOMContentLoaded', startCamera);
+  // tap the viewfinder to (re)try the camera after granting permission
+  vf.addEventListener('click', function(){ if(vf.classList.contains('vf-off')) startCamera(); });
+})();
+</script>
+</body>
+</html>

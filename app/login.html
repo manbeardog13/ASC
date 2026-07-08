@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ASC — Prijava</title>
+<meta name="theme-color" content="#eef0f1">
+<script>try{if(localStorage.getItem('asc.theme')==='dark'){document.documentElement.classList.add('dark');document.querySelector('meta[name="theme-color"]').content='#020305';}}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;650;700;800&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="app.css">
+<style>
+/* Login — the redesign's canvas + glass, one calm card. */
+body{display:flex;align-items:center;justify-content:center;min-height:100dvh;padding:24px}
+.login-card{position:relative;z-index:1;width:min(400px,100%);border-radius:28px;padding:32px 28px 26px;
+  background:var(--shell-solid);border:1px solid var(--rim);border-top-color:var(--rim-top);
+  box-shadow:var(--shadow-card);animation:sheetIn 550ms var(--smooth) both}
+@supports ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  .login-card{background:var(--shell);-webkit-backdrop-filter:blur(30px) saturate(150%) brightness(108%);backdrop-filter:blur(30px) saturate(150%) brightness(108%)}
+}
+.login-logo{height:30px;width:auto;display:block;margin:0 auto 20px;filter:drop-shadow(0 3px 8px rgba(255,78,27,.28))}
+.login-title{font:600 22px Sora;letter-spacing:-.02em;text-align:center;color:var(--ink)}
+.login-sub{font:500 13px Inter;color:var(--muted);text-align:center;margin:3px 0 22px}
+.login-field{display:block;margin-bottom:13px}
+.login-field span{display:block;font:600 11.5px Inter;letter-spacing:.02em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.login-field input{width:100%;font:500 15px Inter;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:13px 14px;outline:none;transition:border-color .2s var(--smooth)}
+.login-field input:focus{border-color:var(--lava-ring)}
+.login-btn{width:100%;margin-top:6px;min-height:50px;border:0;cursor:pointer;border-radius:14px;color:#fff;font:700 15px Inter;
+  background:linear-gradient(160deg,var(--lava-2),var(--lava) 52%,var(--lava-ink));
+  box-shadow:0 12px 26px -10px rgba(255,78,27,.6),inset 0 1px 0 rgba(255,255,255,.28);transition:transform 140ms var(--snap),filter .2s}
+.login-btn:active{transform:scale(.98)}
+.login-btn[disabled]{opacity:.6;cursor:progress}
+@media(hover:hover){ .login-btn:hover{filter:brightness(1.04)} }
+.login-alt{display:flex;justify-content:space-between;gap:10px;margin-top:16px}
+.login-alt button{background:none;border:0;cursor:pointer;font:600 12.5px Inter;color:var(--muted);padding:4px}
+@media(hover:hover){ .login-alt button:hover{color:var(--lava-ink)} }
+.login-msg{min-height:18px;margin:14px 0 0;font:600 12.5px/1.4 Inter;text-align:center}
+.login-msg.err{color:var(--lava-ink)}
+.login-msg.ok{color:var(--green-ink)}
+.login-name{display:none}
+body.signup .login-name{display:block}
+body.signup .login-title::after{content:" — novi račun"}
+body.recover .login-pass-wrap span::after,body.recover .login-title{}
+</style>
+</head>
+<body>
+<span class="canvas" aria-hidden="true"></span>
+<span class="grain" aria-hidden="true"></span>
+
+<main>
+  <div class="login-card">
+    <img class="login-logo" src="assets/logo.png" alt="ASC — Auto servisni centar">
+    <h1 class="login-title" id="title">Prijava</h1>
+    <p class="login-sub">Hotel za gume · Dubrovnik</p>
+
+    <form id="form" autocomplete="on">
+      <label class="login-field login-name"><span>Ime i prezime</span>
+        <input id="name" type="text" autocomplete="name" placeholder="Ivan Horvat"></label>
+      <label class="login-field"><span>Email</span>
+        <input id="email" type="email" autocomplete="email" inputmode="email" required placeholder="ime@asc.hr"></label>
+      <label class="login-field"><span id="passLabel">Lozinka</span>
+        <input id="password" type="password" autocomplete="current-password" required placeholder="••••••••"></label>
+      <button class="login-btn" id="submit" type="submit">Prijavi se</button>
+    </form>
+
+    <div class="login-alt">
+      <button id="toReset" type="button">Zaboravljena lozinka?</button>
+      <button id="toSignup" type="button">Prvi put? Napravi račun</button>
+    </div>
+    <p class="login-msg" id="msg" role="status" aria-live="polite"></p>
+  </div>
+</main>
+
+<script type="module">
+  import { isConfigured } from '../js/supabaseClient.js';
+  import { getSession, signIn, signUp, sendPasswordReset, updatePassword } from '../js/db.js';
+
+  const $ = (id) => document.getElementById(id);
+  const form = $('form'), msg = $('msg'), submit = $('submit'), title = $('title'), passLabel = $('passLabel');
+  let mode = 'signin';   // signin | signup | reset | recover
+
+  const say = (text, kind) => { msg.textContent = text || ''; msg.className = 'login-msg' + (kind ? ' ' + kind : ''); };
+  const busy = (on) => { submit.disabled = on; };
+
+  if (!isConfigured()) { say('Aplikacija još nije povezana s bazom (config.js).', 'err'); submit.disabled = true; }
+
+  // Recovery / invite links land back with type=recovery in the URL hash → set-password.
+  const hash = new URLSearchParams(location.hash.slice(1));
+  if (hash.get('type') === 'recovery') setMode('recover');
+
+  // Already signed in? Go straight to the board.
+  getSession().then((s) => { if (s && mode !== 'recover') location.replace('dashboard.html'); }).catch(() => {});
+
+  function setMode(next) {
+    mode = next;
+    document.body.classList.toggle('signup', next === 'signup');
+    document.body.classList.toggle('recover', next === 'recover');
+    const map = {
+      signin:  { t: 'Prijava',       btn: 'Prijavi se',       pass: 'Lozinka',        show: true },
+      signup:  { t: 'Novi račun',    btn: 'Napravi račun',    pass: 'Lozinka',        show: true },
+      reset:   { t: 'Reset lozinke', btn: 'Pošalji link',     pass: 'Lozinka',        show: false },
+      recover: { t: 'Nova lozinka',  btn: 'Spremi lozinku',   pass: 'Nova lozinka',   show: true },
+    }[next];
+    title.textContent = map.t; submit.textContent = map.btn; passLabel.textContent = map.pass;
+    $('password').parentElement.style.display = map.show ? '' : 'none';
+    $('toSignup').textContent = next === 'signin' ? 'Prvi put? Napravi račun' : 'Imaš račun? Prijavi se';
+    $('toReset').style.display = (next === 'reset' || next === 'recover') ? 'none' : '';
+    $('password').autocomplete = next === 'signin' ? 'current-password' : 'new-password';
+    say('');
+  }
+
+  $('toSignup').addEventListener('click', () => setMode(mode === 'signup' ? 'signin' : 'signup'));
+  $('toReset').addEventListener('click', () => setMode(mode === 'reset' ? 'signin' : 'reset'));
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = $('email').value.trim(), password = $('password').value, name = $('name').value.trim();
+    busy(true);
+    try {
+      if (mode === 'signin') {
+        await signIn(email, password);
+        location.replace('dashboard.html');
+      } else if (mode === 'signup') {
+        const { needsConfirm } = await signUp(email, password, name);
+        if (needsConfirm) { say('Račun napravljen — provjeri email za potvrdu, pa se prijavi.', 'ok'); setMode('signin'); }
+        else location.replace('dashboard.html');
+      } else if (mode === 'reset') {
+        await sendPasswordReset(email);
+        say('Link za reset poslan na ' + email + '.', 'ok'); setMode('signin');
+      } else if (mode === 'recover') {
+        await updatePassword(password);
+        say('Lozinka spremljena — prijavljujem te…', 'ok');
+        setTimeout(() => location.replace('dashboard.html'), 700);
+      }
+    } catch (err) {
+      say(err.message || 'Nešto je pošlo po zlu — pokušaj ponovno.', 'err');
+    } finally { busy(false); }
+  });
+</script>
+</body>
+</html>
