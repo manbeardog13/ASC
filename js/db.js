@@ -362,13 +362,14 @@ export async function findPossibleDuplicates({ plate, phone, dotCodes = [] } = {
 // ---- Creating a storage set ----------------------------------------------------
 export async function createStorageSet(form) {
   const { data: customer, error: cErr } = await supabase.from("customers")
-    .insert({ name: form.customer.name, phone: form.customer.phone || null, email: form.customer.email || null })
+    .insert({ name: form.customer.name, phone: form.customer.phone || null, email: form.customer.email || null,
+      address: form.customer.address || null })
     .select().single();
   if (cErr) throw fail(cErr, "save the customer");
 
   const { data: vehicle, error: vErr } = await supabase.from("vehicles")
     .insert({ customer_id: customer.id, make: form.vehicle.make || null, model: form.vehicle.model || null,
-      year: form.vehicle.year || null, plate: form.vehicle.plate || null }).select().single();
+      year: form.vehicle.year || null, plate: form.vehicle.plate || null, vin: form.vehicle.vin || null }).select().single();
   if (vErr) throw fail(vErr, "save the vehicle");
 
   const { data: set, error: sErr } = await supabase.from("storage_sets")
@@ -378,6 +379,7 @@ export async function createStorageSet(form) {
       zone: form.set.zone || null, rack: form.set.rack || null, shelf: form.set.shelf || null, slot: form.set.slot || null,
       check_in_date: form.set.check_in_date || null, expected_out_date: form.set.expected_out_date || null,
       fee: form.set.fee ?? null, paid: form.set.paid, notes: form.set.notes || null,
+      bolts_location: form.set.bolts_location || null, hubcaps_stored: Boolean(form.set.hubcaps_stored),
     }).select().single();
   if (sErr) throw fail(sErr, "save the tire set");
 

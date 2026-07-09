@@ -123,20 +123,17 @@
     if (stickerPushed && !fromPop) { stickerPushed = false; try { history.back(); } catch(e){} }
     else stickerPushed = false;
   }
-  function printSticker(code) {
-    var set = BY_CODE[code] || { code: code, who: '', vehicle: '', plate: '', season: '', loc: '' };
-    var qrMarkup = svg(code, 8) || ('<div style="font:900 20px monospace">' + esc(code) + '</div>');
-    var season = SEASON[set.season] || '';
-    var shape = String(stickerPref('asc.stickerShape', 'rounded')).replace(/[^a-z]/g, '') || 'rounded';
-    var showOwner = stickerPref('asc.stickerOwner', '1') !== '0';
-    var showLoc = stickerPref('asc.stickerLoc', '1') !== '0';
+  // Shared sheet scaffolding used by BOTH the sticker and the customer report:
+  // creates the full-screen iPhone-safe overlay (Back + Ispiši chrome, inert
+  // background, focus trap, history entry) and drops `inner` into the scroller.
+  function openSheet(inner, ariaLabel, scrollClass) {
     var trigger = document.activeElement;    // restore focus here on close
     var hadPush = stickerPushed;             // reuse our history entry instead of stacking a new one
     closeSticker(true);                      // tear down any sheet already open WITHOUT touching history
 
     var m = document.createElement('div');
     m.className = 'sticker-modal';
-    m.setAttribute('role', 'dialog'); m.setAttribute('aria-modal', 'true'); m.setAttribute('aria-label', 'Naljepnica ' + code);
+    m.setAttribute('role', 'dialog'); m.setAttribute('aria-modal', 'true'); m.setAttribute('aria-label', ariaLabel);
     m.innerHTML =
       '<div class="sm-chrome">' +
         '<button class="sm-back" type="button" aria-label="Natrag">' +
@@ -144,17 +141,7 @@
         '<button class="sm-print" type="button">' +
           '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V3h12v6M6 18H4a2 2 0 01-2-2v-4a2 2 0 012-2h16a2 2 0 012 2v4a2 2 0 01-2 2h-2M7 14h10v7H7z"/></svg><span>Ispiši</span></button>' +
       '</div>' +
-      '<div class="sm-scroll">' +
-        '<div class="sm-label sm-shape-' + esc(shape) + '">' +
-          '<div class="sm-top"><span class="sm-brand">ASC</span>' + (season ? '<span class="sm-season">' + esc(season) + '</span>' : '') + '</div>' +
-          '<div class="sm-qr">' + qrMarkup + '</div>' +
-          '<div class="sm-code">' + esc(code) + '</div>' +
-          (showOwner && set.who ? '<div class="sm-who">' + esc(set.who) + '</div>' : '') +
-          (showOwner ? '<div class="sm-sub">' + esc([set.vehicle, set.plate].filter(Boolean).join(' · ')) + '</div>' : '') +
-          (showLoc && set.loc ? '<div class="sm-loc"><span class="sm-lk">Lokacija</span>' + esc(set.loc) + '</div>' : '') +
-          '<div class="sm-foot">Skenirajte kamerom telefona · ' + esc(code) + '</div>' +
-        '</div>' +
-      '</div>';
+      '<div class="sm-scroll' + (scrollClass ? ' ' + scrollClass : '') + '">' + inner + '</div>';
     document.body.appendChild(m);
     document.documentElement.classList.add('sticker-lock');
     stickerPrev = (trigger && trigger !== document.body) ? trigger : null;
@@ -163,7 +150,10 @@
 
     m.querySelector('.sm-back').addEventListener('click', function () { closeSticker(); });
     m.querySelector('.sm-print').addEventListener('click', function () { try { window.print(); } catch(e){} });
-    m.addEventListener('click', function (e) { if (e.target === m || e.target.className === 'sm-scroll') closeSticker(); });
+    m.addEventListener('click', function (e) {
+      var cls = e.target && e.target.className ? String(e.target.className) : '';
+      if (e.target === m || cls.indexOf('sm-scroll') === 0) closeSticker();
+    });
     document.addEventListener('keydown', stickerKey, true);
     setTimeout(function () { try { m.querySelector('.sm-back').focus({ preventScroll: true }); } catch(e){} }, 30);  // move focus INTO the dialog
     // history: reuse the entry we already own (replace case), else push a fresh one, so the
@@ -171,6 +161,102 @@
     if (hadPush) { stickerPushed = true; }
     else { try { history.pushState({ ascSticker: 1 }, ''); stickerPushed = true; } catch(e) { stickerPushed = false; } }
     if (stickerPushed) { stickerPop = function () { closeSticker(true); }; window.addEventListener('popstate', stickerPop); }
+    return m;
+  }
+
+  function printSticker(code) {
+    var set = BY_CODE[code] || { code: code, who: '', vehicle: '', plate: '', season: '', loc: '' };
+    var qrMarkup = svg(code, 8) || ('<div style="font:900 20px monospace">' + esc(code) + '</div>');
+    var season = SEASON[set.season] || '';
+    var shape = String(stickerPref('asc.stickerShape', 'rounded')).replace(/[^a-z]/g, '') || 'rounded';
+    var showOwner = stickerPref('asc.stickerOwner', '1') !== '0';
+    var showLoc = stickerPref('asc.stickerLoc', '1') !== '0';
+    var inner =
+      '<div class="sm-label sm-shape-' + esc(shape) + '">' +
+        '<div class="sm-top"><span class="sm-brand">ASC</span>' + (season ? '<span class="sm-season">' + esc(season) + '</span>' : '') + '</div>' +
+        '<div class="sm-qr">' + qrMarkup + '</div>' +
+        '<div class="sm-code">' + esc(code) + '</div>' +
+        (showOwner && set.who ? '<div class="sm-who">' + esc(set.who) + '</div>' : '') +
+        (showOwner ? '<div class="sm-sub">' + esc([set.vehicle, set.plate].filter(Boolean).join(' · ')) + '</div>' : '') +
+        (showLoc && set.loc ? '<div class="sm-loc"><span class="sm-lk">Lokacija</span>' + esc(set.loc) + '</div>' : '') +
+        '<div class="sm-foot">Skenirajte kamerom telefona · ' + esc(code) + '</div>' +
+      '</div>';
+    openSheet(inner, 'Naljepnica ' + code);
+    return true;
+  }
+
+  // ---- customer report → printable A4 "Potvrda o pohrani" ---------------------
+  // Given to the customer alongside the QR label. `data` (optional) carries the
+  // rich fields set-detail scrapes from the page; anything missing falls back to
+  // the registry set or a neutral "—" so the document always reads complete.
+  var HR_MONTHS = ['sij','velj','ožu','tra','svi','lip','srp','kol','ruj','lis','stu','pro'];
+  function todayHr() {
+    var d = new Date();
+    return d.getDate() + '. ' + HR_MONTHS[d.getMonth()] + ' ' + d.getFullYear() + '.';
+  }
+  var BOLTS = { stored: 'Uskladišteni kod nas', in_trunk: 'U prtljažniku vozila' };
+  function rline(k, v) { return '<div class="rp-line"><span class="rp-k">' + esc(k) + '</span><span class="rp-v">' + esc(v || '—') + '</span></div>'; }
+  function printReport(code, data) {
+    data = data || {};
+    var set = BY_CODE[code] || {};
+    var who = data.who || set.who || '';
+    var vehicle = data.vehicle || set.vehicle || '';
+    var plate = data.plate || set.plate || '';
+    var season = SEASON[data.season || set.season] || data.season || '';
+    var status = STATUS[data.status || set.status] || data.status || '';
+    var loc = data.location || set.loc || '';
+    var hub = (data.hubcaps === true || data.hubcaps === '1') ? 'Uskladišteni' :
+              (data.hubcaps === false || data.hubcaps === '0') ? 'Nisu (kod kupca)' : '';
+    var qrMarkup = svg(code, 3) || '';
+    var tires = Array.isArray(data.tires) ? data.tires : [];
+    var tRows = tires.length
+      ? tires.map(function (t) {
+          return '<tr><td>' + esc(t.pos || '') + '</td><td>' + esc(t.size || '') + '</td><td>' +
+                 esc(t.brand || '') + '</td><td>' + esc(t.tread || '') + '</td><td>' + esc(t.dot || '') + '</td></tr>';
+        }).join('')
+      : '<tr><td colspan="5" style="color:#9aa0a8;text-align:center;padding:12px">Bez upisanih guma</td></tr>';
+
+    var inner =
+      '<div class="report-doc">' +
+        '<div class="rp-head">' +
+          '<div class="rp-brand"><span class="rp-logo">ASC</span><span class="rp-org">Auto Servisni Centar · Dubrovnik</span></div>' +
+          '<div class="rp-headright">' +
+            '<div class="rp-docmeta"><div class="rp-title">Potvrda o pohrani guma</div>' +
+              '<div class="rp-code">' + esc(code) + '</div><div class="rp-date">Datum: ' + esc(todayHr()) + '</div></div>' +
+            (qrMarkup ? '<div class="rp-qr">' + qrMarkup + '</div>' : '') +
+          '</div>' +
+        '</div>' +
+        '<div class="rp-grid">' +
+          '<div class="rp-box"><div class="rp-h">Kupac</div>' +
+            rline('Ime', who) + rline('Adresa', data.address) + rline('Telefon', data.phone) +
+          '</div>' +
+          '<div class="rp-box"><div class="rp-h">Vozilo</div>' +
+            rline('Marka i model', vehicle) + rline('Registracija', plate) + rline('Šasija (VIN)', data.vin) +
+          '</div>' +
+        '</div>' +
+        '<div class="rp-box rp-store"><div class="rp-h">Pohrana</div><div class="rp-kv">' +
+          rline('Sezona', season) + rline('Status', status) +
+          rline('Lokacija', loc) + rline('Broj guma', data.quantity) +
+          rline('Naplatci', data.rims) + rline('Zaprimljeno', data.checkIn) +
+          rline('Očekivano preuzimanje', data.expectedOut) +
+        '</div></div>' +
+        '<table class="rp-table"><caption>Gume i profil</caption>' +
+          '<thead><tr><th>Poz.</th><th>Dimenzija</th><th>Marka i model</th><th>Profil</th><th>DOT</th></tr></thead>' +
+          '<tbody>' + tRows + '</tbody></table>' +
+        '<div class="rp-grid">' +
+          '<div class="rp-box"><div class="rp-h">Dodatci</div>' +
+            rline('Vijci kotača', BOLTS[data.bolts] || '') + rline('Poklopci kotača', hub) +
+          '</div>' +
+          '<div class="rp-box"><div class="rp-h">Plaćanje</div>' +
+            rline('Cijena čuvanja', data.fee) + rline('Status', data.paid ? 'Plaćeno' : 'Neplaćeno') +
+          '</div>' +
+        '</div>' +
+        (data.notes ? '<div class="rp-notes"><b>Napomene</b>' + esc(data.notes) + '</div>' : '') +
+        '<div class="rp-sign"><div class="rp-sig-line">Potpis djelatnika (ASC)</div><div class="rp-sig-line">Potpis kupca</div></div>' +
+        '<div class="rp-foot">Ova potvrda služi kao dokaz o pohrani guma u Auto Servisnom Centru. ' +
+          'Molimo sačuvajte je do preuzimanja kompleta. · ' + esc(code) + '</div>' +
+      '</div>';
+    openSheet(inner, 'Nalog ' + code, 'sm-scroll-doc');
     return true;
   }
 
@@ -213,7 +299,7 @@
 
   window.ASCQR = {
     normalize: normalize, extractCode: extractCode, deepLink: deepLink, checksum: checksum,
-    svg: svg, printSticker: printSticker,
+    svg: svg, printSticker: printSticker, printReport: printReport,
     scanInto: scanInto, stopScan: stopScan, scanFile: scanFile,
     lookup: function (code) { return BY_CODE[code] || null; },
     ownerId: function (code) { var s = BY_CODE[code]; return s ? s.owner : null; },

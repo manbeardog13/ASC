@@ -698,4 +698,18 @@ $$ language plpgsql security definer set search_path = public, pg_temp;
 revoke execute on function public.set_my_name(text) from public, anon;
 grant execute on function public.set_my_name(text) to authenticated;
 
+-- ============================================================================
+-- v5 — extra intake fields captured on the paper "Nalog za izdavanje" that we
+-- didn't track yet (idempotent, safe to re-run; existing rows untouched):
+--   • customer ADDRESS (for the printed customer order),
+--   • vehicle VIN / chassis number (Br. šas.),
+--   • wheel-BOLT location — stored with us vs left in the customer's trunk,
+--   • whether the HUBCAPS (poklopci kotača) are stored.
+-- ============================================================================
+alter table customers    add column if not exists address text;
+alter table vehicles     add column if not exists vin text;
+alter table storage_sets add column if not exists bolts_location text;   -- null | 'stored' | 'in_trunk'
+alter table storage_sets add column if not exists hubcaps_stored boolean not null default false;
+create index if not exists idx_vehicles_vin on vehicles(vin);
+
 -- Done. Next: Authentication -> Users -> add your shop login (first user = admin).

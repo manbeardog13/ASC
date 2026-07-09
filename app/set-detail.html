@@ -220,6 +220,10 @@ html.dark .tl-item:nth-child(odd){background:rgba(244,245,247,.04)}
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V4h12v5M6 18H5a2 2 0 01-2-2v-4a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2h-1M8 14h8v6H8z"/></svg>
               Naljepnica
             </button>
+            <button type="button" class="sd-menu-item" role="menuitem">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4h6l4 4v12a1 1 0 01-1 1H8a1 1 0 01-1-1V5a1 1 0 011-1z"/><path d="M14 4v4h4M9.5 13h5M9.5 16.5h5"/></svg>
+              Ispiši nalog
+            </button>
             <button type="button" class="sd-menu-item danger" role="menuitem">
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V5.5A1.5 1.5 0 0110.5 4h3A1.5 1.5 0 0115 5.5V7M6 7l1 12a2 2 0 002 2h6a2 2 0 002-2l1-12"/></svg>
               Obriši
@@ -319,12 +323,15 @@ html.dark .tl-item:nth-child(odd){background:rgba(244,245,247,.04)}
       <span class="tab-tl">detalji</span>
       <div class="u-module-head"><h3 class="u-module-title">Detalji</h3></div>
       <div class="kv">
-        <div><span class="k">Vozilo</span><span class="v">2019 Volkswagen Passat</span></div>
-        <div><span class="k">Registracija</span><span class="v tnum">DU-742-IP</span></div>
-        <div><span class="k">Telefon</span><span class="v"><a href="tel:+385912345678">+385 91 234 5678</a></span></div>
-        <div><span class="k">Gume</span><span class="v">4 · na naplacima</span></div>
-        <div><span class="k">Zaprimljeno</span><span class="v">14. lis 2025.</span></div>
-        <div><span class="k">Očekivani izlaz</span><span class="v"><span class="sd-due"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.4"/><path d="M12 7.5V12l3 2"/></svg>15. tra 2026.</span></span></div>
+        <div><span class="k">Vozilo</span><span class="v" data-f="vehicle">2019 Volkswagen Passat</span></div>
+        <div><span class="k">Registracija</span><span class="v tnum" data-f="plate">DU-742-IP</span></div>
+        <div><span class="k">Šasija (VIN)</span><span class="v tnum" data-f="vin">WVWZZZ3CZKE045512</span></div>
+        <div><span class="k">Telefon</span><span class="v"><a href="tel:+385912345678" data-f="phone">+385 91 234 5678</a></span></div>
+        <div><span class="k">Gume</span><span class="v" data-f="gume">4 · na naplacima</span></div>
+        <div><span class="k">Vijci kotača</span><span class="v" data-f="bolts" data-v="in_trunk">U prtljažniku vozila</span></div>
+        <div><span class="k">Poklopci kotača</span><span class="v" data-f="hubcaps" data-v="1">Uskladišteni</span></div>
+        <div><span class="k">Zaprimljeno</span><span class="v" data-f="checkIn">14. lis 2025.</span></div>
+        <div><span class="k">Očekivani izlaz</span><span class="v"><span class="sd-due" data-f="expectedOut"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.4"/><path d="M12 7.5V12l3 2"/></svg>15. tra 2026.</span></span></div>
       </div>
       <div class="sd-note">
         <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l4.5-1L19 8.5a2 2 0 000-3L18.5 5a2 2 0 00-3 0L5 15.5 4 20z"/></svg>
@@ -499,6 +506,48 @@ html.dark .tl-item:nth-child(odd){background:rgba(244,245,247,.04)}
     }
     try { sessionStorage.setItem('asc.prefill', JSON.stringify(pf)); } catch(err){}
     location.href = 'checkin.html?prefill=1';
+  });
+
+  // The "Ispiši nalog" menu item → collect everything shown on the page into a
+  // report object and open the printable A4 "Potvrda o pohrani" (ASCQR.printReport).
+  var reportItem = Array.prototype.filter.call(document.querySelectorAll('.sd-menu-item'), function(el){ return /ispiši nalog/i.test(el.textContent); })[0];
+  if (reportItem) reportItem.addEventListener('click', function(e){
+    e.preventDefault();
+    var c = code || (codeEl ? codeEl.textContent.trim() : '');
+    var text = function(sel){ var el = q(sel); return el ? el.textContent.replace(/\s+/g, ' ').trim() : ''; };
+    var attr = function(sel, a){ var el = q(sel); return el ? (el.getAttribute(a) || '') : ''; };
+    var gume = text('[data-f="gume"]');                          // e.g. "4 · na naplacima"
+    var qtyM = gume.match(/\d+/);
+    var locLabels = ['Zona', 'Regal', 'Polica', 'Mjesto'], locParts = [];
+    var primaryBlock = document.querySelector('.u-module .loc-block');
+    if (primaryBlock) primaryBlock.querySelectorAll('.loc-value').forEach(function(v, i){
+      var t = v.textContent.trim(); if (t && t !== '—') locParts.push(locLabels[i] + ' ' + t);
+    });
+    var tires = [];
+    document.querySelectorAll('.tire-table .tr').forEach(function(tr){
+      if (tr.classList.contains('th')) return;
+      var s = tr.querySelectorAll('span');
+      if (s.length >= 5) tires.push({ pos: s[0].textContent.trim(), size: s[1].textContent.trim(),
+        brand: s[2].textContent.trim(), tread: s[3].textContent.trim(), dot: s[4].textContent.trim() });
+    });
+    var chips = document.querySelectorAll('.detail-chips .chip');
+    var paid = Array.prototype.some.call(chips, function(ch){ return /plaćeno/i.test(ch.textContent) && !/neplaćeno/i.test(ch.textContent); });
+    var data = {
+      who: text('.detail-head .who').replace(/\s*›\s*$/, ''),
+      address: 'Ulica kralja Tomislava 14, 20000 Dubrovnik',
+      phone: text('[data-f="phone"]'),
+      vehicle: text('[data-f="vehicle"]'), plate: text('[data-f="plate"]'), vin: text('[data-f="vin"]'),
+      season: set ? set.season : (chips[1] ? chips[1].textContent.trim() : ''),
+      status: set ? set.status : (chips[0] ? chips[0].textContent.trim() : ''),
+      location: locParts.join(' · '),
+      quantity: qtyM ? qtyM[0] : '',
+      rims: /naplac|felg/i.test(gume) ? 'Na naplacima' : 'Bez naplataka',
+      checkIn: text('[data-f="checkIn"]'), expectedOut: text('[data-f="expectedOut"]'),
+      fee: text('.fee'), paid: paid,
+      bolts: attr('[data-f="bolts"]', 'data-v'), hubcaps: attr('[data-f="hubcaps"]', 'data-v'),
+      notes: text('.sd-note'), tires: tires
+    };
+    if (window.ASCQR && !ASCQR.printReport(c, data)) alert('Ne mogu otvoriti nalog.');
   });
 })();
 </script>

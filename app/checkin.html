@@ -200,6 +200,7 @@ html.dark .btn-primary{background:linear-gradient(180deg,var(--lava-2),var(--lav
           <label class="field"><span class="label">Telefon</span><input id="c_phone" type="tel" inputmode="tel" autocomplete="off" placeholder="+385 91 234 5678"></label>
           <label class="field"><span class="label">E-pošta</span><input id="c_email" type="email" autocomplete="off" placeholder="ivan.peric@email.hr"></label>
         </div>
+        <label class="field"><span class="label">Adresa</span><input id="c_address" autocomplete="off" placeholder="Ulica i broj, grad"></label>
       </fieldset>
       <fieldset>
         <legend>Vozilo</legend>
@@ -209,6 +210,7 @@ html.dark .btn-primary{background:linear-gradient(180deg,var(--lava-2),var(--lav
           <label class="field"><span class="label">Godina</span><input id="v_year" type="number" inputmode="numeric" min="1950" max="2100" placeholder="2019"></label>
           <label class="field"><span class="label">Registracija</span><input id="v_plate" autocomplete="off" placeholder="DU-234-AB" style="text-transform:uppercase"></label>
         </div>
+        <label class="field"><span class="label">Broj šasije (VIN)</span><input id="v_vin" autocomplete="off" placeholder="WVWZZZ3CZ…" maxlength="17" style="text-transform:uppercase"></label>
       </fieldset>
     </section>
 
@@ -247,6 +249,11 @@ html.dark .btn-primary{background:linear-gradient(180deg,var(--lava-2),var(--lav
         <div class="grid-2" id="rimWrap" hidden>
           <label class="field"><span class="label">Vrsta naplatka</span>
             <select id="s_rimtype"><option value="">—</option><option value="steel">Čelični</option><option value="alloy">Aluminijski</option></select></label>
+        </div>
+        <div class="grid-2">
+          <label class="field"><span class="label">Vijci kotača</span>
+            <select id="s_bolts"><option value="">—</option><option value="stored">Uskladišteni kod nas</option><option value="in_trunk">U prtljažniku vozila</option></select></label>
+          <label class="switch" style="align-self:end;padding-bottom:11px"><input id="s_hubcaps" type="checkbox"> Poklopci kotača uskladišteni</label>
         </div>
         <div class="grid-2">
           <label class="field"><span class="label">Cijena čuvanja</span><input id="s_fee" type="number" inputmode="decimal" step="0.01" min="0" placeholder="40.00"></label>
@@ -371,10 +378,13 @@ html.dark .btn-primary{background:linear-gradient(180deg,var(--lava-2),var(--lav
       sessionStorage.removeItem('asc.prefill');
       const setVal = (id, v) => { if (v != null && v !== '' && $(id)) $(id).value = v; };
       setVal('c_name', pf.customer_name); setVal('c_phone', pf.phone); setVal('c_email', pf.email);
+      setVal('c_address', pf.address);
       setVal('v_make', pf.make); setVal('v_model', pf.model); setVal('v_year', pf.year);
       setVal('v_plate', pf.plate ? String(pf.plate).toUpperCase() : '');
+      setVal('v_vin', pf.vin ? String(pf.vin).toUpperCase() : '');
       setVal('s_zone', pf.zone); setVal('s_rack', pf.rack); setVal('s_shelf', pf.shelf); setVal('s_slot', pf.slot);
-      setVal('s_notes', pf.notes);
+      setVal('s_bolts', pf.bolts_location); setVal('s_notes', pf.notes);
+      if (pf.hubcaps_stored) $('s_hubcaps').checked = true;
       if (pf.season) { const sb = form.querySelector('[data-season="' + pf.season + '"]'); if (sb) sb.click(); }
       const qty = Math.max(1, Math.min(8, Number(pf.quantity) || 4));
       $('s_qty').value = qty; renderTires(qty);

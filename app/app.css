@@ -534,6 +534,45 @@ html.sticker-lock, html.sticker-lock body{ overflow:hidden }
 .sm-loc .sm-lk{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:#333;display:block;margin-bottom:1px}
 .sm-foot{margin-top:9px;font-size:8.5px;color:#555}
 
+/* ===== Customer report — printable A4 "Potvrda o pohrani" ====================
+   Reuses the sticker sheet's overlay + print plumbing (.sticker-modal / .sm-scroll
+   / html.sticker-lock). A white document renders inside the dark sheet on screen;
+   the scoped @media print block strips the chrome and prints only this page. */
+.sm-scroll.sm-scroll-doc{align-items:flex-start;padding:8px 14px 40px}
+.report-doc{width:min(720px,100%);background:#fff;color:#14161a;border-radius:14px;
+  box-shadow:0 30px 70px -22px rgba(0,0,0,.7);padding:32px 34px 26px;
+  font:400 12.5px/1.5 Inter;animation:rise .4s var(--smooth) both}
+.rp-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;
+  border-bottom:2px solid #14161a;padding-bottom:14px;margin-bottom:18px}
+.rp-brand{display:flex;flex-direction:column;gap:3px}
+.rp-logo{font:900 26px/1 Sora;letter-spacing:.5px;color:#ff4e1b}
+.rp-org{font:600 11px Inter;letter-spacing:.02em;color:#4a4f57}
+.rp-headright{display:flex;gap:14px;align-items:flex-start}
+.rp-docmeta{text-align:right}
+.rp-title{font:700 15px Sora;color:#14161a}
+.rp-code{font:800 15px Inter;font-variant-numeric:tabular-nums;letter-spacing:.4px;margin-top:3px}
+.rp-date{font:500 11px Inter;color:#4a4f57;margin-top:2px}
+.rp-qr{width:66px;height:66px;flex:none}.rp-qr svg{width:100%;height:100%;display:block}
+.rp-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+.rp-box{border:1px solid #d7dade;border-radius:11px;padding:12px 14px}
+.rp-h{font:700 10px Inter;letter-spacing:.09em;text-transform:uppercase;color:#7a8089;margin-bottom:8px}
+.rp-line{display:flex;justify-content:space-between;gap:12px;padding:3px 0}
+.rp-line + .rp-line{border-top:1px solid #eef0f2}
+.rp-k{color:#6b7079;flex:none}
+.rp-v{font-weight:600;color:#14161a;text-align:right}
+.rp-store .rp-kv{display:grid;grid-template-columns:1fr 1fr;gap:2px 22px}
+.rp-store .rp-line + .rp-line{border-top:0}
+.rp-table{width:100%;border-collapse:collapse;margin-bottom:14px;font-variant-numeric:tabular-nums}
+.rp-table caption{text-align:left;font:700 10px Inter;letter-spacing:.09em;text-transform:uppercase;color:#7a8089;padding-bottom:6px}
+.rp-table th{font:700 10.5px Inter;text-transform:uppercase;letter-spacing:.04em;color:#7a8089;text-align:left;padding:6px 8px;border-bottom:1.5px solid #14161a}
+.rp-table td{padding:7px 8px;border-bottom:1px solid #eef0f2;font-size:12px}
+.rp-table th:first-child,.rp-table td:first-child{padding-left:2px}
+.rp-notes{border:1px solid #d7dade;border-radius:11px;padding:11px 14px;margin-bottom:16px;color:#2b2f36}
+.rp-notes b{font:700 10px Inter;letter-spacing:.09em;text-transform:uppercase;color:#7a8089;display:block;margin-bottom:4px}
+.rp-sign{display:grid;grid-template-columns:1fr 1fr;gap:34px;margin:26px 0 14px}
+.rp-sig-line{border-top:1px solid #14161a;padding-top:6px;font:500 11px Inter;color:#6b7079;text-align:center}
+.rp-foot{border-top:1px solid #d7dade;padding-top:10px;font:500 10px Inter;color:#7a8089;line-height:1.45}
+
 /* ===== Menu drawer — avatar launcher + profile / options sheet ================ */
 .menu-btn{border:0;cursor:pointer;width:38px;height:38px;border-radius:50%;flex:none;overflow:hidden;
   display:grid;place-items:center;font:800 13px Inter;letter-spacing:.02em;color:#fff;
@@ -614,6 +653,9 @@ html.dark .md-field select{background-image:url("data:image/svg+xml,%3Csvg xmlns
   html.sticker-lock .sm-chrome{display:none!important}
   html.sticker-lock .sm-scroll{display:block!important;overflow:visible!important;padding:0!important}
   html.sticker-lock .sm-label{box-shadow:none!important;margin:0 auto!important;animation:none!important}
+  html.sticker-lock .report-doc{box-shadow:none!important;border:0!important;border-radius:0!important;
+    width:100%!important;max-width:none!important;padding:0!important;animation:none!important;
+    color:#000!important;font-size:11.5px!important}
 }
 
 /* ============================== A11y · motion ========================== */
