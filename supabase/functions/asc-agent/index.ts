@@ -21,7 +21,10 @@
 // ============================================================================
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const MODEL = Deno.env.get("GEMINI_MODEL") || "gemini-flash-latest";
+// Primary: pinned current GA flash (the "-latest" alias is what the whole
+// world hammers — persistent 503 "high demand"). Old pinned versions get
+// sunset (2.5-flash began 404ing "no longer available to new users" in 2026).
+const MODEL = Deno.env.get("GEMINI_MODEL") || "gemini-3.5-flash";
 // Separate free-tier quota bucket — keeps the agent alive when the primary
 // model's daily allowance runs out (each has its own RPD on the free tier).
 const FALLBACK_MODEL = Deno.env.get("GEMINI_FALLBACK_MODEL") || "gemini-flash-lite-latest";
@@ -288,19 +291,22 @@ Deno.serve(async (req) => {
         }),
       },
     );
+    // 429 = rate limit; 503/500 = model overloaded ("high demand") — all of
+    // them deserve the retry ladder, not an instant agent_failed.
+    const busy = (s: number) => s === 429 || s === 503 || s === 500;
     let res = await callGemini(MODEL);
-    if (res.status === 429) {
-      // Free-tier RPM burst — one polite retry usually clears it.
+    if (busy(res.status)) {
+      // RPM burst / transient overload — one polite retry usually clears it.
       await new Promise((r) => setTimeout(r, 1600));
       res = await callGemini(MODEL);
     }
-    if (res.status === 429 && FALLBACK_MODEL !== MODEL) {
-      // Persistent 429 = the model's DAILY free allowance is spent. The log
-      // line keeps the quota reason findable; the fallback keeps us alive.
-      console.error("[asc-agent] 429 on", MODEL, (await res.text()).slice(0, 300), "→ trying", FALLBACK_MODEL);
+    if (busy(res.status) && FALLBACK_MODEL !== MODEL) {
+      // Persistent = quota spent or model drowning. The log line keeps the
+      // reason findable; the fallback keeps us alive.
+      console.error("[asc-agent]", res.status, "on", MODEL, (await res.text()).slice(0, 300), "→ trying", FALLBACK_MODEL);
       res = await callGemini(FALLBACK_MODEL);
     }
-    if (res.status === 429) return json({ error: "busy" }, 429);
+    if (busy(res.status)) return json({ error: "busy" }, 429);
     if (!res.ok) {
       console.error("[asc-agent] Gemini error", res.status, (await res.text()).slice(0, 500));
       return json({ error: "agent_failed" }, 502);

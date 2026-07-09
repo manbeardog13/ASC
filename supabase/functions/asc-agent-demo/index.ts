@@ -16,7 +16,11 @@
 // origins (GitHub Pages + localhost). Add your custom domain to ALLOW if needed.
 // ============================================================================
 
-const MODEL = Deno.env.get("GEMINI_MODEL") || "gemini-flash-latest";
+// Primary: pinned current GA flash (the "-latest" alias is what the whole
+// world hammers — persistent 503 "high demand"). Fallback: the LITE alias —
+// a separate, calmer capacity pool (pinned old versions get sunset: 2.5-flash
+// began 404ing "no longer available to new users" in 2026).
+const MODEL = Deno.env.get("GEMINI_MODEL") || "gemini-3.5-flash";
 const FALLBACK_MODEL = Deno.env.get("GEMINI_FALLBACK_MODEL") || "gemini-flash-lite-latest";
 const MAX_MESSAGES = 40;
 const MAX_BODY_BYTES = 200_000;
@@ -150,10 +154,13 @@ Deno.serve(async (req) => {
           contents: toGeminiContents(messages),
           generationConfig: { maxOutputTokens: 1536 },
         }) });
+    // 429 = rate limit; 503/500 = model overloaded ("high demand") — all of
+    // them deserve the retry ladder, not an instant agent_failed.
+    const busy = (s: number) => s === 429 || s === 503 || s === 500;
     let res = await call(MODEL);
-    if (res.status === 429) { await new Promise((r) => setTimeout(r, 1500)); res = await call(MODEL); }
-    if (res.status === 429 && FALLBACK_MODEL !== MODEL) res = await call(FALLBACK_MODEL);
-    if (res.status === 429) return json({ error: "busy" }, 429, origin);
+    if (busy(res.status)) { await new Promise((r) => setTimeout(r, 1200)); res = await call(MODEL); }
+    if (busy(res.status) && FALLBACK_MODEL !== MODEL) res = await call(FALLBACK_MODEL);
+    if (busy(res.status)) return json({ error: "busy" }, 429, origin);
     if (!res.ok) { console.error("[asc-agent-demo] Gemini", res.status, (await res.text()).slice(0, 400)); return json({ error: "agent_failed" }, 502, origin); }
     return json(fromGeminiResponse(await res.json()), 200, origin);
   } catch (err) { console.error("[asc-agent-demo]", err); return json({ error: "agent_failed" }, 502, origin); }
