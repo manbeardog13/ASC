@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- ASC app icon — v6 "Hanssen". The lava tire-ring carrying the design
+       system's signature notched corner (a flat 45° chamfer on the ring's
+       top-left shoulder), on Black Core with the canvas's warm ambient bloom.
+       Orange stays the mark; the canvas stays quiet. -->
+  <defs>
+    <linearGradient id="lava" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ff9a66"/>
+      <stop offset=".45" stop-color="#ff4e1b"/>
+      <stop offset="1" stop-color="#d63a0e"/>
+    </linearGradient>
+    <radialGradient id="bloom" cx=".18" cy=".05" r=".95">
+      <stop offset="0" stop-color="#ff7a40" stop-opacity=".2"/>
+      <stop offset=".55" stop-color="#ff7a40" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="core" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#13161c"/>
+      <stop offset="1" stop-color="#04060a"/>
+    </linearGradient>
+    <!-- ring = outer disc minus inner disc, minus the 45° chamfer at top-left:
+         everything on the corner side of the line x + y = 640 is cut away -->
+    <mask id="ring">
+      <rect width="1024" height="1024" fill="#fff"/>
+      <circle cx="512" cy="512" r="212" fill="#000"/>
+      <polygon points="0,0 640,0 0,640" fill="#000"/>
+    </mask>
+  </defs>
+
+  <rect width="1024" height="1024" fill="url(#core)"/>
+  <rect width="1024" height="1024" fill="url(#bloom)"/>
+
+  <!-- soft ground shadow so the ring sits IN the tile, not on it -->
+  <ellipse cx="516" cy="556" rx="336" ry="310" fill="#000" opacity=".4"/>
+
+  <circle cx="512" cy="512" r="332" fill="url(#lava)" mask="url(#ring)"/>
+</svg>
