@@ -137,6 +137,24 @@ dtabs.forEach(t => t.addEventListener('click', e => {
   }
 }));
 
+// Dock tuck-away: scrolling down slides the tab bar completely off-screen;
+// the SLIGHTEST upward scroll brings it back (asymmetric hysteresis — 6px to
+// hide so micro-jitter never flickers it, 2px to show so intent is instant).
+// Near the top it is always present. rAF-throttled; scrollY clamped so iOS
+// rubber-banding at the top can't fake a direction change.
+(() => {
+  const dock = document.querySelector('.dock');
+  if (!dock) return;
+  let lastY = Math.max(0, scrollY);
+  addEventListener('scroll', () => {
+    const y = Math.max(0, scrollY), dy = y - lastY;
+    lastY = y;
+    if (y < 48) dock.classList.remove('dock-hide');
+    else if (dy > 6) dock.classList.add('dock-hide');
+    else if (dy < -2) dock.classList.remove('dock-hide');
+  }, { passive: true });
+})();
+
 // Count-ups start at the moment of reveal — under the Prag splash they'd burn
 // out invisibly; asc:reveal fires in the same frame the surface lifts.
 const startAnimate = () => {

@@ -224,16 +224,21 @@ html.dark .obar .bar{background:rgba(244,245,247,.10)}
 .chip.all{background:rgba(99,103,111,.16);color:var(--muted)}
 
 /* ============================== Dock — iOS tab bar ====================== */
-/* Flat translucent tab bar: five equal tabs, icon + label, tint-only active.
-   No protruding button, no sliding pill — reads as a native iOS tab bar. */
-.dock{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(10px + env(safe-area-inset-bottom,0px));z-index:50;
-  display:flex;align-items:stretch;width:calc(100% - 24px);max-width:430px;padding:5px;
-  border-radius:26px;background:rgba(250,250,252,.72);border:.5px solid rgba(255,255,255,.55);
-  box-shadow:0 10px 34px -10px rgba(2,3,5,.26);
-  -webkit-backdrop-filter:blur(24px) saturate(180%);backdrop-filter:blur(24px) saturate(180%)}
-html.dark .dock{background:rgba(30,30,34,.62);border-color:rgba(255,255,255,.10);box-shadow:0 10px 34px -10px rgba(0,0,0,.62)}
-.dock a{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
-  min-height:46px;border-radius:20px;text-decoration:none;color:var(--muted);
+/* Flat translucent tab bar, flush to the screen's bottom edge — reads as a
+   native iOS tab bar: full-bleed heavy blur, one hairline on top, tint-only
+   active state, safe-area padding INSIDE the bar. Scrolling down tucks it
+   completely off-screen (.dock-hide, driven by app.js); the slightest upward
+   scroll brings it back — quick but soft, one --smooth transform. */
+.dock{position:fixed;left:0;right:0;bottom:0;z-index:50;
+  display:flex;align-items:stretch;justify-content:center;
+  padding:6px 10px calc(6px + env(safe-area-inset-bottom,0px));
+  background:rgba(250,250,252,.8);border-top:.5px solid rgba(20,22,26,.14);
+  -webkit-backdrop-filter:blur(28px) saturate(180%);backdrop-filter:blur(28px) saturate(180%);
+  transition:transform 320ms var(--smooth)}
+html.dark .dock{background:rgba(16,17,20,.72);border-top-color:rgba(255,255,255,.08)}
+.dock.dock-hide{transform:translateY(102%)}
+.dock a{flex:1;max-width:96px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+  min-height:46px;border-radius:14px;text-decoration:none;color:var(--muted);
   font:500 10px Inter;letter-spacing:.005em;transition:color 200ms var(--snap),opacity 100ms linear}
 .dock a.on{color:var(--lava-ink)}
 html.dark .dock a.on{color:var(--lava-2)}
