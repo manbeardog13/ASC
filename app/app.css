@@ -534,44 +534,72 @@ html.sticker-lock, html.sticker-lock body{ overflow:hidden }
 .sm-loc .sm-lk{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:#333;display:block;margin-bottom:1px}
 .sm-foot{margin-top:9px;font-size:8.5px;color:#555}
 
-/* ===== Customer report — printable A4 "Potvrda o pohrani" ====================
-   Reuses the sticker sheet's overlay + print plumbing (.sticker-modal / .sm-scroll
-   / html.sticker-lock). A white document renders inside the dark sheet on screen;
-   the scoped @media print block strips the chrome and prints only this page. */
-.sm-scroll.sm-scroll-doc{align-items:flex-start;padding:8px 14px 40px}
-.report-doc{width:min(720px,100%);background:#fff;color:#14161a;border-radius:14px;
-  box-shadow:0 30px 70px -22px rgba(0,0,0,.7);padding:32px 34px 26px;
-  font:400 12.5px/1.5 Inter;animation:rise .4s var(--smooth) both}
-.rp-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;
-  border-bottom:2px solid #14161a;padding-bottom:14px;margin-bottom:18px}
-.rp-brand{display:flex;flex-direction:column;gap:3px}
-.rp-logo{font:900 26px/1 Sora;letter-spacing:.5px;color:#ff4e1b}
-.rp-org{font:600 11px Inter;letter-spacing:.02em;color:#4a4f57}
-.rp-headright{display:flex;gap:14px;align-items:flex-start}
-.rp-docmeta{text-align:right}
-.rp-title{font:700 15px Sora;color:#14161a}
-.rp-code{font:800 15px Inter;font-variant-numeric:tabular-nums;letter-spacing:.4px;margin-top:3px}
-.rp-date{font:500 11px Inter;color:#4a4f57;margin-top:2px}
+/* ===== Customer report — A4-locked ledger "Potvrda o pohrani guma" ===========
+   An official receipt in the invoice/bank-statement register: structure comes
+   ONLY from alignment + hairlines, never from boxed containers. One governing
+   right rail — every field value and the tire table's numeric edge land on the
+   same 178mm content edge. Three-weight rule system: 1px #111 structural
+   (section heads, table head/close, signature lines) · 1px #ededed row hairline
+   · 1.5px #111 payment total; plus ONE 2px orange brand rule under the header.
+   True WYSIWYG print: qr.js injects @page{size:A4;margin:0} while the sheet is
+   open, so the doc's own 15/16/13mm padding IS the print margin. Hard-coded
+   black-on-white regardless of app theme. On phones the doc is scale-to-fit
+   (transform on .report-doc, sized via .rp-fit — reset in print). */
+.sm-scroll.sm-scroll-doc{align-items:flex-start;padding:10px 12px 40px}
+.rp-fit{flex:none}
+.report-doc{width:210mm;min-height:297mm;box-sizing:border-box;display:flex;flex-direction:column;
+  background:#fff;color:#111;padding:15mm 16mm 13mm;transform-origin:top left;
+  font:500 9.5px/1.35 Inter,sans-serif;box-shadow:0 30px 70px -22px rgba(0,0,0,.7);
+  -webkit-print-color-adjust:exact;print-color-adjust:exact;animation:rise .4s var(--smooth) both}
+/* header band — the only orange rule on the page */
+.rp-head{display:flex;justify-content:space-between;align-items:flex-start;gap:24px;
+  padding-bottom:12px;margin-bottom:14px;border-bottom:2px solid #ff4e1b}
+.rp-logo{font:800 26px/1 Sora;letter-spacing:-.02em;color:#ff4e1b}
+.rp-org{font:500 9px Inter;letter-spacing:.01em;color:#555;margin-top:3px}
+.rp-title{font:700 16px Sora;letter-spacing:-.01em;color:#111;margin:10px 0 0}
+.rp-meta{display:flex;gap:14px;align-items:flex-start}
+.rp-meta-grid{display:flex;flex-direction:column;gap:6px;text-align:right}
+.rp-ml{font:600 8px Inter;text-transform:uppercase;letter-spacing:.08em;color:#777}
+.rp-mv{font:600 10px Inter;color:#111;margin-top:1px}
 .rp-qr{width:66px;height:66px;flex:none}.rp-qr svg{width:100%;height:100%;display:block}
-.rp-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
-.rp-box{border:1px solid #d7dade;border-radius:11px;padding:12px 14px}
-.rp-h{font:700 10px Inter;letter-spacing:.09em;text-transform:uppercase;color:#7a8089;margin-bottom:8px}
-.rp-line{display:flex;justify-content:space-between;gap:12px;padding:3px 0}
-.rp-line + .rp-line{border-top:1px solid #eef0f2}
-.rp-k{color:#6b7079;flex:none}
-.rp-v{font-weight:600;color:#14161a;text-align:right}
-.rp-store .rp-kv{display:grid;grid-template-columns:1fr 1fr;gap:2px 22px}
-.rp-store .rp-line + .rp-line{border-top:0}
-.rp-table{width:100%;border-collapse:collapse;margin-bottom:14px;font-variant-numeric:tabular-nums}
-.rp-table caption{text-align:left;font:700 10px Inter;letter-spacing:.09em;text-transform:uppercase;color:#7a8089;padding-bottom:6px}
-.rp-table th{font:700 10.5px Inter;text-transform:uppercase;letter-spacing:.04em;color:#7a8089;text-align:left;padding:6px 8px;border-bottom:1.5px solid #14161a}
-.rp-table td{padding:7px 8px;border-bottom:1px solid #eef0f2;font-size:12px}
-.rp-table th:first-child,.rp-table td:first-child{padding-left:2px}
-.rp-notes{border:1px solid #d7dade;border-radius:11px;padding:11px 14px;margin-bottom:16px;color:#2b2f36}
-.rp-notes b{font:700 10px Inter;letter-spacing:.09em;text-transform:uppercase;color:#7a8089;display:block;margin-bottom:4px}
-.rp-sign{display:grid;grid-template-columns:1fr 1fr;gap:34px;margin:26px 0 14px}
-.rp-sig-line{border-top:1px solid #14161a;padding-top:6px;font:500 11px Inter;color:#6b7079;text-align:center}
-.rp-foot{border-top:1px solid #d7dade;padding-top:10px;font:500 10px Inter;color:#7a8089;line-height:1.45}
+/* section = labeled rule + full-width rows (never a box) */
+.rp-sec{margin-bottom:13px}
+.rp-sh{display:flex;justify-content:space-between;align-items:baseline;
+  padding-bottom:4px;margin-bottom:2px;border-bottom:1px solid #111}
+.rp-st{font:700 10px Sora;text-transform:uppercase;letter-spacing:.1em;color:#111}
+.rp-shm{font:500 9px Inter;color:#888}
+/* core field mechanic: 1fr key pushes the auto value onto the shared right rail */
+.rp-f{display:grid;grid-template-columns:1fr auto;column-gap:16px;align-items:baseline;
+  padding:3.5px 0;border-bottom:1px solid #ededed}
+.rp-f:last-child{border-bottom:0}
+.rp-k{font:500 9.5px Inter;color:#555}
+.rp-v{font:600 9.5px Inter;color:#111;text-align:right}
+/* tire line-items table — ruled at head + baselines only, numeric edge on the rail */
+.rp-table{width:100%;border-collapse:collapse}
+.rp-table th{font:600 8px Inter;text-transform:uppercase;letter-spacing:.06em;color:#777;
+  text-align:left;padding:2px 8px 4px 0;border-bottom:1px solid #111}
+.rp-table td{font:500 9.5px Inter;color:#111;padding:5px 8px 5px 0;
+  border-bottom:1px solid #ededed;vertical-align:baseline}
+.rp-table tbody tr:last-child td{border-bottom:1px solid #111}
+.rp-table th.num,.rp-table td.num{text-align:right}
+.rp-table th:last-child,.rp-table td:last-child{padding-right:0}
+/* payment total — emphasis by weight + rule, never color */
+.rp-f.rp-total{border-top:1.5px solid #111;border-bottom:0;padding-top:5px}
+.rp-f:has(+ .rp-total){border-bottom:0}
+.rp-total .rp-v{font:700 12px Sora}
+/* notes — the one left-aligned prose exception */
+.rp-prose{font:400 9.5px/1.4 Inter;color:#333;padding:4px 0}
+/* signatures + footer pinned to the page bottom via the flex spacer */
+.rp-spacer{flex:1}
+.rp-sign{display:grid;grid-template-columns:1fr 1fr;column-gap:48px;margin-top:40px}
+.rp-sig{border-top:1px solid #111;padding-top:5px}
+.rp-sig-cap{font:500 9px Inter;color:#555}
+.rp-sig-date{font:500 8px Inter;color:#888;margin-top:3px}
+.rp-foot{display:flex;justify-content:space-between;gap:16px;margin-top:26px;
+  padding-top:8px;border-top:1px solid #ededed;font:400 8px Inter;color:#777}
+/* tabular slashed-zero figures for every code/date/measure (kept LAST so the
+   feature settings survive the font: shorthand resets above) */
+.report-doc .tab{font-variant-numeric:tabular-nums slashed-zero;font-feature-settings:"tnum" 1,"zero" 1}
 
 /* ===== Menu drawer — avatar launcher + profile / options sheet ================ */
 .menu-btn{border:0;cursor:pointer;width:38px;height:38px;border-radius:50%;flex:none;overflow:hidden;
@@ -653,9 +681,12 @@ html.dark .md-field select{background-image:url("data:image/svg+xml,%3Csvg xmlns
   html.sticker-lock .sm-chrome{display:none!important}
   html.sticker-lock .sm-scroll{display:block!important;overflow:visible!important;padding:0!important}
   html.sticker-lock .sm-label{box-shadow:none!important;margin:0 auto!important;animation:none!important}
-  html.sticker-lock .report-doc{box-shadow:none!important;border:0!important;border-radius:0!important;
-    width:100%!important;max-width:none!important;padding:0!important;animation:none!important;
-    color:#000!important;font-size:11.5px!important}
+  /* A4 report: undo the screen scale-to-fit and let the doc's own mm padding be
+     the print margin (qr.js injects @page{size:A4;margin:0} while it's open).
+     296mm (not 297) so px rounding can't spill a blank second sheet. */
+  html.sticker-lock .rp-fit{width:auto!important;height:auto!important}
+  html.sticker-lock .report-doc{transform:none!important;box-shadow:none!important;margin:0!important;
+    width:210mm!important;min-height:296mm!important;animation:none!important}
 }
 
 /* ============================== A11y · motion ========================== */

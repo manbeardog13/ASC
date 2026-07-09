@@ -113,6 +113,7 @@
   }
   function closeSticker(fromPop) {
     var m = document.querySelector('.sticker-modal'); if (!m) return;
+    a4Lock(false);                                           // drop the report's @page A4 lock
     document.removeEventListener('keydown', stickerKey, true);
     if (stickerPop) { window.removeEventListener('popstate', stickerPop); stickerPop = null; }
     if (stickerBg) { stickerBg.forEach(function (el) { try { el.inert = false; } catch(e){} }); stickerBg = null; }  // un-inert the background
@@ -185,17 +186,36 @@
     return true;
   }
 
-  // ---- customer report → printable A4 "Potvrda o pohrani" ---------------------
+  // ---- customer report → A4-locked ledger "Potvrda o pohrani guma" ------------
   // Given to the customer alongside the QR label. `data` (optional) carries the
   // rich fields set-detail scrapes from the page; anything missing falls back to
-  // the registry set or a neutral "—" so the document always reads complete.
-  var HR_MONTHS = ['sij','velj','ožu','tra','svi','lip','srp','kol','ruj','lis','stu','pro'];
+  // the registry set or a neutral "—" so the ledger rhythm never collapses.
+  // Layout: continuous ledger (invoice register) — labeled section rules + full-
+  // width label→value rows on one shared right rail; no boxed containers.
   function todayHr() {
-    var d = new Date();
-    return d.getDate() + '. ' + HR_MONTHS[d.getMonth()] + ' ' + d.getFullYear() + '.';
+    var d = new Date(), p = function (n) { return (n < 10 ? '0' : '') + n; };
+    return p(d.getDate()) + '.' + p(d.getMonth() + 1) + '.' + d.getFullYear() + '.';
   }
   var BOLTS = { stored: 'Uskladišteni kod nas', in_trunk: 'U prtljažniku vozila' };
-  function rline(k, v) { return '<div class="rp-line"><span class="rp-k">' + esc(k) + '</span><span class="rp-v">' + esc(v || '—') + '</span></div>'; }
+  function rline(k, v, tab, cls) {
+    return '<div class="rp-f' + (cls ? ' ' + cls : '') + '"><span class="rp-k">' + esc(k) +
+           '</span><span class="rp-v' + (tab ? ' tab' : '') + '">' + esc(v || '—') + '</span></div>';
+  }
+  function rsec(title, meta, body) {
+    return '<section class="rp-sec"><div class="rp-sh"><span class="rp-st">' + esc(title) + '</span>' +
+           (meta ? '<span class="rp-shm">' + esc(meta) + '</span>' : '') + '</div>' + body + '</section>';
+  }
+  // @page can't be scoped by CSS selector, so the A4 lock is injected only while
+  // the report sheet is open (removed in closeSticker) — sticker printing keeps
+  // the browser's default page setup.
+  function a4Lock(on) {
+    var el = document.getElementById('ascA4Page');
+    if (on && !el) {
+      el = document.createElement('style'); el.id = 'ascA4Page';
+      el.textContent = '@media print{@page{size:A4;margin:0}}';
+      document.head.appendChild(el);
+    } else if (!on && el) el.remove();
+  }
   function printReport(code, data) {
     data = data || {};
     var set = BY_CODE[code] || {};
@@ -211,52 +231,71 @@
     var tires = Array.isArray(data.tires) ? data.tires : [];
     var tRows = tires.length
       ? tires.map(function (t) {
-          return '<tr><td>' + esc(t.pos || '') + '</td><td>' + esc(t.size || '') + '</td><td>' +
-                 esc(t.brand || '') + '</td><td>' + esc(t.tread || '') + '</td><td>' + esc(t.dot || '') + '</td></tr>';
+          return '<tr><td class="tab">' + esc(t.pos || '') + '</td><td class="tab">' + esc(t.size || '') + '</td><td>' +
+                 esc(t.brand || '') + '</td><td class="num tab">' + esc(t.tread || '') + '</td><td class="num tab">' + esc(t.dot || '') + '</td></tr>';
         }).join('')
-      : '<tr><td colspan="5" style="color:#9aa0a8;text-align:center;padding:12px">Bez upisanih guma</td></tr>';
+      : '<tr><td colspan="5" style="color:#9aa0a8;padding:10px 0">Bez upisanih guma</td></tr>';
 
     var inner =
-      '<div class="report-doc">' +
-        '<div class="rp-head">' +
-          '<div class="rp-brand"><span class="rp-logo">ASC</span><span class="rp-org">Auto Servisni Centar · Dubrovnik</span></div>' +
-          '<div class="rp-headright">' +
-            '<div class="rp-docmeta"><div class="rp-title">Potvrda o pohrani guma</div>' +
-              '<div class="rp-code">' + esc(code) + '</div><div class="rp-date">Datum: ' + esc(todayHr()) + '</div></div>' +
+      '<div class="rp-fit"><div class="report-doc">' +
+        '<header class="rp-head">' +
+          '<div><div class="rp-logo">ASC</div>' +
+            '<div class="rp-org">Auto Servisni Centar · Dubrovnik</div>' +
+            '<h1 class="rp-title">Potvrda o pohrani guma</h1></div>' +
+          '<div class="rp-meta">' +
+            '<div class="rp-meta-grid">' +
+              '<div><div class="rp-ml">Šifra dokumenta</div><div class="rp-mv tab">' + esc(code) + '</div></div>' +
+              '<div><div class="rp-ml">Datum izdavanja</div><div class="rp-mv tab">' + esc(todayHr()) + '</div></div>' +
+            '</div>' +
             (qrMarkup ? '<div class="rp-qr">' + qrMarkup + '</div>' : '') +
           '</div>' +
+        '</header>' +
+        rsec('Kupac', '',
+          rline('Ime', who) + rline('Adresa', data.address) + rline('Telefon', data.phone, true)) +
+        rsec('Vozilo', '',
+          rline('Marka i model', vehicle) + rline('Registracija', plate, true) + rline('Šasija (VIN)', data.vin, true)) +
+        rsec('Pohrana', '',
+          rline('Sezona', season) + rline('Status', status) + rline('Lokacija', loc) +
+          rline('Broj guma', data.quantity, true) + rline('Naplatci', data.rims) +
+          rline('Zaprimljeno', data.checkIn, true) + rline('Očekivano preuzimanje', data.expectedOut, true)) +
+        rsec('Gume i profil', tires.length ? tires.length + (tires.length === 1 ? ' guma' : ' gume') : '',
+          '<table class="rp-table"><colgroup><col style="width:6%"><col style="width:22%"><col style="width:42%"><col style="width:14%"><col style="width:16%"></colgroup>' +
+          '<thead><tr><th>Poz.</th><th>Dimenzija</th><th>Marka i model</th><th class="num">Profil</th><th class="num">DOT</th></tr></thead>' +
+          '<tbody>' + tRows + '</tbody></table>') +
+        rsec('Dodatci', '',
+          rline('Vijci kotača', BOLTS[data.bolts] || '') + rline('Poklopci kotača', hub)) +
+        rsec('Plaćanje', '',
+          rline('Status plaćanja', data.paid ? 'Plaćeno ✓' : 'Neplaćeno') +
+          rline('Cijena čuvanja', data.fee, true, 'rp-total')) +
+        rsec('Napomene', '', '<div class="rp-prose">' + (data.notes ? esc(data.notes) : '—') + '</div>') +
+        '<div class="rp-spacer"></div>' +
+        '<div class="rp-sign">' +
+          '<div class="rp-sig"><div class="rp-sig-cap">Potpis djelatnika (ASC)</div><div class="rp-sig-date">Datum: ____________</div></div>' +
+          '<div class="rp-sig"><div class="rp-sig-cap">Potpis kupca</div><div class="rp-sig-date">Datum: ____________</div></div>' +
         '</div>' +
-        '<div class="rp-grid">' +
-          '<div class="rp-box"><div class="rp-h">Kupac</div>' +
-            rline('Ime', who) + rline('Adresa', data.address) + rline('Telefon', data.phone) +
-          '</div>' +
-          '<div class="rp-box"><div class="rp-h">Vozilo</div>' +
-            rline('Marka i model', vehicle) + rline('Registracija', plate) + rline('Šasija (VIN)', data.vin) +
-          '</div>' +
-        '</div>' +
-        '<div class="rp-box rp-store"><div class="rp-h">Pohrana</div><div class="rp-kv">' +
-          rline('Sezona', season) + rline('Status', status) +
-          rline('Lokacija', loc) + rline('Broj guma', data.quantity) +
-          rline('Naplatci', data.rims) + rline('Zaprimljeno', data.checkIn) +
-          rline('Očekivano preuzimanje', data.expectedOut) +
-        '</div></div>' +
-        '<table class="rp-table"><caption>Gume i profil</caption>' +
-          '<thead><tr><th>Poz.</th><th>Dimenzija</th><th>Marka i model</th><th>Profil</th><th>DOT</th></tr></thead>' +
-          '<tbody>' + tRows + '</tbody></table>' +
-        '<div class="rp-grid">' +
-          '<div class="rp-box"><div class="rp-h">Dodatci</div>' +
-            rline('Vijci kotača', BOLTS[data.bolts] || '') + rline('Poklopci kotača', hub) +
-          '</div>' +
-          '<div class="rp-box"><div class="rp-h">Plaćanje</div>' +
-            rline('Cijena čuvanja', data.fee) + rline('Status', data.paid ? 'Plaćeno' : 'Neplaćeno') +
-          '</div>' +
-        '</div>' +
-        (data.notes ? '<div class="rp-notes"><b>Napomene</b>' + esc(data.notes) + '</div>' : '') +
-        '<div class="rp-sign"><div class="rp-sig-line">Potpis djelatnika (ASC)</div><div class="rp-sig-line">Potpis kupca</div></div>' +
-        '<div class="rp-foot">Ova potvrda služi kao dokaz o pohrani guma u Auto Servisnom Centru. ' +
-          'Molimo sačuvajte je do preuzimanja kompleta. · ' + esc(code) + '</div>' +
-      '</div>';
-    openSheet(inner, 'Nalog ' + code, 'sm-scroll-doc');
+        '<footer class="rp-foot"><span>Ova potvrda služi kao dokaz o pohrani guma. Komplet se izdaje uz predočenje potvrde.</span>' +
+          '<span class="tab">' + esc(code) + '</span></footer>' +
+      '</div></div>';
+
+    var m = openSheet(inner, 'Nalog ' + code, 'sm-scroll-doc');
+    a4Lock(true);
+    // Scale-to-fit on screens narrower than A4 (phones): transform the doc and
+    // size .rp-fit to the scaled box so the scroller's geometry stays honest.
+    // Print resets both (app.css) and uses the real 210mm width.
+    var doc = m.querySelector('.report-doc'), fitBox = m.querySelector('.rp-fit');
+    var fit = function () {
+      if (!document.body.contains(doc)) { window.removeEventListener('resize', fit); return; }
+      var scroller = m.querySelector('.sm-scroll');
+      var avail = scroller.clientWidth - 24;
+      var s = Math.min(1, avail / doc.offsetWidth);
+      if (s < 1) {
+        doc.style.transform = 'scale(' + s + ')';
+        fitBox.style.width = Math.floor(doc.offsetWidth * s) + 'px';
+        fitBox.style.height = Math.ceil(doc.offsetHeight * s) + 'px';
+      } else { doc.style.transform = ''; fitBox.style.width = ''; fitBox.style.height = ''; }
+    };
+    fit();
+    window.addEventListener('resize', fit);
     return true;
   }
 
