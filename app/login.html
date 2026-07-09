@@ -22,7 +22,10 @@
   var mode=handoff?'handoff':oauth?'oauth':!warm?'cold':null;
   var MIN={cold:900,oauth:700,handoff:400}[mode]||0;
   if(matchMedia('(prefers-reduced-motion:reduce)').matches)MIN=mode==='handoff'?0:Math.min(MIN,400);
-  var t0=Date.now(),closing=false;
+  /* Every timer is tracked and cancelled on re-arm: an untracked boot watchdog /
+     wait-sweep / teardown surviving into a later bloom() lifts or hides the
+     veil mid-transition (confirmed in adversarial review). */
+  var t0=Date.now(),closing=false,waitT=0,wdT=0,tdown=0;
   if(mode)d.classList.add('splashing','splash-'+mode);
   function el(){return document.getElementById('splash')}
   function strip(){d.classList.remove('splashing','splash-cold','splash-oauth','splash-handoff')}
@@ -33,22 +36,28 @@
       var s=el();if(s)s.style.display='flex';        /* inline display BEFORE class removal — keeps the fade alive */
       strip();document.dispatchEvent(new CustomEvent('asc:reveal'));
       if(s){s.classList.remove('wait','in');s.classList.add('out')}
-      setTimeout(function(){if(s){s.style.display='none';s.classList.remove('out')}closing=false},560);
+      tdown=setTimeout(function(){if(s){s.style.display='none';s.classList.remove('out')}closing=false},560);
     },Math.max(0,MIN-(Date.now()-t0)));
   }
-  function handoffTo(url){try{ss&&ss.setItem('asc.splash.handoff',String(Date.now()));ss&&ss.setItem('asc.splash.warm','1')}catch(e){}
+  function handoffTo(url){
+    clearTimeout(waitT);clearTimeout(wdT);wdT=setTimeout(done,8000);   /* grace for the swap; fail-open if it never commits */
+    try{ss&&ss.setItem('asc.splash.handoff',String(Date.now()));ss&&ss.setItem('asc.splash.warm','1')}catch(e){}
     location.replace(String(new URL(url,location.href)))}   /* absolute: immune to caller-realm base-URL resolution */
   function bloom(cb){var s=el();if(!s){cb&&cb();return}
-    closing=false;mode='handoff';MIN=400;t0=Date.now();
-    strip();d.classList.add('splashing','splash-handoff');
-    s.style.display='';s.classList.remove('out','gone');s.classList.add('in');
-    if(cb)setTimeout(cb,340)}                         /* setTimeout, never transitionend (throttled tabs) */
-  function abort(){var s=el();if(s){s.classList.remove('in');s.classList.add('out');
-    setTimeout(function(){s.classList.add('gone');s.classList.remove('out')},220)}strip()}
+    clearTimeout(tdown);clearTimeout(waitT);clearTimeout(wdT);wdT=setTimeout(done,8000);
+    closing=false;
+    var up=d.classList.contains('splashing');
+    if(!up){mode='handoff';MIN=400;t0=Date.now();
+      strip();d.classList.add('splashing','splash-handoff');
+      s.style.display='';s.classList.remove('out','gone','wait');s.classList.add('in')}
+    if(cb)setTimeout(cb,up?0:340)}                    /* already-opaque surface needs no cover delay; never transitionend */
+  function abort(){var s=el();if(s){s.style.display='flex';s.classList.remove('in','wait');s.classList.add('out');
+    tdown=setTimeout(function(){s.style.display='none';s.classList.remove('out')},560)}strip()}
   addEventListener('pageshow',function(e){if(!e.persisted)return;var s=el();
-    if(s){s.classList.remove('in','out','wait');s.classList.add('gone')}strip()});
-  if(mode){setTimeout(function(){var s=el();if(s&&d.classList.contains('splashing'))s.classList.add('wait')},1400);
-    setTimeout(done,4000)}                            /* watchdog: module-proof, splash can never wedge */
+    clearTimeout(tdown);clearTimeout(waitT);clearTimeout(wdT);closing=false;
+    if(s){s.classList.remove('in','out','wait');s.classList.add('gone');s.style.display=''}strip()});
+  if(mode){waitT=setTimeout(function(){var s=el();if(s&&d.classList.contains('splashing'))s.classList.add('wait')},1400);
+    wdT=setTimeout(done,4000)}                        /* watchdog: module-proof, splash can never wedge */
   window.ASCSplash={mode:mode,done:done,handoff:handoffTo,bloom:bloom,abort:abort};
 })();
 </script>
@@ -237,7 +246,9 @@ body.recover .fieldx.f-email,body.recover .btn-google,body.recover .auth-div,bod
   if (hash.get('type') === 'recovery') { setMode('recover'); S.done(); }
   else if (hash.get('error')) {
     // OAuth bounced back with an error — surface it on the card, clean the hash.
-    say(decodeURIComponent((hash.get('error_description') || 'Google prijava nije uspjela.').replace(/\+/g, ' ')), 'err');
+    // (URLSearchParams already percent-decoded the value; decoding again throws
+    // URIError on a literal '%' and would kill the whole module.)
+    say((hash.get('error_description') || 'Google prijava nije uspjela.').replace(/\+/g, ' '), 'err');
     history.replaceState(null, '', location.pathname);
     S.done();
   } else if (S.mode === 'oauth') {

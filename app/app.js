@@ -24,13 +24,16 @@
     .then((m) => m.getSession())
     .then((session) => {
       if (session) {
+        // Mark the tab warm on EVERY gated page (not just splashed ones) so a
+        // deep-link → dock-nav never plays a cold splash mid-session.
+        try { sessionStorage.setItem('asc.splash.warm', '1'); } catch (e) {}
         // Restore visibility UNDER the (opaque) splash so the lift can never
         // reveal an unpainted page; then let first live data land before the
         // reveal choreography plays (capped so a slow fetch never stalls it).
         document.documentElement.style.visibility = '';
         Promise.race([window.ascLiveFirst || Promise.resolve(), new Promise((r) => setTimeout(r, 1200))])
           .then(() => S.done());
-      } else S.handoff('login.html');   // splashed pages bounce under the surface; others redirect as before
+      } else S.bloom(() => S.handoff('login.html'));   // re-cover first: even a watchdog-spent splash bounces under the surface
     })
     .catch(() => { document.documentElement.style.visibility = ''; S.done(); });  // never hard-lock on a load error
   // Sign-out: the menu drawer's "Odjava" ends the REAL Supabase session, then → login
@@ -115,7 +118,9 @@ function animate(){
     const target = +el.dataset.count;
     if (reduce || target === 0){ el.textContent = target; return; }
     const dur = 900, t0 = performance.now();
-    const step = (t) => { const p = Math.min(1,(t-t0)/dur); el.textContent = Math.round(target*(1-Math.pow(1-p,3))); if(p<1) requestAnimationFrame(step); };
+    // Abort if live data claims the element mid-count (setNum strips/changes
+    // data-count) — otherwise the stale loop overwrites the real number.
+    const step = (t) => { if (+el.dataset.count !== target) return; const p = Math.min(1,(t-t0)/dur); el.textContent = Math.round(target*(1-Math.pow(1-p,3))); if(p<1) requestAnimationFrame(step); };
     requestAnimationFrame(step);
   });
   requestAnimationFrame(() => document.querySelectorAll('[data-w]').forEach(i => { i.style.width = i.dataset.w + '%'; }));
