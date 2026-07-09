@@ -16,19 +16,29 @@
 (() => {
   if (/\/login\.html$/.test(location.pathname)) return;
   document.documentElement.style.visibility = 'hidden';
+  // Prag splash interplay: pages that carry the boot script expose window.ASCSplash;
+  // on all other gated pages this stub keeps today's behavior byte-for-byte.
+  const S = window.ASCSplash || { mode: null, done(){}, bloom(cb){ cb && cb(); }, handoff(u){ location.replace(u); } };
   const dbReady = import('../js/db.js');
   dbReady
     .then((m) => m.getSession())
     .then((session) => {
-      if (session) document.documentElement.style.visibility = '';
-      else location.replace('login.html');
+      if (session) {
+        // Restore visibility UNDER the (opaque) splash so the lift can never
+        // reveal an unpainted page; then let first live data land before the
+        // reveal choreography plays (capped so a slow fetch never stalls it).
+        document.documentElement.style.visibility = '';
+        Promise.race([window.ascLiveFirst || Promise.resolve(), new Promise((r) => setTimeout(r, 1200))])
+          .then(() => S.done());
+      } else S.handoff('login.html');   // splashed pages bounce under the surface; others redirect as before
     })
-    .catch(() => { document.documentElement.style.visibility = ''; });  // never hard-lock on a load error
-  // Sign-out: the menu drawer's "Odjava" ends the REAL Supabase session, then → login.
+    .catch(() => { document.documentElement.style.visibility = ''; S.done(); });  // never hard-lock on a load error
+  // Sign-out: the menu drawer's "Odjava" ends the REAL Supabase session, then → login
+  // through the same covered doorway (the MPA white-flash exists in both directions).
   document.addEventListener('click', (e) => {
     if (!e.target.closest('[data-logout],[data-signout]')) return;
     e.preventDefault(); e.stopPropagation();
-    dbReady.then((m) => m.signOut()).catch(() => {}).finally(() => location.replace('login.html'));
+    dbReady.then((m) => m.signOut()).catch(() => {}).finally(() => S.bloom(() => S.handoff('login.html')));
   }, true);
 })();
 
@@ -122,7 +132,14 @@ dtabs.forEach(t => t.addEventListener('click', e => {
   }
 }));
 
-if (document.readyState !== 'loading') animate(); else addEventListener('DOMContentLoaded', animate);
+// Count-ups start at the moment of reveal — under the Prag splash they'd burn
+// out invisibly; asc:reveal fires in the same frame the surface lifts.
+const startAnimate = () => {
+  if (document.documentElement.classList.contains('splashing'))
+    document.addEventListener('asc:reveal', () => animate(), { once: true });
+  else animate();
+};
+if (document.readyState !== 'loading') startAnimate(); else addEventListener('DOMContentLoaded', startAnimate);
 
 // Fluid disclosures (.disc) — tap a header to reveal its content; the height
 // springs open (CSS grid). Delegated, so it also drives lists built after load.

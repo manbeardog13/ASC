@@ -6,6 +6,89 @@
 <title>ASC — Prijava</title>
 <meta name="theme-color" content="#eef0f1">
 <script>try{if(localStorage.getItem('asc.theme')==='dark'){document.documentElement.classList.add('dark');document.querySelector('meta[name="theme-color"]').content='#020305';}}catch(e){}</script>
+<script>
+/* ASC Prag v1 boot — login. Decides the launch mode BEFORE first paint and owns
+   the splash lifecycle (entrance, patience sweep, lift, bloom, watchdog). Modes:
+   handoff = continuing the surface from another page (flag, consumed on read),
+   oauth = returning from Google with tokens in the hash (held until exchanged),
+   cold = fresh tab (full entrance), null = warm visit (no splash at all). */
+(function(){
+  var d=document.documentElement,ss=null;try{ss=sessionStorage}catch(e){}
+  var raw=null;try{raw=ss&&ss.getItem('asc.splash.handoff')}catch(e){}
+  var handoff=!!raw&&(Date.now()-+raw<8000);try{ss&&ss.removeItem('asc.splash.handoff')}catch(e){}
+  var warm=false;try{warm=!!ss&&ss.getItem('asc.splash.warm')==='1'}catch(e){}
+  if(!ss){try{var r=document.referrer&&new URL(document.referrer);warm=!!r&&r.origin===location.origin&&!/login\.html$/.test(r.pathname)}catch(e){}}
+  var oauth=/(^|[#&])(access_token|refresh_token|error|error_description)=/.test(location.hash);
+  var mode=handoff?'handoff':oauth?'oauth':!warm?'cold':null;
+  var MIN={cold:900,oauth:700,handoff:400}[mode]||0;
+  if(matchMedia('(prefers-reduced-motion:reduce)').matches)MIN=mode==='handoff'?0:Math.min(MIN,400);
+  var t0=Date.now(),closing=false;
+  if(mode)d.classList.add('splashing','splash-'+mode);
+  function el(){return document.getElementById('splash')}
+  function strip(){d.classList.remove('splashing','splash-cold','splash-oauth','splash-handoff')}
+  function done(){
+    if(closing||!d.classList.contains('splashing'))return;closing=true;
+    setTimeout(function(){
+      try{ss&&ss.setItem('asc.splash.warm','1')}catch(e){}
+      var s=el();if(s)s.style.display='flex';        /* inline display BEFORE class removal — keeps the fade alive */
+      strip();document.dispatchEvent(new CustomEvent('asc:reveal'));
+      if(s){s.classList.remove('wait','in');s.classList.add('out')}
+      setTimeout(function(){if(s){s.style.display='none';s.classList.remove('out')}closing=false},560);
+    },Math.max(0,MIN-(Date.now()-t0)));
+  }
+  function handoffTo(url){try{ss&&ss.setItem('asc.splash.handoff',String(Date.now()));ss&&ss.setItem('asc.splash.warm','1')}catch(e){}
+    location.replace(String(new URL(url,location.href)))}   /* absolute: immune to caller-realm base-URL resolution */
+  function bloom(cb){var s=el();if(!s){cb&&cb();return}
+    closing=false;mode='handoff';MIN=400;t0=Date.now();
+    strip();d.classList.add('splashing','splash-handoff');
+    s.style.display='';s.classList.remove('out','gone');s.classList.add('in');
+    if(cb)setTimeout(cb,340)}                         /* setTimeout, never transitionend (throttled tabs) */
+  function abort(){var s=el();if(s){s.classList.remove('in');s.classList.add('out');
+    setTimeout(function(){s.classList.add('gone');s.classList.remove('out')},220)}strip()}
+  addEventListener('pageshow',function(e){if(!e.persisted)return;var s=el();
+    if(s){s.classList.remove('in','out','wait');s.classList.add('gone')}strip()});
+  if(mode){setTimeout(function(){var s=el();if(s&&d.classList.contains('splashing'))s.classList.add('wait')},1400);
+    setTimeout(done,4000)}                            /* watchdog: module-proof, splash can never wedge */
+  window.ASCSplash={mode:mode,done:done,handoff:handoffTo,bloom:bloom,abort:abort};
+})();
+</script>
+<style id="asc-splash-css">
+/* ASC Prag v1 — self-contained launch surface. Literal hex only: the first frame
+   must not depend on app.css, fonts, or network. Byte-identical on login+dashboard. */
+#splash{position:fixed;inset:0;z-index:9999;display:none;align-items:center;justify-content:center;visibility:visible!important;background:#eef0f1;pointer-events:auto}
+html.splashing #splash{display:flex}
+html.dark #splash{background:#020305}
+#splash::before{content:"";position:absolute;inset:0;background:radial-gradient(60vmax 56vmax at 6% -14%,rgba(255,122,64,.11),transparent 60%),radial-gradient(54vmax 50vmax at 98% 116%,rgba(84,120,152,.08),transparent 60%),radial-gradient(44vmax 40vmax at 86% -8%,rgba(46,47,49,.12),transparent 62%)}
+html.dark #splash::before{background:radial-gradient(60vmax 56vmax at 6% -14%,rgba(255,110,55,.09),transparent 60%),radial-gradient(54vmax 50vmax at 98% 116%,rgba(90,130,165,.07),transparent 60%),radial-gradient(44vmax 40vmax at 86% -8%,rgba(244,245,247,.04),transparent 62%)}
+#splash::after{content:"";position:absolute;inset:0;opacity:.04;mix-blend-mode:overlay;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E")}
+.sp-core{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;transform:translateY(-4vh)}
+.sp-mark{height:32px;width:auto;filter:drop-shadow(0 3px 8px rgba(255,78,27,.28))}
+html.dark .sp-mark{filter:drop-shadow(0 4px 14px rgba(255,78,27,.38))}
+html.splash-cold .sp-mark,html.splash-oauth .sp-mark{animation:spMark 480ms cubic-bezier(.32,1.4,.36,1) 60ms both}
+html.splash-cold .sp-rule,html.splash-oauth .sp-rule{animation:spRule 560ms cubic-bezier(.22,1,.36,1) 240ms both}
+.sp-rule{width:68px;height:1.5px;border-radius:1px;margin-top:14px;background:linear-gradient(90deg,#ff8a5c,#ff4e1b);box-shadow:0 0 12px rgba(255,78,27,.35)}
+@keyframes spMark{from{opacity:0;transform:scale(.94)}}
+@keyframes spRule{from{transform:scaleX(0)}}
+html.splash-handoff .sp-mark,html.splash-handoff .sp-rule{animation:none}
+#splash.wait .sp-rule{background:linear-gradient(90deg,#ff4e1b 0%,#ffb9a1 50%,#ff4e1b 100%);background-size:220% 100%;animation:spSweep 1200ms linear infinite!important}
+@keyframes spSweep{from{background-position:200% 0}to{background-position:-120% 0}}
+#splash.out{opacity:0;pointer-events:none;transition:opacity 420ms cubic-bezier(.25,1,.5,1) 90ms}
+#splash.out .sp-core{opacity:0;transform:translateY(-4vh) scale(1.045);transition:opacity 420ms cubic-bezier(.25,1,.5,1),transform 420ms cubic-bezier(.25,1,.5,1)}
+#splash.in{display:flex;animation:spCover 260ms cubic-bezier(.22,1,.36,1) both}
+@keyframes spCover{from{opacity:0}}
+#splash.gone{display:none!important}
+@media(prefers-reduced-motion:reduce){
+  html.splash-cold .sp-mark,html.splash-oauth .sp-mark{animation:spFade 200ms linear 0ms both}
+  html.splash-cold .sp-rule,html.splash-oauth .sp-rule{animation:spFade 200ms linear 0ms both}
+  #splash.out{transition:opacity 240ms linear}
+  #splash.out .sp-core{transform:translateY(-4vh);transition:opacity 240ms linear}
+  #splash.in{animation:none;opacity:1}               /* cover trap: global animation:none must not leave the veil invisible */
+  #splash.wait .sp-rule{background:linear-gradient(90deg,#ff8a5c,#ff4e1b);animation:spPulse 1600ms ease-in-out infinite!important}
+}
+@keyframes spFade{from{opacity:0}}
+@keyframes spPulse{0%,100%{opacity:.35}50%{opacity:.75}}
+</style>
+<link rel="preload" href="assets/logo.png" as="image" fetchpriority="high">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;650;700;800&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -71,6 +154,12 @@ body.recover .fieldx.f-email,body.recover .btn-google,body.recover .auth-div,bod
 </style>
 </head>
 <body>
+<div id="splash" aria-hidden="true">
+  <div class="sp-core">
+    <img class="sp-mark" src="assets/logo.png" alt="" width="488" height="92" decoding="sync" fetchpriority="high">
+    <i class="sp-rule"></i>
+  </div>
+</div>
 <span class="canvas" aria-hidden="true"></span>
 <span class="grain" aria-hidden="true"></span>
 
@@ -140,10 +229,31 @@ body.recover .fieldx.f-email,body.recover .btn-google,body.recover .auth-div,bod
   // Prefill the last email used.
   try { const s = localStorage.getItem(REMEMBER); if (s) $('email').value = s; } catch (e) {}
 
-  // Recovery / invite links land back with type=recovery in the hash → set-password.
+  // Entry — the Prag splash (window.ASCSplash, armed pre-paint in <head>) covers
+  // this whole decision; the card is only revealed (S.done → lift) when the user
+  // actually needs it. Recovery / invite links land with type=recovery in the hash.
+  const S = window.ASCSplash;
   const hash = new URLSearchParams(location.hash.slice(1));
-  if (hash.get('type') === 'recovery') setMode('recover');
-  else getSession().then((session) => { if (session) location.replace('dashboard.html'); }).catch(() => {});
+  if (hash.get('type') === 'recovery') { setMode('recover'); S.done(); }
+  else if (hash.get('error')) {
+    // OAuth bounced back with an error — surface it on the card, clean the hash.
+    say(decodeURIComponent((hash.get('error_description') || 'Google prijava nije uspjela.').replace(/\+/g, ' ')), 'err');
+    history.replaceState(null, '', location.pathname);
+    S.done();
+  } else if (S.mode === 'oauth') {
+    // Returning from Google with tokens: NEVER navigate on a bare getSession() —
+    // it can resolve null before the hash is exchanged and the dashboard gate
+    // would bounce us back (visible loop). Race the auth event, cap at 4s.
+    Promise.race([
+      new Promise((res) => {
+        const { data } = supabase.auth.onAuthStateChange((_e, s) => { if (s) { data.subscription.unsubscribe(); res(s); } });
+        getSession().then((s) => { if (s) res(s); }).catch(() => {});
+      }),
+      new Promise((res) => setTimeout(res, 4000, null)),
+    ]).then((s) => { if (s) S.handoff('dashboard.html'); else S.done(); });
+  } else {
+    getSession().then((s) => { s ? S.handoff('dashboard.html') : S.done(); }).catch(() => S.done());
+  }
 
   function setMode(next) {
     mode = next;
@@ -167,11 +277,20 @@ body.recover .fieldx.f-email,body.recover .btn-google,body.recover .auth-div,bod
   $('forgot').addEventListener('click', () => setMode(mode === 'reset' ? 'signin' : 'reset'));
 
   // Continue with Google — return to THIS staging app (not the mock root).
+  // bloom() BEFORE signInWithOAuth: the library assigns location itself, so the
+  // exit to accounts.google.com happens under the settled brand surface instead
+  // of a half-disabled card + browser white flash. No handoff flag on the way
+  // out — the return leg is detected by the token hash.
   $('google').addEventListener('click', async () => {
     say(''); busy(true);
+    S.bloom();
     const redirectTo = location.href.split('#')[0].split('?')[0];
     const { error } = await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo } });
-    if (error) { say(/not enabled|provider/i.test(error.message) ? 'Google prijava još nije uključena u Supabase.' : error.message, 'err'); busy(false); }
+    if (error) {
+      S.abort();
+      say(/not enabled|provider/i.test(error.message) ? 'Google prijava još nije uključena u Supabase.' : error.message, 'err');
+      busy(false);
+    }
   });
 
   form.addEventListener('submit', async (e) => {
@@ -183,18 +302,18 @@ body.recover .fieldx.f-email,body.recover .btn-google,body.recover .auth-div,bod
       if (mode === 'signin') {
         await signIn(email, password);
         try { localStorage.setItem(REMEMBER, email); } catch (e2) {}
-        location.replace('dashboard.html');
+        S.bloom(() => S.handoff('dashboard.html'));    // cover, then swap under the opaque surface
       } else if (mode === 'signup') {
         const { needsConfirm } = await signUp(email, password, name);
         if (needsConfirm) { say('Račun napravljen — provjeri email za potvrdu, pa se prijavi.', 'ok'); setMode('signin'); }
-        else location.replace('dashboard.html');
+        else S.bloom(() => S.handoff('dashboard.html'));
       } else if (mode === 'reset') {
         await sendPasswordReset(email);
         say('Link za reset poslan na ' + email + '.', 'ok'); setMode('signin');
       } else if (mode === 'recover') {
         await updatePassword(password);
         say('Lozinka spremljena — prijavljujem te…', 'ok');
-        setTimeout(() => location.replace('dashboard.html'), 700);
+        setTimeout(() => S.bloom(() => S.handoff('dashboard.html')), 700);
       }
     } catch (err) {
       say(err.message || 'Nešto je pošlo po zlu — pokušaj ponovno.', 'err');

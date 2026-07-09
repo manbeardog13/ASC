@@ -30,12 +30,27 @@ function daysBadge(dateStr) {
   return d.toLocaleDateString('hr-HR', { day: 'numeric', month: 'short' });
 }
 
-// Set a number, cancelling the count-up so it doesn't fight our real value.
-function setNum(el, val) { if (!el) return; el.removeAttribute('data-count'); el.textContent = String(val); }
+// Set a number. Normally cancels the count-up so it doesn't fight our real
+// value — but while the Prag splash still holds the reveal (html.splashing),
+// the count-ups haven't run yet, so we feed the REAL value into data-count and
+// let the held animation count up to it the moment the surface lifts.
+function setNum(el, val) {
+  if (!el) return;
+  if (document.documentElement.classList.contains('splashing') && Number.isFinite(+val)) {
+    el.dataset.count = String(+val);
+    return;
+  }
+  el.removeAttribute('data-count'); el.textContent = String(val);
+}
+
+// The gate in app.js races this against a 1200ms cap before lifting the splash,
+// so the dashboard usually reveals with live numbers already in place.
+let liveFirstDone;
+window.ascLiveFirst = new Promise((r) => { liveFirstDone = r; });
 
 (async () => {
   const session = await getSession().catch(() => null);
-  if (!session) return;                       // the gate in app.js handles the redirect
+  if (!session) { liveFirstDone(); return; }  // the gate in app.js handles the redirect
 
   // ---- Greeting + avatar from the signed-in profile ----
   loadMyProfile().then((p) => {
@@ -51,6 +66,7 @@ function setNum(el, val) { if (!el) return; el.removeAttribute('data-count'); el
     [health, counts, sets] = await Promise.all([healthStats(), countsByStatus(), listStorageSets()]);
   } catch (e) {
     console.warn('[live] dashboard data failed — keeping placeholder markup:', e);
+    liveFirstDone();
     return;
   }
 
@@ -111,4 +127,6 @@ function setNum(el, val) { if (!el) return; el.removeAttribute('data-count'); el
       const pl = q('.pl', mini); if (pl) pl.textContent = s.vehicle?.plate || s.public_code;
     });
   }
+
+  liveFirstDone();   // real data is in the DOM — the splash may lift into live numbers
 })();

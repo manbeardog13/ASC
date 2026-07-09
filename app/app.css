@@ -68,6 +68,11 @@ html.dark .canvas{
 @keyframes sheetIn{from{opacity:0;transform:translateY(24px) scale(.985)}}
 @keyframes rise{from{opacity:0;transform:translateY(12px)}}
 .reveal{animation:rise 620ms var(--smooth) both}
+/* Prag splash: while the launch surface is up, the page's entrance choreography
+   holds at frame 0 (paused freezes the DELAY clock too) and plays from zero the
+   instant html.splashing drops — the app's own entrance IS the splash's second
+   act, never a double animation, never a dead reveal behind the veil. */
+html.splashing .reveal,html.splashing .shell,html.splashing .auth-card{animation-play-state:paused}
 
 /* ============================== Top bar (real logo) ====================== */
 .top{display:flex;align-items:center;gap:14px;height:40px;margin-bottom:var(--gap);padding:0 4px}
