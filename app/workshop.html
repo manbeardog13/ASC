@@ -6,6 +6,12 @@
 <title>ASC — Radionica (preview)</title>
 <meta name="theme-color" content="#edf0f5">
 <script>try{if(localStorage.getItem('asc.theme')==='dark'){document.documentElement.classList.add('dark');document.querySelector('meta[name="theme-color"]').content='#020305';}}catch(e){}</script>
+<link rel="icon" href="assets/favicon-32.png" sizes="32x32">
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;650;700;800&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -159,7 +165,7 @@ html.dark .ws-btn.is-dark{background:radial-gradient(120% 130% at 90% -20%,rgba(
 
       <label class="ws-search">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6.8"/><path d="M20.6 20.6L16 16"/><path d="M8.2 11a2.8 2.8 0 012.8-2.8"/></svg>
-        <input id="wsSearch" type="search" value="DU" placeholder="Traži ime, registraciju, dimenziju, DOT, lokaciju…" autocomplete="off" aria-label="Traži ime, registraciju, dimenziju, DOT, lokaciju…">
+        <input id="wsSearch" type="search" placeholder="Traži ime, registraciju, dimenziju, DOT, lokaciju…" autocomplete="off" aria-label="Traži ime, registraciju, dimenziju, DOT, lokaciju…">
       </label>
     </div>
 
@@ -167,26 +173,26 @@ html.dark .ws-btn.is-dark{background:radial-gradient(120% 130% at 90% -20%,rgba(
     <div id="wsResults" class="ws-results reveal" style="animation-delay:170ms"></div>
 
     <div class="ws-grid reveal" style="animation-delay:220ms">
-      <a class="ws-btn is-accent" href="#">
+      <a class="ws-btn is-accent" href="scan.html">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.2V6.4A2.4 2.4 0 016.4 4h1.8M15.8 4h1.8A2.4 2.4 0 0120 6.4v1.8M20 15.8v1.8a2.4 2.4 0 01-2.4 2.4h-1.8M8.2 20H6.4A2.4 2.4 0 014 17.6v-1.8"/><path d="M7.2 12h6.6"/><path d="M16.8 12h.01"/></svg>
         <span>Skeniraj</span>
       </a>
-      <a class="ws-btn" href="#">
+      <a class="ws-btn" href="checkin.html">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5.4v13.2M5.4 12h13.2"/></svg>
         <span>Zaprimi</span>
       </a>
-      <a class="ws-btn" href="#">
+      <a class="ws-btn" href="warehouse.html">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21.2s-7-5.5-7-11a7 7 0 0114 0c0 5.5-7 11-7 11z"/><circle cx="12" cy="10" r="2.4"/></svg>
         <span>Skladište</span>
       </a>
-      <a class="ws-btn" href="#">
+      <a class="ws-btn" href="assistant.html">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.4Q13.4 9.6 20.6 12 13.4 14.4 12 20.6 10.6 14.4 3.4 12 10.6 9.6 12 3.4Z"/><path d="M19 4.4v.01"/></svg>
         <span>ASC Agent</span>
       </a>
-      <a class="ws-btn is-dark" href="#">
+      <a class="ws-btn is-dark" href="reminders.html">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.6"/><path d="M12 7.2V12l3.2 2"/></svg>
         <span>Za preuzimanje</span>
-        <b class="ws-btn-num"><span data-count="17">0</span></b>
+        <b class="ws-btn-num"><span data-count="0">0</span></b>
       </a>
     </div>
   </div>
@@ -201,71 +207,6 @@ html.dark .ws-btn.is-dark{background:radial-gradient(120% 130% at 90% -20%,rgba(
 </nav>
 
 <script src="app.js"></script>
-<script>
-/* ---- Workshop-only enhancement: live filtering of the oversized rows + mic
-   press feedback. Presentational preview data (Dubrovnik names, DU plates,
-   ASC-2026 codes). Shared behaviour (theme, count-up, dock) stays in app.js. */
-(function(){
-  var SETS = [
-    { code:"ASC-2026-0248", who:"Ivan Perić",        plate:"DU-234-AB", status:"Spremljeno",  season:"Zimske",       loc:"Zona A · Regal 3 · Polica 2" },
-    { code:"ASC-2026-0244", who:"Ana Kovačević",     plate:"DU-881-KL", status:"Rezervirano", season:"Ljetne",       loc:"Zona B · Regal 1 · Polica 4" },
-    { code:"ASC-2026-0239", who:"Marko Babić",       plate:"DU-455-MN", status:"Spremljeno",  season:"Zimske",       loc:"Zona A · Regal 5 · Mjesto 7" },
-    { code:"ASC-2026-0231", who:"Petra Novak",       plate:"DU-712-CD", status:"Spremljeno",  season:"Cjelogodišnje", loc:"Zona C · Regal 2 · Polica 1" },
-    { code:"ASC-2026-0226", who:"Luka Marić",        plate:"DU-198-EF", status:"Rezervirano", season:"Ljetne",       loc:"" },
-    { code:"ASC-2026-0219", who:"Nikolina Vlašić",   plate:"DU-540-GH", status:"Spremljeno",  season:"Zimske",       loc:"Zona B · Regal 4 · Polica 3" }
-  ];
-  function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); }
-  function seasonClass(s){ return s==="Ljetne" ? "" : (s==="Zimske" ? "win" : "all"); }
-  function row(s){
-    var loc = s.loc
-      ? '<span class="ws-loc"><span class="ws-loc-k">Lokacija</span><span class="ws-loc-v">'+esc(s.loc).replace(/ · /g,"<br>")+'</span></span>'
-      : '<span class="ws-loc none"><span class="ws-loc-k">Lokacija</span><span class="ws-loc-v">Bez lokacije</span></span>';
-    return '<a class="ws-row" href="set-detail.html?code=' + encodeURIComponent(s.code) + '">'
-      + '<span class="ws-row-body">'
-      +   '<b>'+esc(s.code)+'</b>'
-      +   '<span class="ws-row-who">'+esc(s.who)+' · '+esc(s.plate)+'</span>'
-      +   '<span class="ws-row-meta"><small>'+esc(s.status)+'</small><span class="chip '+seasonClass(s.season)+'">'+esc(s.season)+'</span></span>'
-      + '</span>'
-      + loc
-      + '</a>';
-  }
-  var results = document.getElementById("wsResults");
-  var input = document.getElementById("wsSearch");
-  var count = document.getElementById("wsCount");
-  function paint(){
-    var q = (input.value||"").trim().toLowerCase();
-    if(!q){ results.innerHTML=""; count.textContent=""; return; }
-    var rows = SETS.filter(function(s){
-      return (s.code+" "+s.who+" "+s.plate+" "+s.status+" "+s.season+" "+s.loc).toLowerCase().indexOf(q) > -1;
-    }).slice(0,8);
-    if(rows.length){
-      results.innerHTML = rows.map(row).join("");
-      var n = rows.length;
-      var word = n===1 ? "komplet" : (n>=2 && n<=4 ? "kompleta" : "kompleta");
-      count.textContent = n+" "+word;
-    } else {
-      results.innerHTML = '<div class="ws-none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6.8"/><path d="M20.6 20.6L16 16"/></svg> Ništa za „'+esc(input.value.trim())+'”</div>';
-      count.textContent = "Ništa za „"+input.value.trim()+"”";
-    }
-  }
-  input.addEventListener("input", paint);
-  // A voice/typed command from the global ASC Agent arrives as ?q= — apply it.
-  try {
-    var q = new URLSearchParams(location.search).get("q");
-    if (q) { input.value = q; setTimeout(function(){ input.scrollIntoView({ behavior:"smooth", block:"center" }); }, 200); }
-  } catch(e){}
-  paint();
-
-  // Mic press feedback (no real speech in the preview).
-  var mic = document.getElementById("wsMic");
-  var sub = document.getElementById("wsMicSub");
-  var idle = "Dodirnite pa recite registraciju, ime ili kôd";
-  mic.addEventListener("click", function(){
-    var on = mic.classList.toggle("is-listening");
-    mic.setAttribute("aria-pressed", on ? "true" : "false");
-    sub.textContent = on ? "Slušam…" : idle;
-  });
-})();
-</script>
+<script type="module" src="live-workshop.js"></script>
 </body>
 </html>

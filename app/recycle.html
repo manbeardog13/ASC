@@ -6,16 +6,24 @@
 <title>ASC — Koš za smeće (preview)</title>
 <meta name="theme-color" content="#edf0f5">
 <script>try{if(localStorage.getItem('asc.theme')==='dark'){document.documentElement.classList.add('dark');document.querySelector('meta[name="theme-color"]').content='#020305';}}catch(e){}</script>
+<link rel="icon" href="assets/favicon-32.png" sizes="32x32">
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;650;700;800&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
 <!--
-  ASC recycle bin — isolated preview. Shared design system in app.css + app.js
+  ASC recycle bin — live page. Shared design system in app.css + app.js
   (v6 "Hanssen"): tokens, glass shell, header, notched corner tabs, card surface,
   chips, iOS dock, theme toggle + count-up. Only this page's list/row/button
   layout stays inline below. Quiet, secondary tone — NO green/red action imagery
   here (those belong to check-in / pickup). Deleted-set thumbs are desaturated to
   read as archived. Croatian copy is grounded in js/i18n.js (rec.* strings).
+  Rows are rendered by live-recycle.js from real Supabase data; the markup
+  ships with the calm empty state ON so an empty database looks intentional.
 -->
 <link rel="stylesheet" href="app.css">
 <style>
@@ -126,99 +134,16 @@
     <span class="tab-tl">koš</span>
     <h3>
       <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9.5 7V5.4A1.4 1.4 0 0110.9 4h2.2A1.4 1.4 0 0114.5 5.4V7M6 7l.9 12.1A1.9 1.9 0 008.8 21h6.4a1.9 1.9 0 001.9-1.9L18 7"/></svg>
-      Koš za smeće <span class="count-badge" id="binCount" data-count="5">0</span>
+      Koš za smeće <span class="count-badge" id="binCount" data-count="0" style="display:none">0</span>
     </h3>
 
     <div class="rec-list" id="binList">
-
-      <div class="rec-row" data-code="ASC-2026-0231">
-        <span class="rec-thumb" style="background-image:url('assets/set-1.jpg')"></span>
-        <div class="rec-body">
-          <div class="rec-top"><span class="rec-code">ASC-2026-0231</span><span class="rec-status">Spremljeno</span><span class="chip win">Zimske</span></div>
-          <div class="rec-who">Ivan Perić · DU-512-AB</div>
-          <div class="rec-when">Obrisano 2. srp 2026.</div>
-        </div>
-        <div class="rec-actions">
-          <button class="rbtn" data-restore aria-label="Vrati komplet ASC-2026-0231">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5v5h5"/><path d="M4.6 14.5A7.5 7.5 0 105 8"/></svg>Vrati
-          </button>
-          <button class="rbtn danger" data-purge aria-label="Trajno obriši komplet ASC-2026-0231">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9.5 7V5.4A1.4 1.4 0 0110.9 4h2.2A1.4 1.4 0 0114.5 5.4V7M6 7l.9 12.1A1.9 1.9 0 008.8 21h6.4a1.9 1.9 0 001.9-1.9L18 7"/></svg><span class="lab">Obriši</span>
-          </button>
-        </div>
-      </div>
-
-      <div class="rec-row" data-code="ASC-2026-0219">
-        <span class="rec-thumb" style="background-image:url('assets/set-2.jpg')"></span>
-        <div class="rec-body">
-          <div class="rec-top"><span class="rec-code">ASC-2026-0219</span><span class="rec-status">Preuzeto</span><span class="chip">Ljetne</span></div>
-          <div class="rec-who">Ana Kovačević · DU-773-KL</div>
-          <div class="rec-when">Obrisano 28. lip 2026.</div>
-        </div>
-        <div class="rec-actions">
-          <button class="rbtn" data-restore aria-label="Vrati komplet ASC-2026-0219">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5v5h5"/><path d="M4.6 14.5A7.5 7.5 0 105 8"/></svg>Vrati
-          </button>
-          <button class="rbtn danger" data-purge aria-label="Trajno obriši komplet ASC-2026-0219">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9.5 7V5.4A1.4 1.4 0 0110.9 4h2.2A1.4 1.4 0 0114.5 5.4V7M6 7l.9 12.1A1.9 1.9 0 008.8 21h6.4a1.9 1.9 0 001.9-1.9L18 7"/></svg><span class="lab">Obriši</span>
-          </button>
-        </div>
-      </div>
-
-      <div class="rec-row" data-code="ASC-2026-0205">
-        <span class="rec-thumb" style="background-image:url('assets/set-3.jpg')"></span>
-        <div class="rec-body">
-          <div class="rec-top"><span class="rec-code">ASC-2026-0205</span><span class="rec-status">Spremljeno</span><span class="chip all">Cjelogodišnje</span></div>
-          <div class="rec-who">Marko Babić · DU-341-MN</div>
-          <div class="rec-when">Obrisano 24. lip 2026.</div>
-        </div>
-        <div class="rec-actions">
-          <button class="rbtn" data-restore aria-label="Vrati komplet ASC-2026-0205">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5v5h5"/><path d="M4.6 14.5A7.5 7.5 0 105 8"/></svg>Vrati
-          </button>
-          <button class="rbtn danger" data-purge aria-label="Trajno obriši komplet ASC-2026-0205">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9.5 7V5.4A1.4 1.4 0 0110.9 4h2.2A1.4 1.4 0 0114.5 5.4V7M6 7l.9 12.1A1.9 1.9 0 008.8 21h6.4a1.9 1.9 0 001.9-1.9L18 7"/></svg><span class="lab">Obriši</span>
-          </button>
-        </div>
-      </div>
-
-      <div class="rec-row" data-code="ASC-2026-0198">
-        <span class="rec-thumb" style="background-image:url('assets/set-4.jpg')"></span>
-        <div class="rec-body">
-          <div class="rec-top"><span class="rec-code">ASC-2026-0198</span><span class="rec-status">Rezervirano</span><span class="chip win">Zimske</span></div>
-          <div class="rec-who">Petra Novak · DU-088-CD</div>
-          <div class="rec-when">Obrisano 19. lip 2026.</div>
-        </div>
-        <div class="rec-actions">
-          <button class="rbtn" data-restore aria-label="Vrati komplet ASC-2026-0198">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5v5h5"/><path d="M4.6 14.5A7.5 7.5 0 105 8"/></svg>Vrati
-          </button>
-          <button class="rbtn danger" data-purge aria-label="Trajno obriši komplet ASC-2026-0198">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9.5 7V5.4A1.4 1.4 0 0110.9 4h2.2A1.4 1.4 0 0114.5 5.4V7M6 7l.9 12.1A1.9 1.9 0 008.8 21h6.4a1.9 1.9 0 001.9-1.9L18 7"/></svg><span class="lab">Obriši</span>
-          </button>
-        </div>
-      </div>
-
-      <div class="rec-row" data-code="ASC-2026-0186">
-        <span class="rec-thumb" style="background-image:url('assets/set-5.jpg')"></span>
-        <div class="rec-body">
-          <div class="rec-top"><span class="rec-code">ASC-2026-0186</span><span class="rec-status">Preuzeto</span><span class="chip">Ljetne</span></div>
-          <div class="rec-who">Luka Marić · DU-624-EF</div>
-          <div class="rec-when">Obrisano 12. lip 2026.</div>
-        </div>
-        <div class="rec-actions">
-          <button class="rbtn" data-restore aria-label="Vrati komplet ASC-2026-0186">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5v5h5"/><path d="M4.6 14.5A7.5 7.5 0 105 8"/></svg>Vrati
-          </button>
-          <button class="rbtn danger" data-purge aria-label="Trajno obriši komplet ASC-2026-0186">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9.5 7V5.4A1.4 1.4 0 0110.9 4h2.2A1.4 1.4 0 0114.5 5.4V7M6 7l.9 12.1A1.9 1.9 0 008.8 21h6.4a1.9 1.9 0 001.9-1.9L18 7"/></svg><span class="lab">Obriši</span>
-          </button>
-        </div>
-      </div>
-
+      <!-- Rows come from live-recycle.js (real Supabase data). With an empty
+           database this list stays empty and the calm state below is all the
+           user sees — no mock content ever ships to the customer. -->
     </div>
 
-    <div class="rec-empty" id="binEmpty">
+    <div class="rec-empty on" id="binEmpty">
       <span class="ei"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9.5 7V5.4A1.4 1.4 0 0110.9 4h2.2A1.4 1.4 0 0114.5 5.4V7M6 7l.9 12.1A1.9 1.9 0 008.8 21h6.4a1.9 1.9 0 001.9-1.9L18 7"/></svg></span>
       <h4>Koš je prazan</h4>
       <p>Ovdje se pojavljuju obrisani kompleti kako bi se pogreške lako ispravile.</p>
@@ -240,58 +165,6 @@
 </nav>
 
 <script src="app.js"></script>
-<script>
-/* ---- Recycle-page interactions (restore / arm-and-purge / empty state) ----- */
-(function(){
-  const reduce = matchMedia('(prefers-reduced-motion:reduce)').matches;
-  const list   = document.getElementById('binList');
-  const empty  = document.getElementById('binEmpty');
-  const badge  = document.getElementById('binCount');
-  const toast  = document.getElementById('toast');
-  const toastMsg = document.getElementById('toastMsg');
-  let toastTimer;
-
-  function showToast(msg){
-    toastMsg.textContent = msg;
-    toast.classList.add('show');
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => toast.classList.remove('show'), 2200);
-  }
-  function count(){ return list.querySelectorAll('.rec-row').length; }
-  function refresh(){
-    const n = count();
-    badge.textContent = n;               // count-up already ran; keep in sync
-    badge.style.display = n ? '' : 'none';
-    empty.classList.toggle('on', n === 0);
-  }
-  function removeRow(row, msg){
-    row.classList.add('leaving');
-    const done = () => { row.remove(); refresh(); };
-    if (reduce){ done(); } else { setTimeout(done, 300); }
-    showToast(msg);
-  }
-
-  list.addEventListener('click', (e) => {
-    const restore = e.target.closest('[data-restore]');
-    const purge   = e.target.closest('[data-purge]');
-    if (restore){
-      removeRow(restore.closest('.rec-row'), 'Komplet vraćen');
-      return;
-    }
-    if (purge){
-      // Two-step confirm: first tap arms the danger button, second tap fires.
-      if (!purge.classList.contains('arm')){
-        purge.classList.add('arm');
-        purge.querySelector('.lab').textContent = 'Potvrdi?';
-        setTimeout(() => {
-          if (purge.isConnected){ purge.classList.remove('arm'); purge.querySelector('.lab').textContent = 'Obriši'; }
-        }, 2600);
-        return;
-      }
-      removeRow(purge.closest('.rec-row'), 'Trajno obrisano');
-    }
-  });
-})();
-</script>
+<script type="module" src="live-recycle.js"></script>
 </body>
 </html>

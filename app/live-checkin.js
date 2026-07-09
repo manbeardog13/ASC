@@ -1,0 +1,297 @@
+// ============================================================================
+// live-checkin.js — wires the check-in form (Zaprimi) to REAL Supabase data
+// via ../js/db.js. The auth gate in app.js already guarantees a session before
+// this runs. Every fetch is guarded: a failure keeps the page's markup (hero
+// zeros, static skeleton) and warns instead of blanking.
+//
+// Two modes, decided by the prefill peeked in checkin.html (window.__ascPrefill,
+// captured BEFORE the inline reader consumes sessionStorage 'asc.prefill'):
+//   create (default) — createStorageSet(form) → toast 'Spremljeno <code>'
+//   edit (edit:true + code) — loadStorageSet for ids, then updateCustomer /
+//     updateVehicle / updateStorageSet / replaceTires → toast 'Ažurirano <code>'
+// Both navigate to set-detail.html?code=<code> after ~900ms.
+// ============================================================================
+import {
+  getSession, healthStats, createStorageSet, loadStorageSet,
+  updateCustomer, updateVehicle, updateStorageSet, replaceTires,
+} from '../js/db.js';
+// db.js's createStorageSet persists the location via store.rememberLocation →
+// localStorage 'asc.recentLocations'. Loading here (same module instance as
+// db.js uses) hydrates the in-memory list so saving doesn't clobber history.
+import { loadRecentLocations } from '../js/store.js';
+
+const $ = (id) => document.getElementById(id);
+const q = (s, r = document) => r.querySelector(s);
+const qa = (s, r = document) => [...r.querySelectorAll(s)];
+const showToast = (msg) => {
+  if (typeof window.ascToast === 'function') window.ascToast(msg);
+  else console.warn('[live] toast unavailable:', msg);
+};
+
+// Splash-aware number setter (same contract as live-dashboard.js): while the
+// Prag splash holds the reveal, feed the real value into data-count so the
+// held count-up lands on it; otherwise claim the element outright.
+function setNum(el, val) {
+  if (!el) return;
+  if (document.documentElement.classList.contains('splashing') && Number.isFinite(+val)) {
+    el.dataset.count = String(+val);
+    return;
+  }
+  el.removeAttribute('data-count'); el.textContent = String(val);
+}
+
+// ---- Edit mode (module-level flag) ----------------------------------------
+const pf = window.__ascPrefill || null;
+const editMode = Boolean(pf && pf.edit && pf.code);
+const editCode = editMode ? String(pf.code) : null;
+let editCtx = null; // { setId, customerId, vehicleId } once the set is loaded
+
+async function ensureEditCtx() {
+  if (editCtx && editCtx.setId) return editCtx;
+  const data = await loadStorageSet(editCode);
+  editCtx = {
+    setId: data.id,
+    customerId: data.vehicle?.customer?.id ?? null,
+    vehicleId: data.vehicle?.id ?? null,
+  };
+  return editCtx;
+}
+
+// ---- Recent-location chips (localStorage 'asc.recentLocations') ------------
+const PIN_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-5.5-7-11a7 7 0 0114 0c0 5.5-7 11-7 11z"/><circle cx="12" cy="10" r="2.4"/></svg>';
+
+function renderRecentChips() {
+  const wrap = $('recentLoc');
+  if (!wrap) return;
+  let recent = [];
+  try { recent = loadRecentLocations() || []; } catch (e) { recent = []; }
+  recent = recent.filter((l) => l && (l.zone || l.rack || l.shelf || l.slot));
+  if (!recent.length) { wrap.hidden = true; return; } // no real history yet — hide the mock chips (visual silence)
+  wrap.hidden = false;
+  wrap.textContent = '';
+  recent.forEach((loc) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'sugg';
+    btn.innerHTML = PIN_SVG; // static trusted markup; the label below is a text node
+    btn.appendChild(document.createTextNode([loc.zone, loc.rack, loc.shelf, loc.slot].filter(Boolean).join(' · ')));
+    btn.addEventListener('click', () => {
+      if ($('s_zone')) $('s_zone').value = loc.zone || '';
+      if ($('s_rack')) $('s_rack').value = loc.rack || '';
+      if ($('s_shelf')) $('s_shelf').value = loc.shelf || '';
+      if ($('s_slot')) $('s_slot').value = loc.slot || '';
+    });
+    wrap.appendChild(btn);
+  });
+}
+
+// ---- Edit chrome: same structures, edit wording ----------------------------
+function enterEditChrome() {
+  const codeEl = q('.ci-stats b.code');
+  if (codeEl) codeEl.textContent = editCode;
+  const codeLabel = codeEl && codeEl.nextElementSibling;
+  if (codeLabel) codeLabel.textContent = 'KÔD SETA';
+  const btn = q('#ci .btn-primary');
+  if (btn && btn.lastChild && btn.lastChild.nodeType === 3) btn.lastChild.textContent = 'Spremi promjene';
+}
+
+// Fill the form from the loaded set WITHOUT overwriting anything the prefill
+// bridge (or the employee) already typed — edit-submit writes the full form
+// back, so every field must reflect current data before the first save.
+function fillFromSet(data) {
+  const fillIfEmpty = (id, v) => {
+    const el = $(id);
+    if (el && !String(el.value || '').trim() && v != null && v !== '') el.value = v;
+  };
+  const cust = data.vehicle?.customer || {};
+  const veh = data.vehicle || {};
+  fillIfEmpty('c_name', cust.name); fillIfEmpty('c_phone', cust.phone);
+  fillIfEmpty('c_email', cust.email); fillIfEmpty('c_address', cust.address);
+  fillIfEmpty('v_make', veh.make); fillIfEmpty('v_model', veh.model);
+  fillIfEmpty('v_year', veh.year); fillIfEmpty('v_plate', veh.plate);
+  fillIfEmpty('v_vin', veh.vin);
+  fillIfEmpty('s_zone', data.zone); fillIfEmpty('s_rack', data.rack);
+  fillIfEmpty('s_shelf', data.shelf); fillIfEmpty('s_slot', data.slot);
+  fillIfEmpty('s_out', data.expected_out_date); fillIfEmpty('s_fee', data.fee);
+  fillIfEmpty('s_notes', data.notes); fillIfEmpty('s_bolts', data.bolts_location);
+
+  const onr = $('s_onrims');
+  if (onr && onr.checked !== Boolean(data.on_rims)) {
+    onr.checked = Boolean(data.on_rims);
+    onr.dispatchEvent(new Event('change')); // reveals/hides the rim-type field via the page's own listener
+  }
+  if (data.on_rims) fillIfEmpty('s_rimtype', data.rim_type);
+  if ($('s_paid')) $('s_paid').checked = Boolean(data.paid);
+  if ($('s_hubcaps')) $('s_hubcaps').checked = Boolean(data.hubcaps_stored);
+  if (!(pf && pf.season) && data.season) {
+    const sb = document.querySelector('[data-season="' + data.season + '"]');
+    if (sb) sb.click();
+  }
+
+  // Tires: size the rows to the set (the page's own change-listener re-renders,
+  // preserving whatever is already typed), then fill blanks from the saved tires.
+  const qty = Math.max(1, Math.min(8, Number(data.quantity) || (data.tires?.length || 4)));
+  const qtyEl = $('s_qty');
+  if (qtyEl && Number(qtyEl.value) !== qty) {
+    qtyEl.value = qty;
+    qtyEl.dispatchEvent(new Event('change'));
+  }
+  const rows = qa('#tires .tire-edit-row');
+  (data.tires || []).slice(0, rows.length).forEach((t, i) => {
+    const r = rows[i];
+    const pos = q('[data-t="position"]', r);
+    if (pos && t.position) pos.value = t.position;
+    const setIfEmpty = (sel, v) => {
+      const el = q(sel, r);
+      if (el && !String(el.value || '').trim() && v != null && v !== '') el.value = v;
+    };
+    setIfEmpty('[data-t="size"]', t.size);
+    setIfEmpty('[data-t="tread_mm"]', t.tread_mm);
+    setIfEmpty('[data-t="brand"]', t.brand);
+  });
+}
+
+// ---- Read the whole form into the shape db.js expects -----------------------
+function readForm() {
+  const val = (id) => { const el = $(id); return el ? String(el.value || '').trim() : ''; };
+  const num = (id) => {
+    const raw = val(id);
+    if (raw === '') return null;
+    const n = Number(raw);
+    return Number.isFinite(n) ? n : null;
+  };
+  const seasonBtn = document.querySelector('[data-season][aria-pressed="true"]');
+  const onRims = Boolean($('s_onrims') && $('s_onrims').checked);
+  const tires = qa('#tires .tire-edit-row').map((r) => {
+    const g = (sel) => { const el = q(sel, r); return el ? String(el.value || '').trim() : ''; };
+    const tread = g('[data-t="tread_mm"]');
+    const treadNum = tread === '' ? null : Number(tread);
+    return {
+      position: g('[data-t="position"]'),
+      size: g('[data-t="size"]'),
+      brand: g('[data-t="brand"]'),
+      tread_mm: Number.isFinite(treadNum) ? treadNum : null,
+    };
+  });
+  return {
+    customer: { name: val('c_name'), phone: val('c_phone'), email: val('c_email'), address: val('c_address') },
+    vehicle: {
+      make: val('v_make'), model: val('v_model'), year: num('v_year'),
+      plate: val('v_plate').toUpperCase(), vin: val('v_vin').toUpperCase(),
+    },
+    set: {
+      season: seasonBtn ? seasonBtn.dataset.season : 'winter',
+      on_rims: onRims,
+      rim_type: onRims ? val('s_rimtype') : '',
+      quantity: Math.max(1, Math.min(8, Number(val('s_qty')) || 4)),
+      zone: val('s_zone'), rack: val('s_rack'), shelf: val('s_shelf'), slot: val('s_slot'),
+      check_in_date: new Date().toISOString().slice(0, 10),
+      expected_out_date: val('s_out'),
+      fee: num('s_fee'),
+      paid: Boolean($('s_paid') && $('s_paid').checked),
+      notes: val('s_notes'),
+      bolts_location: val('s_bolts'),
+      hubcaps_stored: Boolean($('s_hubcaps') && $('s_hubcaps').checked),
+    },
+    tires,
+  };
+}
+
+// ---- Submit: the one write path ---------------------------------------------
+const form = $('ci');
+const submitBtn = form ? form.querySelector('.btn-primary') : null;
+let inFlight = false;
+
+function goToSet(code) {
+  setTimeout(() => { location.href = 'set-detail.html?code=' + encodeURIComponent(code); }, 900);
+}
+
+if (form) form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  if (inFlight) return;
+  const f = readForm();
+  if (!f.customer.name) {
+    if ($('c_name')) $('c_name').focus();
+    showToast('Ime kupca je obavezno.');
+    return;
+  }
+  inFlight = true;
+  if (submitBtn) { submitBtn.disabled = true; submitBtn.setAttribute('aria-busy', 'true'); }
+  try {
+    if (editMode) {
+      const ctx = await ensureEditCtx();
+      const c = f.customer, v = f.vehicle, s = f.set;
+      if (ctx.customerId) {
+        await updateCustomer(ctx.customerId, {
+          name: c.name, phone: c.phone || null, email: c.email || null, address: c.address || null,
+        });
+      } else console.warn('[live] no customer id on', editCode, '— customer fields not saved');
+      if (ctx.vehicleId) {
+        await updateVehicle(ctx.vehicleId, {
+          make: v.make || null, model: v.model || null, year: v.year, plate: v.plate || null, vin: v.vin || null,
+        });
+      } else console.warn('[live] no vehicle id on', editCode, '— vehicle fields not saved');
+      await updateStorageSet(ctx.setId, {
+        season: s.season, on_rims: s.on_rims,
+        rim_type: s.on_rims ? s.rim_type || null : null,
+        quantity: s.quantity,
+        zone: s.zone || null, rack: s.rack || null, shelf: s.shelf || null, slot: s.slot || null,
+        expected_out_date: s.expected_out_date || null,
+        fee: s.fee, paid: s.paid, notes: s.notes || null,
+        bolts_location: s.bolts_location || null, hubcaps_stored: s.hubcaps_stored,
+        // check_in_date intentionally untouched: editing must not re-date the intake
+      });
+      await replaceTires(ctx.setId, f.tires);
+      showToast('Ažurirano ' + editCode);
+      goToSet(editCode);
+    } else {
+      const code = await createStorageSet(f);
+      renderRecentChips(); // createStorageSet just persisted this location
+      showToast('Spremljeno ' + code);
+      goToSet(code);
+    }
+    // stay disabled — navigation is in flight; re-enabling would invite doubles
+  } catch (err) {
+    console.warn('[live] save failed — keeping the form:', err);
+    showToast(err && err.message ? err.message : 'Spremanje nije uspjelo. Pokušajte ponovno.');
+    inFlight = false;
+    if (submitBtn) { submitBtn.disabled = false; submitBtn.removeAttribute('aria-busy'); }
+  }
+});
+
+// ---- First paint: hero numbers + chips + (in edit mode) the current set ----
+// The gate in app.js races this against a 1200ms cap before lifting the splash.
+let liveFirstDone;
+window.ascLiveFirst = new Promise((r) => { liveFirstDone = r; });
+
+(async () => {
+  const session = await getSession().catch(() => null);
+  if (!session) { liveFirstDone(); return; } // the gate in app.js handles the redirect
+
+  try { renderRecentChips(); } catch (e) { console.warn('[live] recent locations failed:', e); }
+  if (editMode) enterEditChrome();
+
+  try {
+    const h = await healthStats();
+    const nums = qa('.ci-stats b[data-count]');
+    setNum(nums[0], h.inventory);        // NA ČUVANJU
+    setNum(nums[1], h.todayCheckIns);    // DANAS ZAPRIMLJENO
+  } catch (e) {
+    console.warn('[live] hero stats failed — keeping zeros:', e);
+  }
+  liveFirstDone();
+
+  if (editMode) {
+    try {
+      const data = await loadStorageSet(editCode);
+      editCtx = {
+        setId: data.id,
+        customerId: data.vehicle?.customer?.id ?? null,
+        vehicleId: data.vehicle?.id ?? null,
+      };
+      fillFromSet(data);
+    } catch (e) {
+      console.warn('[live] could not preload', editCode, '(will retry at save):', e);
+    }
+  }
+})();

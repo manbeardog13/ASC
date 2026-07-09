@@ -6,6 +6,12 @@
 <title>ASC — Agent (preview)</title>
 <meta name="theme-color" content="#edf0f5">
 <script>try{if(localStorage.getItem('asc.theme')==='dark'){document.documentElement.classList.add('dark');document.querySelector('meta[name="theme-color"]').content='#020305';}}catch(e){}</script>
+<link rel="icon" href="assets/favicon-32.png" sizes="32x32">
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;650;700;800&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -157,17 +163,13 @@
       </div>
 
       <div class="ag-ctx" aria-label="Kontekst baze">
-        <span><b data-count="248">0</b>setova</span>
-        <span><b data-count="141">0</b>zimske</span>
-        <span><b data-count="3">0</b>za preuzimanje</span>
+        <span><b data-count="0">0</b>setova</span>
+        <span><b data-count="0">0</b>zimske</span>
+        <span><b data-count="0">0</b>za preuzimanje</span>
       </div>
 
       <div id="agLog" class="ag-log" aria-live="polite">
-        <div class="ag-msg is-bot">Bok Toni! Pitaj me bilo što o skladištu — ili mi izdiktiraj novi set guma i ispunit ću ga umjesto tebe.</div>
-        <div class="ag-msg is-me">Koliko je setova na skladištu?</div>
-        <div class="ag-msg is-bot">Trenutačno je na čuvanju 248 kompleta guma — 141 zimski, 89 ljetnih i 18 cjelogodišnjih setova. Slobodno je još 8 % kapaciteta skladišta.</div>
-        <div class="ag-msg is-me">Tko je za preuzimanje ovaj tjedan?</div>
-        <div class="ag-msg is-bot">Ovaj tjedan tri kupca čekaju preuzimanje: Josip Horvat (DU-234-AB) — kasni od petka, Ana Kovačević (DU-881-KL) — danas, i Marko Babić (DU-455-MN) — u srijedu. Želiš li da nekoga podsjetim porukom?</div>
+        <div class="ag-msg is-bot">Bok! Pitaj me bilo što o skladištu — ili mi izdiktiraj novi set guma i ispunit ću ga umjesto tebe.</div>
       </div>
 
       <div id="agChips" class="ag-chips" aria-label="Prijedlozi">
@@ -202,27 +204,19 @@
 <script src="app.js"></script>
 <script>
 /* ---- Assistant-page-specific behaviour (theme/dock/count-up live in app.js) ----
-   A self-contained mock of the chat loop: chips + text send append a user bubble
-   and a canned, DB-grounded agent reply; the walkie-talkie orb runs a real
-   press-and-hold gesture; the read-aloud + new-chat controls flip state. No
-   network, no real speech — a faithful preview of views/assistant.js flow. */
+   The chat loop is wired to the LIVE Gemini brain (window.ASCAgent, loaded by
+   app.js; tools run against the real Supabase data). No canned replies: if the
+   agent isn't reachable the page says so honestly. The walkie-talkie mic runs
+   real Web Speech (hr-HR) where supported; the read-aloud toggle persists to
+   localStorage 'asc.speak' and speaks final replies with a Croatian voice. */
 (function () {
   const log = document.getElementById('agLog');
   const input = document.getElementById('agInput');
   const chips = document.getElementById('agChips');
   const form = document.getElementById('agForm');
-  const reduce = matchMedia('(prefers-reduced-motion:reduce)').matches;
 
-  const GREET = 'Bok Toni! Pitaj me bilo što o skladištu — ili mi izdiktiraj novi set guma i ispunit ću ga umjesto tebe.';
-
-  // Deterministic canned replies grounded in the Dubrovnik/DU sample data.
-  function replyFor(msg) {
-    const m = msg.toLowerCase();
-    if (m.includes('koliko')) return 'Trenutačno je na čuvanju 248 kompleta guma — 141 zimski, 89 ljetnih i 18 cjelogodišnjih setova. Slobodno je još 8 % kapaciteta skladišta.';
-    if (m.includes('preuzim') || m.includes('tjedan')) return 'Ovaj tjedan tri kupca čekaju preuzimanje: Josip Horvat (DU-234-AB) — kasni od petka, Ana Kovačević (DU-881-KL) — danas, i Marko Babić (DU-455-MN) — u srijedu.';
-    if (m.includes('zaprimi') || m.includes('novi set') || m.includes('diktir')) return 'Može — pripremio sam nacrt za novi set (Ivan Perić, zimske Michelin 205/55 R16, kod ASC-2026-0249). Provjeri podatke i potvrdi kad si spreman.';
-    return 'Provjerio sam bazu — 248 kompleta je na čuvanju. Za detalje o pojedinom kupcu reci mi ime ili registraciju, npr. DU-234-AB.';
-  }
+  const GREET = 'Bok! Pitaj me bilo što o skladištu — ili mi izdiktiraj novi set guma i ispunit ću ga umjesto tebe.';
+  const OFFLINE = 'Agent nije dostupan.';
 
   function bubble(who, text, cls) {
     const el = document.createElement('div');
@@ -233,6 +227,31 @@
     return el;
   }
 
+  // ---- read-aloud toggle — persists to 'asc.speak' (shared with app.js) ------
+  const tts = document.getElementById('agTts');
+  const ttsLab = document.getElementById('agTtsLab');
+  function paintTts(on) {
+    tts.setAttribute('aria-pressed', String(on));
+    ttsLab.textContent = on ? 'Glas uključen' : 'Glas isključen';
+  }
+  try { paintTts(localStorage.getItem('asc.speak') !== '0'); } catch (e) {}
+  tts.addEventListener('click', function () {
+    const on = tts.getAttribute('aria-pressed') !== 'true';
+    paintTts(on);
+    try { localStorage.setItem('asc.speak', on ? '1' : '0'); } catch (e) {}
+  });
+  function speak(text) {
+    try {
+      if (tts.getAttribute('aria-pressed') !== 'true' || !text) return;
+      if (!('speechSynthesis' in window)) return;
+      const v = (speechSynthesis.getVoices() || []).filter(function (x) { return (x.lang || '').toLowerCase().indexOf('hr') === 0; })[0];
+      if (!v) return;                                  // no Croatian voice → stay silent, don't mangle it
+      const u = new SpeechSynthesisUtterance(text); u.voice = v; u.lang = 'hr-HR'; u.rate = 1.05;
+      speechSynthesis.cancel(); speechSynthesis.speak(u);
+    } catch (e) {}
+  }
+
+  // ---- chat loop → live agent -------------------------------------------------
   let running = false;
   function send(text) {
     const msg = (text || '').trim();
@@ -242,12 +261,18 @@
     input.value = '';
     bubble('me', msg);
     const thinking = bubble('bot', 'Provjeravam bazu…', 'is-busy');
-    const finish = () => {
+    const done = (reply) => {
       thinking.remove();
-      bubble('bot', replyFor(msg));
+      if (reply) { bubble('bot', reply); speak(reply); }
       running = false;
     };
-    if (reduce) finish(); else setTimeout(finish, 780);
+    if (!(window.ASCAgent && ASCAgent.configured && ASCAgent.configured())) { done(OFFLINE); return; }
+    let lastErr = '';
+    ASCAgent.ask(msg, function (ev) {
+      if (ev.type === 'tool') thinking.textContent = 'Radim…';
+      else if (ev.type === 'error') lastErr = ev.message || '';
+    }).then(function (txt) { done(txt || 'Nemam odgovor — pokušaj drugačije.'); })
+      .catch(function (e) { console.warn('[live] agent ask failed:', e); done(lastErr || OFFLINE); });
   }
 
   form.addEventListener('submit', function (e) { e.preventDefault(); send(input.value); });
@@ -255,28 +280,32 @@
     b.addEventListener('click', function () { send(b.textContent); });
   });
 
-  // New conversation — reset the log to the greeting and bring chips back.
+  // New conversation — reset the log AND the agent's history, bring chips back.
   document.getElementById('agReset').addEventListener('click', function () {
     running = false;
+    try { if (window.ASCAgent) { ASCAgent.reset(); ASCAgent.cancel(); } } catch (e) {}
     log.innerHTML = '';
     bubble('bot', GREET);
     chips.hidden = false;
   });
 
-  // Read-aloud toggle — visual state only in this preview.
-  const tts = document.getElementById('agTts');
-  const ttsLab = document.getElementById('agTtsLab');
-  tts.addEventListener('click', function () {
-    const on = tts.getAttribute('aria-pressed') !== 'true';
-    tts.setAttribute('aria-pressed', String(on));
-    ttsLab.textContent = on ? 'Glas uključen' : 'Glas isključen';
+  // Honest status pill: if the brain never loaded / isn't configured, say so.
+  addEventListener('load', function () {
+    setTimeout(function () {
+      if (!(window.ASCAgent && ASCAgent.configured && ASCAgent.configured())) {
+        const live = document.querySelector('.ag-live');
+        if (live) live.textContent = 'Nedostupan';
+      }
+    }, 600);
   });
 
   // ---- Walkie-talkie: press & HOLD the inline mic to talk, release to send ----
+  // Real Web Speech (hr-HR) when the browser has it; otherwise an honest note.
   const ptt = document.getElementById('agPtt');
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition || null;
   const HOLD = 'Pritisni i drži mikrofon za govor — pusti za slanje';
   const basePlaceholder = input.getAttribute('placeholder');
-  let holding = false, heldAt = 0;
+  let holding = false, heldAt = 0, recog = null, recText = '';
 
   function setState(state, text) {
     ptt.classList.toggle('is-live', state === 'live');
@@ -287,23 +316,40 @@
   }
   function startHold() {
     if (holding || running) return;
-    holding = true; heldAt = Date.now();
-    setState('live', 'Slušam…');
+    holding = true; heldAt = Date.now(); recText = '';
+    if (!SR) { setState('idle', HOLD); input.setAttribute('placeholder', 'Glasovni unos nije podržan u ovom pregledniku'); return; }
+    try {
+      recog = new SR();
+      recog.lang = 'hr-HR'; recog.continuous = true; recog.interimResults = true;
+      recog.onresult = function (e) {
+        let t = '';
+        for (let i = 0; i < e.results.length; i++) t += e.results[i][0].transcript;
+        recText = t.trim();
+        if (holding) input.setAttribute('placeholder', recText || 'Slušam…');
+      };
+      recog.onerror = function (e) {
+        if (e.error === 'not-allowed' || e.error === 'service-not-allowed') { recText = ''; input.setAttribute('placeholder', 'Dopusti mikrofon u pregledniku'); }
+      };
+      recog.onend = function () {
+        recog = null;
+        const t = recText; recText = '';
+        if (holding) { ptt.classList.remove('is-live'); return; }  // engine gave up mid-hold — stop the pulse, never auto-send
+        setState('idle', HOLD);
+        if (t) send(t);
+      };
+      recog.start();
+      setState('live', 'Slušam…');
+    } catch (e) { recog = null; setState('idle', HOLD); }
   }
   function endHold() {
     if (!holding) return;
     holding = false;
+    if (!SR) { setTimeout(function () { if (!holding) setState('idle', HOLD); }, 1600); return; }
     const long = Date.now() - heldAt > 350;
-    if (long) {
-      setState('think', 'Razmišljam…');
-      // Simulated captured dictation → into the same send() loop.
-      setTimeout(function () {
-        setState('idle', HOLD);
-        send('Zaprimi novi set za Ivana Perića, zimske Michelin 205 55 R16');
-      }, 420);
-    } else {
-      setState('idle', HOLD);
-    }
+    if (recog) {
+      if (long) { setState('think', 'Razmišljam…'); try { recog.stop(); } catch (e) { recog = null; setState('idle', HOLD); } }
+      else { recText = ''; try { recog.abort(); } catch (e) {} recog = null; setState('idle', HOLD); }
+    } else setState('idle', HOLD);
   }
   ptt.addEventListener('pointerdown', function (e) { e.preventDefault(); if (ptt.setPointerCapture) ptt.setPointerCapture(e.pointerId); startHold(); });
   ptt.addEventListener('pointerup', endHold);
@@ -313,5 +359,6 @@
   ptt.addEventListener('keyup', function (e) { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); endHold(); } });
 })();
 </script>
+<script type="module" src="live-assistant.js"></script>
 </body>
 </html>

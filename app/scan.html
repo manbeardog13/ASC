@@ -6,6 +6,12 @@
 <title>ASC — Skeniraj (preview)</title>
 <meta name="theme-color" content="#edf0f5">
 <script>try{if(localStorage.getItem('asc.theme')==='dark'){document.documentElement.classList.add('dark');document.querySelector('meta[name="theme-color"]').content='#020305';}}catch(e){}</script>
+<link rel="icon" href="assets/favicon-32.png" sizes="32x32">
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;650;700;800&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -109,6 +115,20 @@ html.dark .code-field input{background:rgba(244,245,247,.05)}
 .tip svg{width:16px;height:16px;flex:none;margin-top:1px;color:var(--lava-ink)}
 html.dark .tip svg{color:var(--lava-2)}
 
+/* ---- Recent scans (real codes only, rendered by live-scan.js) ---- */
+.recent-card{margin-top:14px;padding-bottom:12px}
+.rs-list{display:flex;flex-direction:column}
+.rs-row{display:flex;align-items:center;gap:12px;min-height:46px;padding:9px 4px;border-radius:10px;
+  border-bottom:1px solid var(--hairline);text-decoration:none;color:var(--ink);
+  transition:background 150ms var(--snap),transform 150ms var(--snap)}
+.rs-row:last-child{border-bottom:0}
+@media(hover:hover){ .rs-row:hover{background:var(--panel-2);transform:translateX(3px)} }
+.rs-row:active{transform:scale(.99);transition-duration:80ms}
+.rs-code{flex:none;font:600 13.5px Inter;letter-spacing:.02em}
+.rs-who{min-width:0;flex:1 1 auto;font:500 12.5px Inter;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rs-when{flex:none;margin-left:auto;font:600 11px Inter;color:var(--muted)}
+.rs-empty{padding:8px 4px 10px;font:500 13px Inter;color:var(--muted)}
+
 /* live camera layer — html5-qrcode injects a <video>; keep the AR overlay on top */
 .vf-reader{position:absolute;inset:0;z-index:0;background:#000}
 .vf-reader video{width:100%!important;height:100%!important;object-fit:cover;display:block}
@@ -177,6 +197,18 @@ html.dark .tip svg{color:var(--lava-2)}
         <span>Savjet: i standardna aplikacija Kamera skenira naljepnicu — automatski otvara zapis.</span>
       </p>
     </div>
+
+    <!-- Recent scans — REAL codes only. The inline scanner script records every
+         successful open into localStorage 'asc.recentScans'; live-scan.js renders
+         this list from that store and enriches/prunes it against Supabase. The
+         static markup below is the deterministic empty state. -->
+    <div class="card recent-card reveal" style="animation-delay:190ms">
+      <span class="tab-tl">nedavno</span>
+      <h3>Nedavno skenirano</h3>
+      <div class="rs-list" id="recentList">
+        <p class="rs-empty">Još nema skeniranja</p>
+      </div>
+    </div>
   </section>
 </main>
 
@@ -202,7 +234,20 @@ html.dark .tip svg{color:var(--lava-2)}
   var cue = vf.querySelector('.cue');
   var flashT;
 
-  function go(code){ if(code){ location.href = 'set-detail.html?code=' + encodeURIComponent(code); } }
+  // Remember every successful open in 'asc.recentScans' (real codes only — this
+  // runs only after ASCQR validated the code). live-scan.js renders the list.
+  function remember(code){
+    try{
+      var KEY = 'asc.recentScans';
+      var list = [];
+      try{ list = JSON.parse(localStorage.getItem(KEY) || '[]'); }catch(e){ list = []; }
+      if(!Array.isArray(list)) list = [];
+      list = list.filter(function(r){ return !(r && r.code === code); });
+      list.unshift({ code: code, at: Date.now() });
+      localStorage.setItem(KEY, JSON.stringify(list.slice(0, 12)));
+    }catch(e){ /* storage blocked — scanning still works */ }
+  }
+  function go(code){ if(code){ remember(code); location.href = 'set-detail.html?code=' + encodeURIComponent(code); } }
   function cueText(t){ if(cue) cue.textContent = t; }
   function flash(t){ cueText(t); clearTimeout(flashT); flashT = setTimeout(function(){ cueText('Poravnajte QR unutar okvira'); }, 2600); }
 
@@ -250,5 +295,6 @@ html.dark .tip svg{color:var(--lava-2)}
   vf.addEventListener('click', function(){ if(vf.classList.contains('vf-off')) startCamera(); });
 })();
 </script>
+<script type="module" src="live-scan.js"></script>
 </body>
 </html>

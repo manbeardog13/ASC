@@ -6,6 +6,12 @@
 <title>ASC — Skladište (preview)</title>
 <meta name="theme-color" content="#edf0f5">
 <script>try{if(localStorage.getItem('asc.theme')==='dark'){document.documentElement.classList.add('dark');document.querySelector('meta[name="theme-color"]').content='#020305';}}catch(e){}</script>
+<link rel="icon" href="assets/favicon-32.png" sizes="32x32">
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;650;700;800&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -16,7 +22,9 @@
   toggle + count-up animations — all LINKED, never redefined. Only the
   warehouse-map layout (occupancy header, zone → rack → shelf → slot grid) is
   page-specific and lives inline below. No green/red imagery here — those belong
-  to check-in / pickup only. Numbers & names are Dubrovnik placeholders.
+  to check-in / pickup only. LIVE: the map, pills and numbers are built by
+  live-warehouse.js from real Supabase data (warehouseOccupancy + listStorageSets);
+  the HTML below is the empty skeleton it fills.
 -->
 <link rel="stylesheet" href="app.css">
 <style>
@@ -90,9 +98,10 @@ html.dark .slot.empty{background:rgba(244,245,247,.04)}
 @media(max-width:460px){ .wh-shelf{grid-template-columns:1fr;gap:6px} .wh-shelf-lab{padding-top:0} }
 
 /* Slot window — click a lot → a small window with the customer's name + brief
-   details; click the lot again to close it; click the WINDOW to open that user's
-   page. Deliberately colourless: pure white, black/grey text, rounded, soft
-   shadow — max legibility, no lava. Same in light + dark. */
+   details; click the lot again to close it; click the WINDOW → "Uredi": the set
+   opens pre-filled in check-in (sessionStorage 'asc.prefill'). Deliberately
+   colourless: pure white, black/grey text, rounded, soft shadow — max
+   legibility, no lava. Same in light + dark. */
 .slot.slot-active{transform:scale(.9);box-shadow:0 0 0 3px rgba(2,3,5,.42);z-index:3}
 .wh-win{position:fixed;z-index:85;width:max-content;max-width:min(280px,90vw);cursor:pointer;
   padding:13px 16px 12px;border-radius:16px;background:#fff;color:#111;
@@ -115,6 +124,16 @@ html.dark .slot.empty{background:rgba(244,245,247,.04)}
 .wh-win-go{display:flex;align-items:center;gap:5px;font:700 9.5px Inter;letter-spacing:.05em;text-transform:uppercase;color:#a0a0a0;margin-top:9px;padding-top:8px;border-top:1px solid rgba(0,0,0,.07)}
 .wh-win-go svg{width:12px;height:12px}
 @media(prefers-reduced-motion:reduce){ .wh-win{transition:opacity .15s linear} .slot.slot-active{transition:none} }
+
+/* Empty state — the map's quiet card while nothing is stored yet */
+.wh-empty{margin-top:var(--gap);display:flex;flex-direction:column;align-items:center;text-align:center;padding:46px 22px 42px}
+.wh-empty h2{font:600 20px Sora;letter-spacing:-.01em}
+.wh-empty p{font:500 12.5px Inter;color:var(--muted);margin-top:6px}
+.wh-empty a{display:inline-flex;align-items:center;gap:8px;margin-top:18px;padding:12px 20px;border-radius:999px;
+  background:var(--lava);color:#fff;font:600 13px Inter;text-decoration:none;box-shadow:0 10px 22px -10px var(--lava);
+  transition:transform 150ms var(--snap),box-shadow 200ms var(--snap)}
+@media(hover:hover){ .wh-empty a:hover{transform:translateY(-2px);box-shadow:0 14px 28px -10px var(--lava)} }
+.wh-empty a:active{transform:scale(.97);transition-duration:80ms}
 </style>
 </head>
 <body>
@@ -137,7 +156,7 @@ html.dark .slot.empty{background:rgba(244,245,247,.04)}
     <span class="eyebrow">Hotel za gume · Dubrovnik</span>
     <div class="wh-title">
       <h1>Skladište</h1>
-      <span class="sub"><span data-count="225">0</span> kompleta na karti</span>
+      <span class="sub"><span data-count="0">0</span> kompleta na karti</span>
     </div>
     <div class="wh-stats">
       <div class="wh-stat"><b id="stStored" data-count="0">0</b><span>Spremljeno</span></div>
@@ -166,183 +185,8 @@ html.dark .slot.empty{background:rgba(244,245,247,.04)}
   <a class="dtab" href="#" aria-label="Više"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8.6 6.4H21M8.6 12H21M8.6 17.6H21"/><path d="M3.6 6.4h.01M3.6 12h.01M3.6 17.6h.01"/></svg>Više</a>
 </nav>
 
-<script>
-/* ---- Build the occupancy map (Zone → Rack → Shelf → Slot) ----------------
-   Mirrors js/views/warehouse.js semantics: only OCCUPIED slots are "sets"
-   (filled = in_storage, reserved = reserved); empty tiles are free capacity.
-   Croatian labels are grounded in i18n's hr strings. ------------------------ */
-(function () {
-  var CHEV = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>';
-  var PIN  = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21.2s-7-5.5-7-11a7 7 0 0114 0c0 5.5-7 11-7 11z"/><circle cx="12" cy="10" r="2.4"/></svg>';
-
-  // Every occupied lot is a REAL customer from the database (id matches
-  // customers.html), so the peek's drag-up-to-open lands on their actual card.
-  var DBUSERS = [
-    { uid:"ana",   name:"Ana Kovačević", plate:"DU-881-KL" },
-    { uid:"ivan",  name:"Ivan Perić",    plate:"DU-234-AB" },
-    { uid:"ivana", name:"Ivana Jurić",   plate:"DU-509-IJ" },
-    { uid:"josip", name:"Josip Horvat",  plate:"DU-118-JH" },
-    { uid:"luka",  name:"Luka Marić",    plate:"DU-733-XY" },
-    { uid:"marko", name:"Marko Babić",   plate:"DU-455-MN" },
-    { uid:"petra", name:"Petra Novak",   plate:"DU-662-PP" }
-  ];
-  var seq = 248, p = 0;
-  function occ() {
-    var u = DBUSERS[p % DBUSERS.length];
-    var o = { uid: u.uid, name: u.name, plate: u.plate, code: "ASC-2026-" + String(seq).padStart(4, "0") };
-    p++; seq--; return o;
-  }
-  function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); }
-
-  // Zone → Rack → Shelf capacity + fill pattern (F filled · R reserved · E empty)
-  var ZONES = [
-    { name:"Zona A", sub:"Prizemlje · glavna hala", racks:[
-      { id:"A1", shelves:[ {s:"1",p:"FFFRFFEF"}, {s:"2",p:"FFRFFFFE"}, {s:"3",p:"FEFFRFEF"} ] },
-      { id:"A2", shelves:[ {s:"1",p:"FFFFFRFF"}, {s:"2",p:"EFFFFEFF"} ] }
-    ]},
-    { name:"Zona B", sub:"Kat · sezonske gume", racks:[
-      { id:"B1", shelves:[ {s:"1",p:"FRFFFFEF"}, {s:"2",p:"FFFEFFRF"} ] },
-      { id:"B2", shelves:[ {s:"1",p:"FFFFFFFR"}, {s:"2",p:"FEFFEFFF"} ] }
-    ]},
-    { name:"Zona C", sub:"Vanjski regali · natkriveno", racks:[
-      { id:"C1", shelves:[ {s:"1",p:"FFRFEFFF"}, {s:"2",p:"FFFFFEFF"} ] }
-    ]}
-  ];
-
-  var stored = 0, reserved = 0;
-  var pillHtml = "", mapHtml = "";
-
-  ZONES.forEach(function (z, zi) {
-    var zid = "zone-" + zi, zCount = 0;
-    var racksHtml = z.racks.map(function (rk) {
-      var rFill = 0;
-      var shelvesHtml = rk.shelves.map(function (sh) {
-        var cells = sh.p.split("").map(function (st, ci) {
-          var pos = String(ci + 1).padStart(2, "0");
-          if (st === "E") return '<span class="slot empty" aria-hidden="true">' + pos + '</span>';
-          var d = occ(); rFill++; zCount++;
-          if (st === "R") reserved++; else stored++;
-          var cls = st === "R" ? "reserved" : "filled";
-          var dot = st === "R" ? '<span class="rdot" aria-hidden="true"></span>' : '';
-          var lab = d.name + " · " + d.plate + " · " + d.code;
-          return '<a class="slot ' + cls + '" href="#" role="button" data-uid="' + esc(d.uid) + '" aria-label="' + esc(lab) + '">' + pos + dot + '</a>';
-        }).join("");
-        return '<div class="wh-shelf"><span class="wh-shelf-lab">Polica ' + esc(sh.s) + '</span><div class="slots">' + cells + '</div></div>';
-      }).join("");
-      return '<div class="wh-rack"><div class="wh-rack-head"><span class="r">Regal ' + esc(rk.id) + '</span>' +
-             '<span class="rfill"><b data-count="' + rFill + '">0</b> zauzeto</span></div>' + shelvesHtml + '</div>';
-    }).join("");
-
-    mapHtml += '<details class="card wh-zone reveal" id="' + zid + '" open style="animation-delay:' + (150 + zi * 40) + 'ms">' +
-      '<span class="tab-tl">zona</span>' +
-      '<summary><span class="wh-badge" aria-hidden="true">' + PIN + '</span>' +
-      '<span class="wh-name">' + esc(z.name) + '<small>' + esc(z.sub) + '</small></span>' +
-      '<span class="wh-fill"><b data-count="' + zCount + '">0</b> kompleta</span>' +
-      '<span class="wh-chev" aria-hidden="true">' + CHEV + '</span></summary>' +
-      '<div class="wh-zone-body">' + racksHtml + '</div></details>';
-
-    pillHtml += '<span class="chip wh-zonepill" role="button" tabindex="0" data-z="' + zid + '">' +
-      esc(z.name) + '<span class="n">' + zCount + '</span></span>';
-  });
-
-  document.getElementById("zonebar").innerHTML = '<div class="wh-zonebar" role="group" aria-label="Zone">' + pillHtml + '</div>';
-  document.getElementById("map").innerHTML = mapHtml;
-
-  // Overview totals → feed app.js's count-up + meter fill
-  var total = stored + reserved;
-  var pct = total ? Math.round(stored / total * 100) : 0;
-  document.getElementById("stStored").dataset.count = stored;
-  document.getElementById("stReserved").dataset.count = reserved;
-  document.getElementById("stZones").dataset.count = ZONES.length;
-  document.getElementById("stMeter").dataset.w = pct;
-  document.querySelector(".wh-title .sub span").dataset.count = total;
-  document.getElementById("stCap").textContent = "Popunjenost skladišta · " + pct + " % zauzeto";
-
-  // Zone pills jump to (and open) their zone
-  Array.prototype.forEach.call(document.querySelectorAll(".wh-zonepill"), function (pill) {
-    var go = function () {
-      var el = document.getElementById(pill.dataset.z);
-      if (el) { el.open = true; el.scrollIntoView({ behavior: "smooth", block: "start" }); }
-    };
-    pill.addEventListener("click", go);
-    pill.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); } });
-  });
-
-  // ---- Press-and-hold PEEK + drag-up-to-open --------------------------------
-  // Hold an occupied lot → a card lifts with the customer's basic info + a
-  // "drag up to open" grip. Keep holding and drag your finger UP past the
-  // threshold, then release → jump to that customer's page in the database.
-  // Release in place (or a plain tap) → the card just shows; nothing opens, so
-  // you can hold the next lot and keep looking. Every lot is a real DB customer.
-  var GO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M13 6l6 6-6 6"/></svg>';
-  var win = document.createElement("div");
-  win.className = "wh-win"; win.setAttribute("role", "dialog"); win.hidden = true;
-  document.body.appendChild(win);
-
-  function firstText(el){ return el && el.childNodes[0] ? el.childNodes[0].textContent.trim() : (el ? el.textContent.trim() : ""); }
-  function detailsFor(s){
-    var parts = (s.getAttribute("aria-label") || "").split(" · ");
-    var zone = firstText(s.closest(".wh-zone") && s.closest(".wh-zone").querySelector(".wh-name"));
-    var rackEl = s.closest(".wh-rack"), shelfEl = s.closest(".wh-shelf");
-    var rack = rackEl ? rackEl.querySelector(".wh-rack-head .r").textContent.trim() : "";
-    var shelf = shelfEl ? shelfEl.querySelector(".wh-shelf-lab").textContent.trim() : "";
-    return {
-      uid: s.getAttribute("data-uid") || "",
-      name: parts[0] || "", plate: parts[1] || "",
-      loc: [zone, rack, shelf].filter(Boolean).join(" · ")
-    };
-  }
-
-  var map = document.getElementById("map");
-  var active = null;
-
-  function openWin(s){
-    var d = detailsFor(s);
-    win.dataset.uid = d.uid; win.dataset.name = d.name;
-    win.innerHTML =
-      '<div class="wh-win-name">' + esc(d.name) + '</div>'
-      + '<div class="wh-win-sub">' + esc(d.plate) + '</div>'
-      + (d.loc ? '<div class="wh-win-loc">' + esc(d.loc) + '</div>' : '')
-      + '<div class="wh-win-go">Otvori korisnika' + GO + '</div>';
-    win.hidden = false; win.classList.remove("below");
-    win.style.left = "-9999px"; win.style.top = "0px";
-    var r = s.getBoundingClientRect(), pw = win.offsetWidth, ph = win.offsetHeight;
-    var cx = r.left + r.width / 2;
-    var left = Math.max(8, Math.min(cx - pw / 2, innerWidth - 8 - pw));
-    var top = r.top - ph - 12;
-    if (top < 8) { top = r.bottom + 12; win.classList.add("below"); }
-    win.style.setProperty("--caret", (cx - left) + "px");
-    win.style.left = left + "px"; win.style.top = top + "px";
-    void win.offsetWidth; win.classList.add("show");
-    if (active && active !== s) active.classList.remove("slot-active");
-    active = s; s.classList.add("slot-active");
-  }
-  function closeWin(){
-    if (!active) return;
-    win.classList.remove("show");
-    active.classList.remove("slot-active"); active = null;
-    setTimeout(function(){ if (!active) win.hidden = true; }, 220);
-  }
-
-  // Click a lot → toggle its window (click the SAME lot again → close).
-  map.addEventListener("click", function(e){
-    var s = e.target.closest(".slot.filled, .slot.reserved"); if (!s) return;
-    e.preventDefault();
-    if (active === s) closeWin(); else openWin(s);
-  });
-  // Click the window itself → open that customer's page in the database.
-  win.addEventListener("click", function(){
-    var uid = win.dataset.uid, name = win.dataset.name;
-    location.href = uid ? ("customers.html?id=" + encodeURIComponent(uid)) : ("customers.html?c=" + encodeURIComponent(name));
-  });
-  // Click anywhere else / scroll → close.
-  document.addEventListener("pointerdown", function(e){
-    if (active && !e.target.closest(".slot") && !e.target.closest(".wh-win")) closeWin();
-  });
-  addEventListener("scroll", closeWin, { passive: true });
-  addEventListener("resize", closeWin);
-})();
-</script>
 <script src="app.js"></script>
+<!-- LIVE: build the zone map, pills and occupancy numbers from real Supabase data. -->
+<script type="module" src="live-warehouse.js"></script>
 </body>
 </html>

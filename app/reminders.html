@@ -6,6 +6,12 @@
 <title>ASC — Podsjetnici (preview)</title>
 <meta name="theme-color" content="#edf0f5">
 <script>try{if(localStorage.getItem('asc.theme')==='dark'){document.documentElement.classList.add('dark');document.querySelector('meta[name="theme-color"]').content='#020305';}}catch(e){}</script>
+<link rel="icon" href="assets/favicon-32.png" sizes="32x32">
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;650;700;800&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -49,6 +55,13 @@
 .rem-sec .count-badge.win{background:var(--gun)}
 html.dark .rem-sec .count-badge.win{background:rgba(244,245,247,.16);color:#f4f5f7}
 .rem-sec .count-badge.mut{background:var(--muted)}
+
+/* Live data: [hidden] toggles must beat the display rules in app.css */
+.rem-stage .cta[hidden],.rem-brief[hidden],.rem-sec[hidden]{display:none}
+
+/* Empty state — the only card when nothing is due */
+.rem-empty h3{margin-bottom:6px}
+.rem-empty-sub{font:500 13px Inter;color:var(--muted)}
 
 /* Row grid: 1-up on phones, 2-up when there is room */
 .rr-list{display:grid;grid-template-columns:1fr;gap:11px}
@@ -159,8 +172,15 @@ html.dark .rem-sec .count-badge.win{background:rgba(244,245,247,.16);color:#f4f5
 
   <div class="rem-sections">
 
+    <!-- EMPTY STATE — the live module shows this (and only this) when nothing is due -->
+    <section class="card rem-sec rem-empty reveal" data-sec="empty" hidden style="animation-delay:150ms">
+      <span class="tab-tl">podsjetnici</span>
+      <h3>Nema podsjetnika</h3>
+      <p class="rem-empty-sub">Podsjetnici stižu s očekivanim preuzimanjima.</p>
+    </section>
+
     <!-- KASNI (overdue) — owns the lava accent -->
-    <section class="card rem-sec is-overdue reveal" style="animation-delay:150ms">
+    <section class="card rem-sec is-overdue reveal" data-sec="overdue" style="animation-delay:150ms">
       <span class="tab-tl">kasni</span>
       <h3>Kasni <span class="count-badge" data-count="2">0</span></h3>
       <div class="rr-list">
@@ -193,7 +213,7 @@ html.dark .rem-sec .count-badge.win{background:rgba(244,245,247,.16);color:#f4f5
     </section>
 
     <!-- DANAS ZA PREUZIMANJE (due today) -->
-    <section class="card rem-sec reveal" style="animation-delay:190ms">
+    <section class="card rem-sec reveal" data-sec="today" style="animation-delay:190ms">
       <span class="tab-tl">danas</span>
       <h3>Danas za preuzimanje <span class="count-badge" data-count="2">0</span></h3>
       <div class="rr-list">
@@ -226,7 +246,7 @@ html.dark .rem-sec .count-badge.win{background:rgba(244,245,247,.16);color:#f4f5
     </section>
 
     <!-- OVAJ TJEDAN (this week) -->
-    <section class="card rem-sec reveal" style="animation-delay:230ms">
+    <section class="card rem-sec reveal" data-sec="week" style="animation-delay:230ms">
       <span class="tab-tl">ovaj tjedan</span>
       <h3>Ovaj tjedan <span class="count-badge mut" data-count="3">0</span></h3>
       <div class="rr-list">
@@ -270,8 +290,15 @@ html.dark .rem-sec .count-badge.win{background:rgba(244,245,247,.16);color:#f4f5
       </div>
     </section>
 
+    <!-- KASNIJE (beyond this week) — filled at runtime, hidden when empty -->
+    <section class="card rem-sec reveal" data-sec="later" hidden style="animation-delay:250ms">
+      <span class="tab-tl">kasnije</span>
+      <h3>Kasnije <span class="count-badge mut" data-count="0">0</span></h3>
+      <div class="rr-list"></div>
+    </section>
+
     <!-- VEĆ PODSJEĆENO (already reminded) — collapsed -->
-    <details class="card rem-sec rem-rested reveal" style="animation-delay:270ms">
+    <details class="card rem-sec rem-rested reveal" data-sec="rested" style="animation-delay:270ms">
       <summary>Već podsjećeno <span class="count-badge" data-count="3">0</span>
         <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
       </summary>
@@ -392,5 +419,6 @@ html.dark .rem-sec .count-badge.win{background:rgba(244,245,247,.16);color:#f4f5
   if (cta){ cta.addEventListener('click', (e) => { e.preventDefault(); showToast('Podsjetnici poslani preostalima'); }); }
 })();
 </script>
+<script type="module" src="live-reminders.js"></script>
 </body>
 </html>

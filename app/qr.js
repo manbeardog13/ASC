@@ -1,7 +1,10 @@
 /* ============================================================================
-   preview/qr.js — shared QR layer for the ASC preview. Makes three things real:
-     • click a user  → their card (a small set→owner registry powers the links)
-     • click a sticker → a printable QR label, instantly (no network on click)
+   app/qr.js — shared QR layer for the ASC live staging app. Makes three things
+   real:
+     • click a sticker → a printable QR label, instantly (no network on click);
+       callers pass live data (who/vehicle/plate/season/loc) — the old mock
+       registry is empty so no fake person can ever surface
+     • print a report  → the A4 "Potvrda o pohrani guma" (printReport(code, data))
      • scan a sticker  → opens the set (real camera decode → set-detail.html?code=)
    Deps are loaded (CDN) only by the pages that need them:
      qrcode-generator → global `qrcode` (SVG QR)   ·   html5-qrcode → `Html5Qrcode`.
@@ -10,31 +13,10 @@
 (function () {
   'use strict';
 
-  // ---- Set registry (code → set), compiled from the customers/warehouse data --
-  var OWNERS = {
-    marko: 'Marko Babić', ana: 'Ana Kovačević', ivan: 'Ivan Perić', petra: 'Petra Novak',
-    luka: 'Luka Marić', josip: 'Josip Horvat', ivana: 'Ivana Jurić'
-  };
-  function S(code, owner, plate, vehicle, season, status, loc) {
-    return { code: code, owner: owner, who: OWNERS[owner], plate: plate, vehicle: vehicle,
-             season: season, status: status, loc: loc || '' };
-  }
-  var LIST = [
-    S('ASC-2026-0248', 'ivan',  'DU-234-AB', 'VW Golf VII',    'winter',     'in_storage',  'Zona A · Regal 4 · Polica 2 · Mjesto 12'),
-    S('ASC-2026-0247', 'ana',   'DU-881-KL', 'Škoda Octavia',  'summer',     'in_storage',  'Zona B · Regal 1 · Polica 4'),
-    S('ASC-2026-0250', 'ana',   'DU-410-AK', 'BMW X1',         'winter',     'in_storage',  'Zona B · Regal 3 · Polica 1'),
-    S('ASC-2026-0251', 'ana',   'DU-233-AN', 'Fiat 500',       'all_season', 'reserved',    ''),
-    S('ASC-2026-0246', 'marko', 'DU-455-MN', 'Audi A4',        'winter',     'in_storage',  'Zona A · Regal 3 · Polica 2'),
-    S('ASC-2026-0245', 'petra', 'DU-662-PP', 'Renault Clio',   'all_season', 'in_storage',  'Zona C · Regal 2 · Polica 1'),
-    S('ASC-2026-0244', 'luka',  'DU-733-XY', 'BMW 320d',       'summer',     'in_storage',  'Zona B · Regal 4 · Polica 3'),
-    S('ASC-2026-0243', 'josip', 'DU-118-JH', 'Mercedes C220',  'winter',     'in_storage',  'Zona A · Regal 5 · Mjesto 7'),
-    S('ASC-2026-0239', 'ivana', 'DU-509-IJ', 'Toyota RAV4',    'summer',     'in_storage',  'Zona B · Regal 2'),
-    S('ASC-2026-0231', 'marko', 'DU-902-MB', 'VW Passat',      'summer',     'in_storage',  'Zona A · Regal 2'),
-    S('ASC-2026-0155', 'marko', 'DU-455-MN', 'Audi A4',        'all_season', 'reserved',    ''),
-    S('ASC-2026-0142', 'ivan',  'DU-234-AB', 'VW Golf VII',    'summer',     'checked_out', ''),
-    S('ASC-2026-0121', 'ivana', 'DU-509-IJ', 'Toyota RAV4',    'winter',     'reserved',    ''),
-    S('ASC-2026-0187', 'luka',  'DU-733-XY', 'BMW 320d',       'winter',     'checked_out', '')
-  ];
+  // ---- Set registry (code → set) — LIVE staging: the mock registry is EMPTY.
+  // Real data lives in Supabase; pages pass what they know into printSticker /
+  // printReport via the optional `data` argument. BY_CODE lookups return null.
+  var LIST = [];
   var BY_CODE = {};
   LIST.forEach(function (s) { BY_CODE[s.code] = s; });
 
@@ -165,10 +147,21 @@
     return m;
   }
 
-  function printSticker(code) {
-    var set = BY_CODE[code] || { code: code, who: '', vehicle: '', plate: '', season: '', loc: '' };
+  // `data` (optional, like printReport's) carries the live fields the caller
+  // knows — who / vehicle / plate / season / loc — and wins over the registry.
+  function printSticker(code, data) {
+    data = data || {};
+    var reg = BY_CODE[code] || {};
+    var set = {
+      code: code,
+      who: data.who || reg.who || '',
+      vehicle: data.vehicle || reg.vehicle || '',
+      plate: data.plate || reg.plate || '',
+      season: data.season || reg.season || '',
+      loc: data.loc || data.location || reg.loc || ''
+    };
     var qrMarkup = svg(code, 8) || ('<div style="font:900 20px monospace">' + esc(code) + '</div>');
-    var season = SEASON[set.season] || '';
+    var season = SEASON[set.season] || set.season || '';
     var shape = String(stickerPref('asc.stickerShape', 'rounded')).replace(/[^a-z]/g, '') || 'rounded';
     var showOwner = stickerPref('asc.stickerOwner', '1') !== '0';
     var showLoc = stickerPref('asc.stickerLoc', '1') !== '0';

@@ -105,6 +105,17 @@ window.ascLiveFirst = new Promise((r) => { liveFirstDone = r; });
     const who = q('.meta .who', slide), swho = q('.meta .who', src); if (who && swho) who.textContent = swho.textContent;
     const chip = q('.meta .chip', slide), schip = q('.meta .chip', src); if (chip && schip) { chip.textContent = schip.textContent; chip.className = schip.className; }
   });
+  // Empty warehouse: the marquee has nothing to show — one calm line instead.
+  if (!recent.length) {
+    const track = q('.stream-track');
+    if (track && track.parentElement) {
+      track.style.display = 'none';
+      const empty = document.createElement('p');
+      empty.textContent = 'Još nema kompleta — zaprimi prvi.';
+      empty.style.cssText = 'margin:18px 4px;font:500 13px Inter;color:var(--muted)';
+      track.parentElement.appendChild(empty);
+    }
+  }
 
   // ---- Reminders: soonest upcoming pickups (overdue first) ----
   const dueSoon = sets
@@ -126,6 +137,13 @@ window.ascLiveFirst = new Promise((r) => { liveFirstDone = r; });
       const b = q('b', mini); if (b) b.textContent = s.vehicle?.customer?.name || 'Kupac';
       const pl = q('.pl', mini); if (pl) pl.textContent = s.vehicle?.plate || s.public_code;
     });
+    // Nothing due: one calm line where the rows were.
+    if (!dueSoon.length && minis.length) {
+      const empty = document.createElement('p');
+      empty.textContent = 'Nema podsjetnika.';
+      empty.style.cssText = 'margin:10px 2px 2px;font:500 13px Inter;color:var(--muted)';
+      minis[0].parentElement.appendChild(empty);
+    }
   }
 
   liveFirstDone();   // real data is in the DOM — the splash may lift into live numbers

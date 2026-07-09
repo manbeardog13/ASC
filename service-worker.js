@@ -2,7 +2,7 @@
    Makes the app installable and loads the shell instantly. Network-first for
    same-origin files (so deploys show up right away), cache fallback when
    offline. Live data always comes from Supabase online. */
-const CACHE = "asc-tirehotel-v81";
+const CACHE = "asc-tirehotel-v82";   // v82 = delivery cutover: root → app/, preview/ removed
 // Cross-origin dependencies the app cannot boot (or scan) without. Same-origin
 // files are precached below; these are runtime-cached network-first so an
 // offline cold boot doesn't die on the supabase-js ESM import.
@@ -18,6 +18,19 @@ const SHELL = [
   "./assets/apple-touch-icon.png",
   "./assets/asc-logo.png",
   "./assets/asc-mark.png",
+  // Delivered app shell (app/ is the product after the cutover):
+  "./app/login.html",
+  "./app/dashboard.html",
+  "./app/app.css",
+  "./app/app.js",
+  "./app/qr.js",
+  "./app/manifest.webmanifest",
+  "./app/assets/logo.png",
+  "./app/assets/icon.svg",
+  "./app/assets/icon-192.png",
+  "./app/assets/icon-512.png",
+  "./app/assets/apple-touch-icon.png",
+  "./app/assets/favicon-32.png",
   "./js/app.js",
   "./js/motion.js",
   "./js/i18n.js",

@@ -5,14 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>ASC — Ploča</title>
 <meta name="theme-color" content="#020305">
-<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
-<!-- PRESENTATION BUILD: the root opens the redesigned dashboard under preview/.
-     Client-side replace() keeps the service worker's network-first navigation
-     happy (no HTTP redirect for it to refuse to cache); the meta refresh + the
-     visible link are no-JS fallbacks. To restore the live SPA, revert this file
-     (the previous index.html is one commit back in git). -->
-<script>location.replace("preview/dashboard.html");</script>
-<meta http-equiv="refresh" content="0; url=preview/dashboard.html">
+<link rel="icon" href="app/assets/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="app/assets/apple-touch-icon.png">
+<!-- DELIVERY BUILD (2026-07-09): the root opens the real app under app/ — the
+     Prag splash covers the hop, the auth gate lands unauthenticated visitors on
+     the login card. Client-side replace() keeps the service worker's
+     network-first navigation happy (no HTTP redirect for it to refuse to
+     cache); the meta refresh + the visible link are no-JS fallbacks. -->
+<script>location.replace("app/dashboard.html");</script>
+<meta http-equiv="refresh" content="0; url=app/dashboard.html">
 <style>
   html,body{height:100%;margin:0}
   body{background:#020305;color:#f4f5f7;font-family:"Inter",system-ui,-apple-system,sans-serif;
@@ -28,7 +29,7 @@
   <div class="b">
     <div class="m">ASC</div>
     <p>Otvaram ploču…</p>
-    <a href="preview/dashboard.html">Otvori ploču →</a>
+    <a href="app/dashboard.html">Otvori ploču →</a>
   </div>
 </body>
 </html>

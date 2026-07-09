@@ -3,9 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>ASC — Detalji kompleta (preview)</title>
+<title>ASC — Detalji kompleta</title>
 <meta name="theme-color" content="#edf0f5">
 <script>try{if(localStorage.getItem('asc.theme')==='dark'){document.documentElement.classList.add('dark');document.querySelector('meta[name="theme-color"]').content='#020305';}}catch(e){}</script>
+<link rel="icon" href="assets/favicon-32.png" sizes="32x32">
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;650;700;800&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -17,7 +23,9 @@
   insight strip, location/kv/tire tables, disclosures, buttons) stays inline
   below — grounded in js/views/set-detail.js + js/i18n.js (hr). Green/red action
   imagery (zaprimi/preuzmi) is deliberately absent — it belongs only to the
-  dedicated check-in / pickup cards. Numbers & names are placeholders.
+  dedicated check-in / pickup cards. LIVE: static values are neutral "—"
+  skeletons; live-set-detail.js fills the real set from Supabase (?code=…) and
+  wires every action to a real mutation.
 -->
 <link rel="stylesheet" href="app.css">
 <style>
@@ -204,8 +212,8 @@ html.dark .tl-item:nth-child(odd){background:rgba(244,245,247,.04)}
       <span class="tab-tl">komplet</span>
       <div class="detail-head">
         <div>
-          <div class="code tnum">ASC-2026-0248</div>
-          <div class="who">Ivan Perić</div>
+          <div class="code tnum">—</div>
+          <div class="who"></div>
         </div>
         <div class="sd-menu-wrap">
           <button type="button" class="btn btn-ghost sd-menu-btn" id="sdMenu" aria-haspopup="menu" aria-expanded="false" aria-label="Izbornik">
@@ -252,15 +260,15 @@ html.dark .tl-item:nth-child(odd){background:rgba(244,245,247,.04)}
     <div class="u-stats reveal" style="animation-delay:110ms">
       <div class="u-stat">
         <span class="u-stat-l">Lokacija</span>
-        <span class="u-stat-v"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-5.5-7-11a7 7 0 0114 0c0 5.5-7 11-7 11z"/><circle cx="12" cy="10" r="2.4"/></svg>A · 4 · 2 · 12</span>
+        <span class="u-stat-v"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-5.5-7-11a7 7 0 0114 0c0 5.5-7 11-7 11z"/><circle cx="12" cy="10" r="2.4"/></svg>—</span>
       </div>
       <div class="u-stat is-warn">
         <span class="u-stat-l">Plaćanje</span>
-        <span class="u-stat-v tnum"><span class="u-dot"></span><span data-count="40">0</span> €</span>
+        <span class="u-stat-v tnum"><span class="u-dot"></span><span data-count="0">0</span> €</span>
       </div>
       <div class="u-stat is-ok">
         <span class="u-stat-l">Profil</span>
-        <span class="u-stat-v tnum"><span data-count="6">0</span> mm</span>
+        <span class="u-stat-v tnum"><span data-count="0">0</span> mm</span>
       </div>
     </div>
 
@@ -274,11 +282,11 @@ html.dark .tl-item:nth-child(odd){background:rgba(244,245,247,.04)}
           Premjesti
         </button>
       </div>
-      <div class="loc-block" role="group" aria-label="Lokacija: Zona A · Regal 4 · Polica 2 · Mjesto 12">
-        <div class="loc-cell"><span class="loc-label">Zona</span><span class="loc-value">A</span></div>
-        <div class="loc-cell"><span class="loc-label">Regal</span><span class="loc-value">4</span></div>
-        <div class="loc-cell"><span class="loc-label">Polica</span><span class="loc-value">2</span></div>
-        <div class="loc-cell"><span class="loc-label">Mjesto</span><span class="loc-value">12</span></div>
+      <div class="loc-block" role="group" aria-label="Lokacija">
+        <div class="loc-cell loc-cell-empty"><span class="loc-label">Zona</span><span class="loc-value">—</span></div>
+        <div class="loc-cell loc-cell-empty"><span class="loc-label">Regal</span><span class="loc-value">—</span></div>
+        <div class="loc-cell loc-cell-empty"><span class="loc-label">Polica</span><span class="loc-value">—</span></div>
+        <div class="loc-cell loc-cell-empty"><span class="loc-label">Mjesto</span><span class="loc-value">—</span></div>
       </div>
 
       <div class="move-area" id="moveArea" hidden>
@@ -286,10 +294,10 @@ html.dark .tl-item:nth-child(odd){background:rgba(244,245,247,.04)}
           <div class="move-col">
             <div class="caplabel">Iz</div>
             <div class="loc-block" style="grid-template-columns:repeat(4,1fr)">
-              <div class="loc-cell"><span class="loc-label">Zona</span><span class="loc-value" style="font-size:15px">A</span></div>
-              <div class="loc-cell"><span class="loc-label">Regal</span><span class="loc-value" style="font-size:15px">4</span></div>
-              <div class="loc-cell"><span class="loc-label">Polica</span><span class="loc-value" style="font-size:15px">2</span></div>
-              <div class="loc-cell"><span class="loc-label">Mjesto</span><span class="loc-value" style="font-size:15px">12</span></div>
+              <div class="loc-cell loc-cell-empty"><span class="loc-label">Zona</span><span class="loc-value" style="font-size:15px">—</span></div>
+              <div class="loc-cell loc-cell-empty"><span class="loc-label">Regal</span><span class="loc-value" style="font-size:15px">—</span></div>
+              <div class="loc-cell loc-cell-empty"><span class="loc-label">Polica</span><span class="loc-value" style="font-size:15px">—</span></div>
+              <div class="loc-cell loc-cell-empty"><span class="loc-label">Mjesto</span><span class="loc-value" style="font-size:15px">—</span></div>
             </div>
           </div>
           <div class="arrow" aria-hidden="true">
@@ -306,10 +314,10 @@ html.dark .tl-item:nth-child(odd){background:rgba(244,245,247,.04)}
           </div>
         </div>
         <div class="grid-4">
-          <input class="inp" id="m_zone" placeholder="Zona" value="A" aria-label="Zona">
-          <input class="inp" id="m_rack" placeholder="Regal" value="4" aria-label="Regal">
-          <input class="inp" id="m_shelf" placeholder="Polica" value="2" aria-label="Polica">
-          <input class="inp" id="m_slot" placeholder="Mjesto" value="12" aria-label="Mjesto">
+          <input class="inp" id="m_zone" placeholder="Zona" value="" aria-label="Zona">
+          <input class="inp" id="m_rack" placeholder="Regal" value="" aria-label="Regal">
+          <input class="inp" id="m_shelf" placeholder="Polica" value="" aria-label="Polica">
+          <input class="inp" id="m_slot" placeholder="Mjesto" value="" aria-label="Mjesto">
         </div>
         <button class="btn btn-primary btn-block" id="confirmMove" style="margin-top:12px">
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
@@ -323,19 +331,19 @@ html.dark .tl-item:nth-child(odd){background:rgba(244,245,247,.04)}
       <span class="tab-tl">detalji</span>
       <div class="u-module-head"><h3 class="u-module-title">Detalji</h3></div>
       <div class="kv">
-        <div><span class="k">Vozilo</span><span class="v" data-f="vehicle">2019 Volkswagen Passat</span></div>
-        <div><span class="k">Registracija</span><span class="v tnum" data-f="plate">DU-742-IP</span></div>
-        <div><span class="k">Šasija (VIN)</span><span class="v tnum" data-f="vin">WVWZZZ3CZKE045512</span></div>
-        <div><span class="k">Telefon</span><span class="v"><a href="tel:+385912345678" data-f="phone">+385 91 234 5678</a></span></div>
-        <div><span class="k">Gume</span><span class="v" data-f="gume">4 · na naplacima</span></div>
-        <div><span class="k">Vijci kotača</span><span class="v" data-f="bolts" data-v="in_trunk">U prtljažniku vozila</span></div>
-        <div><span class="k">Poklopci kotača</span><span class="v" data-f="hubcaps" data-v="1">Uskladišteni</span></div>
-        <div><span class="k">Zaprimljeno</span><span class="v" data-f="checkIn">14. lis 2025.</span></div>
-        <div><span class="k">Očekivani izlaz</span><span class="v"><span class="sd-due" data-f="expectedOut"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.4"/><path d="M12 7.5V12l3 2"/></svg>15. tra 2026.</span></span></div>
+        <div><span class="k">Vozilo</span><span class="v" data-f="vehicle">—</span></div>
+        <div><span class="k">Registracija</span><span class="v tnum" data-f="plate">—</span></div>
+        <div><span class="k">Šasija (VIN)</span><span class="v tnum" data-f="vin">—</span></div>
+        <div><span class="k">Telefon</span><span class="v"><a data-f="phone">—</a></span></div>
+        <div><span class="k">Gume</span><span class="v" data-f="gume">—</span></div>
+        <div><span class="k">Vijci kotača</span><span class="v" data-f="bolts" data-v="">—</span></div>
+        <div><span class="k">Poklopci kotača</span><span class="v" data-f="hubcaps" data-v="">—</span></div>
+        <div><span class="k">Zaprimljeno</span><span class="v" data-f="checkIn">—</span></div>
+        <div><span class="k">Očekivani izlaz</span><span class="v"><span class="sd-due" data-f="expectedOut"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.4"/><path d="M12 7.5V12l3 2"/></svg>—</span></span></div>
       </div>
-      <div class="sd-note">
+      <div class="sd-note" style="display:none">
         <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l4.5-1L19 8.5a2 2 0 000-3L18.5 5a2 2 0 00-3 0L5 15.5 4 20z"/></svg>
-        Ljetni set ostavljen u gepeku — kupac javlja dan ranije za termin.
+        <span data-f="notes"></span>
       </div>
     </section>
 
@@ -348,10 +356,7 @@ html.dark .tl-item:nth-child(odd){background:rgba(244,245,247,.04)}
         <div class="disclose-body">
           <div class="tire-table">
             <div class="tr th"><span>Poz.</span><span>Dimenzija</span><span>Marka</span><span>Profil</span><span>DOT</span></div>
-            <div class="tr"><span class="tnum">PL</span><span class="tnum">205/55 R16</span><span>Michelin Alpin 6</span><span class="tnum tread-ok">6 mm</span><span class="tnum">3620</span></div>
-            <div class="tr"><span class="tnum">PD</span><span class="tnum">205/55 R16</span><span>Michelin Alpin 6</span><span class="tnum tread-ok">6 mm</span><span class="tnum">3620</span></div>
-            <div class="tr"><span class="tnum">ZL</span><span class="tnum">205/55 R16</span><span>Michelin Alpin 6</span><span class="tnum tread-warn">5 mm</span><span class="tnum">3620</span></div>
-            <div class="tr"><span class="tnum">ZD</span><span class="tnum">205/55 R16</span><span>Michelin Alpin 6</span><span class="tnum tread-warn">5 mm</span><span class="tnum">3620</span></div>
+            <div class="tire-empty" style="background:var(--panel);padding:14px 12px;font:500 13px Inter;color:var(--muted)">Bez upisanih guma</div>
           </div>
         </div>
       </details>
@@ -360,7 +365,7 @@ html.dark .tl-item:nth-child(odd){background:rgba(244,245,247,.04)}
         <summary>Plaćanje<span class="chev"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></summary>
         <div class="disclose-body">
           <div class="row-between">
-            <div><div class="pay-l">Cijena čuvanja</div><div class="fee tnum">40 €</div></div>
+            <div><div class="pay-l">Cijena čuvanja</div><div class="fee tnum">—</div></div>
             <button class="btn btn-primary" id="payBtn">
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v5M12 16h.01M12 3l9 16H3l9-16z"/></svg>
               Označi plaćeno
@@ -372,12 +377,9 @@ html.dark .tl-item:nth-child(odd){background:rgba(244,245,247,.04)}
       <details class="disclose">
         <summary>Fotografije stanja<span class="chev"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></summary>
         <div class="disclose-body">
-          <div class="photos-grid">
-            <span class="ph" style="background-image:url('assets/set-1.jpg')"></span>
-            <span class="ph" style="background-image:url('assets/set-3.jpg')"></span>
-            <span class="ph" style="background-image:url('assets/set-6.jpg')"></span>
-          </div>
-          <button class="btn btn-ghost" style="margin-top:12px;min-height:38px">
+          <p class="muted" data-photos-empty style="margin:0;font:500 13px Inter">Nema fotografija</p>
+          <div class="photos-grid"></div>
+          <button class="btn btn-ghost" id="addPhotoBtn" style="margin-top:12px;min-height:38px">
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.5A1.5 1.5 0 015.5 7h1.7l1-1.6A1 1 0 0110 5h4a1 1 0 01.85.4L15.8 7h2.7A1.5 1.5 0 0120 8.5V18a1.5 1.5 0 01-1.5 1.5h-13A1.5 1.5 0 014 18V8.5z"/><circle cx="12" cy="13" r="3.2"/></svg>
             Dodaj fotografiju
           </button>
@@ -388,9 +390,7 @@ html.dark .tl-item:nth-child(odd){background:rgba(244,245,247,.04)}
         <summary>Povijest<span class="chev"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></summary>
         <div class="disclose-body">
           <div class="timeline">
-            <div class="tl-item"><div class="tl-top"><span class="tl-action">Lokacija promijenjena</span><span class="tl-time">prije 3 h</span></div><div class="tl-who">toni@asc.hr</div></div>
-            <div class="tl-item"><div class="tl-top"><span class="tl-action">Podaci ažurirani</span><span class="tl-time">2. stu</span></div><div class="tl-who">ana@asc.hr</div></div>
-            <div class="tl-item"><div class="tl-top"><span class="tl-action">Komplet stvoren</span><span class="tl-time">14. lis</span></div><div class="tl-who">toni@asc.hr</div></div>
+            <div class="muted" data-history-empty style="font:500 13px Inter;padding:4px 2px">Još nema zapisa</div>
           </div>
         </div>
       </details>
@@ -445,78 +445,30 @@ html.dark .tl-item:nth-child(odd){background:rgba(244,245,247,.04)}
 })();
 </script>
 <script>
-/* Deep-link / scan target: fill the set identity from ?code, wire the sticker
-   ("Naljepnica") to print instantly, and make the owner a link to their card. */
+/* Deep-link / scan target: show the ?code instantly, then wire the kebab flows
+   (Naljepnica / Uredi / Ispiši nalog). live-set-detail.js loads the REAL set
+   from Supabase, fills the page and stashes the raw row on window.ascLiveSet —
+   these handlers prefer that and fall back to scraping the page (data-f
+   attributes + .tire-table), so the printed report always matches the screen. */
 (function(){
-  function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
-  var SEASON_CLS = { winter:'win', summer:'', all_season:'all' };
   var q = function(s){ return document.querySelector(s); };
   var codeEl = q('.detail-head .code');
   var code = window.ASCQR ? ASCQR.normalize(new URLSearchParams(location.search).get('code'), true) : null;
-  if (!code) code = codeEl ? codeEl.textContent.trim() : null;      // default: the template set
-  var set = (code && window.ASCQR) ? ASCQR.lookup(code) : null;
-
-  function setChipText(chip, text){ var last = chip.lastChild; if(last && last.nodeType===3) last.textContent = text; else chip.appendChild(document.createTextNode(text)); }
+  if (!code && codeEl && window.ASCQR) code = ASCQR.normalize(codeEl.textContent, true);
 
   if (code && codeEl) { codeEl.textContent = code; document.title = 'ASC — ' + code; }
-  if (set) {
-    var whoEl = q('.detail-head .who');
-    if (whoEl) whoEl.innerHTML = '<a href="customers.html?id=' + encodeURIComponent(set.owner) + '" style="color:inherit;text-decoration:none">' + esc(set.who) + ' ›</a>';
-    var chips = document.querySelectorAll('.detail-chips .chip');
-    if (chips[0]) setChipText(chips[0], ASCQR.STATUS[set.status] || set.status);
-    if (chips[1]) { setChipText(chips[1], ASCQR.SEASON[set.season] || set.season); chips[1].classList.remove('win','all'); if (SEASON_CLS[set.season]) chips[1].classList.add(SEASON_CLS[set.season]); }
-    var kv = document.querySelectorAll('.kv > div .v');
-    if (kv[0]) kv[0].textContent = set.vehicle;
-    if (kv[1]) kv[1].textContent = set.plate;
-    if (set.loc) {
-      var segs = set.loc.split('·').map(function(x){ return x.trim(); });
-      var pick = function(kw){ for (var i=0;i<segs.length;i++){ if (segs[i].toLowerCase().indexOf(kw)===0) return segs[i].replace(/^\S+\s*/,''); } return null; };
-      var cells = document.querySelectorAll('.loc-block .loc-value');
-      var vals = [pick('zona'), pick('regal'), pick('polica'), pick('mjesto')];
-      cells.forEach(function(c,i){ if (vals[i]) c.textContent = vals[i]; else if (vals[i]===null && i>=1) { c.textContent='—'; c.parentElement.classList.add('loc-cell-empty'); } });
-    }
-  }
 
-  // The sticker menu item → generate + print instantly.
-  var stickerItem = Array.prototype.filter.call(document.querySelectorAll('.sd-menu-item'), function(el){ return /naljepnic/i.test(el.textContent); })[0];
-  if (stickerItem) stickerItem.addEventListener('click', function(e){
-    e.preventDefault();
-    var c = code || (codeEl ? codeEl.textContent.trim() : '');
-    if (window.ASCQR && c && !ASCQR.printSticker(c)) alert('Dopustite skočne prozore za ispis naljepnice.');
-  });
+  function txt(sel){ var el = q(sel); return el ? el.textContent.replace(/\s+/g, ' ').trim() : ''; }
+  function attr(sel, a){ var el = q(sel); return el ? (el.getAttribute(a) || '') : ''; }
+  function dash(v){ return v === '—' ? '' : v; }
 
-  // The "Uredi" (edit) menu item → reopen this set in the check-in editor, pre-filled
-  // with what we know (owner / vehicle / plate / season / location). Reuses the same
-  // sessionStorage 'asc.prefill' bridge the ASC Agent uses.
-  var editItem = Array.prototype.filter.call(document.querySelectorAll('.sd-menu-item'), function(el){ return /uredi/i.test(el.textContent); })[0];
-  if (editItem) editItem.addEventListener('click', function(e){
-    e.preventDefault();
-    var pf = { edit: true, code: code || (codeEl ? codeEl.textContent.trim() : '') };
-    if (set) {
-      pf.customer_name = set.who || '';
-      pf.plate = set.plate || '';
-      var veh = (set.vehicle || '').trim().split(/\s+/);
-      pf.make = veh.shift() || ''; pf.model = veh.join(' ');
-      pf.season = set.season || '';
-      if (set.loc) {
-        var segs2 = set.loc.split('·').map(function(x){ return x.trim(); });
-        var pick2 = function(kw){ for (var i = 0; i < segs2.length; i++){ if (segs2[i].toLowerCase().indexOf(kw) === 0) return segs2[i].replace(/^\S+\s*/, ''); } return ''; };
-        pf.zone = pick2('zona'); pf.rack = pick2('regal'); pf.shelf = pick2('polica'); pf.slot = pick2('mjesto');
-      }
-    }
-    try { sessionStorage.setItem('asc.prefill', JSON.stringify(pf)); } catch(err){}
-    location.href = 'checkin.html?prefill=1';
-  });
-
-  // The "Ispiši nalog" menu item → collect everything shown on the page into a
-  // report object and open the printable A4 "Potvrda o pohrani" (ASCQR.printReport).
-  var reportItem = Array.prototype.filter.call(document.querySelectorAll('.sd-menu-item'), function(el){ return /ispiši nalog/i.test(el.textContent); })[0];
-  if (reportItem) reportItem.addEventListener('click', function(e){
-    e.preventDefault();
-    var c = code || (codeEl ? codeEl.textContent.trim() : '');
-    var text = function(sel){ var el = q(sel); return el ? el.textContent.replace(/\s+/g, ' ').trim() : ''; };
-    var attr = function(sel, a){ var el = q(sel); return el ? (el.getAttribute(a) || '') : ''; };
-    var gume = text('[data-f="gume"]');                          // e.g. "4 · na naplacima"
+  // Everything the sticker + report need, in one scrape. Machine-value fields
+  // (season/status/quantity/notes/address/paid) come from the live row when the
+  // module has landed it; display fields come from the page itself.
+  function pageData(){
+    var live = window.ascLiveSet || null;
+    var cust = live && live.vehicle && live.vehicle.customer ? live.vehicle.customer : null;
+    var gume = dash(txt('[data-f="gume"]'));                     // e.g. "4 · na naplacima"
     var qtyM = gume.match(/\d+/);
     var locLabels = ['Zona', 'Regal', 'Polica', 'Mjesto'], locParts = [];
     var primaryBlock = document.querySelector('.u-module .loc-block');
@@ -531,25 +483,78 @@ html.dark .tl-item:nth-child(odd){background:rgba(244,245,247,.04)}
         brand: s[2].textContent.trim(), tread: s[3].textContent.trim(), dot: s[4].textContent.trim() });
     });
     var chips = document.querySelectorAll('.detail-chips .chip');
-    var paid = Array.prototype.some.call(chips, function(ch){ return /plaćeno/i.test(ch.textContent) && !/neplaćeno/i.test(ch.textContent); });
-    var data = {
-      who: text('.detail-head .who').replace(/\s*›\s*$/, ''),
-      address: 'Ulica kralja Tomislava 14, 20000 Dubrovnik',
-      phone: text('[data-f="phone"]'),
-      vehicle: text('[data-f="vehicle"]'), plate: text('[data-f="plate"]'), vin: text('[data-f="vin"]'),
-      season: set ? set.season : (chips[1] ? chips[1].textContent.trim() : ''),
-      status: set ? set.status : (chips[0] ? chips[0].textContent.trim() : ''),
+    var paid = live ? !!live.paid
+      : Array.prototype.some.call(chips, function(ch){ return /plaćeno/i.test(ch.textContent) && !/neplaćeno/i.test(ch.textContent); });
+    return {
+      who: txt('.detail-head .who').replace(/\s*›\s*$/, ''),
+      address: cust ? (cust.address || '') : '',
+      phone: dash(txt('[data-f="phone"]')),
+      vehicle: dash(txt('[data-f="vehicle"]')), plate: dash(txt('[data-f="plate"]')), vin: dash(txt('[data-f="vin"]')),
+      season: live ? live.season : (chips[1] ? chips[1].textContent.trim() : ''),
+      status: live ? live.status : (chips[0] ? chips[0].textContent.trim() : ''),
       location: locParts.join(' · '),
-      quantity: qtyM ? qtyM[0] : '',
-      rims: /naplac|felg/i.test(gume) ? 'Na naplacima' : 'Bez naplataka',
-      checkIn: text('[data-f="checkIn"]'), expectedOut: text('[data-f="expectedOut"]'),
-      fee: text('.fee'), paid: paid,
-      bolts: attr('[data-f="bolts"]', 'data-v'), hubcaps: attr('[data-f="hubcaps"]', 'data-v'),
-      notes: text('.sd-note'), tires: tires
+      quantity: live && live.quantity != null ? String(live.quantity) : (qtyM ? qtyM[0] : ''),
+      rims: gume ? (/naplac|felg/i.test(gume) ? 'Na naplacima' : 'Bez naplataka') : '',
+      checkIn: dash(txt('[data-f="checkIn"]')), expectedOut: dash(txt('[data-f="expectedOut"]')),
+      fee: dash(txt('.fee')), paid: paid,
+      bolts: live ? (live.bolts_location || '') : attr('[data-f="bolts"]', 'data-v'),
+      hubcaps: live ? (live.hubcaps_stored ? '1' : '0') : attr('[data-f="hubcaps"]', 'data-v'),
+      notes: live ? (live.notes || '') : dash(txt('.sd-note')), tires: tires
     };
-    if (window.ASCQR && !ASCQR.printReport(c, data)) alert('Ne mogu otvoriti nalog.');
+  }
+
+  // The sticker menu item → generate + print instantly, with the REAL data.
+  var stickerItem = Array.prototype.filter.call(document.querySelectorAll('.sd-menu-item'), function(el){ return /naljepnic/i.test(el.textContent); })[0];
+  if (stickerItem) stickerItem.addEventListener('click', function(e){
+    e.preventDefault();
+    if (!window.ASCQR || !code) return;
+    var d = pageData();
+    if (!ASCQR.printSticker(code, { who: d.who, vehicle: d.vehicle, plate: d.plate, season: d.season, loc: d.location }))
+      alert('Dopustite skočne prozore za ispis naljepnice.');
+  });
+
+  // The "Uredi" (edit) menu item → reopen this set in the check-in editor, pre-
+  // filled with the REAL row (customer / vehicle / VIN / location / bolts /
+  // hubcaps / notes / quantity). Same sessionStorage 'asc.prefill' bridge the
+  // ASC Agent uses; page scrape is the fallback if live data never landed.
+  var editItem = Array.prototype.filter.call(document.querySelectorAll('.sd-menu-item'), function(el){ return /uredi/i.test(el.textContent); })[0];
+  if (editItem) editItem.addEventListener('click', function(e){
+    e.preventDefault();
+    var live = window.ascLiveSet || null;
+    var pf = { edit: true, code: code || '' };
+    if (live) {
+      var v = live.vehicle || {}, cu = v.customer || {};
+      pf.customer_name = cu.name || ''; pf.phone = cu.phone || ''; pf.email = cu.email || ''; pf.address = cu.address || '';
+      pf.make = v.make || ''; pf.model = v.model || ''; pf.year = v.year || ''; pf.plate = v.plate || ''; pf.vin = v.vin || '';
+      pf.season = live.season || ''; pf.quantity = live.quantity || '';
+      pf.zone = live.zone || ''; pf.rack = live.rack || ''; pf.shelf = live.shelf || ''; pf.slot = live.slot || '';
+      pf.bolts_location = live.bolts_location || ''; pf.hubcaps_stored = !!live.hubcaps_stored;
+      pf.notes = live.notes || '';
+    } else {
+      var d = pageData();
+      pf.customer_name = d.who; pf.phone = d.phone; pf.plate = d.plate; pf.vin = d.vin;
+      var veh = (d.vehicle || '').trim().split(/\s+/);
+      if (veh[0] && /^\d{4}$/.test(veh[0])) pf.year = veh.shift();
+      pf.make = veh.shift() || ''; pf.model = veh.join(' ');
+      pf.season = d.season; pf.quantity = d.quantity; pf.notes = d.notes;
+      pf.bolts_location = d.bolts; pf.hubcaps_stored = d.hubcaps === '1';
+      var block = document.querySelector('.u-module .loc-block');
+      var vals = block ? Array.prototype.map.call(block.querySelectorAll('.loc-value'), function(x){ var t = x.textContent.trim(); return t === '—' ? '' : t; }) : [];
+      pf.zone = vals[0] || ''; pf.rack = vals[1] || ''; pf.shelf = vals[2] || ''; pf.slot = vals[3] || '';
+    }
+    try { sessionStorage.setItem('asc.prefill', JSON.stringify(pf)); } catch(err){}
+    location.href = 'checkin.html?prefill=1';
+  });
+
+  // The "Ispiši nalog" menu item → the printable A4 "Potvrda o pohrani guma".
+  var reportItem = Array.prototype.filter.call(document.querySelectorAll('.sd-menu-item'), function(el){ return /ispiši nalog/i.test(el.textContent); })[0];
+  if (reportItem) reportItem.addEventListener('click', function(e){
+    e.preventDefault();
+    if (!window.ASCQR || !code) return;
+    if (!ASCQR.printReport(code, pageData())) alert('Ne mogu otvoriti nalog.');
   });
 })();
 </script>
+<script type="module" src="live-set-detail.js"></script>
 </body>
 </html>

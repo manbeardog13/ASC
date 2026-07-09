@@ -6,6 +6,12 @@
 <title>ASC — Zaprimi (preview)</title>
 <meta name="theme-color" content="#edf0f5">
 <script>try{if(localStorage.getItem('asc.theme')==='dark'){document.documentElement.classList.add('dark');document.querySelector('meta[name="theme-color"]').content='#020305';}}catch(e){}</script>
+<link rel="icon" href="assets/favicon-32.png" sizes="32x32">
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;650;700;800&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -181,9 +187,9 @@ html.dark .btn-primary{background:linear-gradient(180deg,var(--lava-2),var(--lav
       <p class="lead">Hotel za gume · Dubrovnik — novi komplet na čuvanje</p>
     </div>
     <div class="ci-stats">
-      <div><b data-count="248">0</b><span>NA ČUVANJU</span></div>
-      <div><b data-count="12">0</b><span>DANAS ZAPRIMLJENO</span></div>
-      <div><b class="code">ASC-2026-0249</b><span>NOVI KÔD</span></div>
+      <div><b data-count="0">0</b><span>NA ČUVANJU</span></div>
+      <div><b data-count="0">0</b><span>DANAS ZAPRIMLJENO</span></div>
+      <div><b class="code">—</b><span>NOVI KÔD</span></div>
     </div>
   </header>
 
@@ -195,10 +201,10 @@ html.dark .btn-primary{background:linear-gradient(180deg,var(--lava-2),var(--lav
       <span class="tab-tl">01 · kupac</span>
       <fieldset>
         <legend>Kupac</legend>
-        <label class="field"><span class="label">Ime</span><input id="c_name" autocomplete="off" placeholder="Ivan Perić" required></label>
+        <label class="field"><span class="label">Ime</span><input id="c_name" autocomplete="off" placeholder="Ime i prezime" required></label>
         <div class="grid-2">
           <label class="field"><span class="label">Telefon</span><input id="c_phone" type="tel" inputmode="tel" autocomplete="off" placeholder="+385 91 234 5678"></label>
-          <label class="field"><span class="label">E-pošta</span><input id="c_email" type="email" autocomplete="off" placeholder="ivan.peric@email.hr"></label>
+          <label class="field"><span class="label">E-pošta</span><input id="c_email" type="email" autocomplete="off" placeholder="ime@email.hr"></label>
         </div>
         <label class="field"><span class="label">Adresa</span><input id="c_address" autocomplete="off" placeholder="Ulica i broj, grad"></label>
       </fieldset>
@@ -208,7 +214,7 @@ html.dark .btn-primary{background:linear-gradient(180deg,var(--lava-2),var(--lav
           <label class="field"><span class="label">Marka</span><input id="v_make" autocomplete="off" placeholder="Volkswagen"></label>
           <label class="field"><span class="label">Model</span><input id="v_model" autocomplete="off" placeholder="Passat"></label>
           <label class="field"><span class="label">Godina</span><input id="v_year" type="number" inputmode="numeric" min="1950" max="2100" placeholder="2019"></label>
-          <label class="field"><span class="label">Registracija</span><input id="v_plate" autocomplete="off" placeholder="DU-234-AB" style="text-transform:uppercase"></label>
+          <label class="field"><span class="label">Registracija</span><input id="v_plate" autocomplete="off" placeholder="ZG-1234-AB" style="text-transform:uppercase"></label>
         </div>
         <label class="field"><span class="label">Broj šasije (VIN)</span><input id="v_vin" autocomplete="off" placeholder="WVWZZZ3CZ…" maxlength="17" style="text-transform:uppercase"></label>
       </fieldset>
@@ -300,6 +306,13 @@ html.dark .btn-primary{background:linear-gradient(180deg,var(--lava-2),var(--lav
 
 <script src="app.js"></script>
 <script>
+/* Peek at the agent/Uredi prefill BEFORE the reader below consumes it: module
+   scripts (live-checkin.js) run after inline scripts, and the reader removes
+   the sessionStorage key — this read-only copy is how the live module knows
+   whether this visit EDITS an existing set (edit + code) or creates a new one. */
+try{window.__ascPrefill=JSON.parse(sessionStorage.getItem('asc.prefill')||'null');}catch(e){window.__ascPrefill=null;}
+</script>
+<script>
 /* Check-in-page behaviour only. Shared theme toggle + count-up live in app.js. */
 (function(){
   const form = document.getElementById('ci');
@@ -358,16 +371,14 @@ html.dark .btn-primary{background:linear-gradient(180deg,var(--lava-2),var(--lav
     });
   });
 
-  // ---- Toast + submit (mock) -----------------------------------------------
+  // ---- Toast (shared) --------------------------------------------------------
+  // The REAL submit lives in live-checkin.js (module, end of body) — it saves
+  // through js/db.js and navigates to the new set. Exposed so it reuses this
+  // toast (the prefill reader below uses it too).
   const toast = $('toast'), toastMsg = $('toastMsg');
   let toastT = null;
   function showToast(msg){ toastMsg.textContent = msg; toast.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(()=>toast.classList.remove('show'), 3200); }
-
-  form.addEventListener('submit', (e)=>{
-    e.preventDefault();
-    if(!$('c_name').value.trim()){ $('c_name').focus(); showToast('Ime kupca je obavezno.'); return; }
-    showToast('Spremljeno ASC-2026-0249');
-  });
+  window.ascToast = showToast;
 
   // ---- ASC Agent (Gemini) prefill ------------------------------------------
   // create_tire_set stashes what the user dictated in sessionStorage + sends us
@@ -399,5 +410,6 @@ html.dark .btn-primary{background:linear-gradient(180deg,var(--lava-2),var(--lav
   } catch(e){}
 })();
 </script>
+<script type="module" src="live-checkin.js"></script>
 </body>
 </html>
