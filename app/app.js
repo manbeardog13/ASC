@@ -128,14 +128,116 @@ function animate(){
 
 // Dock: iOS tab bar. Real hrefs navigate; placeholder ("#") tabs just move the
 // tint (so the preview stays interactive without dead-ending the real links).
-const dtabs = [...document.querySelectorAll('.dock .dtab')];
-dtabs.forEach(t => t.addEventListener('click', e => {
-  if (t.getAttribute('href') === '#') {
-    e.preventDefault();
-    dtabs.forEach(x => x.classList.remove('on'));
-    t.classList.add('on');
-  }
-}));
+// ---- Dock: the bubble controller -------------------------------------------
+// One custom property (--nx) glues the glass cutout and the floating puck.
+// Finger-glide writes --nx directly per frame (zero lag); taps and releases
+// let the registered property settle through the CSS spring. Navigation fires
+// at 240ms — the arc is ~60% through its travel at the MPA swap, and the
+// destination page boots already parked (data-boot kills the replay flight).
+const dockEl = document.querySelector('.dock');
+let dockDragging = false, navPending = false;
+(() => {
+  if (!dockEl) return;
+  const tabs = [...dockEl.querySelectorAll('.dtab')];
+  if (!tabs.length) return;
+  const DNAV = { 'Ploča': 'dashboard.html', 'Zaprimi': 'checkin.html', 'Skeniraj': 'scan.html', 'Skladište': 'warehouse.html' };
+  const label = (t) => (t.getAttribute('aria-label') || '').trim();
+
+  // wrap bare label text so it can lift independently of the icon
+  tabs.forEach(t => { [...t.childNodes].forEach(n => {
+    if (n.nodeType === 3 && n.textContent.trim()) { const s = document.createElement('span'); s.className = 'dlabel'; s.textContent = n.textContent.trim(); t.replaceChild(s, n); }
+  }); });
+
+  // the puck + its redrawn hairline arc
+  const float = document.createElement('div');
+  float.className = 'dock-float'; float.setAttribute('aria-hidden', 'true');
+  float.innerHTML = '<svg class="dock-arc" width="60" height="20" viewBox="0 0 60 20" fill="none"><path d="M3.6 0 A29 29 0 0 0 56.4 0" stroke="currentColor" stroke-width="1"/></svg>';
+  dockEl.appendChild(float);
+
+  // geometry — measured, never computed (flex spacing is viewport-dependent)
+  let centers = [], dockLeft = 0;
+  const measure = () => {
+    const dr = dockEl.getBoundingClientRect(); dockLeft = dr.left;
+    centers = tabs.map(t => { const r = t.getBoundingClientRect(); return r.left + r.width / 2 - dockLeft; });
+  };
+  addEventListener('resize', measure); addEventListener('orientationchange', measure);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(measure);
+
+  const current = () => tabs.find(t => t.classList.contains('on')) ||
+    tabs.find(t => (DNAV[label(t)] || '') === location.pathname.split('/').pop());
+  let lifted = null;
+  const setLift = (tab, popPuck) => {
+    if (lifted === tab) return;
+    if (lifted) lifted.classList.remove('lift');
+    lifted = tab;
+    if (tab) {
+      tab.classList.add('lift');
+      const cs = getComputedStyle(tab);
+      dockEl.style.setProperty('--tc-glow', cs.getPropertyValue('--tc-glow'));
+      float.style.setProperty('--tc-glow', cs.getPropertyValue('--tc-glow'));
+      if (popPuck) { float.classList.remove('pop'); void float.offsetWidth; float.classList.add('pop'); }
+    }
+  };
+  const park = (tab) => {
+    tabs.forEach(x => { x.classList.toggle('on', x === tab); x.removeAttribute('aria-current'); });
+    if (tab) { tab.setAttribute('aria-current', 'page'); setLift(tab, false); dockEl.style.setProperty('--nx', centers[tabs.indexOf(tab)] + 'px'); float.classList.remove('off'); }
+    else { dockEl.style.setProperty('--nx', '-120px'); float.classList.add('off'); setLift(null, false); }
+  };
+
+  // boot: park instantly (no flight) on the page's own tab
+  dockEl.setAttribute('data-boot', '');
+  measure();
+  park(current() || null);
+  requestAnimationFrame(() => requestAnimationFrame(() => dockEl.removeAttribute('data-boot')));
+
+  // pointer state machine
+  let pid = null, startX = 0, startTab = null, moved = false, raf = 0, pendX = null;
+  const nearest = (x) => { let bi = 0, bd = 1e9; centers.forEach((c, i) => { const d = Math.abs(c - x); if (d < bd) { bd = d; bi = i; } }); return bi; };
+  const write = () => { raf = 0; if (pendX == null) return; dockEl.style.setProperty('--nx', pendX + 'px'); const t = tabs[nearest(pendX)]; if (t !== lifted) setLift(t, true); pendX = null; };
+
+  dockEl.addEventListener('pointerdown', (e) => {
+    const tab = e.target.closest('.dtab'); if (!tab || pid !== null || navPending) return;
+    pid = e.pointerId; startX = e.clientX; startTab = tab; moved = false;
+    try { dockEl.setPointerCapture(pid); } catch (err) {}
+    tab.classList.add('press');
+    measure();
+  });
+  dockEl.addEventListener('pointermove', (e) => {
+    if (e.pointerId !== pid) return;
+    if (!moved && Math.abs(e.clientX - startX) > 8) { moved = true; dockDragging = true; dockEl.classList.add('dragging'); }
+    if (!moved) return;
+    pendX = Math.min(Math.max(e.clientX - dockLeft, centers[0]), centers[centers.length - 1]);
+    if (!raf) raf = requestAnimationFrame(write);
+  });
+  const finish = (commit) => {
+    if (pid === null) return;
+    try { dockEl.releasePointerCapture(pid); } catch (err) {}
+    pid = null;
+    tabs.forEach(t => t.classList.remove('press'));
+    const wasDrag = moved; moved = false; dockDragging = false;
+    requestAnimationFrame(() => dockEl.classList.remove('dragging'));
+    const target = commit ? (wasDrag ? tabs[nearest(parseFloat(getComputedStyle(dockEl).getPropertyValue('--nx')) || centers[0])] : startTab) : null;
+    const home = current();
+    if (!commit || !target) { park(home || null); return; }
+    const name = label(target);
+    dockEl.style.setProperty('--nx', centers[tabs.indexOf(target)] + 'px');
+    setLift(target, false);
+    if (name === 'Više') {
+      setTimeout(() => document.dispatchEvent(new CustomEvent('asc:open-menu')), 240);
+    } else if (DNAV[name] && target !== home) {
+      navPending = true;
+      setTimeout(() => location.assign(DNAV[name]), 240);
+    } else {
+      float.classList.remove('bounce'); void float.offsetWidth; float.classList.add('bounce');
+    }
+  };
+  dockEl.addEventListener('pointerup', (e) => { if (e.pointerId === pid) finish(true); });
+  dockEl.addEventListener('pointercancel', (e) => { if (e.pointerId === pid) finish(false); });
+  // navigation is programmatic — kill every native click (incl. iOS trailing synthetic)
+  dockEl.addEventListener('click', (e) => { if (e.target.closest('.dtab')) e.preventDefault(); }, true);
+  // the drawer closed → the puck glides home
+  document.addEventListener('asc:menu-closed', () => park(current() || null));
+})();
 
 // Dock tuck-away: scrolling down slides the tab bar completely off-screen;
 // the SLIGHTEST upward scroll brings it back (asymmetric hysteresis — 6px to
@@ -147,6 +249,7 @@ dtabs.forEach(t => t.addEventListener('click', e => {
   if (!dock) return;
   let lastY = Math.max(0, scrollY);
   addEventListener('scroll', () => {
+    if (dockDragging || navPending) return;   // never tuck mid-glide or mid-settle
     const y = Math.max(0, scrollY), dy = y - lastY;
     lastY = y;
     if (y < 48) dock.classList.remove('dock-hide');
@@ -555,9 +658,11 @@ if (document.readyState !== 'loading') syncDisc(); else addEventListener('DOMCon
     mbg.forEach(el => { el.inert = false; });                       // restore reachability BEFORE focusing the launcher
     try { btn.focus({ preventScroll: true }); } catch(e){}
     drawer.setAttribute('aria-hidden', 'true'); drawer.inert = true;
+    document.dispatchEvent(new CustomEvent('asc:menu-closed'));     // the dock puck glides home
   };
   btn.addEventListener('click', () => open('profile'));
-  document.querySelectorAll('.dock a').forEach(a => { if ((a.getAttribute('aria-label') || '').trim() === 'Više') a.addEventListener('click', (e) => { e.preventDefault(); open('menu'); }); });
+  // The dock's Više tab settles its puck, then asks for the drawer (bubble controller).
+  document.addEventListener('asc:open-menu', () => open('menu'));
   q('.md-close').addEventListener('click', close);
   scrim.addEventListener('click', close);
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && document.body.classList.contains('menu-open')) close(); });

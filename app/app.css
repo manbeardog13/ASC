@@ -19,7 +19,7 @@
   --smooth:cubic-bezier(.25,1,.5,1); --snap:cubic-bezier(.22,1,.36,1);
   --shadow-card:0 1px 2px -1px rgba(20,18,15,.10),0 6px 16px -8px rgba(20,18,15,.15),0 20px 40px -22px rgba(20,18,15,.22);
   --gap:14px; --pad:20px; --radius:22px;
-  --tap:44px; --dock-h:66px;
+  --tap:44px; --dock-h:50px;
 }
 html.dark{
   --bg:#020305; --shell:rgba(23,24,28,.55); --shell-solid:rgba(23,24,28,.86);
@@ -73,6 +73,11 @@ html.dark .canvas{
    instant html.splashing drops — the app's own entrance IS the splash's second
    act, never a double animation, never a dead reveal behind the veil. */
 html.splashing .reveal,html.splashing .shell,html.splashing .auth-card{animation-play-state:paused}
+/* Warm in-app navigation (dock/tab hops, stamped pre-paint in each head):
+   content is simply THERE — native tab bars never replay entrances, and the
+   rise reading as "the page got pushed up" on short pages goes away. Cold
+   entries (fresh tab, splash) keep the full choreography. */
+html.warm-nav .reveal,html.warm-nav .shell{animation:none}
 
 /* ============================== Top bar (real logo) ====================== */
 .top{display:flex;align-items:center;gap:14px;height:40px;margin-bottom:var(--gap);padding:0 4px}
@@ -224,27 +229,80 @@ html.dark .obar .bar{background:rgba(244,245,247,.10)}
 .chip.all{background:rgba(99,103,111,.16);color:var(--muted)}
 
 /* ============================== Dock — iOS tab bar ====================== */
-/* Flat translucent tab bar, flush to the screen's bottom edge — reads as a
-   native iOS tab bar: full-bleed heavy blur, one hairline on top, tint-only
-   active state, safe-area padding INSIDE the bar. Scrolling down tucks it
-   completely off-screen (.dock-hide, driven by app.js); the slightest upward
-   scroll brings it back — quick but soft, one --smooth transform. */
+/* ============ Dock — the bubble tab bar =====================================
+   A flush iOS tab bar whose GLASS lives on ::before (bg + blur + hairline) so
+   a radial mask can carve a true arc out of it without clipping children. One
+   registered custom property --nx drives BOTH the mask center and the floating
+   puck — cradle and disc are physically glued and can never desync. The puck
+   (.dock-float, injected by app.js) is a neutral plate; COLOR lives only in the
+   lifted tab's icon/label ink + a soft under-glow. Finger-glide on the bar
+   tracks --nx directly (zero lag); releases settle through a ~1.5% overshoot
+   spring. Scroll tuck-away behavior unchanged. */
+@property --nx{syntax:'<length>';inherits:true;initial-value:-120px}
 .dock{position:fixed;left:0;right:0;bottom:0;z-index:50;
   display:flex;align-items:stretch;justify-content:center;
-  padding:6px 10px calc(6px + env(safe-area-inset-bottom,0px));
+  padding:4px 10px calc(4px + env(safe-area-inset-bottom,0px));
+  touch-action:none;-webkit-user-select:none;user-select:none;
+  transition:transform 320ms var(--smooth),--nx 400ms cubic-bezier(.3,1.33,.5,1)}
+.dock{transition:transform 320ms var(--smooth),
+  --nx 400ms linear(0,.067,.242,.464,.675,.841,.956,1.022,1.05,1.052,1.038,1.02,1.004,.996,.998,1)}
+.dock::before{content:"";position:absolute;inset:0;z-index:-1;
   background:rgba(250,250,252,.8);border-top:.5px solid rgba(20,22,26,.14);
-  -webkit-backdrop-filter:blur(28px) saturate(180%);backdrop-filter:blur(28px) saturate(180%);
-  transition:transform 320ms var(--smooth)}
-html.dark .dock{background:rgba(16,17,20,.72);border-top-color:rgba(255,255,255,.08)}
-.dock.dock-hide{transform:translateY(102%)}
+  -webkit-backdrop-filter:blur(28px) saturate(180%);backdrop-filter:blur(28px) saturate(180%)}
+html.dark .dock::before{background:rgba(16,17,20,.72);border-top-color:rgba(255,255,255,.08)}
+/* the arc: a hole carved from the glass, 1px anti-aliased shoulder; WebKit-only
+   (Chromium mishandles masks over backdrop-filter) + .dock-flat kill switch */
+@supports (-webkit-touch-callout:none){
+  .dock:not(.dock-flat)::before{
+    -webkit-mask-image:radial-gradient(circle 29px at var(--nx) -12px,transparent 28px,#000 29px);
+    mask-image:radial-gradient(circle 29px at var(--nx) -12px,transparent 28px,#000 29px)}
+}
+.dock.dock-hide{transform:translateY(calc(100% + 40px))}   /* +40 carries the raised puck fully off-screen */
 .dock a{flex:1;max-width:96px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
-  min-height:46px;border-radius:14px;text-decoration:none;color:var(--muted);
-  font:500 10px Inter;letter-spacing:.005em;transition:color 200ms var(--snap),opacity 100ms linear}
-.dock a.on{color:var(--lava-ink)}
-html.dark .dock a.on{color:var(--lava-2)}
-.dock a svg{width:25px;height:25px}
-.dock a:active{opacity:.4}
+  min-height:42px;border-radius:14px;text-decoration:none;color:var(--muted);opacity:.92;
+  font:500 10px Inter;letter-spacing:.005em;
+  transition:color 180ms var(--snap),opacity 180ms linear,transform 260ms var(--smooth)}
+.dock a svg{width:24px;height:24px;transition:transform 260ms var(--smooth)}
+.dock a .dlabel{transition:transform 260ms var(--smooth),font-weight 0s}
+/* per-tab color tokens (order-independent) — chroma / ink light / ink dark / glow */
+.dock a[aria-label="Ploča"]{--tc:#ff4e1b;--tc-ink:#c0360d;--tc-ink-d:#ff8a5c;--tc-glow:rgba(255,78,27,.4)}
+.dock a[aria-label="Zaprimi"]{--tc:#2fbf5b;--tc-ink:#1c894a;--tc-ink-d:#57d484;--tc-glow:rgba(47,191,91,.42)}
+.dock a[aria-label="Skeniraj"]{--tc:#547898;--tc-ink:#3f7297;--tc-ink-d:#7cb9dd;--tc-glow:rgba(84,140,180,.4)}
+.dock a[aria-label="Skladište"]{--tc:#f0c052;--tc-ink:#9c6d0a;--tc-ink-d:#f0c052;--tc-glow:rgba(240,192,82,.42)}
+.dock a[aria-label="Više"]{--tc:#2e2f31;--tc-ink:#2e2f31;--tc-ink-d:#dfe2e7;--tc-glow:rgba(46,47,49,.3)}
+html.dark .dock a{--tc-ink:var(--tc-ink-d)}
+/* the lifted tab: icon rises 30px into the puck, gains its color; label lifts */
+.dock a.lift{color:var(--tc-ink);opacity:1}
+.dock a.lift svg{transform:translateY(-30px);transition:transform 300ms cubic-bezier(.34,1.45,.64,1)}
+.dock a.lift .dlabel{transform:translateY(-3px);font-weight:600}
+.dock a.press svg{transform:scale(.94);transition-duration:90ms}
+.dock a.lift.press svg{transform:translateY(-30px) scale(.94)}
+/* the puck: neutral plate riding --nx; only color = the per-tab under-glow */
+.dock-float{position:absolute;top:0;left:0;width:46px;height:46px;pointer-events:none;will-change:transform;
+  transform:translateX(calc(var(--nx) - 23px)) translateY(-35px);opacity:1;transition:opacity 200ms linear}
+.dock-float.off{opacity:0}
+.dock-float::before{content:"";position:absolute;inset:0;border-radius:50%;
+  background:rgba(255,255,255,.96);border:.5px solid rgba(20,22,26,.1);
+  box-shadow:0 6px 18px -8px rgba(2,3,5,.35),0 2px 6px -2px rgba(2,3,5,.18),0 8px 20px -10px var(--tc-glow,transparent);
+  transition:box-shadow 220ms var(--snap)}
+html.dark .dock-float::before{background:rgba(38,39,43,.96);border-color:rgba(255,255,255,.1)}
+.dock-float.pop::before{animation:puckPop 130ms var(--snap)}
+@keyframes puckPop{50%{transform:scale(1.05)}}
+.dock-float.bounce::before{animation:puckBounce 260ms var(--smooth)}
+@keyframes puckBounce{40%{transform:scale(1.06)}}
+/* the hairline the mask erased, redrawn as an SVG arc riding the same transform */
+.dock-arc{position:absolute;left:-7px;top:35px;color:rgba(20,22,26,.14)}
+html.dark .dock-arc{color:rgba(255,255,255,.08)}
+/* while a finger drags, kill the spring — writes land raw (zero lag) */
+.dock.dragging{transition:transform 320ms var(--smooth)}
+/* per-page boot parking: no transitions for one frame so MPA arrivals don't replay a flight */
+.dock[data-boot],.dock[data-boot] *,.dock[data-boot]::before{transition:none!important;animation:none!important}
 @media(min-width:1021px){ .dock{display:none} }
+@media(prefers-reduced-motion:reduce){
+  .dock{transition:transform 320ms var(--smooth)}
+  .dock a.lift svg{transition:none}
+  .dock-float{transition:none}
+}
 @media(max-width:1020px){ .pill-links{display:none} .pill{background:transparent;border:0;padding:0;margin-left:auto} }
 
 /* ============================== Global ASC Agent — right-edge voice dock ===
