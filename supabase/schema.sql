@@ -520,7 +520,10 @@ end $$;
 -- the list without being able to read raw emails from the profiles table. Emails
 -- come back as  c**********@gmail.com  (first letter + stars, domain revealed).
 -- 'readonly' (inert) accounts get an empty list.
-create or replace function list_users()
+-- (drop first: v4 below changes the return type, and `create or replace` can't
+--  redefine a function whose OUT row type differs — 42P13 on re-runs otherwise)
+drop function if exists list_users();
+create function list_users()
 returns table (id uuid, full_name text, role text, email_masked text, is_owner boolean) as $$
   select
     p.id,
