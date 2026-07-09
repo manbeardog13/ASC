@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>ASC — Ploča (preview)</title>
+<title>ASC — Ploča</title>
 <meta name="theme-color" content="#edf0f5">
 <script>try{if(localStorage.getItem('asc.theme')==='dark'){document.documentElement.classList.add('dark');document.querySelector('meta[name="theme-color"]').content='#020305';}}catch(e){}</script>
 <script>
@@ -762,14 +762,7 @@ document.addEventListener('click', function(e){
       const d = Math.round(h / 24); return 'prije ' + d + (d === 1 ? ' dan' : ' dana');
     };
 
-    let notes = load();
-    if (!notes) {   // seed on first-ever load (owner can dismiss these examples)
-      notes = [
-        { id: 101, author: 'Marko', text: 'Dodaj brzi gumb za SMS podsjetnik kupcu.', ts: Date.now() - 2 * 3600e3 },
-        { id: 102, author: 'Ana', text: 'Može li filter po sezoni na Skladištu?', ts: Date.now() - 26 * 3600e3 }
-      ];
-      save();
-    }
+    let notes = load() || [];   // delivery build: no seeded examples — the empty state invites the first note
     const savedName = localStorage.getItem(NAMEKEY); if (savedName && nameEl) nameEl.value = savedName;
 
     function render() {

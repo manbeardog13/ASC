@@ -52,7 +52,7 @@ window.ascLiveFirst = new Promise((r) => { liveFirstDone = r; });
   const session = await getSession().catch(() => null);
   if (!session) { liveFirstDone(); return; }  // the gate in app.js handles the redirect
 
-  // ---- Greeting + avatar from the signed-in profile ----
+  // ---- Greeting + avatar from the signed-in profile, real date line ----
   loadMyProfile().then((p) => {
     const name = p && p.full_name ? String(p.full_name).trim() : '';
     const h1 = q('.profile .row1 h1');
@@ -60,6 +60,11 @@ window.ascLiveFirst = new Promise((r) => { liveFirstDone = r; });
     const av = q('.profile .pavatar');
     if (av && name) av.textContent = initials(name);
   }).catch(() => {});
+  const sub = q('.profile .row1 .sub');
+  if (sub) {
+    const d = new Date().toLocaleDateString('hr-HR', { weekday: 'long', day: 'numeric', month: 'long' });
+    sub.textContent = d.charAt(0).toUpperCase() + d.slice(1).replace(/,?\s*$/, '');
+  }
 
   let health, counts, sets;
   try {
@@ -116,6 +121,19 @@ window.ascLiveFirst = new Promise((r) => { liveFirstDone = r; });
       track.parentElement.appendChild(empty);
     }
   }
+
+  // ---- "Po sezoni" occupancy: real season split of everything in the house ----
+  const active = sets.filter((s) => s.status !== 'checked_out');
+  const bySeason = { winter: 0, summer: 0, all_season: 0 };
+  active.forEach((s) => { if (s.season in bySeason) bySeason[s.season] += 1; });
+  const seasonMax = Math.max(1, bySeason.winter, bySeason.summer, bySeason.all_season);
+  qa('.obar').forEach((bar, i) => {
+    const key = ['winter', 'summer', 'all_season'][i];
+    if (!(key in bySeason)) return;
+    setNum(q('.t b', bar), bySeason[key]);
+    const fill = q('.bar i', bar);
+    if (fill) { fill.dataset.w = String(Math.round(bySeason[key] / seasonMax * 100)); }
+  });
 
   // ---- Reminders: soonest upcoming pickups (overdue first) ----
   const dueSoon = sets
