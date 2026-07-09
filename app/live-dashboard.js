@@ -132,7 +132,13 @@ window.ascLiveFirst = new Promise((r) => { liveFirstDone = r; });
     if (!(key in bySeason)) return;
     setNum(q('.t b', bar), bySeason[key]);
     const fill = q('.bar i', bar);
-    if (fill) { fill.dataset.w = String(Math.round(bySeason[key] / seasonMax * 100)); }
+    if (fill) {
+      const w = String(Math.round(bySeason[key] / seasonMax * 100));
+      fill.dataset.w = w;
+      // Warm visits: animate() already applied the old mock width before we
+      // got here — overwrite it directly (under the splash, data-w is enough).
+      if (!document.documentElement.classList.contains('splashing')) fill.style.width = w + '%';
+    }
   });
 
   // ---- Reminders: soonest upcoming pickups (overdue first) ----

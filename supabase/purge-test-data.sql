@@ -25,10 +25,13 @@ delete from customers;
 -- Audit trail of the testing period:
 delete from audit_events;
 
--- Stored tire photos (objects in the private bucket):
-delete from storage.objects where bucket_id = 'tire-photos';
-
 commit;
+
+-- NOTE: tire-photo FILES cannot be deleted via SQL (storage.protect_delete
+-- blocks direct deletes on storage.objects). Empty the bucket via the
+-- dashboard: Storage → tire-photos → select all → Delete. With the photos
+-- table wiped above, any leftover files are unreferenced and invisible to
+-- the app either way.
 
 -- Verify (every count should be 0):
 select
@@ -37,5 +40,4 @@ select
   (select count(*) from storage_sets)  as storage_sets,
   (select count(*) from tires)         as tires,
   (select count(*) from photos)        as photos,
-  (select count(*) from audit_events)  as audit_events,
-  (select count(*) from storage.objects where bucket_id = 'tire-photos') as photo_files;
+  (select count(*) from audit_events)  as audit_events;
