@@ -109,11 +109,11 @@ function fillFromSet(data) {
   fillIfEmpty('c_email', cust.email); fillIfEmpty('c_address', cust.address);
   fillIfEmpty('v_make', veh.make); fillIfEmpty('v_model', veh.model);
   fillIfEmpty('v_year', veh.year); fillIfEmpty('v_plate', veh.plate);
-  fillIfEmpty('v_vin', veh.vin);
   fillIfEmpty('s_zone', data.zone); fillIfEmpty('s_rack', data.rack);
   fillIfEmpty('s_shelf', data.shelf); fillIfEmpty('s_slot', data.slot);
   fillIfEmpty('s_out', data.expected_out_date); fillIfEmpty('s_fee', data.fee);
-  fillIfEmpty('s_notes', data.notes); fillIfEmpty('s_bolts', data.bolts_location);
+  fillIfEmpty('s_notes', data.notes);
+  if (window.setSegOpt && data.bolts_location) setSegOpt('s_bolts', data.bolts_location);
 
   const onr = $('s_onrims');
   if (onr && onr.checked !== Boolean(data.on_rims)) {
@@ -122,7 +122,7 @@ function fillFromSet(data) {
   }
   if (data.on_rims) fillIfEmpty('s_rimtype', data.rim_type);
   if ($('s_paid')) $('s_paid').checked = Boolean(data.paid);
-  if ($('s_hubcaps')) $('s_hubcaps').checked = Boolean(data.hubcaps_stored);
+  if (window.setSegOpt) setSegOpt('s_hubcaps', data.hubcaps_location || (data.hubcaps_stored ? 'stored' : ''));
   if (!(pf && pf.season) && data.season) {
     const sb = document.querySelector('[data-season="' + data.season + '"]');
     if (sb) sb.click();
@@ -177,7 +177,7 @@ function readForm() {
     customer: { name: val('c_name'), phone: val('c_phone'), email: val('c_email'), address: val('c_address') },
     vehicle: {
       make: val('v_make'), model: val('v_model'), year: num('v_year'),
-      plate: val('v_plate').toUpperCase(), vin: val('v_vin').toUpperCase(),
+      plate: val('v_plate').toUpperCase(), vin: null,
     },
     set: {
       season: seasonBtn ? seasonBtn.dataset.season : 'winter',
@@ -190,8 +190,9 @@ function readForm() {
       fee: num('s_fee'),
       paid: Boolean($('s_paid') && $('s_paid').checked),
       notes: val('s_notes'),
-      bolts_location: val('s_bolts'),
-      hubcaps_stored: Boolean($('s_hubcaps') && $('s_hubcaps').checked),
+      bolts_location: val('s_bolts') || null,
+      hubcaps_location: val('s_hubcaps') || null,
+      hubcaps_stored: val('s_hubcaps') === 'stored',
     },
     tires,
   };
@@ -238,7 +239,7 @@ if (form) form.addEventListener('submit', async (e) => {
         zone: s.zone || null, rack: s.rack || null, shelf: s.shelf || null, slot: s.slot || null,
         expected_out_date: s.expected_out_date || null,
         fee: s.fee, paid: s.paid, notes: s.notes || null,
-        bolts_location: s.bolts_location || null, hubcaps_stored: s.hubcaps_stored,
+        bolts_location: s.bolts_location || null, hubcaps_location: s.hubcaps_location || null, hubcaps_stored: s.hubcaps_stored,
         // check_in_date intentionally untouched: editing must not re-date the intake
       });
       await replaceTires(ctx.setId, f.tires);

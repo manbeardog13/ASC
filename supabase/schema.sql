@@ -741,3 +741,9 @@ drop policy if exists "own avatar update" on storage.objects;
 create policy "own avatar update" on storage.objects
   for update to authenticated
   using (bucket_id = 'avatars' and name = auth.uid()::text || '.jpg');
+
+-- ============================================================================
+-- v7 — hubcaps become a 3-state location (idempotent):
+--   'in_trunk' | 'stored' | 'none'  (hubcaps_stored boolean kept for compat)
+-- ============================================================================
+alter table storage_sets add column if not exists hubcaps_location text;

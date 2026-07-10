@@ -84,6 +84,8 @@ html.dark .field select,html.dark .tire-grid select{background-image:url("data:i
 .grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
 @media(max-width:640px){.grid-4{grid-template-columns:1fr 1fr}}
 
+/* option segments (vijci/poklopci): same idiom, denser */
+.seg-opt button{min-height:38px;font-size:11.5px;padding:0 6px}
 /* Segmented control (season) */
 .segmented{display:flex;gap:6px;background:var(--panel-2);padding:5px;border-radius:15px;border:1px solid var(--hairline)}
 html.dark .segmented{background:rgba(244,245,247,.05)}
@@ -216,7 +218,6 @@ html.dark .btn-primary{background:linear-gradient(180deg,var(--lava-2),var(--lav
           <label class="field"><span class="label">Godina</span><input id="v_year" type="number" inputmode="numeric" min="1950" max="2100" placeholder="2019"></label>
           <label class="field"><span class="label">Registracija</span><input id="v_plate" autocomplete="off" placeholder="ZG-1234-AB" style="text-transform:uppercase"></label>
         </div>
-        <label class="field"><span class="label">Broj šasije (VIN)</span><input id="v_vin" autocomplete="off" placeholder="WVWZZZ3CZ…" maxlength="17" style="text-transform:uppercase"></label>
       </fieldset>
     </section>
 
@@ -257,9 +258,17 @@ html.dark .btn-primary{background:linear-gradient(180deg,var(--lava-2),var(--lav
             <select id="s_rimtype"><option value="">—</option><option value="steel">Čelični</option><option value="alloy">Aluminijski</option></select></label>
         </div>
         <div class="grid-2">
-          <label class="field"><span class="label">Vijci kotača</span>
-            <select id="s_bolts"><option value="">—</option><option value="stored">Uskladišteni kod nas</option><option value="in_trunk">U prtljažniku vozila</option></select></label>
-          <label class="switch" style="align-self:end;padding-bottom:11px"><input id="s_hubcaps" type="checkbox"> Poklopci kotača uskladišteni</label>
+          <div class="field"><span class="label">Vijci kotača</span>
+            <div class="segmented seg-opt" data-for="s_bolts" role="group" aria-label="Vijci kotača">
+              <button type="button" data-v="in_trunk">U prtljažniku kupca</button>
+              <button type="button" data-v="stored">Uskladišteno</button>
+            </div><input type="hidden" id="s_bolts"></div>
+          <div class="field"><span class="label">Poklopci kotača</span>
+            <div class="segmented seg-opt" data-for="s_hubcaps" role="group" aria-label="Poklopci kotača">
+              <button type="button" data-v="in_trunk">U prtljažniku kupca</button>
+              <button type="button" data-v="stored">Uskladišteno</button>
+              <button type="button" data-v="none">Ne postoje</button>
+            </div><input type="hidden" id="s_hubcaps"></div>
         </div>
         <div class="grid-2">
           <label class="field"><span class="label">Cijena čuvanja</span><input id="s_fee" type="number" inputmode="decimal" step="0.01" min="0" placeholder="40.00"></label>
@@ -354,6 +363,19 @@ try{window.__ascPrefill=JSON.parse(sessionStorage.getItem('asc.prefill')||'null'
 
   // ---- On-rims reveal + date min ------------------------------------------
   $('s_onrims').addEventListener('change', (e)=>{ $('rimWrap').hidden = !e.target.checked; });
+  // option segments — one active choice, mirrored into the hidden input
+  document.querySelectorAll('.seg-opt').forEach((seg)=>{
+    const inp = $(seg.dataset.for);
+    seg.addEventListener('click', (e)=>{
+      const b = e.target.closest('button[data-v]'); if(!b) return;
+      const on = b.getAttribute('aria-pressed') === 'true';
+      seg.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed','false'));
+      if(!on){ b.setAttribute('aria-pressed','true'); inp.value = b.dataset.v; } else inp.value = '';
+    });
+  });
+  window.setSegOpt = (id, v)=>{ const seg = document.querySelector('.seg-opt[data-for="'+id+'"]'); if(!seg) return;
+    seg.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed', String(x.dataset.v===v)));
+    const inp = $(id); if(inp) inp.value = v || ''; };
   $('s_out').min = new Date().toISOString().slice(0,10);
 
   // ---- Recent-location chips ----------------------------------------------
@@ -385,10 +407,10 @@ try{window.__ascPrefill=JSON.parse(sessionStorage.getItem('asc.prefill')||'null'
       setVal('c_address', pf.address);
       setVal('v_make', pf.make); setVal('v_model', pf.model); setVal('v_year', pf.year);
       setVal('v_plate', pf.plate ? String(pf.plate).toUpperCase() : '');
-      setVal('v_vin', pf.vin ? String(pf.vin).toUpperCase() : '');
       setVal('s_zone', pf.zone); setVal('s_rack', pf.rack); setVal('s_shelf', pf.shelf); setVal('s_slot', pf.slot);
-      setVal('s_bolts', pf.bolts_location); setVal('s_notes', pf.notes);
-      if (pf.hubcaps_stored) $('s_hubcaps').checked = true;
+      if (pf.bolts_location) setSegOpt('s_bolts', pf.bolts_location);
+      if (pf.hubcaps_location || pf.hubcaps_stored) setSegOpt('s_hubcaps', pf.hubcaps_location || (pf.hubcaps_stored ? 'stored' : ''));
+      setVal('s_notes', pf.notes);
       if (pf.season) { const sb = form.querySelector('[data-season="' + pf.season + '"]'); if (sb) sb.click(); }
       const qty = Math.max(1, Math.min(8, Number(pf.quantity) || 4));
       $('s_qty').value = qty; renderTires(qty);

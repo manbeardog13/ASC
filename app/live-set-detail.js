@@ -16,7 +16,7 @@ const SEASON_LABEL = { winter: 'Zimske', summer: 'Ljetne', all_season: 'Cjelogod
 const SEASON_CLASS = { winter: 'win', summer: '', all_season: 'all' };
 const STATUS_LABEL = { in_storage: 'Spremljeno', reserved: 'Rezervirano', checked_out: 'Preuzeto', missing: 'Nedostaje' };
 const POS_LABEL = { FL: 'PL', FR: 'PD', RL: 'ZL', RR: 'ZD', spare: 'Rez.' };
-const BOLTS_LABEL = { stored: 'Uskladišteni kod nas', in_trunk: 'U prtljažniku vozila' };
+const BOLTS_LABEL = { stored: 'Uskladišteno', in_trunk: 'U prtljažniku kupca' };
 
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const q = (s, r = document) => r.querySelector(s);
@@ -206,7 +206,11 @@ function renderDetails(s) {
   const bolts = q('[data-f="bolts"]');
   if (bolts) { bolts.setAttribute('data-v', s.bolts_location || ''); bolts.textContent = BOLTS_LABEL[s.bolts_location] || '—'; }
   const hub = q('[data-f="hubcaps"]');
-  if (hub) { hub.setAttribute('data-v', s.hubcaps_stored ? '1' : '0'); hub.textContent = s.hubcaps_stored ? 'Uskladišteni' : 'Nisu (kod kupca)'; }
+  if (hub) {
+    const loc = s.hubcaps_location || (s.hubcaps_stored ? 'stored' : '');
+    const HUBS = { stored: 'Uskladišteno', in_trunk: 'U prtljažniku kupca', none: 'Ne postoje' };
+    hub.setAttribute('data-v', loc); hub.textContent = HUBS[loc] || '—';
+  }
   set('[data-f="checkIn"]', fmtDate(s.check_in_date));
   setTail(q('[data-f="expectedOut"]'), fmtDate(s.expected_out_date));
   const note = q('.sd-note');

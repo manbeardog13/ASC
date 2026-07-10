@@ -189,7 +189,13 @@
     var d = new Date(), p = function (n) { return (n < 10 ? '0' : '') + n; };
     return p(d.getDate()) + '.' + p(d.getMonth() + 1) + '.' + d.getFullYear() + '.';
   }
-  var BOLTS = { stored: 'Uskladišteni kod nas', in_trunk: 'U prtljažniku vozila' };
+  var BOLTS = [{ v: 'in_trunk', t: 'U prtljažniku kupca' }, { v: 'stored', t: 'Uskladišteno' }];
+  var HUBS = [{ v: 'in_trunk', t: 'U prtljažniku kupca' }, { v: 'stored', t: 'Uskladišteno' }, { v: 'none', t: 'Ne postoje' }];
+  function optRow(k, opts, chosen) {
+    return '<div class="rp-f"><span class="rp-k">' + esc(k) + '</span><span class="rp-v rp-opts">' +
+      opts.map(function (o) { return '<span class="rp-opt' + (o.v === chosen ? ' sel' : '') + '"><i></i>' + esc(o.t) + '</span>'; }).join('') +
+      '</span></div>';
+  }
   function rline(k, v, tab, cls) {
     return '<div class="rp-f' + (cls ? ' ' + cls : '') + '"><span class="rp-k">' + esc(k) +
            '</span><span class="rp-v' + (tab ? ' tab' : '') + '">' + esc(v || '—') + '</span></div>';
@@ -218,8 +224,8 @@
     var season = SEASON[data.season || set.season] || data.season || '';
     var status = STATUS[data.status || set.status] || data.status || '';
     var loc = data.location || set.loc || '';
-    var hub = (data.hubcaps === true || data.hubcaps === '1') ? 'Uskladišteni' :
-              (data.hubcaps === false || data.hubcaps === '0') ? 'Nisu (kod kupca)' : '';
+    if (data.hubcaps === true || data.hubcaps === '1') data.hubcaps = 'stored';
+    else if (data.hubcaps === false || data.hubcaps === '0') data.hubcaps = 'in_trunk';
     var qrMarkup = svg(code, 3) || '';
     var tires = Array.isArray(data.tires) ? data.tires : [];
     var tRows = tires.length
@@ -256,7 +262,7 @@
           '<thead><tr><th>Poz.</th><th>Dimenzija</th><th>Marka i model</th><th class="num">Profil</th><th class="num">DOT</th></tr></thead>' +
           '<tbody>' + tRows + '</tbody></table>') +
         rsec('Dodatci', '',
-          rline('Vijci kotača', BOLTS[data.bolts] || '') + rline('Poklopci kotača', hub)) +
+          optRow('Vijci kotača', BOLTS, data.bolts || '') + optRow('Poklopci kotača', HUBS, data.hubcaps || '')) +
         rsec('Plaćanje', '',
           rline('Status plaćanja', data.paid ? 'Plaćeno ✓' : 'Neplaćeno') +
           rline('Cijena čuvanja', data.fee, true, 'rp-total')) +

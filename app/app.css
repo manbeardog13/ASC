@@ -739,6 +739,12 @@ html.sticker-lock, html.sticker-lock body{ overflow:hidden }
 .rp-f.rp-total{border-top:1.5px solid #111;border-bottom:0;padding-top:5px}
 .rp-f:has(+ .rp-total){border-bottom:0}
 .rp-total .rp-v{font:700 12px Sora}
+/* form-style option squares: every option printed, the chosen one blacked in */
+.rp-opts{display:inline-flex;gap:14px;flex-wrap:wrap;justify-content:flex-end}
+.rp-opt{display:inline-flex;align-items:center;gap:5px;font:500 9.5px Inter;color:#555}
+.rp-opt i{width:9px;height:9px;border:1.2px solid #111;flex:none;background:#fff}
+.rp-opt.sel{color:#111;font-weight:600}
+.rp-opt.sel i{background:#111}
 /* notes — the one left-aligned prose exception */
 .rp-prose{font:400 9.5px/1.4 Inter;color:#333;padding:4px 0}
 /* signatures + footer pinned to the page bottom via the flex spacer */

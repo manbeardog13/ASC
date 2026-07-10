@@ -395,7 +395,7 @@ export async function createStorageSet(form) {
       zone: form.set.zone || null, rack: form.set.rack || null, shelf: form.set.shelf || null, slot: form.set.slot || null,
       check_in_date: form.set.check_in_date || null, expected_out_date: form.set.expected_out_date || null,
       fee: form.set.fee ?? null, paid: form.set.paid, notes: form.set.notes || null,
-      bolts_location: form.set.bolts_location || null, hubcaps_stored: Boolean(form.set.hubcaps_stored),
+      bolts_location: form.set.bolts_location || null, hubcaps_location: form.set.hubcaps_location || null, hubcaps_stored: form.set.hubcaps_stored != null ? Boolean(form.set.hubcaps_stored) : form.set.hubcaps_location === 'stored',
     }).select().single();
   if (sErr) throw fail(sErr, "save the tire set");
 
