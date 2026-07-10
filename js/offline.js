@@ -52,9 +52,12 @@ export async function replay(executor) {
 
 // ---- Connection watching -----------------------------------------------------
 let replayExecutor = null;
+let inited = false;
 
 export function initOffline(executor) {
   replayExecutor = executor;
+  if (inited) return;   // db.js wires this at boot; a second call must not stack listeners
+  inited = true;
   setState({ syncPending: pendingCount(), online: navigator.onLine });
 
   window.addEventListener("online", async () => {

@@ -491,7 +491,9 @@ html.dark .tl-item:nth-child(odd){background:rgba(244,245,247,.04)}
       checkIn: dash(txt('[data-f="checkIn"]')), expectedOut: dash(txt('[data-f="expectedOut"]')),
       fee: dash(txt('.fee')), paid: paid,
       bolts: live ? (live.bolts_location || '') : attr('[data-f="bolts"]', 'data-v'),
-      hubcaps: live ? (live.hubcaps_stored ? '1' : '0') : attr('[data-f="hubcaps"]', 'data-v'),
+      // Three-state token ('in_trunk'/'stored'/'none'), never the legacy boolean:
+      // collapsing 'none' to a boolean printed the wrong square on a signed document.
+      hubcaps: live ? (live.hubcaps_location || (live.hubcaps_stored ? 'stored' : '')) : attr('[data-f="hubcaps"]', 'data-v'),
       notes: live ? (live.notes || '') : dash(txt('.sd-note')), tires: tires
     };
   }
@@ -521,7 +523,9 @@ html.dark .tl-item:nth-child(odd){background:rgba(244,245,247,.04)}
       pf.make = v.make || ''; pf.model = v.model || ''; pf.year = v.year || ''; pf.plate = v.plate || ''; pf.vin = v.vin || '';
       pf.season = live.season || ''; pf.quantity = live.quantity || '';
       pf.zone = live.zone || ''; pf.rack = live.rack || ''; pf.shelf = live.shelf || ''; pf.slot = live.slot || '';
-      pf.bolts_location = live.bolts_location || ''; pf.hubcaps_stored = !!live.hubcaps_stored;
+      pf.bolts_location = live.bolts_location || '';
+      pf.hubcaps_location = live.hubcaps_location || (live.hubcaps_stored ? 'stored' : '');
+      pf.hubcaps_stored = !!live.hubcaps_stored;
       pf.notes = live.notes || '';
     } else {
       var d = pageData();
@@ -530,7 +534,8 @@ html.dark .tl-item:nth-child(odd){background:rgba(244,245,247,.04)}
       if (veh[0] && /^\d{4}$/.test(veh[0])) pf.year = veh.shift();
       pf.make = veh.shift() || ''; pf.model = veh.join(' ');
       pf.season = d.season; pf.quantity = d.quantity; pf.notes = d.notes;
-      pf.bolts_location = d.bolts; pf.hubcaps_stored = d.hubcaps === '1';
+      pf.bolts_location = d.bolts;
+      pf.hubcaps_location = d.hubcaps; pf.hubcaps_stored = d.hubcaps === 'stored';
       var block = document.querySelector('.u-module .loc-block');
       var vals = block ? Array.prototype.map.call(block.querySelectorAll('.loc-value'), function(x){ var t = x.textContent.trim(); return t === '—' ? '' : t; }) : [];
       pf.zone = vals[0] || ''; pf.rack = vals[1] || ''; pf.shelf = vals[2] || ''; pf.slot = vals[3] || '';

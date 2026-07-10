@@ -2,7 +2,7 @@
    Makes the app installable and loads the shell instantly. Network-first for
    same-origin files (so deploys show up right away), cache fallback when
    offline. Live data always comes from Supabase online. */
-const CACHE = "asc-tirehotel-v82";   // v82 = delivery cutover: root → app/, preview/ removed
+const CACHE = "asc-tirehotel-v83";   // v83 = offline nav serves the requested page (kills the index redirect loop)
 // Cross-origin dependencies the app cannot boot (or scan) without. Same-origin
 // files are precached below; these are runtime-cached network-first so an
 // offline cold boot doesn't die on the supabase-js ESM import.
@@ -21,9 +21,31 @@ const SHELL = [
   // Delivered app shell (app/ is the product after the cutover):
   "./app/login.html",
   "./app/dashboard.html",
+  "./app/checkin.html",
+  "./app/set-detail.html",
+  "./app/scan.html",
+  "./app/warehouse.html",
+  "./app/customers.html",
+  "./app/reminders.html",
+  "./app/workshop.html",
+  "./app/recycle.html",
+  "./app/users.html",
   "./app/app.css",
   "./app/app.js",
   "./app/qr.js",
+  "./app/layout-edit.js",
+  "./app/agent-config.js",
+  "./app/agent-gemini.js",
+  "./app/live-dashboard.js",
+  "./app/live-checkin.js",
+  "./app/live-set-detail.js",
+  "./app/live-scan.js",
+  "./app/live-warehouse.js",
+  "./app/live-customers.js",
+  "./app/live-reminders.js",
+  "./app/live-workshop.js",
+  "./app/live-recycle.js",
+  "./app/live-users.js",
   "./app/manifest.webmanifest",
   "./app/assets/logo.png",
   "./app/assets/icon.svg",
@@ -126,7 +148,13 @@ self.addEventListener("fetch", (e) => {
           if (cacheable(res) && isShell) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put("./index.html", copy)).catch(() => {}); }
           return res;
         })
-        .catch(() => caches.match("./index.html").then((r) => r || caches.match("./")))
+        // Offline: serve the cached copy of the PAGE THE USER ASKED FOR first.
+        // Answering every navigation with index.html re-ran its relative
+        // redirect against /app/ URLs and looped forever (…/app/app/app/…).
+        .catch(() => caches.match(req)
+          .then((r) => r || caches.match("./app/dashboard.html"))
+          .then((r) => r || caches.match("./index.html"))
+          .then((r) => r || caches.match("./")))
     );
     return;
   }

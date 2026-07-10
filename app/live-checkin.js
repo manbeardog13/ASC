@@ -44,7 +44,13 @@ function setNum(el, val) {
 const pf = window.__ascPrefill || null;
 const editMode = Boolean(pf && pf.edit && pf.code);
 const editCode = editMode ? String(pf.code) : null;
-let editCtx = null; // { setId, customerId, vehicleId } once the set is loaded
+let editCtx = null;   // { setId, customerId, vehicleId } once the set is loaded
+let editSet = null;   // the full loaded row — tire merge + hydration gate need it
+// The prefill bridge carries only a subset of fields. Saving before the real row
+// has filled the form would write the gaps back as NULLs — so edit-mode submit is
+// gated on this flag and re-attempts the load itself if the preload failed.
+let editHydrated = !editMode;
+let paidTouched = false;
 
 async function ensureEditCtx() {
   if (editCtx && editCtx.setId) return editCtx;
@@ -113,7 +119,9 @@ function fillFromSet(data) {
   fillIfEmpty('s_shelf', data.shelf); fillIfEmpty('s_slot', data.slot);
   fillIfEmpty('s_out', data.expected_out_date); fillIfEmpty('s_fee', data.fee);
   fillIfEmpty('s_notes', data.notes);
-  if (window.setSegOpt && data.bolts_location) setSegOpt('s_bolts', data.bolts_location);
+  // Segments and the paid switch honor the same fill-don't-overwrite contract:
+  // a choice the employee already made while the preload was in flight stays.
+  if (window.setSegOpt && data.bolts_location && !$('s_bolts').value) setSegOpt('s_bolts', data.bolts_location);
 
   const onr = $('s_onrims');
   if (onr && onr.checked !== Boolean(data.on_rims)) {
@@ -121,8 +129,8 @@ function fillFromSet(data) {
     onr.dispatchEvent(new Event('change')); // reveals/hides the rim-type field via the page's own listener
   }
   if (data.on_rims) fillIfEmpty('s_rimtype', data.rim_type);
-  if ($('s_paid')) $('s_paid').checked = Boolean(data.paid);
-  if (window.setSegOpt) setSegOpt('s_hubcaps', data.hubcaps_location || (data.hubcaps_stored ? 'stored' : ''));
+  if ($('s_paid') && !paidTouched) $('s_paid').checked = Boolean(data.paid);
+  if (window.setSegOpt && !$('s_hubcaps').value) setSegOpt('s_hubcaps', data.hubcaps_location || (data.hubcaps_stored ? 'stored' : ''));
   if (!(pf && pf.season) && data.season) {
     const sb = document.querySelector('[data-season="' + data.season + '"]');
     if (sb) sb.click();
@@ -173,10 +181,17 @@ function readForm() {
       tread_mm: Number.isFinite(treadNum) ? treadNum : null,
     };
   });
+  // The form is novalidate, so the inputs' declared bounds are enforced here:
+  // an impossible year or a negative fee becomes "not recorded" rather than
+  // garbage on a signed document.
+  let year = num('v_year');
+  if (year != null && (year < 1950 || year > 2100)) year = null;
+  let fee = num('s_fee');
+  if (fee != null && fee < 0) fee = null;
   return {
     customer: { name: val('c_name'), phone: val('c_phone'), email: val('c_email'), address: val('c_address') },
     vehicle: {
-      make: val('v_make'), model: val('v_model'), year: num('v_year'),
+      make: val('v_make'), model: val('v_model'), year,
       plate: val('v_plate').toUpperCase(), vin: null,
     },
     set: {
@@ -187,7 +202,7 @@ function readForm() {
       zone: val('s_zone'), rack: val('s_rack'), shelf: val('s_shelf'), slot: val('s_slot'),
       check_in_date: new Date().toISOString().slice(0, 10),
       expected_out_date: val('s_out'),
-      fee: num('s_fee'),
+      fee,
       paid: Boolean($('s_paid') && $('s_paid').checked),
       notes: val('s_notes'),
       bolts_location: val('s_bolts') || null,
@@ -210,15 +225,34 @@ function goToSet(code) {
 if (form) form.addEventListener('submit', async (e) => {
   e.preventDefault();
   if (inFlight) return;
-  const f = readForm();
-  if (!f.customer.name) {
-    if ($('c_name')) $('c_name').focus();
-    showToast('Ime kupca je obavezno.');
-    return;
-  }
   inFlight = true;
   if (submitBtn) { submitBtn.disabled = true; submitBtn.setAttribute('aria-busy', 'true'); }
+  const unlock = () => {
+    inFlight = false;
+    if (submitBtn) { submitBtn.disabled = false; submitBtn.removeAttribute('aria-busy'); }
+  };
   try {
+    if (editMode && !editHydrated) {
+      // The row never landed (flaky preload, or a save faster than the fetch).
+      // Writing the form now would null every field the prefill didn't carry —
+      // load and fill first; a failure here aborts the save, form untouched.
+      const data = await loadStorageSet(editCode);
+      editCtx = {
+        setId: data.id,
+        customerId: data.vehicle?.customer?.id ?? null,
+        vehicleId: data.vehicle?.id ?? null,
+      };
+      editSet = data;
+      fillFromSet(data);
+      editHydrated = true;
+    }
+    const f = readForm();
+    if (!f.customer.name) {
+      if ($('c_name')) $('c_name').focus();
+      showToast('Ime kupca je obavezno.');
+      unlock();
+      return;
+    }
     if (editMode) {
       const ctx = await ensureEditCtx();
       const c = f.customer, v = f.vehicle, s = f.set;
@@ -228,11 +262,13 @@ if (form) form.addEventListener('submit', async (e) => {
         });
       } else console.warn('[live] no customer id on', editCode, '— customer fields not saved');
       if (ctx.vehicleId) {
+        // vin intentionally absent from the patch: the form has no VIN field,
+        // and writing null would wipe a VIN recorded outside this form.
         await updateVehicle(ctx.vehicleId, {
-          make: v.make || null, model: v.model || null, year: v.year, plate: v.plate || null, vin: v.vin || null,
+          make: v.make || null, model: v.model || null, year: v.year, plate: v.plate || null,
         });
       } else console.warn('[live] no vehicle id on', editCode, '— vehicle fields not saved');
-      await updateStorageSet(ctx.setId, {
+      const saved = await updateStorageSet(ctx.setId, {
         season: s.season, on_rims: s.on_rims,
         rim_type: s.on_rims ? s.rim_type || null : null,
         quantity: s.quantity,
@@ -242,7 +278,27 @@ if (form) form.addEventListener('submit', async (e) => {
         bolts_location: s.bolts_location || null, hubcaps_location: s.hubcaps_location || null, hubcaps_stored: s.hubcaps_stored,
         // check_in_date intentionally untouched: editing must not re-date the intake
       });
-      await replaceTires(ctx.setId, f.tires);
+      // The form shows only position/size/brand/tread — carry the unshown
+      // columns (DOT, model, studded, notes) over from the loaded rows so an
+      // edit-save can't silently erase them. Match by position, then by order.
+      const existing = (editSet && editSet.tires) || [];
+      const taken = new Set();
+      const carried = f.tires.map((t, i) => {
+        let j = existing.findIndex((o, k) => !taken.has(k) && t.position && o.position === t.position);
+        if (j < 0 && existing[i] && !taken.has(i)) j = i;
+        if (j < 0) return t;
+        taken.add(j);
+        const o = existing[j];
+        return { ...t, model: o.model, dot_code: o.dot_code, studded: o.studded, condition_notes: o.condition_notes };
+      });
+      await replaceTires(ctx.setId, carried);
+      if (saved && saved.queued) {
+        // Offline outbox took the patch — set-detail would show stale server
+        // data, so stay here and say exactly what happened.
+        showToast('Nema veze — promjene čekaju i sinkronizirat će se automatski.');
+        unlock();
+        return;
+      }
       showToast('Ažurirano ' + editCode);
       goToSet(editCode);
     } else {
@@ -255,8 +311,7 @@ if (form) form.addEventListener('submit', async (e) => {
   } catch (err) {
     console.warn('[live] save failed — keeping the form:', err);
     showToast(err && err.message ? err.message : 'Spremanje nije uspjelo. Pokušajte ponovno.');
-    inFlight = false;
-    if (submitBtn) { submitBtn.disabled = false; submitBtn.removeAttribute('aria-busy'); }
+    unlock();
   }
 });
 
@@ -290,9 +345,15 @@ window.ascLiveFirst = new Promise((r) => { liveFirstDone = r; });
         customerId: data.vehicle?.customer?.id ?? null,
         vehicleId: data.vehicle?.id ?? null,
       };
+      editSet = data;
       fillFromSet(data);
+      editHydrated = true;
     } catch (e) {
-      console.warn('[live] could not preload', editCode, '(will retry at save):', e);
+      console.warn('[live] could not preload', editCode, '(the save gate retries it):', e);
     }
   }
 })();
+
+// A deliberate Plaćeno choice made while the preload is in flight must survive
+// the late fill — fillFromSet checks this flag before touching the switch.
+if ($('s_paid')) $('s_paid').addEventListener('change', () => { paidTouched = true; });

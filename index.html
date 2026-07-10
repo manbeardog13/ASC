@@ -12,7 +12,15 @@
      the login card. Client-side replace() keeps the service worker's
      network-first navigation happy (no HTTP redirect for it to refuse to
      cache); the meta refresh + the visible link are no-JS fallbacks. -->
-<script>location.replace("app/dashboard.html");</script>
+<script>
+// Path-aware: when an offline service worker answers a deep /app/ navigation
+// with this page, a bare relative redirect would resolve to app/app/… and loop.
+(function(){
+  var p = location.pathname;
+  var base = p.indexOf('/app/') >= 0 ? p.slice(0, p.indexOf('/app/') + 1) : p.replace(/[^\/]*$/, '');
+  location.replace(base + 'app/dashboard.html');
+})();
+</script>
 <meta http-equiv="refresh" content="0; url=app/dashboard.html">
 <style>
   html,body{height:100%;margin:0}

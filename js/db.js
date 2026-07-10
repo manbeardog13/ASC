@@ -6,15 +6,17 @@
 import { supabase } from "./supabaseClient.js";
 import { config } from "./config.js";
 import { compressImage } from "./images.js";
-import { isOnline, enqueue } from "./offline.js";
+import { isOnline, enqueue, initOffline } from "./offline.js";
 import { rememberLocation } from "./store.js";
 
 // Turn a Supabase error into a sentence an employee could read.
 function fail(error, doing) {
   const message = error?.message || String(error);
   if (/duplicate key|unique/i.test(message)) return new Error("That already exists.");
-  if (/Failed to fetch|network|fetch failed/i.test(message)) {
-    return new Error(`No connection while trying to ${doing}. It will retry when you're back online.`);
+  if (/Failed to fetch|network|fetch failed|load failed/i.test(message)) {
+    // Honest wording: only queued field-edits auto-retry (updateStorageSet's
+    // offline branch, which never reaches here). Everything else did NOT save.
+    return new Error(`No connection while trying to ${doing} — nothing was saved. Check the connection and try again.`);
   }
   if (/row-level security|permission/i.test(message)) {
     return new Error(`You don't have permission to ${doing}.`);
@@ -391,8 +393,53 @@ async function lenientWrite(doing, payload, write) {
     const present = col && (Array.isArray(p) ? p.some((r) => col in r) : col in p);
     if (!present) throw fail(error, doing);
     console.warn(`[db] column '${col}' missing in production — ${doing} saved without it`);
+    // Degrading a save must never be invisible — app.js listens and toasts.
+    try { window.dispatchEvent(new CustomEvent("asc:save-degraded", { detail: { column: col, doing } })); } catch { /* non-DOM */ }
     if (Array.isArray(p)) p.forEach((r) => delete r[col]); else delete p[col];
   }
+}
+
+// ---- Failed-create unwind (durable) ---------------------------------------------
+// RLS quirk: staff may INSERT storage_sets but only admins may DELETE them, and a
+// filtered-out delete returns success with 0 rows. So the unwind soft-deletes the
+// set first (allowed to every staff role) — a soft-deleted ghost is invisible to
+// lists, counts and location checks — then tries the hard delete, and only touches
+// the customer once the set is neutralized. If any step can't be confirmed (e.g.
+// the network just died), the ids are parked in localStorage and replayed later.
+const UNWIND_KEY = "asc.unwind.pending";
+function readUnwinds() {
+  try { return JSON.parse(localStorage.getItem(UNWIND_KEY)) ?? []; } catch { return []; }
+}
+function writeUnwinds(list) {
+  try { localStorage.setItem(UNWIND_KEY, JSON.stringify(list)); } catch { /* ignore */ }
+}
+async function unwindCreate({ setId, customerId }) {
+  if (setId) {
+    const soft = await supabase.from("storage_sets")
+      .update({ deleted_at: new Date().toISOString() }).eq("id", setId).select("id");
+    const hard = await supabase.from("storage_sets").delete().eq("id", setId).select("id");
+    const gone = (!hard.error && (hard.data?.length || 0) > 0) || (!soft.error && (soft.data?.length || 0) > 0);
+    if (!gone) {
+      // Row may already be deleted — confirm before declaring failure.
+      const check = await supabase.from("storage_sets").select("id").eq("id", setId).maybeSingle();
+      if (check.error || check.data) return false;
+    }
+  }
+  if (customerId) {
+    const del = await supabase.from("customers").delete().eq("id", customerId).select("id");
+    if (del.error) return false;
+  }
+  return true;
+}
+async function replayPendingUnwinds() {
+  const pending = readUnwinds();
+  if (!pending.length) return;
+  const survivors = [];
+  for (const entry of pending) {
+    const done = await unwindCreate(entry).catch(() => false);
+    if (!done) survivors.push(entry);
+  }
+  writeUnwinds(survivors);
 }
 
 export async function createStorageSet(form) {
@@ -426,10 +473,9 @@ export async function createStorageSet(form) {
         (p) => supabase.from("tires").insert(p));
     }
   } catch (e) {
-    // Best-effort unwind, children first (deleting the customer alone would
-    // strand the set with vehicle_id = null, since that FK is ON DELETE SET NULL).
-    if (set) await supabase.from("storage_sets").delete().eq("id", set.id).then(() => {}, () => {});
-    await supabase.from("customers").delete().eq("id", customer.id).then(() => {}, () => {});
+    const job = { setId: set?.id ?? null, customerId: customer.id, at: new Date().toISOString() };
+    const done = await unwindCreate(job).catch(() => false);
+    if (!done) writeUnwinds([...readUnwinds(), job]);  // replayed on next boot / reconnect
     throw e;
   }
 
@@ -504,11 +550,16 @@ export async function updateVehicle(vehicleId, patch) {
   if (error) throw fail(error, "save the vehicle");
 }
 export async function replaceTires(setId, tires) {
-  const { error: delErr } = await supabase.from("tires").delete().eq("set_id", setId);
-  if (delErr) throw fail(delErr, "update the tires");
+  // Insert the new rows FIRST, then delete only the old ids. A failure between
+  // the two leaves harmless duplicates (fixed by re-saving) — never zero rows.
+  const { data: old, error: oldErr } = await supabase.from("tires").select("id").eq("set_id", setId);
+  if (oldErr) throw fail(oldErr, "update the tires");
   const rows = toTireRows(setId, tires);
   if (rows.length) {
-    const { error } = await supabase.from("tires").insert(rows);
+    await lenientWrite("update the tires", rows, (p) => supabase.from("tires").insert(p));
+  }
+  if (old?.length) {
+    const { error } = await supabase.from("tires").delete().in("id", old.map((o) => o.id));
     if (error) throw fail(error, "update the tires");
   }
 }
@@ -529,8 +580,11 @@ export async function listRecycleBin() {
   return data ?? [];
 }
 export async function purgeSetPermanently(setId) {
-  const { error } = await supabase.from("storage_sets").delete().eq("id", setId);
+  // RLS grants hard-delete to admins only; a filtered delete "succeeds" with 0
+  // rows — verify the row actually went away instead of toasting a false success.
+  const { data, error } = await supabase.from("storage_sets").delete().eq("id", setId).select("id");
   if (error) throw fail(error, "permanently delete the set");
+  if (!data || data.length === 0) throw new Error("Samo administrator može trajno obrisati.");
 }
 
 // ---- Audit trail ---------------------------------------------------------------
@@ -610,3 +664,11 @@ export function subscribeToChanges(onChange) {
 export function unsubscribe(channel) {
   if (channel) supabase.removeChannel(channel);
 }
+
+// ---- Boot wiring -----------------------------------------------------------------
+// Every delivered page imports this module, so this is where the offline machinery
+// comes alive: online/offline listeners + outbox replay (initOffline is idempotent)
+// and the retry of any unwind a dead connection interrupted mid-check-in.
+initOffline(executeQueuedMutation);
+replayPendingUnwinds().catch(() => {});
+window.addEventListener("online", () => { replayPendingUnwinds().catch(() => {}); });

@@ -837,3 +837,33 @@ if (document.readyState !== 'loading') syncDisc(); else addEventListener('DOMCon
   const modeBtn = document.getElementById('mode');       // keep the switch honest if the header toggle is used
   if (modeBtn) modeBtn.addEventListener('click', () => setTimeout(syncTheme, 0));
 })();
+
+// ---- Degraded-save alarm ----------------------------------------------------
+// db.js dispatches asc:save-degraded when a write had to drop a column the
+// database doesn't know yet (schema drift). The save succeeded minus that field
+// — the employee must hear about it, on every page, without a page-local toast.
+(() => {
+  const NAMES = {
+    hubcaps_location: 'poklopci kotača', bolts_location: 'vijci kotača',
+    expected_out_date: 'datum preuzimanja', fee: 'cijena', notes: 'napomene',
+  };
+  let el = null, t = null;
+  window.addEventListener('asc:save-degraded', (e) => {
+    const col = e.detail && e.detail.column;
+    const msg = 'Spremljeno bez polja „' + (NAMES[col] || col) + '” — baza čeka nadogradnju.';
+    if (typeof window.ascToast === 'function') { window.ascToast(msg); return; }
+    if (!el) {
+      el = document.createElement('div');
+      el.setAttribute('role', 'status');
+      el.style.cssText = 'position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);' +
+        'z-index:200;max-width:min(92vw,480px);padding:12px 18px;border-radius:14px;background:#1c1e24;color:#f4f5f7;' +
+        'font:500 13.5px/1.45 Inter,system-ui,sans-serif;box-shadow:0 18px 40px -18px rgba(0,0,0,.55);opacity:0;' +
+        'transition:opacity .25s ease;pointer-events:none';
+      document.body.appendChild(el);
+    }
+    el.textContent = msg;
+    el.style.opacity = '1';
+    clearTimeout(t);
+    t = setTimeout(() => { el.style.opacity = '0'; }, 4200);
+  });
+})();

@@ -123,7 +123,7 @@ list?.addEventListener('click', async (e) => {
     console.warn('[live] purge failed:', err);
     delete row.dataset.busy; purge.disabled = false;
     purge.classList.remove('arm'); purge.querySelector('.lab').textContent = 'Obriši';
-    showToast('Brisanje nije uspjelo');
+    showToast(err && err.message ? err.message : 'Brisanje nije uspjelo');
   }
 });
 

@@ -6,6 +6,12 @@
       "runtimeExecutable": "npx",
       "runtimeArgs": ["--yes", "http-server", ".", "-p", "8791", "-c-1"],
       "port": 8791
+    },
+    {
+      "name": "asc-sd",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "8973", "--directory", "preview"],
+      "port": 8973
     }
   ]
 }

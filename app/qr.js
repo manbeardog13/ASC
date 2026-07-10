@@ -224,8 +224,10 @@
     var season = SEASON[data.season || set.season] || data.season || '';
     var status = STATUS[data.status || set.status] || data.status || '';
     var loc = data.location || set.loc || '';
+    // Legacy boolean compat: true means stored; false/unset means UNRECORDED —
+    // never fabricate 'in_trunk' (a blackened square on a signed document).
     if (data.hubcaps === true || data.hubcaps === '1') data.hubcaps = 'stored';
-    else if (data.hubcaps === false || data.hubcaps === '0') data.hubcaps = 'in_trunk';
+    else if (data.hubcaps === false || data.hubcaps === '0') data.hubcaps = '';
     var qrMarkup = svg(code, 3) || '';
     var tires = Array.isArray(data.tires) ? data.tires : [];
     var tRows = tires.length
