@@ -201,7 +201,7 @@ function animate(){
   };
   const here = location.pathname.split('/').pop() || 'dashboard.html';
   const item = (m, href, icon, label, kid) =>
-    '<a class="sb-item' + (kid ? ' sb-kid' : '') + (here === href ? ' on' : '') + '" data-m="' + m + '" href="' + href + '">' + icon + '<span class="t">' + label + '</span></a>';
+    '<a class="sb-item' + (kid ? ' sb-kid' : '') + (here === href ? ' on' : '') + '" data-m="' + m + '" href="' + href + '" title="' + label + '">' + icon + '<span class="t">' + label + '</span></a>';
 
   const whOpen = here === 'warehouse.html' || here === 'recycle.html' ||
     (localStorage.getItem('asc.side.wh') !== '0' && here === 'set-detail.html');
@@ -239,6 +239,9 @@ function animate(){
   doc.body.appendChild(aside);
   root.classList.add('has-side');
   if (matchMedia('(min-width:1021px)').matches) {
+    const well = doc.createElement('div');
+    well.className = 'frame-well'; well.setAttribute('aria-hidden', 'true');
+    doc.body.appendChild(well);
     const lip = doc.createElement('div');
     lip.className = 'frame-lip'; lip.setAttribute('aria-hidden', 'true');
     doc.body.appendChild(lip);

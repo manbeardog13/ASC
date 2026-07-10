@@ -252,6 +252,15 @@ html[data-side="rail"]{--sbw:72px}
   .frame-lip::after{content:"";position:absolute;inset:0;border-radius:24px;
     box-shadow:inset 0 2px 6px -2px rgba(20,18,15,.18),inset 0 0 0 1px rgba(28,22,16,.06)}
   html.dark .frame-lip::after{box-shadow:inset 0 2px 8px -2px rgba(0,0,0,.7),inset 0 0 0 1px rgba(255,255,255,.05)}
+  /* the recessed WELL: one carved region the sidebar and content both live in —
+     the frame wraps around BOTH, so the app reads as a single sculpted object.
+     A tint + inset shadow (not a fill) so the ambient canvas keeps breathing. */
+  .frame-well{position:fixed;inset:14px;z-index:0;pointer-events:none;border-radius:24px;
+    background:rgba(2,3,5,.028);
+    box-shadow:inset 0 3px 10px -4px rgba(20,18,15,.14),inset 0 1px 0 rgba(2,3,5,.04),
+      inset 0 -1px 0 rgba(255,255,255,.5)}
+  html.dark .frame-well{background:rgba(0,0,0,.16);
+    box-shadow:inset 0 3px 12px -4px rgba(0,0,0,.6),inset 0 -1px 0 rgba(255,255,255,.03)}
   html.has-side body{padding-left:calc(26px + var(--sbw) + 18px);padding-right:26px}
   html.has-side .shell{margin:0 auto;transition:margin 260ms var(--smooth)}
   html.has-side .pill-links{display:none}
@@ -277,22 +286,32 @@ html[data-side="rail"] .sb-collapse{transform:rotate(180deg)}
   -webkit-mask-image:linear-gradient(180deg,transparent,#000 12px,#000 calc(100% - 12px),transparent);
   mask-image:linear-gradient(180deg,transparent,#000 12px,#000 calc(100% - 12px),transparent)}
 .sb-nav::-webkit-scrollbar{display:none}
-.sb-item{position:relative;display:flex;align-items:center;gap:11px;min-height:40px;
+.sb-item{position:relative;display:flex;align-items:center;gap:10px;min-height:40px;
   padding:0 12px;border-radius:12px;text-decoration:none;cursor:pointer;border:0;background:transparent;
   font:500 13.5px Inter;color:var(--ink-2);text-align:left;width:100%;
-  transition:background 160ms var(--snap),color 160ms var(--snap)}
-.sb-item svg{flex:none;width:20px;height:20px;color:var(--muted);transition:color 160ms var(--snap)}
+  transition:background 180ms var(--snap),color 180ms var(--snap),
+    transform 180ms var(--snap),box-shadow 220ms var(--snap)}
+/* one optical axis: every icon lives in a fixed 22px column, labels align exactly */
+.sb-item svg{flex:none;width:20px;height:20px;margin:0 1px;color:var(--muted);
+  transition:color 180ms var(--snap),transform 180ms var(--snap)}
 .sb-item .t{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 @media(hover:hover){
-  .sb-item:hover{background:rgba(2,3,5,.045)}
-  html.dark .sb-item:hover{background:rgba(244,245,247,.06)}
+  .sb-item:hover{background:rgba(2,3,5,.045);transform:translateY(-1px);
+    box-shadow:0 2px 6px -3px rgba(20,18,15,.18)}
+  html.dark .sb-item:hover{background:rgba(244,245,247,.06);box-shadow:0 2px 8px -3px rgba(0,0,0,.5)}
+  .sb-item:hover svg{color:var(--ink-2)}
 }
+.sb-item:active{transform:scale(.985);transition-duration:80ms}
 .sb-item.on{background:var(--panel-2);color:var(--acc-ink);
-  box-shadow:0 1px 2px rgba(2,3,5,.08),inset 0 1px 0 rgba(255,255,255,.6)}
-html.dark .sb-item.on{background:rgba(244,245,247,.08);box-shadow:inset 0 1px 0 rgba(255,255,255,.07)}
+  box-shadow:0 1px 3px rgba(2,3,5,.1),inset 0 1px 0 rgba(255,255,255,.6),
+    0 4px 14px -8px var(--acc)}
+html.dark .sb-item.on{background:rgba(244,245,247,.08);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 4px 14px -8px var(--acc)}
 .sb-item.on svg{color:var(--acc-ink)}
 .sb-item.on::before{content:"";position:absolute;left:0;top:9px;bottom:9px;width:3px;
-  border-radius:3px;background:var(--acc)}
+  border-radius:3px;background:var(--acc);transform-origin:center;
+  animation:sbBar 260ms var(--snap) both}
+@keyframes sbBar{from{transform:scaleY(.4);opacity:0}}
 /* per-item module accents (raw chroma for the bar; ink for text/icon) */
 .sb-item[data-m="dashboard"]{--acc:#ff4e1b;--acc-ink:#c0360d}
 .sb-item[data-m="checkin"]{--acc:#2fbf5b;--acc-ink:#177a41}
@@ -316,7 +335,7 @@ html.dark .sb-item[data-m="users"]{--acc-ink:#c9ccd2}
 .sb-group-kids{display:grid;grid-template-rows:0fr;transition:grid-template-rows 240ms var(--snap)}
 .sb-group.open .sb-group-kids{grid-template-rows:1fr}
 .sb-group-kids>div{overflow:hidden;display:flex;flex-direction:column;gap:2px;min-height:0}
-.sb-kid{padding-left:43px;font-size:13px;min-height:36px;opacity:0;transform:translateY(-4px);
+.sb-kid{padding-left:44px;font-size:13px;min-height:36px;opacity:0;transform:translateY(-4px);
   transition:opacity 200ms var(--snap) 60ms,transform 200ms var(--snap) 60ms,background 160ms var(--snap),color 160ms var(--snap)}
 .sb-group.open .sb-kid{opacity:1;transform:none}
 .sb-chev{flex:none;transition:transform 240ms var(--snap);color:var(--muted)}
@@ -335,7 +354,14 @@ html[data-side="rail"] .sb-item.on::before{top:auto;bottom:4px;left:50%;transfor
 .sb-user{position:relative;display:flex;align-items:center;gap:10px;width:100%;border:0;cursor:pointer;
   background:transparent;padding:8px;border-radius:14px;text-align:left;
   transition:background 160ms var(--snap)}
-@media(hover:hover){ .sb-user:hover{background:rgba(2,3,5,.045)} html.dark .sb-user:hover{background:rgba(244,245,247,.06)} }
+@media(hover:hover){
+  .sb-user:hover{background:rgba(2,3,5,.045);transform:translateY(-1px);box-shadow:0 2px 8px -4px rgba(20,18,15,.22)}
+  html.dark .sb-user:hover{background:rgba(244,245,247,.06);box-shadow:0 2px 10px -4px rgba(0,0,0,.55)}
+}
+.sb-user{transition:background 180ms var(--snap),transform 180ms var(--snap),box-shadow 220ms var(--snap)}
+.sb-ava .dot{animation:sbDot 3.2s ease-in-out infinite}
+@keyframes sbDot{0%,100%{box-shadow:0 0 0 0 rgba(47,191,91,.35)}50%{box-shadow:0 0 0 3px rgba(47,191,91,0)}}
+@media(prefers-reduced-motion:reduce){ .sb-ava .dot{animation:none} }
 .sb-ava{position:relative;flex:none;width:36px;height:36px;border-radius:50%;overflow:hidden;
   display:grid;place-items:center;font:800 13px Inter;color:#fff;
   background:linear-gradient(150deg,var(--lava),var(--lava-ink))}
