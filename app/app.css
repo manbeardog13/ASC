@@ -844,6 +844,38 @@ html.dark .md-field select{background-image:url("data:image/svg+xml,%3Csvg xmlns
 @media(prefers-reduced-motion:reduce){ *{animation:none!important;transition-property:background-color,color,opacity!important} .act .bg{transform:none!important} }
 
 
+
+/* ==================== Dynamic Island halo + avatar row =======================
+   The halo: while the agent listens (asc:agent-listen), a 2px violet conic ring
+   with exactly 6px clearance crowns the island pill, plus a soft bloom capped
+   at .3 alpha so the clock/battery stay legible. Pure compositor: the conic is
+   painted once and ROTATED (never repainted). Web apps cannot draw inside the
+   island — this is the honest, and honestly better-looking, alternative. */
+#islHalo{position:fixed;left:50%;top:calc(var(--isl-y,11px) - 6px);width:138px;height:49px;
+  border-radius:24.5px;padding:2px;transform:translateX(-50%) scale(.94);opacity:0;
+  pointer-events:none;z-index:9998;overflow:hidden;
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+  mask-composite:exclude;transition:opacity 220ms var(--smooth),transform 220ms var(--smooth)}
+#islHalo::before{content:"";position:absolute;left:50%;top:50%;width:160px;height:160px;
+  transform:translate(-50%,-50%);
+  background:conic-gradient(from 0deg,transparent 0 68%,#a78bfa 78%,#8b5cf6 88%,#6d28d9 96%,transparent 100%)}
+#islHalo.on{opacity:1;transform:translateX(-50%) scale(1)}
+#islHalo.on::before{animation:islSpin 1.6s linear infinite}
+@keyframes islSpin{to{transform:translate(-50%,-50%) rotate(360deg)}}
+.isl-bloom{position:fixed;left:50%;top:calc(var(--isl-y,11px) - 30px);width:190px;height:96px;
+  transform:translateX(-50%);pointer-events:none;opacity:0;transition:opacity 300ms var(--smooth);
+  background:radial-gradient(closest-side,rgba(139,92,246,.28),transparent 70%)}
+#islHalo.on .isl-bloom{opacity:1}
+@media(prefers-reduced-motion:reduce){ #islHalo.on::before{animation:none} }
+/* drawer avatar row */
+.md-ava-row{display:flex;align-items:center;gap:12px}
+.md-avatar.sm{width:44px;height:44px;font:800 15px Inter;flex:none}
+.md-ava-btn{border:1px solid var(--line);background:var(--panel);cursor:pointer;border-radius:11px;
+  padding:9px 14px;font:600 13px Inter;color:var(--ink);transition:border-color .2s,transform 130ms var(--snap)}
+.md-ava-btn:hover{border-color:var(--sel,#5C7C9D)}
+.md-ava-btn:active{transform:scale(.96)}
+
 /* ==================== Layout editing mode ("Uredi raspored") =================
    Calm, Figma-grade editing: a dot field over the workspace, dimmed chrome,
    cards as tactile objects (lift on grab, accent ring on drop target), a hide
@@ -873,6 +905,12 @@ html.layout-edit .editable{outline:1.5px dashed rgba(92,124,157,.4);outline-offs
 .edit-bar .eb-w{display:flex;align-items:center;gap:9px;font:600 11.5px Inter;color:var(--muted)}
 .edit-bar .eb-w b{font:600 12px Inter;color:var(--ink);font-variant-numeric:tabular-nums;min-width:52px}
 .edit-bar input[type="range"]{width:150px;accent-color:var(--sel,#5C7C9D)}
+.edit-rz{position:absolute;bottom:10px;right:10px;z-index:9;width:26px;height:26px;border:0;border-radius:50%;cursor:pointer;
+  background:rgba(20,22,26,.78);color:#f4f5f7;display:grid;place-items:center;
+  box-shadow:0 2px 8px rgba(2,3,5,.35);transition:transform 140ms var(--snap),background 140ms}
+.edit-rz:hover{transform:scale(1.12);background:rgba(70,97,127,.95)}
+.edit-bar .eb-io{border:0;background:none;cursor:pointer;color:var(--muted);width:30px;height:30px;border-radius:9px;display:grid;place-items:center;transition:background 140ms,color 140ms}
+.edit-bar .eb-io:hover{background:var(--panel);color:var(--ink)}
 .edit-bar .eb-reset{border:0;background:none;cursor:pointer;font:600 12.5px Inter;color:var(--muted);padding:6px}
 .edit-bar .eb-reset:hover{color:var(--lava-ink)}
 .edit-bar .eb-done{border:0;cursor:pointer;min-height:36px;padding:0 18px;border-radius:12px;color:#fff;

@@ -90,6 +90,44 @@ document.getElementById('mode').addEventListener('click', () => {
   addEventListener('resize', setDevice, { passive: true });
 })();
 
+// Dynamic Island detection — capability probe, no UA sniffing. A web app cannot
+// draw INSIDE the island (native ActivityKit territory); in the installed PWA we
+// own the pixels around it, so has-island pages can halo it. sat≥59 in portrait
+// standalone = island hardware (14 Pro → 16 Pro Max); one parametric --isl-y.
+(() => {
+  const probe = () => {
+    const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+    root.classList.remove('has-island');
+    if (!standalone) return;
+    const d = document.createElement('div');
+    d.style.cssText = 'position:fixed;top:0;height:env(safe-area-inset-top,0px);width:1px;pointer-events:none;visibility:hidden';
+    document.documentElement.appendChild(d);
+    const sat = d.offsetHeight; d.remove();
+    if (sat >= 59) { root.classList.add('has-island'); root.style.setProperty('--isl-y', (sat - 48) + 'px'); }
+  };
+  probe();
+  addEventListener('orientationchange', () => setTimeout(probe, 120));
+})();
+
+// The Gemini halo: while the agent listens, a violet ring + soft bloom crown the
+// island (has-island only). Listens for asc:agent-listen / asc:agent-idle.
+(() => {
+  let halo = null;
+  const ensure = () => {
+    if (halo) return halo;
+    halo = document.createElement('div');
+    halo.id = 'islHalo'; halo.setAttribute('aria-hidden', 'true');
+    halo.innerHTML = '<i class="isl-bloom"></i>';
+    document.body.appendChild(halo);
+    return halo;
+  };
+  document.addEventListener('asc:agent-listen', () => {
+    if (!root.classList.contains('has-island')) return;
+    ensure().classList.add('on');
+  });
+  document.addEventListener('asc:agent-idle', () => { if (halo) halo.classList.remove('on'); });
+})();
+
 // Preview navigation: wire the shared header pills + iOS dock to the real pages,
 // so every screen links to every other. Dashboard-only cards/lists are wired too
 // (gated on #agentCard); selectors that match nothing on a page are just no-ops.
@@ -468,6 +506,7 @@ if (document.readyState !== 'loading') syncDisc(); else addEventListener('DOMCon
   }
   function press(){
     if (!SR) { input.focus(); return; }
+    document.dispatchEvent(new CustomEvent('asc:agent-listen'));     // island halo on
     holding = true; userStopping = false; lastError = false;
     finalText = ''; interimText = '';
     heard.textContent = '…'; result.textContent = ''; result.classList.remove('pop');
@@ -477,6 +516,7 @@ if (document.readyState !== 'loading') syncDisc(); else addEventListener('DOMCon
   }
   function release(submit){
     if (!holding) return;
+    document.dispatchEvent(new CustomEvent('asc:agent-idle'));       // island halo off
     holding = false; userStopping = true;
     mic.classList.remove('is-live');                                 // stop the pulse immediately (both paths)
     if (!lastError) hint.textContent = idleHint;
@@ -644,6 +684,10 @@ if (document.readyState !== 'loading') syncDisc(); else addEventListener('DOMCon
       '</section>' +
       '<section class="md-panel" data-panel="profile" hidden>' +
         '<div class="md-field"><label for="mp-name">Ime</label><input id="mp-name" type="text" data-f="name" value="' + mesc(profile.name) + '" autocomplete="name"></div>' +
+        '<div class="md-field"><label>Profilna slika</label>' +
+        '<div class="md-ava-row"><span class="md-avatar sm" data-avatar2>' + mesc(initials(profile.name)) + '</span>' +
+        '<button class="md-ava-btn" type="button" data-pickavatar>Promijeni</button>' +
+        '<input type="file" accept="image/*" data-avafile hidden></div></div>' +
         '<div class="md-field"><label for="mp-role">Uloga</label><input id="mp-role" type="text" data-f="role" value="' + mesc(profile.role) + '"></div>' +
         '<div class="md-field"><label for="mp-email">Email</label><input id="mp-email" type="email" data-f="email" value="' + mesc(profile.email) + '" placeholder="ime@asc.hr" autocomplete="email"></div>' +
         '<div class="md-field"><label for="mp-lang">Jezik</label><select id="mp-lang" data-f="lang"><option value="hr">Hrvatski</option><option value="en">English</option></select></div>' +
@@ -697,6 +741,43 @@ if (document.readyState !== 'loading') syncDisc(); else addEventListener('DOMCon
     drawer.setAttribute('aria-hidden', 'true'); drawer.inert = true;
     document.dispatchEvent(new CustomEvent('asc:menu-closed'));     // the dock puck glides home
   };
+  // Profilna slika: pick → downscale to a 256px cover JPEG → avatars bucket →
+  // repaint every avatar surface (drawer, sidebar card, dashboard smjena).
+  (() => {
+    const pick = drawer.querySelector('[data-pickavatar]'), file = drawer.querySelector('[data-avafile]');
+    if (!pick || !file) return;
+    const paint = (url) => {
+      drawer.querySelectorAll('[data-avatar],[data-avatar2]').forEach(a => {
+        a.innerHTML = '<img src="' + url + '" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:50%">';
+        a.style.position = 'relative'; a.style.overflow = 'hidden';
+      });
+      const sb = document.getElementById('sbAva');
+      if (sb) { const old = sb.querySelector('img'); if (old) old.remove();
+        const img = new Image(); img.src = url; sb.insertBefore(img, sb.querySelector('.dot')); }
+      const pv = document.querySelector('.profile .pavatar');
+      if (pv) { pv.innerHTML = '<img src="' + url + '" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%">'; }
+    };
+    pick.addEventListener('click', () => file.click());
+    file.addEventListener('change', async () => {
+      const f = file.files && file.files[0]; if (!f) return;
+      pick.disabled = true; pick.textContent = 'Spremam…';
+      try {
+        const bmp = await createImageBitmap(f);
+        const c = document.createElement('canvas'); c.width = c.height = 256;
+        const x = c.getContext('2d');
+        const s0 = Math.min(bmp.width, bmp.height);
+        x.drawImage(bmp, (bmp.width - s0) / 2, (bmp.height - s0) / 2, s0, s0, 0, 0, 256, 256);
+        const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.85));
+        const m = await import('../js/db.js');
+        const url = await m.setMyAvatar(blob);
+        paint(url);
+        pick.textContent = 'Promijeni';
+      } catch (err) {
+        console.warn('[avatar]', err);
+        pick.textContent = 'Pokušaj opet';
+      } finally { pick.disabled = false; file.value = ''; }
+    });
+  })();
   btn.addEventListener('click', () => open('profile'));
   // The dock's Više tab settles its puck, then asks for the drawer (bubble controller).
   document.addEventListener('asc:open-menu', (e) => open(e.detail || 'menu'));

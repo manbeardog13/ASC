@@ -73,6 +73,8 @@
     bar.innerHTML =
       '<span class="eb-t">Uređivanje rasporeda</span>' +
       '<label class="eb-w">Širina <input type="range" min="980" max="1560" step="20" value="' + w0 + '"><b>' + w0 + 'px</b></label>' +
+      '<button class="eb-io" type="button" data-io="out" title="Izvezi raspored"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4M8 8l4-4 4 4M5 15v4a1 1 0 001 1h12a1 1 0 001-1v-4"/></svg></button>' +
+      '<button class="eb-io" type="button" data-io="in" title="Uvezi raspored"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M8 11l4 4 4-4M5 15v4a1 1 0 001 1h12a1 1 0 001-1v-4"/></svg></button>' +
       '<button class="eb-reset" type="button">Vrati zadano</button>' +
       '<button class="eb-done" type="button">Gotovo</button>';
     document.body.appendChild(bar);
@@ -87,10 +89,52 @@
       location.reload();
     });
     bar.querySelector('.eb-done').addEventListener('click', exit);
-    // per-widget hide affordance
+    // Layout profiles, the portable half: export the workspace as a file,
+    // import it on any other machine (per-device auto-profiles stay intact).
+    bar.querySelector('[data-io="out"]').addEventListener('click', () => {
+      const payload = { v: 1, profile: KEY, hidden: [...hidden], areas: store.get('areas', {}), width: store.get('width', 1180) };
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }));
+      a.download = 'asc-raspored-' + KEY + '.json';
+      a.click(); URL.revokeObjectURL(a.href);
+    });
+    bar.querySelector('[data-io="in"]').addEventListener('click', () => {
+      const inp = document.createElement('input');
+      inp.type = 'file'; inp.accept = 'application/json';
+      inp.addEventListener('change', async () => {
+        try {
+          const p = JSON.parse(await inp.files[0].text());
+          if (!p || p.v !== 1) throw new Error('bad payload');
+          store.set('hidden', Array.isArray(p.hidden) ? p.hidden : []);
+          store.set('areas', p.areas && typeof p.areas === 'object' ? p.areas : {});
+          if (p.width) store.set('width', +p.width);
+          location.reload();
+        } catch (err) { console.warn('[layout] import failed:', err); }
+      });
+      inp.click();
+    });
+    // per-widget hide affordance + structured resize (normal ↔ full width)
+    const RESIZABLE = new Set(['agent', 'notes', 'profile', 'zauzece', 'reminders']);
     WIDGETS.forEach(w => {
       if (hidden.has(w.id)) return;
       w.el.classList.add('editable');
+      if (RESIZABLE.has(w.id)) {
+        const rz = document.createElement('button');
+        rz.className = 'edit-rz'; rz.type = 'button'; rz.setAttribute('aria-label', 'Promijeni širinu');
+        rz.innerHTML = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 12h16M7 8l-3 4 3 4M17 8l3 4-3 4"/></svg>';
+        rz.addEventListener('click', (e) => {
+          e.preventDefault(); e.stopPropagation();
+          const first = w.el.getBoundingClientRect();
+          const wide = w.el.style.gridColumn === '1 / -1';
+          w.el.style.gridColumn = wide ? '' : '1 / -1';
+          const last = w.el.getBoundingClientRect();
+          w.el.animate([
+            { transform: 'translate(' + (first.left - last.left) + 'px,' + (first.top - last.top) + 'px) scale(' + (first.width / last.width) + ',1)', transformOrigin: 'top left' },
+            { transform: 'none' }], { duration: 360, easing: 'cubic-bezier(.3,1.15,.4,1)' });
+          saveAreas();
+        });
+        w.el.appendChild(rz);
+      }
       const x = document.createElement('button');
       x.className = 'edit-x'; x.type = 'button'; x.setAttribute('aria-label', 'Sakrij ' + w.title);
       x.innerHTML = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 12h12"/></svg>';
@@ -105,7 +149,7 @@
     root.classList.remove('layout-edit');
     if (bar) bar.remove(); bar = null;
     if (tray) tray.remove(); tray = null;
-    document.querySelectorAll('.edit-x').forEach(x => x.remove());
+    document.querySelectorAll('.edit-x,.edit-rz').forEach(x => x.remove());
     WIDGETS.forEach(w => w.el.classList.remove('editable', 'drag-over', 'lifting'));
     document.removeEventListener('keydown', escClose);
   };
