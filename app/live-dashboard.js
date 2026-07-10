@@ -59,16 +59,6 @@ window.ascLiveFirst = new Promise((r) => { liveFirstDone = r; });
   if (gw) gw.textContent = greeting();
   if (gd) { const d = new Date().toLocaleDateString('hr-HR', { weekday: 'long', day: 'numeric', month: 'long' }); gd.textContent = d.charAt(0).toUpperCase() + d.slice(1); }
   if (gc) { const tick = () => { gc.textContent = new Date().toLocaleTimeString('hr-HR', { hour: '2-digit', minute: '2-digit' }); }; tick(); setInterval(tick, 15000); }
-  // delicate parallax: pointer position drives --px/--py on the stage (desktop, motion-safe)
-  const stage = q('.stage');
-  if (stage && matchMedia('(hover:hover) and (prefers-reduced-motion: no-preference)').matches) {
-    stage.addEventListener('pointermove', (e) => {
-      const r = stage.getBoundingClientRect();
-      stage.style.setProperty('--px', ((e.clientX - r.left) / r.width - 0.5).toFixed(3));
-      stage.style.setProperty('--py', ((e.clientY - r.top) / r.height - 0.5).toFixed(3));
-    });
-    stage.addEventListener('pointerleave', () => { stage.style.setProperty('--px', 0); stage.style.setProperty('--py', 0); });
-  }
   loadMyProfile().then((p) => {
     const name = p && p.full_name ? String(p.full_name).trim() : '';
     const first = name.split(/\s+/)[0] || '';
