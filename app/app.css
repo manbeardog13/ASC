@@ -842,3 +842,66 @@ html.dark .md-field select{background-image:url("data:image/svg+xml,%3Csvg xmlns
 .stage :focus-visible,.act :focus-visible,.dock :focus-visible,.card.dark :focus-visible{outline-color:var(--lava-2);box-shadow:0 0 0 4px rgba(2,3,5,.55)}
 .ai-panel :focus-visible{outline-color:#c4b5fd;outline-offset:2px}
 @media(prefers-reduced-motion:reduce){ *{animation:none!important;transition-property:background-color,color,opacity!important} .act .bg{transform:none!important} }
+
+/* ==================== COLOR brief — orange means ACTION only =================
+   Selection/filter/focus states across the whole app demote from lava to the
+   page's module accent (slate by default — Brief B's "navigation/selected →
+   slate blue"). The lever: the legacy selection tokens --lava-tint/--lava-ring
+   are re-pointed to module-aware --sel-* — every page-local rule that says
+   var(--lava-tint) inherits the new meaning at resolve time. True actions
+   (gradients + anything using --lava/--lava-2/--lava-ink directly as a fill)
+   stay unmistakably orange. */
+:root{--sel:#5C7C9D;--sel-ink:#46617f;
+  --sel-tint:rgba(92,124,157,.14);--sel-ring:rgba(92,124,157,.4);
+  --lava-tint:var(--sel-tint);--lava-ring:var(--sel-ring)}
+html.dark{--sel-ink:#9db8d2;--sel-tint:rgba(112,148,182,.18);--sel-ring:rgba(125,160,192,.45)}
+html[data-module="dashboard"]{--sel:#ff4e1b;--sel-ink:#c0360d;--sel-tint:rgba(255,78,27,.12);--sel-ring:rgba(255,78,27,.38)}
+html[data-module="checkin"]{--sel:#2fbf5b;--sel-ink:#177a41;--sel-tint:rgba(47,191,91,.13);--sel-ring:rgba(47,191,91,.4)}
+html[data-module="scan"]{--sel:#547898;--sel-ink:#43617c;--sel-tint:rgba(84,120,152,.14);--sel-ring:rgba(84,120,152,.42)}
+html[data-module="warehouse"]{--sel:#f0c052;--sel-ink:#8a6a14;--sel-tint:rgba(240,192,82,.16);--sel-ring:rgba(240,192,82,.48)}
+html[data-module="customers"]{--sel:#5A63E8;--sel-ink:#4a52c9;--sel-tint:rgba(90,99,232,.12);--sel-ring:rgba(90,99,232,.4)}
+html[data-module="reminders"]{--sel:#5C7C9D;--sel-ink:#46617f;--sel-tint:rgba(92,124,157,.14);--sel-ring:rgba(92,124,157,.42)}
+html[data-module="workshop"]{--sel:#B86A3F;--sel-ink:#9a5730;--sel-tint:rgba(184,106,63,.13);--sel-ring:rgba(184,106,63,.42)}
+html[data-module="assistant"]{--sel:#7A5CFF;--sel-ink:#6247d6;--sel-tint:rgba(122,92,255,.13);--sel-ring:rgba(122,92,255,.42)}
+html[data-module="users"]{--sel:#5C7C9D;--sel-ink:#46617f;--sel-tint:rgba(92,124,157,.14);--sel-ring:rgba(92,124,157,.42)}
+html.dark[data-module="dashboard"]{--sel-ink:#ff8a5c}
+html.dark[data-module="checkin"]{--sel-ink:#57d484}
+html.dark[data-module="scan"]{--sel-ink:#8fb0cc}
+html.dark[data-module="warehouse"]{--sel-ink:#f0c052}
+html.dark[data-module="customers"]{--sel-ink:#97a0f5}
+html.dark[data-module="reminders"]{--sel-ink:#9db8d2}
+html.dark[data-module="workshop"]{--sel-ink:#d99a6c}
+html.dark[data-module="assistant"]{--sel-ink:#a794ff}
+html.dark[data-module="users"]{--sel-ink:#c9ccd2}
+/* selected-state INK follows the module too (page rules said --lava-ink) */
+html[data-module] .segmented button[aria-pressed="true"]{color:var(--sel-ink)}
+html.dark[data-module] .segmented button[aria-pressed="true"]{color:var(--sel-ink)}
+html[data-module] .wh-zonepill .n{color:var(--sel-ink)}
+html[data-module] .switch input:checked{background:var(--sel)}
+html[data-module] .count-badge{background:var(--sel-tint);color:var(--sel-ink)}
+/* destructive/warm hovers keep their warmth — they are actions, not selections */
+.sb-logout:hover{background:rgba(255,78,27,.12);color:var(--lava-ink)}
+.md-logout{color:var(--lava-ink)}
+
+/* ==================== COLOR brief — the AI surface ===========================
+   "Something intelligent just joined": the agent card deepens into an
+   indigo-violet optical glass with a faint star field that drifts (compositor-
+   only, reduced-motion safe) and a soft violet bloom. Applied to the dashboard
+   agent card and the global agent orb; violet stays exclusive to AI. */
+html[data-module] .agent-card{
+  background:linear-gradient(138deg,#171040 0%,#241659 42%,#33207a 100%);
+  box-shadow:0 18px 44px -18px rgba(76,42,168,.55),inset 0 1px 0 rgba(255,255,255,.14)}
+/* the existing ::before aurora stays; the star field lives on ::after above it */
+html[data-module] .agent-card::after{content:"";position:absolute;inset:0;z-index:1;border-radius:inherit;pointer-events:none;
+  background:
+    radial-gradient(1.5px 1.5px at 12% 28%,rgba(255,255,255,.8),transparent 100%),
+    radial-gradient(1px 1px at 34% 62%,rgba(255,255,255,.55),transparent 100%),
+    radial-gradient(1.5px 1.5px at 58% 18%,rgba(200,180,255,.7),transparent 100%),
+    radial-gradient(1px 1px at 71% 74%,rgba(255,255,255,.45),transparent 100%),
+    radial-gradient(1.5px 1.5px at 86% 38%,rgba(210,190,255,.65),transparent 100%),
+    radial-gradient(1px 1px at 23% 84%,rgba(255,255,255,.5),transparent 100%),
+    radial-gradient(1px 1px at 45% 41%,rgba(255,255,255,.35),transparent 100%),
+    radial-gradient(1.5px 1.5px at 92% 82%,rgba(190,170,255,.6),transparent 100%);
+  opacity:.45;animation:aiDrift 26s linear infinite alternate}
+@keyframes aiDrift{from{transform:translateY(0)}to{transform:translateY(-6px)}}
+@media(prefers-reduced-motion:reduce){ html[data-module] .agent-card::after{animation:none} }
