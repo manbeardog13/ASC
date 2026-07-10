@@ -194,7 +194,6 @@ function renderDetails(s) {
   const set = (sel, text) => { const el = q(sel); if (el) el.textContent = text || '—'; };
   set('[data-f="vehicle"]', [v.year, v.make, v.model].filter(Boolean).join(' '));
   set('[data-f="plate"]', v.plate);
-  set('[data-f="vin"]', v.vin);
   const phone = q('[data-f="phone"]');
   if (phone) {
     if (cust.phone) { phone.textContent = cust.phone; phone.setAttribute('href', 'tel:' + String(cust.phone).replace(/[^\d+]/g, '')); }

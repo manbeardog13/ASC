@@ -121,7 +121,7 @@ html.dark .sugg{background:rgba(244,245,247,.05)}
 .tire-edit-row{padding:12px;border-radius:14px;background:var(--panel-2);border:1px solid var(--hairline);margin-bottom:10px}
 html.dark .tire-edit-row{background:rgba(244,245,247,.04)}
 .tire-edit-row:last-child{margin-bottom:0}
-.tire-grid{display:grid;grid-template-columns:78px 1.5fr 1fr 1.1fr;gap:8px;align-items:center}
+.tire-grid{display:grid;grid-template-columns:74px 1.3fr .82fr 1fr .92fr;gap:8px;align-items:center}
 .tire-grid input,.tire-grid select{min-height:40px;padding:9px 11px;font-size:13px;min-width:0}
 @media(max-width:720px){
   .tire-grid{grid-template-columns:1fr 1fr;gap:9px}
@@ -333,6 +333,7 @@ try{window.__ascPrefill=JSON.parse(sessionStorage.getItem('asc.prefill')||'null'
         <input data-t="size" list="commonSizes" placeholder="225/45R17" value="${v.size||''}" aria-label="Dimenzija gume">
         <input data-t="tread_mm" type="number" inputmode="decimal" step="0.1" min="0" placeholder="Profil mm" value="${v.tread||''}" aria-label="Profil mm">
         <input data-t="brand" placeholder="Marka (nije obavezno)" value="${v.brand||''}" aria-label="Marka">
+        <input data-t="dot_code" placeholder="DOT" value="${v.dot||''}" aria-label="DOT oznaka" autocapitalize="characters">
       </div>`;
     return el;
   }
@@ -343,6 +344,7 @@ try{window.__ascPrefill=JSON.parse(sessionStorage.getItem('asc.prefill')||'null'
       size:r.querySelector('[data-t="size"]').value.trim(),
       tread:r.querySelector('[data-t="tread_mm"]').value,
       brand:r.querySelector('[data-t="brand"]').value.trim(),
+      dot:r.querySelector('[data-t="dot_code"]').value.trim(),
     }));
   }
   function renderTires(n, existing){

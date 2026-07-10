@@ -254,7 +254,7 @@
         rsec('Kupac', '',
           rline('Ime', who) + rline('Adresa', data.address) + rline('Telefon', data.phone, true)) +
         rsec('Vozilo', '',
-          rline('Marka i model', vehicle) + rline('Registracija', plate, true) + rline('Šasija (VIN)', data.vin, true)) +
+          rline('Marka i model', vehicle) + rline('Registracija', plate, true)) +
         rsec('Pohrana', '',
           rline('Sezona', season) + rline('Status', status) + rline('Lokacija', loc) +
           rline('Broj guma', data.quantity, true) + rline('Naplatci', data.rims) +

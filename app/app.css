@@ -721,7 +721,7 @@ html.sticker-lock, html.sticker-lock body{ overflow:hidden }
 /* header band — the only orange rule on the page */
 .rp-head{display:flex;justify-content:space-between;align-items:flex-start;gap:24px;
   padding-bottom:12px;margin-bottom:14px;border-bottom:2px solid #ff4e1b}
-.rp-logo{font:800 26px/1 Sora;letter-spacing:-.02em;color:#ff4e1b}
+.rp-logo{font:800 26px/1 Sora;letter-spacing:-.02em;color:#111}
 .rp-org{font:500 9px Inter;letter-spacing:.01em;color:#555;margin-top:3px}
 .rp-title{font:700 16px Sora;letter-spacing:-.01em;color:#111;margin:10px 0 0}
 .rp-meta{display:flex;gap:14px;align-items:flex-start}

@@ -159,6 +159,7 @@ function fillFromSet(data) {
     setIfEmpty('[data-t="size"]', t.size);
     setIfEmpty('[data-t="tread_mm"]', t.tread_mm);
     setIfEmpty('[data-t="brand"]', t.brand);
+    setIfEmpty('[data-t="dot_code"]', t.dot_code);
   });
 }
 
@@ -182,6 +183,7 @@ function readForm() {
       size: g('[data-t="size"]'),
       brand: g('[data-t="brand"]'),
       tread_mm: Number.isFinite(treadNum) ? treadNum : null,
+      dot_code: g('[data-t="dot_code"]'),
     };
   });
   // The form is novalidate, so the inputs' declared bounds are enforced here:
@@ -281,21 +283,22 @@ if (form) form.addEventListener('submit', async (e) => {
         bolts_location: s.bolts_location || null, hubcaps_location: s.hubcaps_location || null, hubcaps_stored: s.hubcaps_stored,
         // check_in_date intentionally untouched: editing must not re-date the intake
       });
-      // The form shows only position/size/brand/tread — carry the unshown columns
-      // (DOT, model, studded, notes) over from the loaded rows so an edit-save
-      // can't silently erase them. Match by POSITION only: an index fallback would
-      // graft one tire's DOT onto a physically different tire if positions moved.
-      // Rows the employee blanked out keep no carry — they drop out as intended.
+      // The form collects position/size/brand/tread/DOT — carry the still-unshown
+      // columns (model, studded, condition notes) over from the loaded rows so an
+      // edit-save can't silently erase them. Match by POSITION only: an index
+      // fallback would graft one tire's data onto a physically different tire if
+      // positions moved. Rows the employee blanked out keep no carry — they drop.
       const existing = (editSet && editSet.tires) || [];
       const taken = new Set();
       const carried = f.tires.map((t) => {
-        const kept = t.size || t.brand || (t.tread_mm != null);
-        if (!kept) return t;   // cleared row — let it be filtered out, don't revive it with an old DOT
+        const kept = t.size || t.brand || (t.tread_mm != null) || t.dot_code;
+        if (!kept) return t;   // fully cleared row — let it be filtered out
         const j = existing.findIndex((o, k) => !taken.has(k) && t.position && o.position === t.position);
         if (j < 0) return t;
         taken.add(j);
         const o = existing[j];
-        return { ...t, model: o.model, dot_code: o.dot_code, studded: o.studded, condition_notes: o.condition_notes };
+        // Keep the form's DOT (it's now editable); only carry what the form omits.
+        return { ...t, model: o.model, studded: o.studded, condition_notes: o.condition_notes };
       });
       await replaceTires(ctx.setId, carried);
       showToast('Ažurirano ' + editCode);
