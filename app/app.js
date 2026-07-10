@@ -46,6 +46,15 @@
 })();
 
 const root = document.documentElement;
+// Personal workspace width (layout-edit): applied on EVERY page, per device profile.
+try {
+  const lk = (() => { const p = navigator.platform || '';
+    const os = /Win/i.test(p) ? 'win' : /Mac/i.test(p) ? 'mac' : /iP(hone|ad)/i.test(p) ? 'ios' : 'other';
+    const br = /Edg/i.test(navigator.userAgent) ? 'edge' : /Chrome/i.test(navigator.userAgent) ? 'chrome' : /Safari/i.test(navigator.userAgent) ? 'safari' : 'browser';
+    return os + '-' + br + '-' + (innerWidth >= 1021 ? 'desktop' : 'mobile'); })();
+  const w = JSON.parse(localStorage.getItem('asc.layout.width.' + lk));
+  if (w) root.style.setProperty('--shell-max', w + 'px');
+} catch (e) {}
 const meta = document.querySelector('meta[name="theme-color"]');
 const reduce = matchMedia('(prefers-reduced-motion:reduce)').matches;
 try { if (localStorage.getItem('asc.theme') === 'dark') root.classList.add('dark'); } catch(e){}
@@ -263,6 +272,7 @@ function animate(){
       '<button class="acct-item" data-act="profile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.4"/><path d="M5 20a7 7 0 0114 0"/></svg>Profil</button>' +
       '<button class="acct-item" data-act="theme"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5 5l1.4 1.4M17.6 17.6L19 19M19 5l-1.4 1.4M6.4 17.6L5 19"/></svg>Tema</button>' +
       '<button class="acct-item" data-act="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 00-.1-1.2l2-1.6-2-3.4-2.4 1a7 7 0 00-2-1.2L14 3h-4l-.5 2.6a7 7 0 00-2 1.2l-2.4-1-2 3.4 2 1.6A7 7 0 005 12c0 .4 0 .8.1 1.2l-2 1.6 2 3.4 2.4-1a7 7 0 002 1.2L10 21h4l.5-2.6a7 7 0 002-1.2l2.4 1 2-3.4-2-1.6c.1-.4.1-.8.1-1.2z"/></svg>Postavke</button>' +
+      (document.querySelector('.hero') ? '<button class="acct-item" data-act="layout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="7" height="7" rx="2"/><rect x="13" y="4" width="7" height="7" rx="2"/><rect x="4" y="13" width="7" height="7" rx="2"/><rect x="13" y="13" width="7" height="7" rx="2"/></svg>Uredi raspored</button>' : '') +
       '<div class="acct-div"></div>' +
       '<button class="acct-item danger" data-logout><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4H6a2 2 0 00-2 2v12a2 2 0 002 2h3M15 8l4 4-4 4M19 12H9"/></svg>Odjava</button>';
     doc.body.appendChild(pop);
@@ -274,6 +284,7 @@ function animate(){
       if (!act) return;   // data-logout bubbles to the global gate listener
       const a = act.getAttribute('data-act');
       if (a === 'theme') { const mode = doc.getElementById('mode'); if (mode) mode.click(); }
+      else if (a === 'layout') document.dispatchEvent(new CustomEvent('asc:edit-layout'));
       else document.dispatchEvent(new CustomEvent('asc:open-menu', { detail: a === 'profile' ? 'profile' : 'menu' }));
       closePop();
     });

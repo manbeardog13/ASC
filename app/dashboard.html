@@ -119,6 +119,22 @@ html.splash-handoff .sp-mark,html.splash-handoff .sp-rule{animation:none}
 <style>
 /* ---- Dashboard-page-specific layout only (shared rules live in app.css) ---- */
 
+/* Welcome hero — the greeting is the dashboard's anchor (EDITING-MODE brief).
+   Keynote-scale Sora, first name emphasized in lava; date + live clock beneath;
+   the photo and the text counter-drift a few px on cursor move (desktop). */
+.greet{position:relative;z-index:2;margin:10px 0 4px;animation:greetIn 700ms var(--smooth) both;
+  transform:translate(calc(var(--px,0)*-3px),calc(var(--py,0)*-2px))}
+@keyframes greetIn{from{opacity:0;transform:translateY(14px)}}
+.greet-line{font:600 clamp(28px,3.4vw,42px)/1.08 Sora;letter-spacing:-.02em;color:var(--on-stage);margin:0}
+.greet-line b{font-weight:700;background:linear-gradient(120deg,var(--lava-2),var(--lava));
+  -webkit-background-clip:text;background-clip:text;color:transparent}
+.greet-sub{font:500 13px Inter;color:var(--on-stage-2);margin-top:7px;display:flex;gap:8px;align-items:baseline}
+.greet-sub .greet-dot{opacity:.5}
+#greetClock{font-variant-numeric:tabular-nums}
+.stage .photo{transform:scale(1.04) translate(calc(var(--px,0)*6px),calc(var(--py,0)*4px));transition:transform .2s ease-out}
+html.warm-nav .greet{animation:none}
+
+
 /* HERO grid: stage spans 2 rows beside two action cards; the AI card sits in a
    3rd row UNDER the stage, inheriting the stage's (column-1) width. */
 .hero{display:grid;grid-template-columns:1.5fr 1fr;grid-template-rows:1fr 1fr auto;gap:var(--gap)}
@@ -407,6 +423,10 @@ html.dark .notes-name,html.dark .notes-text{background:rgba(244,245,247,.05)}
       <span class="photo" aria-hidden="true"></span>
       <span class="scrim" aria-hidden="true"></span>
       <span class="k">Skladište · Hotel za gume · Dubrovnik</span>
+      <div class="greet">
+        <h1 class="greet-line"><span id="greetWord">Dobar dan</span>, <b id="greetName">&nbsp;</b></h1>
+        <div class="greet-sub"><span id="greetDate"></span><span class="greet-dot">·</span><span id="greetClock"></span></div>
+      </div>
       <div class="hero-num"><span data-count="248">0</span><em>setova</em></div>
       <div class="cap">na čuvanju · 0 rezervirano · 92 % ostaje</div>
       <div class="meter"><i data-w="92"></i></div>
@@ -788,6 +808,7 @@ document.addEventListener('click', function(e){
   })();
 </script>
 <!-- LIVE: override the mock numbers/stream/reminders with real Supabase data. -->
+<script src="layout-edit.js" defer></script>
 <script type="module" src="live-dashboard.js"></script>
 </body>
 </html>

@@ -119,10 +119,28 @@ body{display:flex;align-items:center;justify-content:center;min-height:100dvh;pa
 }
 .auth-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
 .auth-logo{height:26px;width:auto;filter:drop-shadow(0 3px 8px rgba(255,78,27,.28))}
-.auth-theme{width:34px;height:34px;border-radius:50%;border:0;cursor:pointer;background:var(--panel);display:grid;place-items:center;transition:transform 380ms var(--smooth),background 380ms var(--smooth)}
-.auth-theme:active{transform:scale(.92)}
-.auth-theme i{width:11px;height:11px;border-radius:50%;background:var(--ink);display:block;transition:box-shadow .38s ease,background .38s ease}
-html.dark .auth-theme i{background:transparent;box-shadow:inset 0 0 0 2.4px var(--ink)}
+/* iOS sliding theme switch — 60% scale, spring thumb, lava micro-glow on move */
+.auth-theme{position:relative;width:38px;height:22px;border-radius:999px;border:0;cursor:pointer;flex:none;
+  background:var(--line);transition:background 320ms var(--smooth);
+  box-shadow:inset 0 1px 2px rgba(2,3,5,.14)}
+html.dark .auth-theme{background:#2e2f31;box-shadow:inset 0 1px 3px rgba(0,0,0,.5)}
+.auth-theme i{position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#fff;
+  box-shadow:0 1px 3px rgba(2,3,5,.3),0 0 0 0 rgba(255,78,27,0);
+  transition:transform 300ms cubic-bezier(.34,1.56,.64,1),box-shadow 300ms var(--smooth)}
+html.dark .auth-theme i{transform:translateX(16px)}
+.auth-theme:active i{width:21px}
+html.dark .auth-theme:active i{transform:translateX(13px)}
+.auth-theme.kick i{box-shadow:0 1px 3px rgba(2,3,5,.3),0 0 10px 2px rgba(255,78,27,.35)}
+/* optical glass: edge highlight, refraction sheen tracking the pointer, micro-noise */
+.auth-card::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:0;
+  background:radial-gradient(240px 180px at var(--gx,30%) var(--gy,0%),rgba(255,255,255,.16),transparent 70%);
+  transition:opacity .3s}
+html.dark .auth-card::before{background:radial-gradient(240px 180px at var(--gx,30%) var(--gy,0%),rgba(255,255,255,.07),transparent 70%)}
+.auth-card::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:0;opacity:.035;
+  mix-blend-mode:overlay;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E")}
+.auth-card{box-shadow:var(--shadow-card),inset 0 1px 0 rgba(255,255,255,.55),inset 0 -1px 0 rgba(2,3,5,.05)}
+html.dark .auth-card{box-shadow:var(--shadow-card),inset 0 1px 0 rgba(255,255,255,.09),inset 0 -1px 0 rgba(0,0,0,.3)}
+.auth-card>*{position:relative;z-index:1}
 .auth-title{font:600 24px Sora;letter-spacing:-.02em;color:var(--ink)}
 .auth-sub{font:500 13.5px Inter;color:var(--muted);margin:3px 0 20px}
 
@@ -233,7 +251,17 @@ body.recover .fieldx.f-email,body.recover .btn-google,body.recover .auth-div,bod
     const dark = document.documentElement.classList.toggle('dark');
     document.querySelector('meta[name="theme-color"]').content = dark ? '#020305' : '#eef0f1';
     try { localStorage.setItem('asc.theme', dark ? 'dark' : 'light'); } catch (e) {}
+    const t = $('theme'); t.classList.add('kick'); setTimeout(() => t.classList.remove('kick'), 340);
   });
+  // optical refraction: the sheen follows the pointer across the glass
+  if (matchMedia('(hover:hover) and (prefers-reduced-motion: no-preference)').matches) {
+    const card = document.querySelector('.auth-card');
+    card.addEventListener('pointermove', (e) => {
+      const r = card.getBoundingClientRect();
+      card.style.setProperty('--gx', ((e.clientX - r.left) / r.width * 100).toFixed(1) + '%');
+      card.style.setProperty('--gy', ((e.clientY - r.top) / r.height * 100).toFixed(1) + '%');
+    });
+  }
   // Show / hide password
   $('eye').addEventListener('click', () => {
     const p = $('password'); p.type = p.type === 'password' ? 'text' : 'password';

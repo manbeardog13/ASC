@@ -57,7 +57,7 @@ html.dark .canvas{
 .preview-tag{display:none!important;position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:70;font:700 10px Inter;letter-spacing:.14em;text-transform:uppercase;background:var(--gun);color:#f4f5f7;padding:4px 12px;border-radius:0 0 10px 10px;opacity:.9}
 
 /* ============================== Glass shell ============================== */
-.shell{max-width:1180px;margin:0 auto;border-radius:32px;position:relative;z-index:2;
+.shell{max-width:var(--shell-max,1180px);margin:0 auto;border-radius:32px;position:relative;z-index:2;
   background:var(--shell-solid);border:1px solid var(--rim);border-top-color:var(--rim-top);
   box-shadow:0 25px 50px rgba(2,3,5,.22);padding:var(--gap);animation:sheetIn 550ms var(--smooth) both;transition:background 380ms var(--smooth)}
 @media(min-width:1021px){ .shell{padding:18px} }
@@ -842,6 +842,52 @@ html.dark .md-field select{background-image:url("data:image/svg+xml,%3Csvg xmlns
 .stage :focus-visible,.act :focus-visible,.dock :focus-visible,.card.dark :focus-visible{outline-color:var(--lava-2);box-shadow:0 0 0 4px rgba(2,3,5,.55)}
 .ai-panel :focus-visible{outline-color:#c4b5fd;outline-offset:2px}
 @media(prefers-reduced-motion:reduce){ *{animation:none!important;transition-property:background-color,color,opacity!important} .act .bg{transform:none!important} }
+
+
+/* ==================== Layout editing mode ("Uredi raspored") =================
+   Calm, Figma-grade editing: a dot field over the workspace, dimmed chrome,
+   cards as tactile objects (lift on grab, accent ring on drop target), a hide
+   affordance per card and a restore tray. No jiggle — desktop Apple. */
+html.layout-edit .shell{position:relative}
+html.layout-edit .shell::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:0;
+  background-image:radial-gradient(circle 1px,rgba(2,3,5,.16) 1px,transparent 1.5px);
+  background-size:24px 24px;opacity:.5}
+html.dark.layout-edit .shell::after{background-image:radial-gradient(circle 1px,rgba(244,245,247,.14) 1px,transparent 1.5px)}
+html.layout-edit .top,html.layout-edit .side{opacity:.45;pointer-events:none;filter:saturate(.6)}
+.editable{cursor:grab;position:relative}
+html.layout-edit .editable{outline:1.5px dashed rgba(92,124,157,.4);outline-offset:4px;border-radius:24px}
+.editable.lifting{opacity:.35;cursor:grabbing}
+.editable.drag-over{outline:2px solid var(--sel,#5C7C9D);outline-offset:4px}
+.edit-x{position:absolute;top:10px;right:10px;z-index:9;width:26px;height:26px;border:0;border-radius:50%;cursor:pointer;
+  background:rgba(20,22,26,.78);color:#f4f5f7;display:grid;place-items:center;
+  box-shadow:0 2px 8px rgba(2,3,5,.35);transition:transform 140ms var(--snap),background 140ms}
+.edit-x:hover{transform:scale(1.12);background:rgba(192,54,13,.9)}
+.edit-bar{position:fixed;left:50%;top:18px;transform:translateX(-50%);z-index:130;
+  display:flex;align-items:center;gap:16px;padding:10px 14px;border-radius:18px;
+  background:var(--shell-solid);border:1px solid var(--rim);box-shadow:0 18px 44px -16px rgba(2,3,5,.5);
+  animation:acctIn 200ms var(--snap) both}
+@supports ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  .edit-bar{background:var(--shell);-webkit-backdrop-filter:blur(24px) saturate(150%);backdrop-filter:blur(24px) saturate(150%)}
+}
+.edit-bar .eb-t{font:700 13px Sora;color:var(--ink)}
+.edit-bar .eb-w{display:flex;align-items:center;gap:9px;font:600 11.5px Inter;color:var(--muted)}
+.edit-bar .eb-w b{font:600 12px Inter;color:var(--ink);font-variant-numeric:tabular-nums;min-width:52px}
+.edit-bar input[type="range"]{width:150px;accent-color:var(--sel,#5C7C9D)}
+.edit-bar .eb-reset{border:0;background:none;cursor:pointer;font:600 12.5px Inter;color:var(--muted);padding:6px}
+.edit-bar .eb-reset:hover{color:var(--lava-ink)}
+.edit-bar .eb-done{border:0;cursor:pointer;min-height:36px;padding:0 18px;border-radius:12px;color:#fff;
+  font:700 13px Inter;background:linear-gradient(160deg,var(--lava-2),var(--lava));
+  box-shadow:0 8px 18px -8px rgba(255,78,27,.6);transition:transform 140ms var(--snap)}
+.edit-bar .eb-done:active{transform:scale(.96)}
+.edit-tray{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:130;
+  display:flex;align-items:center;gap:8px;padding:9px 12px;border-radius:16px;flex-wrap:wrap;justify-content:center;
+  background:var(--shell-solid);border:1px solid var(--rim);box-shadow:0 18px 44px -16px rgba(2,3,5,.5);
+  animation:acctIn 200ms var(--snap) both;max-width:min(720px,92vw)}
+.edit-tray .et-t{font:600 10.5px Inter;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-right:2px}
+.edit-tray button{border:1px solid var(--line);background:var(--panel);cursor:pointer;border-radius:999px;
+  padding:7px 13px;font:600 12.5px Inter;color:var(--ink);transition:transform 130ms var(--snap),border-color .2s}
+.edit-tray button:hover{transform:translateY(-1px);border-color:var(--sel,#5C7C9D)}
+@media(prefers-reduced-motion:reduce){ .edit-bar,.edit-tray{animation:none} }
 
 /* ==================== COLOR brief — orange means ACTION only =================
    Selection/filter/focus states across the whole app demote from lava to the

@@ -52,14 +52,32 @@ window.ascLiveFirst = new Promise((r) => { liveFirstDone = r; });
   const session = await getSession().catch(() => null);
   if (!session) { liveFirstDone(); return; }  // the gate in app.js handles the redirect
 
-  // ---- Greeting + avatar from the signed-in profile, real date line ----
+  // ---- Hero greeting (the dashboard anchor) + profile card --------------------
+  // Time-based Croatian greeting in the stage hero; the SMJENA card carries the
+  // plain name (one greeting on screen — visual silence).
+  const gw = q('#greetWord'), gn = q('#greetName'), gd = q('#greetDate'), gc = q('#greetClock');
+  if (gw) gw.textContent = greeting();
+  if (gd) { const d = new Date().toLocaleDateString('hr-HR', { weekday: 'long', day: 'numeric', month: 'long' }); gd.textContent = d.charAt(0).toUpperCase() + d.slice(1); }
+  if (gc) { const tick = () => { gc.textContent = new Date().toLocaleTimeString('hr-HR', { hour: '2-digit', minute: '2-digit' }); }; tick(); setInterval(tick, 15000); }
+  // delicate parallax: pointer position drives --px/--py on the stage (desktop, motion-safe)
+  const stage = q('.stage');
+  if (stage && matchMedia('(hover:hover) and (prefers-reduced-motion: no-preference)').matches) {
+    stage.addEventListener('pointermove', (e) => {
+      const r = stage.getBoundingClientRect();
+      stage.style.setProperty('--px', ((e.clientX - r.left) / r.width - 0.5).toFixed(3));
+      stage.style.setProperty('--py', ((e.clientY - r.top) / r.height - 0.5).toFixed(3));
+    });
+    stage.addEventListener('pointerleave', () => { stage.style.setProperty('--px', 0); stage.style.setProperty('--py', 0); });
+  }
   loadMyProfile().then((p) => {
     const name = p && p.full_name ? String(p.full_name).trim() : '';
+    const first = name.split(/\s+/)[0] || '';
+    if (gn) gn.textContent = first || 'dobrodošli';
     const h1 = q('.profile .row1 h1');
-    if (h1) h1.textContent = greeting() + (name ? ', ' + name.split(/\s+/)[0] : '');
+    if (h1) h1.textContent = name || 'Smjena';
     const av = q('.profile .pavatar');
     if (av && name) av.textContent = initials(name);
-  }).catch(() => {});
+  }).catch(() => { if (gn) gn.textContent = 'dobrodošli'; });
   const sub = q('.profile .row1 .sub');
   if (sub) {
     const d = new Date().toLocaleDateString('hr-HR', { weekday: 'long', day: 'numeric', month: 'long' });
