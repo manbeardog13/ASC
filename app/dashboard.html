@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>ASC — Ploča</title>
 <meta name="theme-color" content="#edf0f5">
-<script>try{if(localStorage.getItem('asc.theme')==='dark'){document.documentElement.classList.add('dark');document.querySelector('meta[name="theme-color"]').content='#020305';}}catch(e){}try{if(sessionStorage.getItem('asc.splash.warm')==='1'&&document.referrer&&new URL(document.referrer).origin===location.origin){document.documentElement.classList.add('warm-nav');}}catch(e){}</script>
+<script>try{if(localStorage.getItem('asc.theme')==='dark'){document.documentElement.classList.add('dark');document.querySelector('meta[name="theme-color"]').content='#0a0c11';}}catch(e){}try{if(sessionStorage.getItem('asc.splash.warm')==='1'&&document.referrer&&new URL(document.referrer).origin===location.origin){document.documentElement.classList.add('warm-nav');}}catch(e){}</script>
 <script>
 /* ASC Prag v1 boot — dashboard. Same lifecycle as login's boot, two differences:
    no oauth mode, and the 6s watchdog ALSO restores documentElement visibility
@@ -66,7 +66,7 @@
    must not depend on app.css, fonts, or network. Byte-identical on login+dashboard. */
 #splash{position:fixed;inset:0;z-index:9999;display:none;align-items:center;justify-content:center;visibility:visible!important;background:#eef0f1;pointer-events:auto}
 html.splashing #splash{display:flex}
-html.dark #splash{background:#020305}
+html.dark #splash{background:#0a0c11}
 #splash::before{content:"";position:absolute;inset:0;background:radial-gradient(60vmax 56vmax at 6% -14%,rgba(255,122,64,.11),transparent 60%),radial-gradient(54vmax 50vmax at 98% 116%,rgba(84,120,152,.08),transparent 60%),radial-gradient(44vmax 40vmax at 86% -8%,rgba(46,47,49,.12),transparent 62%)}
 html.dark #splash::before{background:radial-gradient(60vmax 56vmax at 6% -14%,rgba(255,110,55,.09),transparent 60%),radial-gradient(54vmax 50vmax at 98% 116%,rgba(90,130,165,.07),transparent 60%),radial-gradient(44vmax 40vmax at 86% -8%,rgba(244,245,247,.04),transparent 62%)}
 #splash::after{content:"";position:absolute;inset:0;opacity:.04;mix-blend-mode:overlay;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E")}
@@ -263,6 +263,10 @@ html.warm-nav .greet{animation:none}
 /* the hover-revealed chat window: the bubble BLUR-FADES in, then the three
    suggestion chips fade-RISE one after another. Space is reserved (opacity /
    transform only, never layout) so nothing reflows — buttery, Apple-grade. */
+.tb-reply .tb-me{display:block;align-self:flex-end;text-align:right;margin:0 0 8px auto;max-width:86%;
+  padding:7px 12px;border-radius:14px 14px 4px 14px;background:rgba(244,245,247,.14);
+  font:500 12.5px/1.45 Inter;color:var(--on-stage)}
+.tb-reply .tb-ans{display:block}
 .agent-reveal{position:absolute;left:26px;right:26px;bottom:26px;display:flex;flex-direction:column;gap:12px;pointer-events:none}
 @media(hover:hover){ .agent-card:hover .agent-reveal,.agent-card:focus-within .agent-reveal{pointer-events:auto} }
 /* touch has no hover → keep the chat window tappable there; and while a reply is
@@ -419,6 +423,13 @@ html.dark .notes-name,html.dark .notes-text{background:rgba(244,245,247,.05)}
     <i class="sp-rule"></i>
   </div>
 </div>
+<script>/* island re-probe: env() needs real layout — head-time probes can read 0 */
+(function(){var d=document.documentElement;if(d.classList.contains('island'))return;
+try{var sal=(navigator.standalone===true)||matchMedia('(display-mode: standalone)').matches;if(!sal)return;
+var pr=document.createElement('div');pr.style.cssText='position:fixed;top:0;height:env(safe-area-inset-top,0px);width:1px;visibility:hidden';
+document.body.appendChild(pr);var sat=pr.offsetHeight;pr.remove();
+if(sat>=59){d.classList.add('island');d.style.setProperty('--isl-y',(sat-48)+'px');}}catch(e){}})();
+</script>
 <div class="canvas" aria-hidden="true"></div>
 <div class="grain" aria-hidden="true"></div>
 <span class="preview-tag">Preview · nije uživo</span>
@@ -715,14 +726,18 @@ document.addEventListener('click', function(e){
       text = (text || '').trim();
       if (!text || busy) return;
       pulse();
+      if (input) input.value = '';                       // the question moves into the thread
       if (window.ASCAgent && ASCAgent.configured && ASCAgent.configured()) {
-        busy = true; show('Razmišljam…');
+        busy = true;
+        const me = '<span class="tb-me">' + esc(text) + '</span>';
+        const ans = (h) => show(me + '<span class="tb-ans">' + h + '</span>');
+        ans('Razmišljam…');
         ASCAgent.ask(text, (ev) => {
-          if (ev.type === 'text') reply.innerHTML = esc(ev.text);
-          else if (ev.type === 'tool') reply.textContent = 'Radim…';
-          else if (ev.type === 'error') reply.textContent = ev.message || 'Greška.';
-        }).then((txt) => { busy = false; if (txt) reply.innerHTML = esc(txt); })
-          .catch(() => { busy = false; reply.textContent = 'Veza je pukla — pokušaj ponovno.'; });
+          if (ev.type === 'text') ans(esc(ev.text));
+          else if (ev.type === 'tool') ans('Radim…');
+          else if (ev.type === 'error') ans(esc(ev.message || 'Greška.'));
+        }).then((txt) => { busy = false; if (txt) ans(esc(txt)); })
+          .catch(() => { busy = false; ans('Veza je pukla — pokušaj ponovno.'); });
       } else {                                   // Gemini not wired → route to search
         show('Tražim…');
         setTimeout(() => { location.href = 'workshop.html?q=' + encodeURIComponent(text); }, 120);

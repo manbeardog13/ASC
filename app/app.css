@@ -1,7 +1,7 @@
 /* =========================================================================
    ASC design system · v6 "Hanssen" — shared reusable stylesheet
    Extracted VERBATIM from dashboard.html. Values are locked — do not rewrite.
-   Palette: Cloud Ash #EDF0F5 · Black Core #020305 · Lava Rush #FF4E1B ·
+   Palette: Cloud Ash #EDF0F5 · Black Core #0a0c11 · Lava Rush #FF4E1B ·
    Gunmetal #2E2F31 · green #2fbf5b (online/success only). Inter + Sora.
    Twin light/dark themes toggled by html.dark.
    ========================================================================= */
@@ -10,7 +10,7 @@
 :root{
   --bg:#eef0f1; --shell:rgba(255,255,255,.44); --shell-solid:rgba(255,255,255,.70);
   --panel:#f4f4f3; --panel-2:#fdfdfc;
-  --ink:#020305; --ink-2:#3a3c40; --muted:#63676f;
+  --ink:#0a0c11; --ink-2:#3a3c40; --muted:#63676f;
   --lava:#ff4e1b; --lava-2:#ff8a5c; --lava-ink:#c0360d; --lava-tint:rgba(255,78,27,.11); --lava-ring:rgba(255,78,27,.30);
   --gun:#2e2f31; --hairline:rgba(28,22,16,.06); --line:rgba(28,22,16,.09);
   --stage-1:#0b0c0e; --stage-2:#17181b; --on-stage:#f4f5f7; --on-stage-2:rgba(244,245,247,.72); --tab-surf:#f7f9fc;
@@ -22,12 +22,12 @@
   --tap:44px;
 }
 html.dark{
-  --bg:#020305; --shell:rgba(23,24,28,.55); --shell-solid:rgba(23,24,28,.86);
-  --panel:#1d1e22; --panel-2:#26272b;
+  --bg:#0a0c11; --shell:rgba(30,32,38,.55); --shell-solid:rgba(30,32,38,.88);
+  --panel:#22242a; --panel-2:#2b2d33;
   --ink:#f4f5f7; --ink-2:#d6d8dc; --muted:rgba(244,245,247,.62);
   --hairline:rgba(244,245,247,.09); --line:rgba(244,245,247,.12);
-  --lava-ink:#ff8a5c; --tab-surf:#0f1013; --green-ink:#57d484;
-  --stage-1:#07080a; --stage-2:#101114;
+  --lava-ink:#ff8a5c; --tab-surf:#14161c; --green-ink:#57d484;
+  --stage-1:#0d0f14; --stage-2:#15171d;
   --rim-top:rgba(255,255,255,.16); --rim:rgba(255,255,255,.08);
   --shadow-card:0 1px 2px -1px rgba(0,0,0,.5),0 8px 20px -10px rgba(0,0,0,.55),0 24px 48px -24px rgba(0,0,0,.62);
 }
@@ -36,10 +36,10 @@ html.dark{
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{min-height:100%}
 body{font-family:"Inter",system-ui,sans-serif;color:var(--ink);background:var(--bg);
-  padding:24px 18px calc(env(safe-area-inset-bottom,0px) + 40px);
+  padding:calc(14px + env(safe-area-inset-top,0px)) 18px calc(env(safe-area-inset-bottom,0px) + 40px);
   -webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums;
   transition:background 380ms var(--smooth),color 380ms var(--smooth)}
-@media(min-width:1021px){ body{padding:30px 26px} }
+@media(min-width:1021px){ body{padding:calc(30px + env(safe-area-inset-top,0px)) 26px 30px} }
 
 .canvas{position:fixed;inset:0;z-index:-1;pointer-events:none;
   background:
@@ -136,7 +136,7 @@ html.dark .mode i{background:transparent;box-shadow:inset 0 0 0 2.5px #f4f5f7}
 .spill:active{transform:scale(.97);transition-duration:80ms}
 .spill b{display:block;font-family:Sora;font-weight:500;font-size:21px;line-height:1}
 .spill span{font-size:10px;color:var(--on-stage-2);display:block;margin-top:4px}
-.cta{display:flex;align-items:center;justify-content:center;gap:10px;min-height:50px;border-radius:25px;background:rgba(244,245,247,.94);color:#020305;text-decoration:none;font:600 14px Inter;transition:transform 150ms var(--snap),box-shadow 200ms var(--snap);position:relative}
+.cta{display:flex;align-items:center;justify-content:center;gap:10px;min-height:50px;border-radius:25px;background:rgba(244,245,247,.94);color:#0a0c11;text-decoration:none;font:600 14px Inter;transition:transform 150ms var(--snap),box-shadow 200ms var(--snap);position:relative}
 @media(hover:hover){ .cta:hover{transform:translateY(-2px);box-shadow:0 12px 26px -10px rgba(0,0,0,.5)} }
 .cta:active{transform:scale(.98);transition-duration:80ms}
 .cta .dot{width:9px;height:9px;border-radius:50%;background:var(--lava);box-shadow:0 0 8px 2px var(--lava-ring);animation:breathe 2.4s ease-in-out infinite}
@@ -229,6 +229,10 @@ html.dark .obar .bar{background:rgba(244,245,247,.10)}
 .chip.all{background:rgba(99,103,111,.16);color:var(--muted)}
 
 /* ============================== Dock — iOS tab bar ====================== */
+/* header controls retired: theme + account live in the sidebar/account menu.
+   Elements stay in the DOM (#mode is driven programmatically by 'Tema'). */
+.top #mode,.top .menu-btn{display:none}
+
 /* ==================== v7 "Okvir" — frame lip + floating sidebar ==============
    The MENU architecture: a thick rounded frame lip wraps the app; a floating
    opaque sidebar (one step darker than the canvas) sits inset at the left with

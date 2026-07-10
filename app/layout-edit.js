@@ -20,6 +20,7 @@
 (() => {
   'use strict';
   if (!document.querySelector('.hero')) return;   // dashboard only
+  if (matchMedia('(max-width:1020px)').matches) return;   // desktop workspace tool — phones get the fixed layout
 
   const root = document.documentElement;
   const KEY = (() => {

@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>ASC — Agent</title>
 <meta name="theme-color" content="#edf0f5">
-<script>try{if(localStorage.getItem('asc.theme')==='dark'){document.documentElement.classList.add('dark');document.querySelector('meta[name="theme-color"]').content='#020305';}}catch(e){}try{if(sessionStorage.getItem('asc.splash.warm')==='1'&&document.referrer&&new URL(document.referrer).origin===location.origin){document.documentElement.classList.add('warm-nav');}}catch(e){}</script>
+<script>try{if(localStorage.getItem('asc.theme')==='dark'){document.documentElement.classList.add('dark');document.querySelector('meta[name="theme-color"]').content='#0a0c11';}}catch(e){}try{if(sessionStorage.getItem('asc.splash.warm')==='1'&&document.referrer&&new URL(document.referrer).origin===location.origin){document.documentElement.classList.add('warm-nav');}}catch(e){}</script>
 <link rel="icon" href="assets/favicon-32.png" sizes="32x32">
 <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
@@ -104,6 +104,30 @@
 .ag-mic.is-live .halo{animation:ping 1.5s var(--smooth) infinite}
 .ag-mic.is-think{background:var(--lava-tint);border-color:var(--lava-ring);color:var(--lava-2)}
 @keyframes ping{0%{transform:scale(1);opacity:.7}100%{transform:scale(1.55);opacity:0}}
+
+
+/* v7 polish: the chat is a full-height violet surface — the agent's own room,
+   not a floating box. Star field + aurora identity; violet bubbles (module
+   discipline: lava belongs to actions, violet to AI). */
+.card.ag{display:flex;flex-direction:column;min-height:calc(100dvh - 210px);
+  background:linear-gradient(150deg,#171040 0%,#241659 48%,#33207a 100%)!important;
+  box-shadow:0 18px 44px -18px rgba(76,42,168,.55),inset 0 1px 0 rgba(255,255,255,.12)!important}
+.card.ag::after{content:"";position:absolute;inset:0;z-index:0;border-radius:inherit;pointer-events:none;
+  background:radial-gradient(1.5px 1.5px at 12% 28%,rgba(255,255,255,.8),transparent 100%),
+    radial-gradient(1px 1px at 34% 62%,rgba(255,255,255,.55),transparent 100%),
+    radial-gradient(1.5px 1.5px at 58% 18%,rgba(200,180,255,.7),transparent 100%),
+    radial-gradient(1px 1px at 71% 74%,rgba(255,255,255,.45),transparent 100%),
+    radial-gradient(1.5px 1.5px at 86% 38%,rgba(210,190,255,.65),transparent 100%),
+    radial-gradient(1px 1px at 23% 84%,rgba(255,255,255,.5),transparent 100%);
+  opacity:.4;animation:aiDrift 26s linear infinite alternate}
+.card.ag>*{position:relative;z-index:1}
+.ag-msg.is-me{background:linear-gradient(180deg,rgba(139,92,246,.34),rgba(122,92,255,.22))!important;
+  border:1px solid rgba(167,139,250,.25)!important}
+.ag-msg.is-bot{background:rgba(244,245,247,.09)!important}
+#agLog{flex:1 1 auto;min-height:200px}
+.ag-inputrow{background:rgba(20,14,50,.55);border:1px solid rgba(167,139,250,.22);
+  -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+@media(prefers-reduced-motion:reduce){ .card.ag::after{animation:none} }
 
 /* bottom input row */
 .ag-inputrow{display:flex;gap:9px;margin-top:14px;align-items:center}
