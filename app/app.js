@@ -154,7 +154,7 @@ document.getElementById('mode').addEventListener('click', () => {
     });
   }
   // Workshop action grid + reminder set-codes were inert href="#" (audit) — wire them.
-  const WSB = { 'Skeniraj': 'scan.html', 'Zaprimi': 'checkin.html', 'Skladište': 'warehouse.html', 'ASC Agent': 'assistant.html', 'Za preuzimanje': 'reminders.html' };
+  const WSB = { 'Skeniraj': 'scan.html', 'Zaprimi': 'checkin.html', 'Skladište': 'warehouse.html', 'Za preuzimanje': 'reminders.html' };
   document.querySelectorAll('.ws-btn').forEach(a => { const s = a.querySelector('span'); const t = s ? s.textContent.trim() : ''; if (WSB[t]) a.setAttribute('href', WSB[t]); });
   document.querySelectorAll('.rr-code').forEach(a => { const c = a.textContent.trim(); if (/^ASC-/.test(c)) a.setAttribute('href', 'set-detail.html?code=' + encodeURIComponent(c)); });
 })();
@@ -224,7 +224,6 @@ function animate(){
       item('customers', 'customers.html', I.people, 'Kupci') +
       item('reminders', 'reminders.html', I.bell, 'Podsjetnici') +
       item('workshop', 'workshop.html', I.wrench, 'Radionica') +
-      item('assistant', 'assistant.html', I.spark, 'ASC Agent') +
       '<div class="sb-div"></div><div class="sb-eyebrow2">Upravljanje</div>' +
       item('users', 'users.html', I.users, 'Korisnici') +
     '</nav>' +
@@ -266,7 +265,7 @@ function animate(){
   const MOD = { 'dashboard.html': 'dashboard', 'checkin.html': 'checkin', 'scan.html': 'scan',
     'warehouse.html': 'warehouse', 'recycle.html': 'warehouse', 'set-detail.html': 'warehouse',
     'customers.html': 'customers', 'reminders.html': 'reminders', 'workshop.html': 'workshop',
-    'assistant.html': 'assistant', 'users.html': 'users' };
+    'users.html': 'users' };
   if (MOD[here]) root.setAttribute('data-module', MOD[here]);
 
   // set-detail highlights its parent domain
@@ -625,7 +624,6 @@ if (document.readyState !== 'loading') syncDisc(); else addEventListener('DOMCon
     [/(podsjetnic|preuzim|pickup|reminder|danas.*(preuzet|gotov))/, 'reminders.html', 'Podsjetnike'],
     [/(korisnic|djelatnic|\buser|osoblje|zaposlenic)/, 'users.html', 'Korisnike'],
     [/(reciklir|recikla|otpad|zbrin|recycle)/, 'recycle.html', 'Reciklažu'],
-    [/(asistent|assistant|pomo[ćc]nik|razgovor)/, 'assistant.html', 'ASC Agenta'],
   ];
   function act(html, fn){ result.innerHTML = html; result.classList.remove('pop'); void result.offsetWidth; result.classList.add('pop'); clearTimeout(actTimer); actTimer = setTimeout(fn, reduce ? 120 : 620); }
   function search(term){
@@ -702,7 +700,7 @@ if (document.readyState !== 'loading') syncDisc(); else addEventListener('DOMCon
     '<nav class="md-tabs"><button class="md-tab on" type="button" data-tab="menu">Izbornik</button><button class="md-tab" type="button" data-tab="profile">Profil</button><button class="md-tab" type="button" data-tab="options">Postavke</button></nav>' +
     '<div class="md-body">' +
       '<section class="md-panel" data-panel="menu">' +
-        '<nav class="md-links">' + [['customers.html','Kupci'],['workshop.html','Radionica'],['reminders.html','Podsjetnici'],['assistant.html','ASC Agent'],['users.html','Korisnici'],['recycle.html','Koš za smeće']].map(l => '<a class="md-link" href="' + l[0] + '"><span>' + l[1] + '</span><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></a>').join('') + '</nav>' +
+        '<nav class="md-links">' + [['customers.html','Kupci'],['workshop.html','Radionica'],['reminders.html','Podsjetnici'],['users.html','Korisnici'],['recycle.html','Koš za smeće']].map(l => '<a class="md-link" href="' + l[0] + '"><span>' + l[1] + '</span><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></a>').join('') + '</nav>' +
       '</section>' +
       '<section class="md-panel" data-panel="profile" hidden>' +
         '<div class="md-field"><label for="mp-name">Ime</label><input id="mp-name" type="text" data-f="name" value="' + mesc(profile.name) + '" autocomplete="name"></div>' +
