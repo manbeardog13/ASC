@@ -256,6 +256,15 @@ html[data-side="rail"]{--sbw:72px}
       inset 0 0 0 1px rgba(255,255,255,.03)}
   html.dark .frame-shell{background:linear-gradient(178deg,#191b21,#111318 60%,#0e1015);
     box-shadow:0 30px 80px -30px rgba(0,0,0,.8),inset 0 1px 0 rgba(255,255,255,.06)}
+  /* the frame's INTERIOR is white (reference): the graphite reads as a ring +
+     the sidebar; the content column sits on a white plate inside the lip */
+  .frame-plate{position:fixed;top:30px;bottom:30px;right:30px;
+    left:calc(30px + var(--sbw) + 14px);z-index:1;pointer-events:none;border-radius:26px;
+    background:linear-gradient(180deg,#fdfdfe,#f4f5f7);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 2px 14px -6px rgba(2,3,5,.35);
+    transition:left 260ms var(--smooth)}
+  html.dark .frame-plate{background:linear-gradient(180deg,#15171d,#111318);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 2px 14px -6px rgba(0,0,0,.5)}
   html.has-side body{padding-left:calc(30px + var(--sbw) + 22px);padding-right:30px}
   html.has-side .shell{margin:0 auto;transition:margin 260ms var(--smooth)}
   html.has-side .pill{display:none}
