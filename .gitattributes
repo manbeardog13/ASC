@@ -1,0 +1,6 @@
+# CI runs on Linux — shell scripts, workflows and Node ESM must be LF or bash
+# breaks on the carriage returns (heredocs, `[ ]` comparisons, shebangs).
+*.sh   text eol=lf
+*.mjs  text eol=lf
+*.yml  text eol=lf
+*.yaml text eol=lf
