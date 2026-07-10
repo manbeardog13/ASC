@@ -245,56 +245,19 @@ html.dark .obar .bar{background:rgba(244,245,247,.10)}
   --side:#e9ebee;--lip:#f7f8fa}
 html.dark{--side:#0c0d10;--lip:#14161a;--acc-ink:#9db8d2}
 html[data-side="rail"]{--sbw:72px}
-.frame-shell{display:none}
 @media(min-width:1021px){
-  /* THE FRAME: one continuous graphite surface — it IS the sidebar's ground and
-     wraps the whole app (reference: LoadSwift). The white content shell floats
-     inside it as a card; the ambient canvas glows around the outside. */
-  .frame-shell{display:block;position:fixed;inset:16px;z-index:1;border-radius:36px;pointer-events:none;
-    background:linear-gradient(178deg,#17181d,#101116 60%,#0d0e12);
-    box-shadow:0 30px 80px -30px rgba(2,3,5,.55),inset 0 1px 0 rgba(255,255,255,.07),
-      inset 0 0 0 1px rgba(255,255,255,.03)}
-  html.dark .frame-shell{background:linear-gradient(178deg,#191b21,#111318 60%,#0e1015);
-    box-shadow:0 30px 80px -30px rgba(0,0,0,.8),inset 0 1px 0 rgba(255,255,255,.06)}
-  /* the frame's INTERIOR is white (reference): the graphite reads as a ring +
-     the sidebar; the content column sits on a white plate inside the lip */
-  .frame-plate{position:fixed;top:30px;bottom:30px;right:30px;
-    left:calc(30px + var(--sbw) + 14px);z-index:1;pointer-events:none;border-radius:26px;
-    background:linear-gradient(180deg,#fdfdfe,#f4f5f7);
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 2px 14px -6px rgba(2,3,5,.35);
-    transition:left 260ms var(--smooth)}
-  html.dark .frame-plate{background:linear-gradient(180deg,#15171d,#111318);
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 2px 14px -6px rgba(0,0,0,.5)}
   html.has-side body{padding-left:calc(30px + var(--sbw) + 22px);padding-right:30px}
   html.has-side .shell{margin:0 auto;transition:margin 260ms var(--smooth)}
   html.has-side .pill{display:none}
 }
 .side{position:fixed;left:30px;top:30px;bottom:30px;width:var(--sbw);z-index:40;
   display:flex;flex-direction:column;padding:14px 10px;border-radius:22px;
-  background:transparent;
+  background:var(--side);
+  box-shadow:0 1px 2px -1px rgba(20,18,15,.08),0 12px 28px -18px rgba(20,18,15,.28),
+    inset 0 1px 0 rgba(255,255,255,.65),inset 0 0 0 1px rgba(28,22,16,.05);
   transition:width 260ms var(--smooth),transform 320ms var(--smooth)}
-/* the sidebar lives on the graphite frame — light ink in both themes */
-@media(min-width:1021px){
-  .side .sb-eyebrow,.side .sb-eyebrow2{color:rgba(244,245,247,.45)}
-  .side .sb-item{color:rgba(244,245,247,.78)}
-  .side .sb-item svg{color:rgba(244,245,247,.5)}
-  .side .sb-item:hover{background:rgba(255,255,255,.06);box-shadow:0 2px 8px -3px rgba(0,0,0,.5)}
-  .side .sb-item:hover svg{color:rgba(244,245,247,.85)}
-  .side .sb-item.on{background:rgba(255,255,255,.09);color:var(--acc-d,#f4f5f7);
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 4px 14px -8px var(--acc)}
-  .side .sb-item.on svg{color:var(--acc-d,#f4f5f7)}
-  .side .sb-div{background:rgba(255,255,255,.08)}
-  .side .sb-collapse{color:rgba(244,245,247,.55)}
-  .side .sb-collapse:hover{background:rgba(255,255,255,.07)}
-  .side .sb-chev{color:rgba(244,245,247,.45)}
-  .side .sb-user{background:rgba(255,255,255,.045);border-radius:16px}
-  .side .sb-user:hover{background:rgba(255,255,255,.08)}
-  .side .sb-uid b{color:#f4f5f7}
-  .side .sb-uid span{color:rgba(244,245,247,.5)}
-  .side .sb-foot{border-top-color:rgba(255,255,255,.08)}
-  .side .sb-logout{color:rgba(244,245,247,.55)}
-  .side .sb-ava .dot{border-color:#121419}
-}
+html.dark .side{box-shadow:0 12px 32px -18px rgba(0,0,0,.6),
+  inset 0 1px 0 rgba(255,255,255,.06),inset 0 0 0 1px rgba(244,245,247,.05)}
 .sb-head{flex:none;display:flex;align-items:center;justify-content:space-between;
   padding:4px 12px 12px;min-height:40px}
 html[data-side="rail"] .sb-head{justify-content:center;padding:4px 0 12px}
@@ -370,8 +333,8 @@ html[data-side="rail"] .sb-item{justify-content:center;padding:0}
 html[data-side="rail"] .sb-item .t,html[data-side="rail"] .sb-chev,
 html[data-side="rail"] .sb-eyebrow,html[data-side="rail"] .sb-eyebrow2,
 html[data-side="rail"] .sb-group-kids{display:none}
-html[data-side="rail"] .sb-group .sb-item.kid-on{background:rgba(255,255,255,.09);color:var(--acc-d,#f4f5f7)}
-html[data-side="rail"] .sb-group .sb-item.kid-on svg{color:var(--acc-d,#f4f5f7)}
+html[data-side="rail"] .sb-group .sb-item.kid-on{background:var(--panel-2);color:var(--acc-ink)}
+html[data-side="rail"] .sb-group .sb-item.kid-on svg{color:var(--acc-ink)}
 html[data-side="rail"] .sb-item.on::before{top:auto;bottom:4px;left:50%;transform:translateX(-50%);
   width:14px;height:3px}
 /* user card */
@@ -425,23 +388,8 @@ html[data-side="rail"] .sb-user{justify-content:center;padding:8px 0}
   transition:opacity .28s var(--smooth),visibility .28s;-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)}
 @media(max-width:1020px){
   .side{left:0;top:0;bottom:0;width:min(300px,84vw);border-radius:0 22px 22px 0;z-index:116;
-    background:linear-gradient(178deg,#17181d,#0d0e12);
-    box-shadow:20px 0 60px -20px rgba(0,0,0,.55);
     transform:translateX(-103%);padding-top:calc(14px + env(safe-area-inset-top,0px));
     padding-bottom:calc(14px + env(safe-area-inset-bottom,0px))}
-  .side .sb-eyebrow,.side .sb-eyebrow2{color:rgba(244,245,247,.45)}
-  .side .sb-item{color:rgba(244,245,247,.78)}
-  .side .sb-item svg{color:rgba(244,245,247,.5)}
-  .side .sb-item.on{background:rgba(255,255,255,.09);color:var(--acc-d,#f4f5f7)}
-  .side .sb-item.on svg{color:var(--acc-d,#f4f5f7)}
-  .side .sb-div{background:rgba(255,255,255,.08)}
-  .side .sb-user{background:rgba(255,255,255,.045);border-radius:16px}
-  .side .sb-uid b{color:#f4f5f7}
-  .side .sb-uid span{color:rgba(244,245,247,.5)}
-  .side .sb-foot{border-top-color:rgba(255,255,255,.08)}
-  .side .sb-logout{color:rgba(244,245,247,.55)}
-  .side .sb-chev,.side .sb-collapse{color:rgba(244,245,247,.45)}
-  .side .sb-ava .dot{border-color:#121419}
   html.side-open .side{transform:none}
   .side{padding-left:max(10px,env(safe-area-inset-left,0px))}
   html.side-open .side-scrim{opacity:1;visibility:visible}

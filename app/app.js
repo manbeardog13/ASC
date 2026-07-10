@@ -237,14 +237,6 @@ function animate(){
   doc.body.appendChild(scrim);
   doc.body.appendChild(aside);
   root.classList.add('has-side');
-  if (matchMedia('(min-width:1021px)').matches) {
-    const frame = doc.createElement('div');
-    frame.className = 'frame-shell'; frame.setAttribute('aria-hidden', 'true');
-    doc.body.appendChild(frame);
-    const plate = doc.createElement('div');
-    plate.className = 'frame-plate'; plate.setAttribute('aria-hidden', 'true');
-    doc.body.appendChild(plate);
-  }
   // Global search — under the header, reference placement. ASC codes open the
   // set directly; anything else searches the customer base.
   const topBar = doc.querySelector('.top');
