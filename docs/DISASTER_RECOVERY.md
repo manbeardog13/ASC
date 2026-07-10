@@ -10,7 +10,7 @@
 | **RPO** (max data loss) | ≤ 24 hours |
 | **RTO** (time to restore service) | ≤ 1 hour |
 | **Backup frequency** | Daily automatic (02:00 UTC) + on-demand |
-| **Backup verification** | Weekly automated restore test (Mondays 03:00 UTC) |
+| **Backup verification** | **Daily automated recovery drill** — after every backup, restore into a throwaway Postgres and prove it recovers; retry once after 5 min; Telegram alert on failure |
 | **Backup locations** | Supabase (primary) · encrypted `backups` branch · Actions artifacts |
 
 ## The layers
@@ -22,7 +22,7 @@
 | 3 | **Encrypted CSV snapshot** (human-readable once decrypted) | `backups` branch → `database_backups/csv/` + artifact | "the app is gone, I just need the list" |
 | 4 | **Audit log** (`audit_events`, event-sourced) | Supabase | "who moved/deleted this set" |
 | 5 | **Soft delete** (recycle bin, 30 days) | Supabase `storage_sets.deleted_at` | accidental deletes |
-| 6 | **Weekly integrity check** | GitHub Actions | silent backup rot |
+| 6 | **Daily recovery drill** (real restore into a throwaway Postgres + 7 checkpoints) | GitHub Actions → `scripts/restore-drill.sh` | silent backup rot — proves the backup *actually restores*, not just that the file exists |
 
 Retention on the `backups` branch: **30 daily · 12 monthly · 5 yearly** (older
 pruned automatically by `scripts/prune-backups.mjs`).
@@ -43,6 +43,18 @@ Add two repository secrets — **Settings → Secrets and variables → Actions 
 |---|---|
 | `SUPABASE_DB_URL` | Supabase → **Project Settings → Database → Connection string**. Use the **Session pooler** URI (port **5432**) — GitHub's runners are IPv4-only and the direct connection is IPv6-only, so the pooler is what works from Actions (and it supports `pg_dump`). Looks like `postgresql://postgres.ilnqhlrvchuvpjgptjfx:PASSWORD@aws-0-<region>.pooler.supabase.com:5432/postgres`. Do **not** use the Transaction pooler (port 6543). |
 | `BACKUP_ENCRYPTION_KEY` | A long random passphrase **you generate and store somewhere safe** (a password manager). Losing it means losing the ability to decrypt backups. Generate one: `openssl rand -base64 40` |
+
+**Optional but recommended — Telegram failure alerts.** Add these two so a
+failed backup or a failed recovery drill pings your phone (Telegram bots cannot
+message a phone *number* — you need a bot + your numeric chat id):
+
+| Secret | Value |
+|---|---|
+| `TELEGRAM_BOT_TOKEN` | In Telegram, message **@BotFather** → `/newbot` → give it a name (e.g. "ASC Backup Watch") → it replies with a token like `8123456789:AAH...`. Paste that. |
+| `TELEGRAM_CHAT_ID` | Open the bot you just made and tap **Start**. Then message **@userinfobot** — it replies with your numeric **Id** (e.g. `123456789`). Paste that. |
+
+Without these the pipeline still runs and still goes red on failure (with
+GitHub's own email to the repo owner) — you just don't get the Telegram ping.
 
 Then merge this branch to `main` (scheduled workflows only run from the default
 branch). The first backup runs that night, or trigger it now: **Actions →
@@ -115,14 +127,27 @@ lives in `supabase/schema.sql`. So every restore is: **structure first, then dat
 
 ## Verification & monitoring
 
-- The **weekly verify workflow** decrypts the newest dump and confirms it's
-  intact — the key works, it decompresses, and every core table is present with a
-  plausible row count. A failure emails you and writes a `failed` row to
-  `backup_runs`. (Do a full restore drill into a scratch project quarterly.)
+- **Daily recovery drill** (`scripts/restore-drill.sh`, run automatically right
+  after every nightly backup). It doesn't just check the file exists — it
+  actually **restores** the newest encrypted dump into a throwaway Postgres and
+  asserts 7 checkpoints:
+  1. **Freshness** — newest backup is < 26h old (the pipeline is alive)
+  2. **Decrypt** — the AES key works and the gzip isn't corrupt
+  3. **Restore-clean** — the data-only dump loads with zero errors
+  4. **Non-empty** — customers / vehicles / storage_sets / tires all have rows
+  5. **Referential** — no orphan vehicles / sets / tires (every foreign key resolves)
+  6. **Completeness** — restored `storage_sets` count matches live (within tolerance)
+  7. **Round-trip** — the newest set restores with the same tire-row count as live
+
+  If the drill fails it **retries once after 5 minutes** (in case of a transient
+  runner/network hiccup). If it fails again it sends a **Telegram alert** and
+  writes a `failed` row to `backup_runs`. The GitHub run also goes red (owner
+  email backstop).
 - The app's **dashboard** shows **Last backup** (from `backup_runs`) so staff can
   see at a glance that protection is current.
-- Do a **manual fire drill quarterly**: run *Nightly backup* → *Weekly
-  verification* by hand, then decrypt the newest CSV and confirm it opens.
+- Still worth a **manual full-project fire drill quarterly**: restore the newest
+  dump into a scratch Supabase project and click through the app, to exercise the
+  auth/storage layers the automated drill doesn't cover.
 
 ## If Supabase disappears entirely
 

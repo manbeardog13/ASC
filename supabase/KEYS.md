@@ -18,6 +18,26 @@ Google requires an OAuth client that only you can mint:
 
 That's the entire flow. No tokens in chat, no tokens in the repo.
 
+## Telegram backup alerts (optional — the backup itself already works without it)
+
+The daily backup + recovery drill will Telegram you if a backup fails or a backup
+can't be recovered. Telegram bots **cannot message a phone number**, so we need a
+bot token + your numeric chat id. Two GitHub secrets, ~2 minutes:
+
+1. In Telegram, open **@BotFather** → send `/newbot` → give it a name (e.g.
+   "ASC Backup Watch") and a username ending in `bot`. It replies with a **token**
+   like `8123456789:AAH...`.
+2. Open the new bot (BotFather gives you a link) and tap **Start**.
+3. Message **@userinfobot** — it replies with your numeric **Id** (e.g. `123456789`).
+4. Add both as repo secrets — GitHub → this repo → **Settings → Secrets and
+   variables → Actions → New repository secret**:
+   - `TELEGRAM_BOT_TOKEN` = the BotFather token (step 1) — this is a real secret.
+   - `TELEGRAM_CHAT_ID` = your numeric Id (step 3).
+
+You can hand me just the **chat id** and I'll set that one for you (`gh secret set`);
+the **bot token** you paste yourself (I never handle secrets). Until both are set,
+alerts are skipped with a log notice — everything else runs normally.
+
 ## SQL deployments
 
 None needed from you — I run every .sql file in this folder via the dashboard

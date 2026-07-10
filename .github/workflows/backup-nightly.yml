@@ -1,12 +1,19 @@
 name: Nightly backup
 
-# Layer 1 (encrypted DB dump) + Layer 2 (CSV snapshot) + soft-delete purge.
-# Scheduled workflows only run from the DEFAULT branch, so this activates once
-# this branch is merged to main.
+# Layer 1 (encrypted DB dump) + Layer 2 (CSV snapshot) + soft-delete purge,
+# followed by a REAL recovery drill (restore into a throwaway Postgres and prove
+# it comes back). Scheduled workflows only run from the DEFAULT branch.
 on:
   schedule:
-    - cron: "0 2 * * *"     # 02:00 UTC every day
+    - cron: "0 2 * * *"     # 02:00 UTC every day (GitHub's scheduler drifts by hours)
   workflow_dispatch: {}      # ...and on demand from the Actions tab
+  push:
+    branches: [main]
+    paths:                   # re-run the pipeline whenever the backup logic itself changes
+      - "scripts/backup.sh"
+      - "scripts/restore-drill.sh"
+      - "scripts/telegram-alert.sh"
+      - ".github/workflows/backup-nightly.yml"
 
 permissions:
   contents: write            # to push to the backups branch
@@ -16,10 +23,15 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # ==========================================================================
+  # 1) Create the encrypted backup (DB dump + CSV), publish, purge recycle bin.
+  # ==========================================================================
   backup:
     runs-on: ubuntu-latest
     env:
       ENC_KEY: ${{ secrets.BACKUP_ENCRYPTION_KEY }}
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
     steps:
       - uses: actions/checkout@v4
 
@@ -48,8 +60,6 @@ jobs:
           sudo sh -c 'echo "deb https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
           curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/pgdg.gpg
           sudo apt-get update -qq
-          # Detect the Supabase server major version and install the matching
-          # pg_dump so the dump is always loadable by the production server.
           MAJOR=$(psql "$DB_URL" -tAc "select current_setting('server_version_num')::int/10000")
           echo "Supabase Postgres major version: $MAJOR"
           sudo apt-get install -y -qq "postgresql-client-$MAJOR"
@@ -107,3 +117,99 @@ jobs:
         if: failure()
         run: |
           psql "$DB_URL" -c "insert into backup_runs(kind,status,detail,started_at) values('db','failed','see Actions log', now());" || true
+
+      - name: Telegram alert — backup itself failed
+        if: failure()
+        run: |
+          bash scripts/telegram-alert.sh "🔴 ASC — the nightly BACKUP failed ($(date -u '+%Y-%m-%d %H:%M') UTC). No new backup was created tonight. Please check GitHub → Actions → Nightly backup."
+
+  # ==========================================================================
+  # 2) Recovery drill — restore the fresh backup into a throwaway Postgres and
+  #    prove it recovers. Retry once after 5 min; Telegram-alert on double fail.
+  # ==========================================================================
+  verify:
+    needs: backup
+    runs-on: ubuntu-latest
+    env:
+      ENC_KEY: ${{ secrets.BACKUP_ENCRYPTION_KEY }}
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      SCRATCH: postgresql://postgres:postgres@localhost:5432/postgres
+    services:
+      scratch:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - name: Checkout main (schema + scripts)
+        uses: actions/checkout@v4
+
+      - name: Checkout the backups branch (newest dump)
+        uses: actions/checkout@v4
+        with:
+          ref: backups
+          path: _backups
+
+      - name: Build database connection string (live — structure + counts)
+        env:
+          DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          DB_URL_FULL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          if [ -n "$DB_PASSWORD" ]; then
+            ENC=$(python3 -c 'import urllib.parse,os;print(urllib.parse.quote(os.environ["DB_PASSWORD"], safe=""))')
+            URL="postgresql://postgres.ilnqhlrvchuvpjgptjfx:${ENC}@aws-0-eu-west-1.pooler.supabase.com:5432/postgres"
+          elif [ -n "$DB_URL_FULL" ]; then
+            URL="$DB_URL_FULL"
+          else
+            echo "::error::Set SUPABASE_DB_PASSWORD to your database password."; exit 1
+          fi
+          echo "::add-mask::$URL"
+          echo "DB_URL=$URL" >> "$GITHUB_ENV"
+
+      - name: Install PostgreSQL client matching the server
+        run: |
+          sudo sh -c 'echo "deb https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+          curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/pgdg.gpg
+          sudo apt-get update -qq
+          MAJOR=$(psql "$DB_URL" -tAc "select current_setting('server_version_num')::int/10000")
+          sudo apt-get install -y -qq "postgresql-client-$MAJOR"
+          echo "/usr/lib/postgresql/$MAJOR/bin" >> "$GITHUB_PATH"
+
+      - name: Recovery drill (retry once after 5 minutes)
+        id: drill
+        env:
+          BACKUP_DIR: _backups/database_backups/db
+        run: |
+          set +e
+          bash scripts/restore-drill.sh
+          rc=$?
+          if [ "$rc" -ne 0 ]; then
+            echo "::warning::First recovery drill failed (exit $rc). Retrying in 5 minutes…"
+            # wipe the scratch DB so the retry is a clean restore
+            psql "$SCRATCH" -q -c "drop schema if exists public cascade; create schema public;" || true
+            sleep 300
+            bash scripts/restore-drill.sh
+            rc=$?
+          fi
+          exit "$rc"
+
+      - name: Record verification result
+        if: always() && env.DB_URL != ''
+        run: |
+          if [ "${{ steps.drill.outcome }}" = "success" ]; then
+            psql "$DB_URL" -c "insert into backup_runs(kind,status,detail,started_at) values('verify','success','daily recovery drill: ${sets:-?} sets restored + verified', now());" || true
+          else
+            psql "$DB_URL" -c "insert into backup_runs(kind,status,detail,started_at) values('verify','failed','daily recovery drill FAILED (${drill_dump:-?})', now());" || true
+          fi
+
+      - name: Telegram alert — recovery failed twice
+        if: failure()
+        run: |
+          bash scripts/telegram-alert.sh "🔴 ASC — the backup could NOT be recovered. The automated restore drill failed TWICE (dump ${drill_dump:-latest}, $(date -u '+%Y-%m-%d %H:%M') UTC). Your backups may not be restorable — please check GitHub → Actions → Nightly backup. — ASC watchdog"
