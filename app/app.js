@@ -211,6 +211,8 @@ function animate(){
   aside.innerHTML =
     '<div class="sb-head"><span class="sb-eyebrow">ASC sustav</span>' +
       '<button class="sb-collapse" type="button" aria-label="Suzi izbornik"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 6l-6 6 6 6"/></svg></button></div>' +
+    '<form class="sb-search" role="search"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg>' +
+      '<input type="search" placeholder="Traži…" aria-label="Pretraga" autocomplete="off"></form>' +
     '<nav class="sb-nav">' +
       item('dashboard', 'dashboard.html', I.home, 'Ploča') +
       item('checkin', 'checkin.html', I.plus, 'Zaprimi') +
@@ -237,24 +239,6 @@ function animate(){
   doc.body.appendChild(scrim);
   doc.body.appendChild(aside);
   root.classList.add('has-side');
-  // Global search — under the header, reference placement. ASC codes open the
-  // set directly; anything else searches the customer base.
-  const topBar = doc.querySelector('.top');
-  if (topBar && !doc.querySelector('.gsearch')) {
-    const gs = doc.createElement('form');
-    gs.className = 'gsearch'; gs.setAttribute('role', 'search');
-    gs.innerHTML = '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg>' +
-      '<input type="search" placeholder="Traži kod, kupca, registraciju…" aria-label="Pretraga" autocomplete="off">';
-    topBar.insertAdjacentElement('afterend', gs);
-    gs.addEventListener('submit', (e) => {
-      e.preventDefault();
-      const q = gs.querySelector('input').value.trim();
-      if (!q) return;
-      const code = window.ASCQR && ASCQR.normalize ? ASCQR.normalize(q, true) : null;
-      location.href = code ? 'set-detail.html?code=' + encodeURIComponent(code)
-                           : 'customers.html?c=' + encodeURIComponent(q);
-    });
-  }
 
   // module stamp for page-level tinting
   const MOD = { 'dashboard.html': 'dashboard', 'checkin.html': 'checkin', 'scan.html': 'scan',
@@ -274,6 +258,22 @@ function animate(){
 
   // collapse rail (desktop) — persisted
   try { if (localStorage.getItem('asc.side.rail') === '1') root.setAttribute('data-side', 'rail'); } catch (e) {}
+  const sbs = aside.querySelector('.sb-search');
+  sbs.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const q = sbs.querySelector('input').value.trim();
+    if (!q) return;
+    const code = window.ASCQR && ASCQR.normalize ? ASCQR.normalize(q, true) : null;
+    location.href = code ? 'set-detail.html?code=' + encodeURIComponent(code)
+                         : 'customers.html?c=' + encodeURIComponent(q);
+  });
+  // rail mode: the search collapses to its icon — clicking expands and focuses
+  sbs.addEventListener('click', () => {
+    if (root.getAttribute('data-side') !== 'rail') return;
+    root.removeAttribute('data-side');
+    try { localStorage.setItem('asc.side.rail', '0'); } catch (e) {}
+    setTimeout(() => sbs.querySelector('input').focus(), 280);
+  });
   aside.querySelector('.sb-collapse').addEventListener('click', () => {
     const rail = root.getAttribute('data-side') === 'rail';
     if (rail) root.removeAttribute('data-side'); else root.setAttribute('data-side', 'rail');

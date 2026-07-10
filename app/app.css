@@ -1016,13 +1016,17 @@ html[data-module] .agent-card::after{content:"";position:absolute;inset:0;z-inde
 @keyframes aiDrift{from{transform:translateY(0)}to{transform:translateY(-6px)}}
 @media(prefers-reduced-motion:reduce){ html[data-module] .agent-card::after{animation:none} }
 
-/* global search — sits under the header exactly like the reference */
-.gsearch{display:flex;align-items:center;gap:10px;margin:2px 0 var(--gap);
-  min-height:46px;padding:0 15px;border-radius:15px;
-  background:var(--panel);border:1px solid var(--hairline);
+/* sidebar search — a quiet control above the navigation (Linear posture);
+   in rail mode it collapses to the icon (click = expand + focus) */
+.sb-search{flex:none;display:flex;align-items:center;gap:9px;min-height:40px;
+  margin:0 0 8px;padding:0 12px;border-radius:12px;
+  background:rgba(2,3,5,.04);border:1px solid var(--hairline);
   transition:border-color 200ms var(--snap),box-shadow 220ms var(--snap)}
-.gsearch:focus-within{border-color:var(--sel,#5C7C9D);box-shadow:0 0 0 3px var(--sel-tint)}
-.gsearch svg{flex:none;color:var(--muted)}
-.gsearch input{flex:1;min-width:0;border:0;background:none;outline:none;
-  font:500 14px Inter;color:var(--ink);padding:12px 0}
-.gsearch input::placeholder{color:var(--muted);opacity:.8}
+html.dark .sb-search{background:rgba(244,245,247,.05)}
+.sb-search:focus-within{border-color:var(--sel,#5C7C9D);box-shadow:0 0 0 3px var(--sel-tint)}
+.sb-search svg{flex:none;color:var(--muted);margin:0 1px}
+.sb-search input{flex:1;min-width:0;border:0;background:none;outline:none;
+  font:500 13.5px Inter;color:var(--ink);padding:9px 0}
+.sb-search input::placeholder{color:var(--muted);opacity:.8}
+html[data-side="rail"] .sb-search{justify-content:center;padding:0;cursor:pointer}
+html[data-side="rail"] .sb-search input{display:none}
