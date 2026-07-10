@@ -81,7 +81,7 @@ export async function signUp(email, password, fullName) {
 export async function loadMyProfile() {
   const session = await getSession();
   if (!session) return null;
-  const { data } = await supabase.from("profiles").select("id, email, full_name, role").eq("id", session.user.id).maybeSingle();
+  const { data } = await supabase.from("profiles").select("id, email, full_name, role, avatar_url").eq("id", session.user.id).maybeSingle();
   // Google sign-ins carry the person's name in auth metadata while the profiles
   // row starts empty — adopt it so greetings and the agent know who this is,
   // and persist it (best-effort; ignored if RLS says no).
@@ -131,6 +131,22 @@ export async function listUsers() {
 // Set MY display name (the "state your first and last name" gate + self-edit).
 // The RPC works for every role; direct table update is the pre-migration fallback
 // (admins only under RLS).
+// Profile picture: client passes a Blob (already downscaled); stored in the
+// public 'avatars' bucket as <uid>.jpg, URL cached-busted + saved on profiles.
+export async function setMyAvatar(blob) {
+  const session = await getSession();
+  if (!session) throw new Error("Prvo se prijavi.");
+  const path = session.user.id + ".jpg";
+  const { error: upErr } = await supabase.storage.from("avatars")
+    .upload(path, blob, { upsert: true, contentType: "image/jpeg" });
+  if (upErr) throw fail(upErr, "save the picture");
+  const { data: pub } = supabase.storage.from("avatars").getPublicUrl(path);
+  const url = pub.publicUrl + "?v=" + Date.now();
+  const { error } = await supabase.from("profiles").update({ avatar_url: url }).eq("id", session.user.id);
+  if (error) throw fail(error, "save the picture");
+  return url;
+}
+
 export async function setMyName(fullName) {
   const clean = (fullName || "").trim();
   if (!clean) throw new Error("Name is required.");

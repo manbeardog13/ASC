@@ -128,135 +128,161 @@ function animate(){
 
 // Dock: iOS tab bar. Real hrefs navigate; placeholder ("#") tabs just move the
 // tint (so the preview stays interactive without dead-ending the real links).
-// ---- Dock: the bubble controller -------------------------------------------
-// One custom property (--nx) glues the glass cutout and the floating puck.
-// Finger-glide writes --nx directly per frame (zero lag); taps and releases
-// let the registered property settle through the CSS spring. Navigation fires
-// at 240ms — the arc is ~60% through its travel at the MPA swap, and the
-// destination page boots already parked (data-boot kills the replay flight).
-const dockEl = document.querySelector('.dock');
-let dockDragging = false, navPending = false;
+// ---- v7 "Okvir" sidebar — THE navigation (desktop panel / mobile overlay) ----
+// Injected chrome (zero HTML edits): a floating sidebar one step darker than
+// the canvas, one expandable parent (Skladište), per-module accent inks, a
+// pinned user card with hover-logout + a floating account menu, a frame lip on
+// desktop, and a hamburger + scrim overlay on phones. Active page detection by
+// filename; html[data-module] is stamped for page-level accent tinting.
 (() => {
-  if (!dockEl) return;
-  const tabs = [...dockEl.querySelectorAll('.dtab')];
-  if (!tabs.length) return;
-  const DNAV = { 'Ploča': 'dashboard.html', 'Zaprimi': 'checkin.html', 'Skeniraj': 'scan.html', 'Skladište': 'warehouse.html' };
-  const label = (t) => (t.getAttribute('aria-label') || '').trim();
-
-  // wrap bare label text so it can lift independently of the icon
-  tabs.forEach(t => { [...t.childNodes].forEach(n => {
-    if (n.nodeType === 3 && n.textContent.trim()) { const s = document.createElement('span'); s.className = 'dlabel'; s.textContent = n.textContent.trim(); t.replaceChild(s, n); }
-  }); });
-
-  // the puck + its redrawn hairline arc
-  const float = document.createElement('div');
-  float.className = 'dock-float'; float.setAttribute('aria-hidden', 'true');
-  float.innerHTML = '<svg class="dock-arc" width="60" height="20" viewBox="0 0 60 20" fill="none"><path d="M3.6 0 A29 29 0 0 0 56.4 0" stroke="currentColor" stroke-width="1"/></svg>';
-  dockEl.appendChild(float);
-
-  // geometry — measured, never computed (flex spacing is viewport-dependent)
-  let centers = [], dockLeft = 0;
-  const measure = () => {
-    const dr = dockEl.getBoundingClientRect(); dockLeft = dr.left;
-    centers = tabs.map(t => { const r = t.getBoundingClientRect(); return r.left + r.width / 2 - dockLeft; });
+  if (/\/login\.html$/.test(location.pathname)) return;
+  const doc = document, root = doc.documentElement;
+  const I = {
+    home: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.2 10.6L12 4l7.8 6.6"/><path d="M5.8 9.4V19a2 2 0 002 2h8.4a2 2 0 002-2V9.4"/></svg>',
+    plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5.4v13.2M5.4 12h13.2"/></svg>',
+    scan: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.2V6.4A2.4 2.4 0 016.4 4h1.8M15.8 4h1.8A2.4 2.4 0 0120 6.4v1.8M20 15.8v1.8a2.4 2.4 0 01-2.4 2.4h-1.8M8.2 20H6.4A2.4 2.4 0 014 17.6v-1.8"/><path d="M7.2 12h9.6"/></svg>',
+    pin: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21.2s-7-5.5-7-11a7 7 0 0114 0c0 5.5-7 11-7 11z"/><circle cx="12" cy="10" r="2.4"/></svg>',
+    people: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19.5a5.5 5.5 0 0111 0M15.5 5.6a3.2 3.2 0 010 4.8M17.5 13.8a5.5 5.5 0 013 5"/></svg>',
+    bell: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9.5a6 6 0 0112 0c0 4.2 1.6 5.6 2.2 6.2H3.8C4.4 15.1 6 13.7 6 9.5z"/><path d="M9.8 19a2.4 2.4 0 004.4 0"/></svg>',
+    wrench: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.2 6.3a4 4 0 015.3 5.3l-8.4 8.4a2.1 2.1 0 01-3-3l8.4-8.4z"/><path d="M14.2 6.3L17.7 3M6 21l-3-3"/></svg>',
+    spark: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5l1.8 4.9 4.9 1.8-4.9 1.8L12 17l-1.8-5-4.9-1.8 4.9-1.8L12 3.5z"/><path d="M18.8 15.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8.8-2.2z"/></svg>',
+    users: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="7.6" r="3.4"/><path d="M5 20a7 7 0 0114 0"/></svg>',
+    bin: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V5.5A1.5 1.5 0 0110.5 4h3A1.5 1.5 0 0115 5.5V7M6 7l1 12a2 2 0 002 2h6a2 2 0 002-2l1-12"/></svg>',
+    map: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4.5L4 6.5v13l5-2 6 2 5-2v-13l-5 2-6-2z"/><path d="M9 4.5v13M15 6.5v13"/></svg>',
+    chev: '<svg class="sb-chev" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9.5l6 6 6-6"/></svg>',
+    out: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4H6a2 2 0 00-2 2v12a2 2 0 002 2h3M15 8l4 4-4 4M19 12H9"/></svg>',
   };
-  addEventListener('resize', measure); addEventListener('orientationchange', measure);
-  if (document.fonts && document.fonts.ready) document.fonts.ready.then(measure);
+  const here = location.pathname.split('/').pop() || 'dashboard.html';
+  const item = (m, href, icon, label, kid) =>
+    '<a class="sb-item' + (kid ? ' sb-kid' : '') + (here === href ? ' on' : '') + '" data-m="' + m + '" href="' + href + '">' + icon + '<span class="t">' + label + '</span></a>';
 
-  const current = () => tabs.find(t => t.classList.contains('on')) ||
-    tabs.find(t => (DNAV[label(t)] || '') === location.pathname.split('/').pop());
-  let lifted = null;
-  const setLift = (tab, popPuck) => {
-    if (lifted === tab) return;
-    if (lifted) lifted.classList.remove('lift');
-    lifted = tab;
-    if (tab) {
-      tab.classList.add('lift');
-      const cs = getComputedStyle(tab);
-      dockEl.style.setProperty('--tc-glow', cs.getPropertyValue('--tc-glow'));
-      float.style.setProperty('--tc-glow', cs.getPropertyValue('--tc-glow'));
-      if (popPuck) { float.classList.remove('pop'); void float.offsetWidth; float.classList.add('pop'); }
-    }
-  };
-  const park = (tab) => {
-    tabs.forEach(x => { x.classList.toggle('on', x === tab); x.removeAttribute('aria-current'); });
-    if (tab) { tab.setAttribute('aria-current', 'page'); setLift(tab, false); dockEl.style.setProperty('--nx', centers[tabs.indexOf(tab)] + 'px'); float.classList.remove('off'); }
-    else { dockEl.style.setProperty('--nx', '-120px'); float.classList.add('off'); setLift(null, false); }
-  };
+  const whOpen = here === 'warehouse.html' || here === 'recycle.html' ||
+    (localStorage.getItem('asc.side.wh') !== '0' && here === 'set-detail.html');
+  const aside = doc.createElement('aside');
+  aside.className = 'side';
+  aside.setAttribute('aria-label', 'Glavna navigacija');
+  aside.innerHTML =
+    '<div class="sb-head"><span class="sb-eyebrow">ASC sustav</span>' +
+      '<button class="sb-collapse" type="button" aria-label="Suzi izbornik"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 6l-6 6 6 6"/></svg></button></div>' +
+    '<nav class="sb-nav">' +
+      item('dashboard', 'dashboard.html', I.home, 'Ploča') +
+      item('checkin', 'checkin.html', I.plus, 'Zaprimi') +
+      item('scan', 'scan.html', I.scan, 'Skeniraj') +
+      '<div class="sb-group' + (whOpen ? ' open' : '') + '">' +
+        '<button class="sb-item" type="button" data-m="warehouse" aria-expanded="' + whOpen + '">' + I.pin + '<span class="t">Skladište</span>' + I.chev + '</button>' +
+        '<div class="sb-group-kids"><div>' +
+          item('warehouse', 'warehouse.html', I.map, 'Karta skladišta', true) +
+          item('warehouse', 'recycle.html', I.bin, 'Košarica', true) +
+        '</div></div></div>' +
+      item('customers', 'customers.html', I.people, 'Kupci') +
+      item('reminders', 'reminders.html', I.bell, 'Podsjetnici') +
+      item('workshop', 'workshop.html', I.wrench, 'Radionica') +
+      item('assistant', 'assistant.html', I.spark, 'ASC Agent') +
+      '<div class="sb-div"></div><div class="sb-eyebrow2">Upravljanje</div>' +
+      item('users', 'users.html', I.users, 'Korisnici') +
+    '</nav>' +
+    '<div class="sb-foot"><button class="sb-user" type="button" aria-haspopup="menu">' +
+      '<span class="sb-ava" id="sbAva">…<span class="dot"></span></span>' +
+      '<span class="sb-uid"><b id="sbName">—</b><span id="sbRole">—</span></span>' +
+      '<span class="sb-logout" role="button" tabindex="0" aria-label="Odjava" data-logout>' + I.out + '</span>' +
+    '</button></div>';
+  const scrim = doc.createElement('div');
+  scrim.className = 'side-scrim';
+  doc.body.appendChild(scrim);
+  doc.body.appendChild(aside);
+  root.classList.add('has-side');
+  if (matchMedia('(min-width:1021px)').matches) {
+    const lip = doc.createElement('div');
+    lip.className = 'frame-lip'; lip.setAttribute('aria-hidden', 'true');
+    doc.body.appendChild(lip);
+  }
 
-  // boot: park instantly (no flight) on the page's own tab
-  dockEl.setAttribute('data-boot', '');
-  measure();
-  park(current() || null);
-  requestAnimationFrame(() => requestAnimationFrame(() => dockEl.removeAttribute('data-boot')));
+  // module stamp for page-level tinting
+  const MOD = { 'dashboard.html': 'dashboard', 'checkin.html': 'checkin', 'scan.html': 'scan',
+    'warehouse.html': 'warehouse', 'recycle.html': 'warehouse', 'set-detail.html': 'warehouse',
+    'customers.html': 'customers', 'reminders.html': 'reminders', 'workshop.html': 'workshop',
+    'assistant.html': 'assistant', 'users.html': 'users' };
+  if (MOD[here]) root.setAttribute('data-module', MOD[here]);
 
-  // pointer state machine
-  let pid = null, startX = 0, startTab = null, moved = false, raf = 0, pendX = null;
-  const nearest = (x) => { let bi = 0, bd = 1e9; centers.forEach((c, i) => { const d = Math.abs(c - x); if (d < bd) { bd = d; bi = i; } }); return bi; };
-  const write = () => { raf = 0; if (pendX == null) return; dockEl.style.setProperty('--nx', pendX + 'px'); const t = tabs[nearest(pendX)]; if (t !== lifted) setLift(t, true); pendX = null; };
+  // set-detail highlights its parent domain
+  if (here === 'set-detail.html') {
+    const w = aside.querySelector('.sb-item[href="warehouse.html"]'); if (w) w.classList.add('on');
+  }
 
-  dockEl.addEventListener('pointerdown', (e) => {
-    const tab = e.target.closest('.dtab'); if (!tab || pid !== null || navPending) return;
-    pid = e.pointerId; startX = e.clientX; startTab = tab; moved = false;
-    try { dockEl.setPointerCapture(pid); } catch (err) {}
-    tab.classList.add('press');
-    measure();
+  // collapse rail (desktop) — persisted
+  try { if (localStorage.getItem('asc.side.rail') === '1') root.setAttribute('data-side', 'rail'); } catch (e) {}
+  aside.querySelector('.sb-collapse').addEventListener('click', () => {
+    const rail = root.getAttribute('data-side') === 'rail';
+    if (rail) root.removeAttribute('data-side'); else root.setAttribute('data-side', 'rail');
+    try { localStorage.setItem('asc.side.rail', rail ? '0' : '1'); } catch (e) {}
   });
-  dockEl.addEventListener('pointermove', (e) => {
-    if (e.pointerId !== pid) return;
-    if (!moved && Math.abs(e.clientX - startX) > 8) { moved = true; dockDragging = true; dockEl.classList.add('dragging'); }
-    if (!moved) return;
-    pendX = Math.min(Math.max(e.clientX - dockLeft, centers[0]), centers[centers.length - 1]);
-    if (!raf) raf = requestAnimationFrame(write);
+
+  // expandable parent
+  const group = aside.querySelector('.sb-group');
+  group.querySelector('button.sb-item').addEventListener('click', () => {
+    const open = group.classList.toggle('open');
+    group.querySelector('button').setAttribute('aria-expanded', String(open));
+    try { localStorage.setItem('asc.side.wh', open ? '1' : '0'); } catch (e) {}
   });
-  const finish = (commit) => {
-    if (pid === null) return;
-    try { dockEl.releasePointerCapture(pid); } catch (err) {}
-    pid = null;
-    tabs.forEach(t => t.classList.remove('press'));
-    const wasDrag = moved; moved = false; dockDragging = false;
-    requestAnimationFrame(() => dockEl.classList.remove('dragging'));
-    const target = commit ? (wasDrag ? tabs[nearest(parseFloat(getComputedStyle(dockEl).getPropertyValue('--nx')) || centers[0])] : startTab) : null;
-    const home = current();
-    if (!commit || !target) { park(home || null); return; }
-    const name = label(target);
-    dockEl.style.setProperty('--nx', centers[tabs.indexOf(target)] + 'px');
-    setLift(target, false);
-    if (name === 'Više') {
-      setTimeout(() => document.dispatchEvent(new CustomEvent('asc:open-menu')), 240);
-    } else if (DNAV[name] && target !== home) {
-      navPending = true;
-      setTimeout(() => location.assign(DNAV[name]), 240);
-    } else {
-      float.classList.remove('bounce'); void float.offsetWidth; float.classList.add('bounce');
-    }
-  };
-  dockEl.addEventListener('pointerup', (e) => { if (e.pointerId === pid) finish(true); });
-  dockEl.addEventListener('pointercancel', (e) => { if (e.pointerId === pid) finish(false); });
-  // navigation is programmatic — kill every native click (incl. iOS trailing synthetic)
-  dockEl.addEventListener('click', (e) => { if (e.target.closest('.dtab')) e.preventDefault(); }, true);
-  // the drawer closed → the puck glides home
-  document.addEventListener('asc:menu-closed', () => park(current() || null));
+
+  // mobile: hamburger in the header + scrim close
+  const top = doc.querySelector('.top');
+  if (top) {
+    const burger = doc.createElement('button');
+    burger.className = 'sb-burger'; burger.type = 'button'; burger.setAttribute('aria-label', 'Izbornik');
+    burger.innerHTML = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>';
+    top.insertBefore(burger, top.firstChild);
+    burger.addEventListener('click', () => root.classList.add('side-open'));
+  }
+  scrim.addEventListener('click', () => root.classList.remove('side-open'));
+  doc.addEventListener('keydown', (e) => { if (e.key === 'Escape') root.classList.remove('side-open'); });
+  aside.addEventListener('click', (e) => { if (e.target.closest('a.sb-item')) root.classList.remove('side-open'); });
+
+  // user card: real profile (name, role, avatar) — degrades to initials
+  const ROLE = { admin: 'Administrator', manager: 'Voditelj', employee: 'Djelatnik', reception: 'Recepcija', readonly: 'Pregled' };
+  import('../js/db.js').then((m) => m.loadMyProfile()).then((p) => {
+    if (!p) return;
+    const name = (p.full_name || '').trim() || 'ASC korisnik';
+    doc.getElementById('sbName').textContent = name;
+    doc.getElementById('sbRole').textContent = ROLE[p.role] || p.role || '';
+    const ava = doc.getElementById('sbAva');
+    const initials = name.split(/\s+/).map(w => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase() || 'A';
+    ava.firstChild.textContent = initials;
+    if (p.avatar_url) { const img = new Image(); img.onload = () => ava.insertBefore(img, ava.querySelector('.dot')); img.src = p.avatar_url; }
+  }).catch(() => {});
+
+  // account menu — floats up from the card
+  let pop = null;
+  const closePop = () => { if (pop) { pop.remove(); pop = null; } };
+  aside.querySelector('.sb-user').addEventListener('click', (e) => {
+    if (e.target.closest('[data-logout]')) return;   // the ghost logout does its own thing
+    if (pop) { closePop(); return; }
+    pop = doc.createElement('div');
+    pop.className = 'acct-pop'; pop.setAttribute('role', 'menu');
+    pop.innerHTML =
+      '<button class="acct-item" data-act="profile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.4"/><path d="M5 20a7 7 0 0114 0"/></svg>Profil</button>' +
+      '<button class="acct-item" data-act="theme"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5 5l1.4 1.4M17.6 17.6L19 19M19 5l-1.4 1.4M6.4 17.6L5 19"/></svg>Tema</button>' +
+      '<button class="acct-item" data-act="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 00-.1-1.2l2-1.6-2-3.4-2.4 1a7 7 0 00-2-1.2L14 3h-4l-.5 2.6a7 7 0 00-2 1.2l-2.4-1-2 3.4 2 1.6A7 7 0 005 12c0 .4 0 .8.1 1.2l-2 1.6 2 3.4 2.4-1a7 7 0 002 1.2L10 21h4l.5-2.6a7 7 0 002-1.2l2.4 1 2-3.4-2-1.6c.1-.4.1-.8.1-1.2z"/></svg>Postavke</button>' +
+      '<div class="acct-div"></div>' +
+      '<button class="acct-item danger" data-logout><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4H6a2 2 0 00-2 2v12a2 2 0 002 2h3M15 8l4 4-4 4M19 12H9"/></svg>Odjava</button>';
+    doc.body.appendChild(pop);
+    const r = aside.querySelector('.sb-user').getBoundingClientRect();
+    pop.style.left = Math.max(12, r.left) + 'px';
+    pop.style.bottom = (innerHeight - r.top + 8) + 'px';
+    pop.addEventListener('click', (ev) => {
+      const act = ev.target.closest('[data-act]');
+      if (!act) return;   // data-logout bubbles to the global gate listener
+      const a = act.getAttribute('data-act');
+      if (a === 'theme') { const mode = doc.getElementById('mode'); if (mode) mode.click(); }
+      else document.dispatchEvent(new CustomEvent('asc:open-menu', { detail: a === 'profile' ? 'profile' : 'menu' }));
+      closePop();
+    });
+    setTimeout(() => doc.addEventListener('click', function away(ev) {
+      if (pop && !pop.contains(ev.target) && !ev.target.closest('.sb-user')) { closePop(); doc.removeEventListener('click', away); }
+    }), 0);
+  });
 })();
 
-// Dock tuck-away: scrolling down slides the tab bar completely off-screen;
-// the SLIGHTEST upward scroll brings it back (asymmetric hysteresis — 6px to
-// hide so micro-jitter never flickers it, 2px to show so intent is instant).
-// Near the top it is always present. rAF-throttled; scrollY clamped so iOS
-// rubber-banding at the top can't fake a direction change.
-(() => {
-  const dock = document.querySelector('.dock');
-  if (!dock) return;
-  let lastY = Math.max(0, scrollY);
-  addEventListener('scroll', () => {
-    if (dockDragging || navPending) return;   // never tuck mid-glide or mid-settle
-    const y = Math.max(0, scrollY), dy = y - lastY;
-    lastY = y;
-    if (y < 48) dock.classList.remove('dock-hide');
-    else if (dy > 6) dock.classList.add('dock-hide');
-    else if (dy < -2) dock.classList.remove('dock-hide');
-  }, { passive: true });
-})();
 
 // Count-ups start at the moment of reveal — under the Prag splash they'd burn
 // out invisibly; asc:reveal fires in the same frame the surface lifts.
@@ -662,7 +688,7 @@ if (document.readyState !== 'loading') syncDisc(); else addEventListener('DOMCon
   };
   btn.addEventListener('click', () => open('profile'));
   // The dock's Više tab settles its puck, then asks for the drawer (bubble controller).
-  document.addEventListener('asc:open-menu', () => open('menu'));
+  document.addEventListener('asc:open-menu', (e) => open(e.detail || 'menu'));
   q('.md-close').addEventListener('click', close);
   scrim.addEventListener('click', close);
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && document.body.classList.contains('menu-open')) close(); });

@@ -716,3 +716,28 @@ alter table storage_sets add column if not exists hubcaps_stored boolean not nul
 create index if not exists idx_vehicles_vin on vehicles(vin);
 
 -- Done. Next: Authentication -> Users -> add your shop login (first user = admin).
+
+-- ============================================================================
+-- v6 — profile pictures (idempotent): profiles.avatar_url + a public-read
+-- 'avatars' bucket (5-person shop; public read keeps rendering simple and the
+-- URLs are unguessable UUID filenames). Users may write ONLY their own file.
+-- ============================================================================
+alter table profiles add column if not exists avatar_url text;
+
+insert into storage.buckets (id, name, public)
+  values ('avatars', 'avatars', true)
+  on conflict (id) do update set public = true;
+
+drop policy if exists "avatars are public read" on storage.objects;
+create policy "avatars are public read" on storage.objects
+  for select using (bucket_id = 'avatars');
+
+drop policy if exists "own avatar write" on storage.objects;
+create policy "own avatar write" on storage.objects
+  for insert to authenticated
+  with check (bucket_id = 'avatars' and name = auth.uid()::text || '.jpg');
+
+drop policy if exists "own avatar update" on storage.objects;
+create policy "own avatar update" on storage.objects
+  for update to authenticated
+  using (bucket_id = 'avatars' and name = auth.uid()::text || '.jpg');
