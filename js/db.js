@@ -376,33 +376,61 @@ export async function findPossibleDuplicates({ plate, phone, dotCodes = [] } = {
 }
 
 // ---- Creating a storage set ----------------------------------------------------
+// A payload key the database doesn't know yet (the app updated before a migration
+// ran) must never kill a save. PostgREST names the exact column — PGRST204 on
+// writes, 42703 elsewhere — so we drop that one field, warn, and save the rest.
+const MISSING_COLUMN = /[Cc]ould not find the '([^']+)' column|column "?(?:\w+\.)?(\w+)"?(?: of relation "?\w+"?)? does not exist/;
+async function lenientWrite(doing, payload, write) {
+  let p = Array.isArray(payload) ? payload.map((r) => ({ ...r })) : { ...payload };
+  for (;;) {
+    const { data, error } = await write(p);
+    if (!error) return data;
+    const named = (error.code === "PGRST204" || error.code === "42703")
+      ? MISSING_COLUMN.exec(error.message || "") : null;
+    const col = named && (named[1] || named[2]);
+    const present = col && (Array.isArray(p) ? p.some((r) => col in r) : col in p);
+    if (!present) throw fail(error, doing);
+    console.warn(`[db] column '${col}' missing in production — ${doing} saved without it`);
+    if (Array.isArray(p)) p.forEach((r) => delete r[col]); else delete p[col];
+  }
+}
+
 export async function createStorageSet(form) {
-  const { data: customer, error: cErr } = await supabase.from("customers")
-    .insert({ name: form.customer.name, phone: form.customer.phone || null, email: form.customer.email || null,
-      address: form.customer.address || null })
-    .select().single();
-  if (cErr) throw fail(cErr, "save the customer");
+  const customer = await lenientWrite("save the customer", {
+    name: form.customer.name, phone: form.customer.phone || null, email: form.customer.email || null,
+    address: form.customer.address || null,
+  }, (p) => supabase.from("customers").insert(p).select().single());
 
-  const { data: vehicle, error: vErr } = await supabase.from("vehicles")
-    .insert({ customer_id: customer.id, make: form.vehicle.make || null, model: form.vehicle.model || null,
-      year: form.vehicle.year || null, plate: form.vehicle.plate || null, vin: form.vehicle.vin || null }).select().single();
-  if (vErr) throw fail(vErr, "save the vehicle");
+  // Everything after the customer either fully saves or fully unwinds — a failed
+  // check-in must leave nothing behind, or retrying creates duplicate customers.
+  let set;
+  try {
+    const vehicle = await lenientWrite("save the vehicle", {
+      customer_id: customer.id, make: form.vehicle.make || null, model: form.vehicle.model || null,
+      year: form.vehicle.year || null, plate: form.vehicle.plate || null, vin: form.vehicle.vin || null,
+    }, (p) => supabase.from("vehicles").insert(p).select().single());
 
-  const { data: set, error: sErr } = await supabase.from("storage_sets")
-    .insert({
+    set = await lenientWrite("save the tire set", {
       vehicle_id: vehicle.id, season: form.set.season, on_rims: form.set.on_rims,
       rim_type: form.set.on_rims ? form.set.rim_type || null : null, quantity: form.set.quantity,
       zone: form.set.zone || null, rack: form.set.rack || null, shelf: form.set.shelf || null, slot: form.set.slot || null,
       check_in_date: form.set.check_in_date || null, expected_out_date: form.set.expected_out_date || null,
       fee: form.set.fee ?? null, paid: form.set.paid, notes: form.set.notes || null,
-      bolts_location: form.set.bolts_location || null, hubcaps_location: form.set.hubcaps_location || null, hubcaps_stored: form.set.hubcaps_stored != null ? Boolean(form.set.hubcaps_stored) : form.set.hubcaps_location === 'stored',
-    }).select().single();
-  if (sErr) throw fail(sErr, "save the tire set");
+      bolts_location: form.set.bolts_location || null, hubcaps_location: form.set.hubcaps_location || null,
+      hubcaps_stored: form.set.hubcaps_stored != null ? Boolean(form.set.hubcaps_stored) : form.set.hubcaps_location === 'stored',
+    }, (p) => supabase.from("storage_sets").insert(p).select().single());
 
-  const tires = toTireRows(set.id, form.tires);
-  if (tires.length) {
-    const { error: tErr } = await supabase.from("tires").insert(tires);
-    if (tErr) throw fail(tErr, "save the tire details");
+    const tires = toTireRows(set.id, form.tires);
+    if (tires.length) {
+      await lenientWrite("save the tire details", tires,
+        (p) => supabase.from("tires").insert(p));
+    }
+  } catch (e) {
+    // Best-effort unwind, children first (deleting the customer alone would
+    // strand the set with vehicle_id = null, since that FK is ON DELETE SET NULL).
+    if (set) await supabase.from("storage_sets").delete().eq("id", set.id).then(() => {}, () => {});
+    await supabase.from("customers").delete().eq("id", customer.id).then(() => {}, () => {});
+    throw e;
   }
 
   rememberLocation(form.set);
@@ -421,8 +449,8 @@ function toTireRows(setId, tires) {
 
 // ---- Updating (offline-queueable) ----------------------------------------------
 async function applySetPatch(setId, patch) {
-  const { error } = await supabase.from("storage_sets").update(patch).eq("id", setId);
-  if (error) throw fail(error, "save the change");
+  await lenientWrite("save the change", patch,
+    (p) => supabase.from("storage_sets").update(p).eq("id", setId));
 }
 
 export async function updateStorageSet(setId, patch) {
