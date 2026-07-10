@@ -137,7 +137,7 @@ jobs:
       SCRATCH: postgresql://postgres:postgres@localhost:5432/postgres
     services:
       scratch:
-        image: postgres:16
+        image: postgres:17     # match Supabase's major version so the dump restores cleanly
         env:
           POSTGRES_PASSWORD: postgres
         ports:

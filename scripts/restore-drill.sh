@@ -103,6 +103,11 @@ for t in customers vehicles storage_sets tires; do
 done
 
 # ---- CHECKPOINT 3: strict data restore -------------------------------------
+# pg_dump on newer servers emits session GUCs the scratch image may not know
+# (e.g. transaction_timeout, added in PG17). They're harmless dump-session
+# settings, not data — strip them so a minor server/scratch skew can't abort the
+# whole restore and raise a false alarm.
+sed -i -E '/^SET (transaction_timeout|idle_session_timeout) /d' "$PLAIN"
 echo "→ Restoring the decrypted data-only dump…"
 if psql "$SCRATCH" -v ON_ERROR_STOP=1 -q -f "$PLAIN" >/tmp/restore.log 2>&1; then
   note "✓ data restored into scratch with no errors"
