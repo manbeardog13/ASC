@@ -51,6 +51,7 @@ let editSet = null;   // the full loaded row — tire merge + hydration gate nee
 // gated on this flag and re-attempts the load itself if the preload failed.
 let editHydrated = !editMode;
 let paidTouched = false;
+let onRimsTouched = false;
 
 async function ensureEditCtx() {
   if (editCtx && editCtx.setId) return editCtx;
@@ -124,7 +125,9 @@ function fillFromSet(data) {
   if (window.setSegOpt && data.bolts_location && !$('s_bolts').value) setSegOpt('s_bolts', data.bolts_location);
 
   const onr = $('s_onrims');
-  if (onr && onr.checked !== Boolean(data.on_rims)) {
+  // Don't overwrite an on-rims choice the employee already made while the
+  // preload (or save-time hydration) was in flight.
+  if (onr && !onRimsTouched && onr.checked !== Boolean(data.on_rims)) {
     onr.checked = Boolean(data.on_rims);
     onr.dispatchEvent(new Event('change')); // reveals/hides the rim-type field via the page's own listener
   }
@@ -268,7 +271,7 @@ if (form) form.addEventListener('submit', async (e) => {
           make: v.make || null, model: v.model || null, year: v.year, plate: v.plate || null,
         });
       } else console.warn('[live] no vehicle id on', editCode, '— vehicle fields not saved');
-      const saved = await updateStorageSet(ctx.setId, {
+      await updateStorageSet(ctx.setId, {
         season: s.season, on_rims: s.on_rims,
         rim_type: s.on_rims ? s.rim_type || null : null,
         quantity: s.quantity,
@@ -278,27 +281,23 @@ if (form) form.addEventListener('submit', async (e) => {
         bolts_location: s.bolts_location || null, hubcaps_location: s.hubcaps_location || null, hubcaps_stored: s.hubcaps_stored,
         // check_in_date intentionally untouched: editing must not re-date the intake
       });
-      // The form shows only position/size/brand/tread — carry the unshown
-      // columns (DOT, model, studded, notes) over from the loaded rows so an
-      // edit-save can't silently erase them. Match by position, then by order.
+      // The form shows only position/size/brand/tread — carry the unshown columns
+      // (DOT, model, studded, notes) over from the loaded rows so an edit-save
+      // can't silently erase them. Match by POSITION only: an index fallback would
+      // graft one tire's DOT onto a physically different tire if positions moved.
+      // Rows the employee blanked out keep no carry — they drop out as intended.
       const existing = (editSet && editSet.tires) || [];
       const taken = new Set();
-      const carried = f.tires.map((t, i) => {
-        let j = existing.findIndex((o, k) => !taken.has(k) && t.position && o.position === t.position);
-        if (j < 0 && existing[i] && !taken.has(i)) j = i;
+      const carried = f.tires.map((t) => {
+        const kept = t.size || t.brand || (t.tread_mm != null);
+        if (!kept) return t;   // cleared row — let it be filtered out, don't revive it with an old DOT
+        const j = existing.findIndex((o, k) => !taken.has(k) && t.position && o.position === t.position);
         if (j < 0) return t;
         taken.add(j);
         const o = existing[j];
         return { ...t, model: o.model, dot_code: o.dot_code, studded: o.studded, condition_notes: o.condition_notes };
       });
       await replaceTires(ctx.setId, carried);
-      if (saved && saved.queued) {
-        // Offline outbox took the patch — set-detail would show stale server
-        // data, so stay here and say exactly what happened.
-        showToast('Nema veze — promjene čekaju i sinkronizirat će se automatski.');
-        unlock();
-        return;
-      }
       showToast('Ažurirano ' + editCode);
       goToSet(editCode);
     } else {
@@ -354,6 +353,8 @@ window.ascLiveFirst = new Promise((r) => { liveFirstDone = r; });
   }
 })();
 
-// A deliberate Plaćeno choice made while the preload is in flight must survive
-// the late fill — fillFromSet checks this flag before touching the switch.
+// A deliberate Plaćeno / Na naplacima choice made while the preload is in flight
+// must survive the late fill — fillFromSet checks these flags before touching
+// either control.
 if ($('s_paid')) $('s_paid').addEventListener('change', () => { paidTouched = true; });
+if ($('s_onrims')) $('s_onrims').addEventListener('change', () => { onRimsTouched = true; });

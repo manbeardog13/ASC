@@ -2,7 +2,7 @@
    Makes the app installable and loads the shell instantly. Network-first for
    same-origin files (so deploys show up right away), cache fallback when
    offline. Live data always comes from Supabase online. */
-const CACHE = "asc-tirehotel-v83";   // v83 = offline nav serves the requested page (kills the index redirect loop)
+const CACHE = "asc-tirehotel-v84";   // v84 = offline nav ignoreSearch (deep ?code= links) + index loop-breaker
 // Cross-origin dependencies the app cannot boot (or scan) without. Same-origin
 // files are precached below; these are runtime-cached network-first so an
 // offline cold boot doesn't die on the supabase-js ESM import.
@@ -149,9 +149,11 @@ self.addEventListener("fetch", (e) => {
           return res;
         })
         // Offline: serve the cached copy of the PAGE THE USER ASKED FOR first.
-        // Answering every navigation with index.html re-ran its relative
-        // redirect against /app/ URLs and looped forever (…/app/app/app/…).
-        .catch(() => caches.match(req)
+        // ignoreSearch so a deep link (set-detail.html?code=…, checkin.html?
+        // prefill=1) matches its precached bare page instead of falling through
+        // to the dashboard. Answering every navigation with index.html re-ran its
+        // relative redirect against /app/ URLs and looped forever (…/app/app/…).
+        .catch(() => caches.match(req, { ignoreSearch: true })
           .then((r) => r || caches.match("./app/dashboard.html"))
           .then((r) => r || caches.match("./index.html"))
           .then((r) => r || caches.match("./")))

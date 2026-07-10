@@ -15,13 +15,20 @@
 <script>
 // Path-aware: when an offline service worker answers a deep /app/ navigation
 // with this page, a bare relative redirect would resolve to app/app/… and loop.
+// The timestamp guard is a hard stop: if we land back here within 3s of already
+// redirecting (a precache hole bouncing us), we give up and show the manual
+// button below instead of spinning forever.
 (function(){
+  var now = Date.now(), KEY = 'asc.redir.ts';
+  try {
+    if (now - (+sessionStorage.getItem(KEY) || 0) < 3000) return;
+    sessionStorage.setItem(KEY, String(now));
+  } catch(e){}
   var p = location.pathname;
   var base = p.indexOf('/app/') >= 0 ? p.slice(0, p.indexOf('/app/') + 1) : p.replace(/[^\/]*$/, '');
   location.replace(base + 'app/dashboard.html');
 })();
 </script>
-<meta http-equiv="refresh" content="0; url=app/dashboard.html">
 <style>
   html,body{height:100%;margin:0}
   body{background:#020305;color:#f4f5f7;font-family:"Inter",system-ui,-apple-system,sans-serif;

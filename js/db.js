@@ -6,7 +6,7 @@
 import { supabase } from "./supabaseClient.js";
 import { config } from "./config.js";
 import { compressImage } from "./images.js";
-import { isOnline, enqueue, initOffline } from "./offline.js";
+import { isOnline, enqueue, initOffline, replay } from "./offline.js";
 import { rememberLocation } from "./store.js";
 
 // Turn a Supabase error into a sentence an employee could read.
@@ -384,17 +384,24 @@ export async function findPossibleDuplicates({ plate, phone, dotCodes = [] } = {
 const MISSING_COLUMN = /[Cc]ould not find the '([^']+)' column|column "?(?:\w+\.)?(\w+)"?(?: of relation "?\w+"?)? does not exist/;
 async function lenientWrite(doing, payload, write) {
   let p = Array.isArray(payload) ? payload.map((r) => ({ ...r })) : { ...payload };
+  const dropped = [];
   for (;;) {
     const { data, error } = await write(p);
-    if (!error) return data;
+    if (!error) {
+      // Announce dropped columns only once the write has actually landed — never
+      // before, or the toast would claim a save that then failed on the retry.
+      if (dropped.length) {
+        try { window.dispatchEvent(new CustomEvent("asc:save-degraded", { detail: { column: dropped[0], columns: dropped, doing } })); } catch { /* non-DOM */ }
+      }
+      return data;
+    }
     const named = (error.code === "PGRST204" || error.code === "42703")
       ? MISSING_COLUMN.exec(error.message || "") : null;
     const col = named && (named[1] || named[2]);
     const present = col && (Array.isArray(p) ? p.some((r) => col in r) : col in p);
     if (!present) throw fail(error, doing);
     console.warn(`[db] column '${col}' missing in production — ${doing} saved without it`);
-    // Degrading a save must never be invisible — app.js listens and toasts.
-    try { window.dispatchEvent(new CustomEvent("asc:save-degraded", { detail: { column: col, doing } })); } catch { /* non-DOM */ }
+    dropped.push(col);
     if (Array.isArray(p)) p.forEach((r) => delete r[col]); else delete p[col];
   }
 }
@@ -431,15 +438,27 @@ async function unwindCreate({ setId, customerId }) {
   }
   return true;
 }
+let unwinding = false;
 async function replayPendingUnwinds() {
+  if (unwinding) return;               // one pass at a time (boot + 'online' can overlap)
+  // Unauthenticated, every delete/update is RLS-filtered to a 0-row "success"
+  // that would look like a completed unwind and drop the parked job for good.
+  // Only run when there is a real session — otherwise leave the jobs parked.
+  const session = await getSession().catch(() => null);
+  if (!session) return;
   const pending = readUnwinds();
   if (!pending.length) return;
-  const survivors = [];
-  for (const entry of pending) {
-    const done = await unwindCreate(entry).catch(() => false);
-    if (!done) survivors.push(entry);
-  }
-  writeUnwinds(survivors);
+  unwinding = true;
+  try {
+    const survivors = [];
+    for (const entry of pending) {
+      const done = await unwindCreate(entry).catch(() => false);
+      if (!done) survivors.push(entry);
+    }
+    // Merge with anything a concurrent create parked while we were awaiting.
+    const added = readUnwinds().filter((e) => !pending.includes(e));
+    writeUnwinds([...survivors, ...added]);
+  } finally { unwinding = false; }
 }
 
 export async function createStorageSet(form) {
@@ -495,8 +514,12 @@ function toTireRows(setId, tires) {
 
 // ---- Updating (offline-queueable) ----------------------------------------------
 async function applySetPatch(setId, patch) {
-  await lenientWrite("save the change", patch,
-    (p) => supabase.from("storage_sets").update(p).eq("id", setId));
+  // .select() so we can count the rows the update actually touched: an
+  // RLS-filtered write (e.g. an unauthenticated replay) returns 0 rows with NO
+  // error, and treating that as success would let the outbox drop the edit.
+  const rows = await lenientWrite("save the change", patch,
+    (p) => supabase.from("storage_sets").update(p).eq("id", setId).select("id"));
+  if (!rows || rows.length === 0) throw new Error("Promjena nije spremljena — nema pristupa ili je zapis uklonjen.");
 }
 
 export async function updateStorageSet(setId, patch) {
@@ -508,8 +531,14 @@ export async function updateStorageSet(setId, patch) {
   return { queued: false };
 }
 
-// offline.js replays queued mutations through this executor (FIFO).
+// offline.js replays queued mutations through this executor (FIFO). It THROWS
+// when there's no session so replay() pauses and keeps the entry — an
+// unauthenticated replay would run as anon, RLS-filter the write to a 0-row
+// "success", and silently drop the queued edit. applySetPatch's row-count check
+// is the second guard for the same failure.
 export async function executeQueuedMutation(mutation) {
+  const session = await getSession().catch(() => null);
+  if (!session) throw new Error("Nije prijavljen — odgađam spremanje reda.");
   if (mutation.kind === "updateSet") return applySetPatch(mutation.setId, mutation.patch);
   console.warn("Unknown queued mutation skipped:", mutation.kind);
 }
@@ -667,8 +696,18 @@ export function unsubscribe(channel) {
 
 // ---- Boot wiring -----------------------------------------------------------------
 // Every delivered page imports this module, so this is where the offline machinery
-// comes alive: online/offline listeners + outbox replay (initOffline is idempotent)
-// and the retry of any unwind a dead connection interrupted mid-check-in.
+// comes alive: online/offline listeners (initOffline is idempotent) plus the outbox
+// + unwind replays. Both replays run through session-guarded paths, so it is safe
+// that this module also loads on login.html (no session there) — nothing drains
+// until the user is actually signed in.
 initOffline(executeQueuedMutation);
-replayPendingUnwinds().catch(() => {});
-window.addEventListener("online", () => { replayPendingUnwinds().catch(() => {}); });
+function flushQueues() {
+  replay(executeQueuedMutation).catch(() => {});   // executor is session-gated
+  replayPendingUnwinds().catch(() => {});           // session-gated inside
+}
+// Drain on reconnect and the moment the user signs in (the outbox otherwise waits
+// for the next network flap or reload after login).
+window.addEventListener("online", flushQueues);
+onAuthChange((event) => { if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") flushQueues(); });
+// Boot drain only if a session is already restored — avoids a doomed anon attempt.
+getSession().then((s) => { if (s) flushQueues(); }).catch(() => {});
