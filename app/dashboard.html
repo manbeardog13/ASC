@@ -136,8 +136,7 @@ html:not(.island).splash-cold .sp-topglow{display:block;position:fixed;left:0;ri
 /* Welcome hero — the greeting is the dashboard's anchor (EDITING-MODE brief).
    Keynote-scale Sora, first name emphasized in lava; date + live clock beneath;
    the photo and the text counter-drift a few px on cursor move (desktop). */
-.greet{position:relative;z-index:2;margin:10px 0 4px;animation:greetIn 700ms var(--smooth) both;
-  transform:translate(calc(var(--px,0)*-3px),calc(var(--py,0)*-2px))}
+.greet{position:relative;z-index:2;margin:10px 0 4px;animation:greetIn 700ms var(--smooth) both}
 @keyframes greetIn{from{opacity:0;transform:translateY(14px)}}
 .greet-line{font:600 clamp(28px,3.4vw,42px)/1.08 Sora;letter-spacing:-.02em;color:var(--on-stage);margin:0}
 .greet-line b{font-weight:700;background:linear-gradient(120deg,var(--lava-2),var(--lava));
@@ -145,7 +144,6 @@ html:not(.island).splash-cold .sp-topglow{display:block;position:fixed;left:0;ri
 .greet-sub{font:500 13px Inter;color:var(--on-stage-2);margin-top:7px;display:flex;gap:8px;align-items:baseline}
 .greet-sub .greet-dot{opacity:.5}
 #greetClock{font-variant-numeric:tabular-nums}
-.stage .photo{transform:scale(1.04) translate(calc(var(--px,0)*6px),calc(var(--py,0)*4px));transition:transform .2s ease-out}
 html.warm-nav .greet{animation:none}
 html.splashing .greet{animation-play-state:paused}
 
