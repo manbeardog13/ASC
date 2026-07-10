@@ -162,7 +162,7 @@ html.dark .auth-card{box-shadow:var(--shadow-card),inset 0 1px 0 rgba(255,255,25
   border:1px solid var(--line);border-radius:14px;background:var(--panel-2);color:var(--ink);font:650 14.5px Inter;
   box-shadow:0 2px 8px -4px rgba(20,18,15,.2);transition:transform 140ms var(--snap),background .2s var(--smooth),border-color .2s}
 .btn-google:active{transform:scale(.985)}
-@media(hover:hover){ .btn-google:hover{border-color:var(--lava-ring);background:var(--panel)} }
+@media(any-hover:hover){ .btn-google:hover{border-color:var(--lava-ring);background:var(--panel)} }
 .btn-google svg{flex:none}
 
 .auth-div{display:flex;align-items:center;gap:12px;margin:16px 0;color:var(--muted);font:600 11px Inter;letter-spacing:.08em;text-transform:uppercase}
@@ -173,14 +173,14 @@ html.dark .auth-card{box-shadow:var(--shadow-card),inset 0 1px 0 rgba(255,255,25
 .fieldx .fx-ic{flex:none;color:var(--muted);display:grid;place-items:center}
 .fieldx input{flex:1;min-width:0;border:0;background:none;outline:none;font:500 15px Inter;color:var(--ink);padding:14px 0}
 .fieldx input::placeholder{color:var(--muted);opacity:.85}
-.fx-eye{flex:none;border:0;background:none;cursor:pointer;color:var(--muted);padding:6px;display:grid;place-items:center}
+.fx-eye{flex:none;border:0;background:none;cursor:pointer;color:var(--muted);padding:13px;margin-right:-12px;display:grid;place-items:center}
 .auth-names{display:none;gap:11px}
 body.signup .auth-names{display:flex}
 body.signup .auth-names .fieldx{flex:1;margin-bottom:11px}
 
 .auth-forgot-row{display:flex;justify-content:flex-end;margin:-2px 0 12px}
 .auth-forgot{background:none;border:0;cursor:pointer;font:600 12.5px Inter;color:var(--muted);padding:2px}
-@media(hover:hover){ .auth-forgot:hover{color:var(--lava-ink)} }
+@media(any-hover:hover){ .auth-forgot:hover{color:var(--lava-ink)} }
 body.signup .auth-forgot-row,body.recover .auth-forgot-row{display:none}
 
 .btn-amber{width:100%;min-height:50px;display:flex;align-items:center;justify-content:center;gap:8px;border:0;cursor:pointer;border-radius:14px;color:#fff;font:700 15px Inter;
@@ -188,7 +188,7 @@ body.signup .auth-forgot-row,body.recover .auth-forgot-row{display:none}
   box-shadow:0 12px 26px -10px rgba(255,78,27,.6),inset 0 1px 0 rgba(255,255,255,.28);transition:transform 140ms var(--snap),filter .2s}
 .btn-amber:active{transform:scale(.98)}
 .btn-amber[disabled]{opacity:.6;cursor:progress}
-@media(hover:hover){ .btn-amber:hover{filter:brightness(1.04)} }
+@media(any-hover:hover){ .btn-amber:hover{filter:brightness(1.04)} }
 
 .auth-switch{text-align:center;margin:16px 0 0;font:500 13px Inter;color:var(--muted)}
 .auth-switch button{background:none;border:0;cursor:pointer;font:700 13px Inter;color:var(--lava-ink);padding:0}
@@ -276,7 +276,7 @@ if(sat>=59){d.classList.add('island');d.style.setProperty('--isl-y',(sat-48)+'px
     const t = $('theme'); t.classList.add('kick'); setTimeout(() => t.classList.remove('kick'), 340);
   });
   // optical refraction: the sheen follows the pointer across the glass
-  if (matchMedia('(hover:hover) and (prefers-reduced-motion: no-preference)').matches) {
+  if (matchMedia('(any-hover:hover) and (prefers-reduced-motion: no-preference)').matches) {
     const card = document.querySelector('.auth-card');
     card.addEventListener('pointermove', (e) => {
       const r = card.getBoundingClientRect();

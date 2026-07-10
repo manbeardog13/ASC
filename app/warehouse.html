@@ -55,7 +55,7 @@
 .wh-zonebar{display:flex;flex-wrap:wrap;gap:8px;margin:var(--gap) 4px 2px}
 .wh-zonepill{margin-top:0;cursor:pointer;gap:7px;padding:6px 7px 6px 11px;background:var(--panel);color:var(--ink-2);border:1px solid var(--line);transition:transform 150ms var(--snap),background 150ms var(--snap),color 150ms var(--snap)}
 .wh-zonepill .n{font:800 10px Inter;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:var(--lava-tint);color:var(--lava-ink);display:inline-flex;align-items:center;justify-content:center}
-@media(hover:hover){ .wh-zonepill:hover{transform:translateY(-1px);background:var(--panel-2);color:var(--ink)} }
+@media(any-hover:hover){ .wh-zonepill:hover{transform:translateY(-1px);background:var(--panel-2);color:var(--ink)} }
 .wh-zonepill:active{transform:scale(.96);transition-duration:80ms}
 
 /* Zone = a .card holding a native <details>; summary is the zone header */
@@ -91,7 +91,7 @@ html.dark .rfill b{color:var(--lava-2)}
 html.dark .slot.reserved{color:var(--lava-2)}
 .slot.empty{background:var(--panel);color:var(--muted);box-shadow:inset 0 0 0 1.5px var(--line);font-weight:600;pointer-events:none}
 html.dark .slot.empty{background:rgba(244,245,247,.04)}
-@media(hover:hover){ .slot.filled:hover,.slot.reserved:hover{transform:translateY(-2px);box-shadow:0 10px 20px -8px var(--lava-ring)} }
+@media(any-hover:hover){ .slot.filled:hover,.slot.reserved:hover{transform:translateY(-2px);box-shadow:0 10px 20px -8px var(--lava-ring)} }
 .slot.filled:active,.slot.reserved:active{transform:scale(.92);transition-duration:80ms}
 .slot .rdot{position:absolute;top:4px;right:4px;width:5px;height:5px;border-radius:50%;background:var(--lava)}
 
@@ -116,7 +116,7 @@ html.dark .slot.empty{background:rgba(244,245,247,.04)}
   background:#fff;border-right:1px solid rgba(0,0,0,.08);border-bottom:1px solid rgba(0,0,0,.08);
   transform:translateX(-50%) rotate(45deg)}
 .wh-win.below::after{bottom:auto;top:-6px;border:0;border-left:1px solid rgba(0,0,0,.08);border-top:1px solid rgba(0,0,0,.08)}
-@media(hover:hover){ .wh-win:hover{transform:translateY(-1px);box-shadow:0 24px 54px -14px rgba(0,0,0,.48)} }
+@media(any-hover:hover){ .wh-win:hover{transform:translateY(-1px);box-shadow:0 24px 54px -14px rgba(0,0,0,.48)} }
 .wh-win:active{transform:scale(.99)}
 .wh-win-name{font:700 15.5px Sora;letter-spacing:-.01em;color:#0a0a0a}
 .wh-win-sub{font:600 12.5px Inter;color:#555;margin-top:3px}
@@ -132,7 +132,7 @@ html.dark .slot.empty{background:rgba(244,245,247,.04)}
 .wh-empty a{display:inline-flex;align-items:center;gap:8px;margin-top:18px;padding:12px 20px;border-radius:999px;
   background:var(--lava);color:#fff;font:600 13px Inter;text-decoration:none;box-shadow:0 10px 22px -10px var(--lava);
   transition:transform 150ms var(--snap),box-shadow 200ms var(--snap)}
-@media(hover:hover){ .wh-empty a:hover{transform:translateY(-2px);box-shadow:0 14px 28px -10px var(--lava)} }
+@media(any-hover:hover){ .wh-empty a:hover{transform:translateY(-2px);box-shadow:0 14px 28px -10px var(--lava)} }
 .wh-empty a:active{transform:scale(.97);transition-duration:80ms}
 </style>
 </head>

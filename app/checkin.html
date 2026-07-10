@@ -53,7 +53,7 @@
   background:rgba(244,245,247,.12);border:1px solid rgba(255,255,255,.20);color:var(--on-stage);
   font:600 12.5px Inter;cursor:pointer;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
   transition:transform .15s var(--snap),background .15s var(--snap)}
-@media(hover:hover){.voice-cta:hover{transform:translateY(-1px);background:rgba(244,245,247,.2)}}
+@media(any-hover:hover){.voice-cta:hover{transform:translateY(-1px);background:rgba(244,245,247,.2)}}
 .voice-cta:active{transform:scale(.96)}
 
 /* Form scaffolding */
@@ -82,7 +82,7 @@ html.dark .field select,html.dark .tire-grid select{background-image:url("data:i
   outline:0;border-color:var(--lava);box-shadow:0 0 0 3px var(--lava-tint)}
 .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
-@media(max-width:640px){.grid-4{grid-template-columns:1fr 1fr}}
+@media(max-width:640px){.grid-4{grid-template-columns:1fr 1fr} .grid-2:has(.seg-opt){grid-template-columns:1fr}}
 
 /* option segments (vijci/poklopci): same idiom, denser */
 .seg-opt button{min-height:38px;font-size:11.5px;padding:0 6px}
@@ -112,7 +112,7 @@ html.dark .segmented button[aria-pressed="true"]{color:var(--lava-2)}
   background:var(--panel-2);color:var(--ink-2);font:600 11.5px Inter;cursor:pointer;transition:transform .14s var(--snap),border-color .14s,color .14s}
 html.dark .sugg{background:rgba(244,245,247,.05)}
 .sugg svg{width:13px;height:13px;color:var(--muted)}
-@media(hover:hover){.sugg:hover{border-color:var(--lava-ring);color:var(--lava-ink);transform:translateY(-1px)}}
+@media(any-hover:hover){.sugg:hover{border-color:var(--lava-ring);color:var(--lava-ink);transform:translateY(-1px)}}
 .sugg:active{transform:scale(.96)}
 
 /* Tire rows */
@@ -142,18 +142,18 @@ html.dark .banner-ok{color:var(--green-ink)}
   transition:transform .15s var(--snap),background .15s var(--snap),box-shadow .2s var(--snap)}
 .btn svg{width:18px;height:18px}
 html.dark .btn{background:rgba(244,245,247,.06)}
-@media(hover:hover){.btn:hover{transform:translateY(-1px);background:var(--panel)}}
+@media(any-hover:hover){.btn:hover{transform:translateY(-1px);background:var(--panel)}}
 .btn:active{transform:scale(.97);transition-duration:80ms}
 .btn.small{min-height:38px;padding:0 14px;font-size:12.5px;border-radius:19px}
 .btn-primary{background:linear-gradient(180deg,var(--lava-2),var(--lava));color:#fff;border-color:transparent;box-shadow:0 10px 24px -10px rgba(255,78,27,.7)}
 html.dark .btn-primary{background:linear-gradient(180deg,var(--lava-2),var(--lava));color:#fff}
-@media(hover:hover){.btn-primary:hover{background:linear-gradient(180deg,var(--lava-2),var(--lava));box-shadow:0 14px 30px -10px rgba(255,78,27,.8)}}
+@media(any-hover:hover){.btn-primary:hover{background:linear-gradient(180deg,var(--lava-2),var(--lava));box-shadow:0 14px 30px -10px rgba(255,78,27,.8)}}
 .action-bar{display:flex;gap:12px;align-items:center;margin-top:18px}
 .action-bar .btn-primary{flex:1}
 .action-bar .btn.ghost{flex:none}
 
 /* A toast confirmation (mock save) */
-.toast{position:fixed;left:50%;bottom:calc(var(--dock-h) + env(safe-area-inset-bottom,0px) + 22px);transform:translate(-50%,14px);
+.toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 22px);transform:translate(-50%,14px);
   z-index:80;display:flex;align-items:center;gap:10px;max-width:calc(100% - 32px);
   background:var(--gun);color:#f4f5f7;padding:12px 18px;border-radius:16px;font:600 13px Inter;
   box-shadow:0 16px 40px -12px rgba(2,3,5,.55);opacity:0;pointer-events:none;transition:opacity .3s var(--smooth),transform .3s var(--smooth)}
@@ -272,7 +272,7 @@ html.dark .btn-primary{background:linear-gradient(180deg,var(--lava-2),var(--lav
         </div>
         <div class="grid-2">
           <label class="field"><span class="label">Cijena čuvanja</span><input id="s_fee" type="number" inputmode="decimal" step="0.01" min="0" placeholder="40.00"></label>
-          <label class="switch" style="align-self:end;padding-bottom:11px"><input id="s_paid" type="checkbox"> Plaćeno</label>
+          <label class="switch" style="align-self:end;padding-bottom:8px"><input id="s_paid" type="checkbox"> Plaćeno</label>
         </div>
         <label class="field"><span class="label">Napomene</span><textarea id="s_notes" rows="2" placeholder="Npr. sezonska zamjena, poziv prije preuzimanja…"></textarea></label>
       </fieldset>

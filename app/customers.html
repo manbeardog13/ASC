@@ -50,7 +50,7 @@
 .crow{display:flex;gap:10px;align-items:stretch;padding:13px 14px;text-decoration:none;color:var(--ink);
   background:var(--panel-2);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow-card);cursor:pointer;
   -webkit-tap-highlight-color:transparent;transition:transform 160ms var(--snap),box-shadow 200ms var(--snap),border-color 150ms var(--snap),background 380ms var(--smooth)}
-@media(hover:hover){ .crow:hover{transform:translateY(-2px);box-shadow:0 16px 30px -18px rgba(2,3,5,.5);border-color:var(--lava-ring)} }
+@media(any-hover:hover){ .crow:hover{transform:translateY(-2px);box-shadow:0 16px 30px -18px rgba(2,3,5,.5);border-color:var(--lava-ring)} }
 .crow:active{transform:scale(.99);transition-duration:90ms}
 .crow.sel{border-color:var(--lava-ring);box-shadow:0 0 0 1px var(--lava-ring),var(--shadow-card);background:var(--panel)}
 .crow .cav{width:40px;height:40px;border-radius:50%;flex:none;align-self:center;display:grid;place-items:center;
@@ -99,7 +99,7 @@ html.dark .cstat .v .ic{color:var(--lava-2)}
 .srow{display:block;padding:12px 14px;text-decoration:none;color:var(--ink);background:var(--panel-2);
   border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow-card);cursor:pointer;-webkit-tap-highlight-color:transparent;
   transition:transform 160ms var(--snap),box-shadow 200ms var(--snap),border-color 150ms var(--snap)}
-@media(hover:hover){ .srow:hover{transform:translateX(3px);box-shadow:0 16px 30px -18px rgba(2,3,5,.5);border-color:var(--lava-ring)} }
+@media(any-hover:hover){ .srow:hover{transform:translateX(3px);box-shadow:0 16px 30px -18px rgba(2,3,5,.5);border-color:var(--lava-ring)} }
 .srow:active{transform:scale(.99);transition-duration:90ms}
 .srow .toprow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px}
 .srow .code{font:700 13px Inter;letter-spacing:.2px}
@@ -139,7 +139,7 @@ html.dark .cust-contact a{background:rgba(244,245,247,.05)}
   background:var(--lava-tint);color:var(--lava-ink);display:grid;place-items:center;
   transition:transform 150ms var(--snap),background 160ms var(--snap)}
 html.dark .set-sticker{color:var(--lava-2)}
-@media(hover:hover){ .set-sticker:hover{background:var(--lava);color:#fff} }
+@media(any-hover:hover){ .set-sticker:hover{background:var(--lava);color:#fff} }
 .set-sticker:active{transform:scale(.9)}
 .set-sticker svg{width:19px;height:19px}
 @media(max-width:520px){ .set-tags{width:100%;margin-left:0;order:3} .set-row{flex-wrap:wrap} }

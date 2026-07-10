@@ -42,13 +42,13 @@
   color:var(--ink);font:600 13.5px Inter;text-decoration:none;cursor:pointer;
   transition:transform 150ms var(--snap),box-shadow 200ms var(--snap),background 200ms var(--snap)}
 .btn svg{flex:none}
-@media(hover:hover){ .btn:hover{transform:translateY(-1px)} }
+@media(any-hover:hover){ .btn:hover{transform:translateY(-1px)} }
 .btn:active{transform:scale(.98);transition-duration:80ms}
 .btn-ghost{background:transparent;border-color:var(--line)}
-@media(hover:hover){ .btn-ghost:hover{background:var(--panel)} }
+@media(any-hover:hover){ .btn-ghost:hover{background:var(--panel)} }
 .btn-primary{border:0;color:#fff;background:linear-gradient(180deg,var(--lava-2),var(--lava));
   box-shadow:0 10px 24px -12px var(--lava)}
-@media(hover:hover){ .btn-primary:hover{box-shadow:0 14px 30px -12px var(--lava)} }
+@media(any-hover:hover){ .btn-primary:hover{box-shadow:0 14px 30px -12px var(--lava)} }
 .btn-lg{min-height:50px;border-radius:16px;font:600 14.5px Inter}
 .btn-block{width:100%}
 
@@ -67,7 +67,7 @@
 .sd-menu-pop[hidden]{display:none}
 .sd-menu-item{display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;border:0;border-radius:11px;
   background:transparent;color:var(--ink);font:600 13.5px Inter;text-align:left;cursor:pointer;transition:background 140ms var(--snap)}
-@media(hover:hover){ .sd-menu-item:hover{background:var(--panel)} }
+@media(any-hover:hover){ .sd-menu-item:hover{background:var(--panel)} }
 .sd-menu-item.danger{color:var(--lava-ink)}
 
 /* Chip row (reuses app.css .chip; reset its stacking margin for a flex row) */

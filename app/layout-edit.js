@@ -51,9 +51,18 @@
   const hidden = new Set(store.get('hidden', []));
   hidden.forEach(id => { if (byId[id]) byId[id].el.style.display = 'none'; });
   const areas = store.get('areas', {});           // id → {c,r} inline grid placement
-  for (const id in areas) {
-    if (byId[id] && areas[id]) { byId[id].el.style.gridColumn = areas[id].c; byId[id].el.style.gridRow = areas[id].r; }
-  }
+  // persisted placements only apply where the multi-column hero exists — the
+  // <=900px single-column media query must keep winning on resize/rotate
+  const wideMq = matchMedia('(min-width:901px)');
+  const applyAreas = () => {
+    for (const id in areas) {
+      if (!byId[id] || !areas[id]) continue;
+      byId[id].el.style.gridColumn = wideMq.matches ? areas[id].c : '';
+      byId[id].el.style.gridRow = wideMq.matches ? areas[id].r : '';
+    }
+  };
+  applyAreas();
+  wideMq.addEventListener('change', applyAreas);
 
   const saveHidden = () => store.set('hidden', [...hidden]);
   const saveAreas = () => {
@@ -200,7 +209,7 @@
     ghost = el.cloneNode(true);
     ghost.className = 'edit-ghost';
     const r = el.getBoundingClientRect();
-    ghost.style.cssText = 'position:fixed;left:' + r.left + 'px;top:' + r.top + 'px;width:' + r.width + 'px;height:' + r.height + 'px;z-index:130;pointer-events:none;opacity:.85;transform:scale(1.02);border-radius:24px;overflow:hidden;box-shadow:0 30px 70px -20px rgba(2,3,5,.5);transition:transform 160ms var(--snap)';
+    ghost.style.cssText = 'position:fixed;left:' + r.left + 'px;top:' + r.top + 'px;width:' + r.width + 'px;height:' + r.height + 'px;z-index:130;pointer-events:none;opacity:.85;transform:scale(1.02);border-radius:22px;overflow:hidden;box-shadow:0 30px 70px -20px rgba(2,3,5,.5);transition:transform 160ms var(--snap)';
     document.body.appendChild(ghost);
     const ox = e.clientX - r.left, oy = e.clientY - r.top;
     const move = (ev) => {

@@ -34,7 +34,7 @@
 .rem-back{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 12px 0 8px;margin:0 0 12px;
   border-radius:12px;background:var(--panel);color:var(--ink-2);text-decoration:none;
   font:600 12.5px Inter;border:1px solid var(--line);transition:transform 150ms var(--snap),background 150ms var(--snap)}
-@media(hover:hover){ .rem-back:hover{background:var(--panel-2);transform:translateX(-2px)} }
+@media(any-hover:hover){ .rem-back:hover{background:var(--panel-2);transform:translateX(-2px)} }
 .rem-back:active{transform:scale(.97);transition-duration:80ms}
 .rem-back svg{width:16px;height:16px}
 
@@ -71,7 +71,7 @@ html.dark .rem-sec .count-badge.win{background:rgba(244,245,247,.16);color:#f4f5
 .rr{position:relative;background:var(--panel-2);border-radius:16px;padding:14px 14px 13px;
   border:1px solid var(--hairline);display:flex;flex-direction:column;
   transition:transform 160ms var(--snap),box-shadow 220ms var(--snap)}
-@media(hover:hover){ .rr:hover{transform:translateY(-2px);box-shadow:var(--shadow-card)} }
+@media(any-hover:hover){ .rr:hover{transform:translateY(-2px);box-shadow:var(--shadow-card)} }
 .rr-overdue{border-left:3px solid var(--lava)}
 .rr-top{display:flex;align-items:center;gap:10px;margin-bottom:9px}
 .rem-due{display:inline-flex;align-items:center;gap:5px;font:700 11px Inter;letter-spacing:.02em;
@@ -80,7 +80,7 @@ html.dark .rem-sec .count-badge.win{background:rgba(244,245,247,.16);color:#f4f5
 .rr-today .rem-due{color:var(--ink)}
 .rr-overdue .rem-due{color:var(--lava-ink)}
 .rr-code{margin-left:auto;font:700 12px Inter;color:var(--ink-2);text-decoration:none;letter-spacing:.01em}
-@media(hover:hover){ .rr-code:hover{color:var(--lava-ink)} }
+@media(any-hover:hover){ .rr-code:hover{color:var(--lava-ink)} }
 .rr-id{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
 .rr-name{font:650 15px Inter;letter-spacing:-.01em;color:var(--ink)}
 .rr-plate{font:600 11.5px Inter;color:var(--muted);background:var(--panel);padding:2px 8px;border-radius:7px;border:1px solid var(--hairline)}
@@ -96,16 +96,16 @@ html.dark .rem-sec .count-badge.win{background:rgba(244,245,247,.16);color:#f4f5
   background:var(--panel);border:1px solid var(--line);cursor:pointer;
   transition:transform 150ms var(--snap),background 150ms var(--snap),box-shadow 200ms var(--snap)}
 .ract svg{width:16px;height:16px;flex:none}
-@media(hover:hover){ .ract:hover{background:var(--panel-2);box-shadow:0 6px 16px -10px rgba(2,3,5,.5);transform:translateY(-1px)} }
+@media(any-hover:hover){ .ract:hover{background:var(--panel-2);box-shadow:0 6px 16px -10px rgba(2,3,5,.5);transform:translateY(-1px)} }
 .ract:active{transform:scale(.96);transition-duration:80ms}
 .ract.is-disabled{opacity:.38;pointer-events:none}
 .ract.wide{width:100%;margin-top:7px;color:#f4f5f7;border-color:transparent;
   background:linear-gradient(175deg,var(--stage-2),var(--stage-1))}
-@media(hover:hover){ .ract.wide:hover{background:linear-gradient(175deg,var(--stage-2),var(--stage-1));box-shadow:0 10px 24px -12px rgba(2,3,5,.7)} }
+@media(any-hover:hover){ .ract.wide:hover{background:linear-gradient(175deg,var(--stage-2),var(--stage-1));box-shadow:0 10px 24px -12px rgba(2,3,5,.7)} }
 .rr-overdue .ract.wide{background:linear-gradient(175deg,var(--lava-2),var(--lava))}
-@media(hover:hover){ .rr-overdue .ract.wide:hover{box-shadow:0 10px 24px -10px var(--lava-ring)} }
+@media(any-hover:hover){ .rr-overdue .ract.wide:hover{box-shadow:0 10px 24px -10px var(--lava-ring)} }
 .ract.wide.again{color:var(--ink);background:var(--panel);border:1px solid var(--line)}
-@media(hover:hover){ .ract.wide.again:hover{background:var(--panel-2)} }
+@media(any-hover:hover){ .ract.wide.again:hover{background:var(--panel-2)} }
 
 /* "Već podsjećeno" — collapsed details section */
 .rem-rested{padding-top:18px}
@@ -122,7 +122,7 @@ html.dark .rem-sec .count-badge.win{background:rgba(244,245,247,.16);color:#f4f5
 @media(prefers-reduced-motion:reduce){ .rem-rested summary .chev{transition:none} }
 
 /* Lightweight toast + row-leave (mirrors recycle interactions; app.js has none) */
-.rem-toast{position:fixed;left:50%;bottom:calc(var(--dock-h) + 22px + env(safe-area-inset-bottom,0px));
+.rem-toast{position:fixed;left:50%;bottom:calc(22px + env(safe-area-inset-bottom,0px));
   transform:translate(-50%,14px);z-index:80;display:flex;align-items:center;gap:9px;
   padding:11px 16px;border-radius:14px;background:var(--gun);color:#f4f5f7;
   font:600 12.5px Inter;box-shadow:0 12px 30px -10px rgba(2,3,5,.5);

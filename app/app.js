@@ -82,7 +82,7 @@ document.getElementById('mode').addEventListener('click', () => {
 // reveal it). Re-evaluated on resize/rotate.
 (() => {
   const setDevice = () => {
-    const touch = matchMedia('(hover: none)').matches || matchMedia('(pointer: coarse)').matches;
+    const touch = !matchMedia('(any-pointer:fine)').matches;
     const device = touch ? (innerWidth <= 640 ? 'mobile' : 'tablet') : 'desktop';
     if (root.getAttribute('data-device') !== device) root.setAttribute('data-device', device);
   };
@@ -239,12 +239,27 @@ function animate(){
   doc.body.appendChild(aside);
   root.classList.add('has-side');
   if (matchMedia('(min-width:1021px)').matches) {
-    const well = doc.createElement('div');
-    well.className = 'frame-well'; well.setAttribute('aria-hidden', 'true');
-    doc.body.appendChild(well);
-    const lip = doc.createElement('div');
-    lip.className = 'frame-lip'; lip.setAttribute('aria-hidden', 'true');
-    doc.body.appendChild(lip);
+    const frame = doc.createElement('div');
+    frame.className = 'frame-shell'; frame.setAttribute('aria-hidden', 'true');
+    doc.body.appendChild(frame);
+  }
+  // Global search — under the header, reference placement. ASC codes open the
+  // set directly; anything else searches the customer base.
+  const topBar = doc.querySelector('.top');
+  if (topBar && !doc.querySelector('.gsearch')) {
+    const gs = doc.createElement('form');
+    gs.className = 'gsearch'; gs.setAttribute('role', 'search');
+    gs.innerHTML = '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg>' +
+      '<input type="search" placeholder="Traži kod, kupca, registraciju…" aria-label="Pretraga" autocomplete="off">';
+    topBar.insertAdjacentElement('afterend', gs);
+    gs.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const q = gs.querySelector('input').value.trim();
+      if (!q) return;
+      const code = window.ASCQR && ASCQR.normalize ? ASCQR.normalize(q, true) : null;
+      location.href = code ? 'set-detail.html?code=' + encodeURIComponent(code)
+                           : 'customers.html?c=' + encodeURIComponent(q);
+    });
   }
 
   // module stamp for page-level tinting
@@ -257,6 +272,10 @@ function animate(){
   // set-detail highlights its parent domain
   if (here === 'set-detail.html') {
     const w = aside.querySelector('.sb-item[href="warehouse.html"]'); if (w) w.classList.add('on');
+  }
+  // rail mode hides group children — surface the active domain on the parent
+  if ((MOD[here] || '') === 'warehouse') {
+    const p = aside.querySelector('.sb-group > button.sb-item'); if (p) p.classList.add('kid-on');
   }
 
   // collapse rail (desktop) — persisted

@@ -40,7 +40,7 @@
   font:600 13.5px Inter;text-decoration:none;border-top:1px solid var(--rim-top);
   transition:transform 150ms var(--snap),background 150ms var(--snap)}
 .ws-exit svg{width:17px;height:17px}
-@media(hover:hover){ .ws-exit:hover{background:var(--panel-2)} }
+@media(any-hover:hover){ .ws-exit:hover{background:var(--panel-2)} }
 .ws-exit:active{transform:scale(.96)}
 
 /* The search console — one card with the signature notched corner tab, holding
@@ -54,7 +54,7 @@
   border-radius:20px;text-align:left;color:var(--ink);
   background:radial-gradient(120% 140% at 88% -20%,var(--lava-tint),transparent 60%),var(--panel-2);
   transition:transform 150ms var(--snap),box-shadow 220ms var(--snap),border-color 200ms var(--snap)}
-@media(hover:hover){ .ws-mic:hover{transform:translateY(-2px);box-shadow:0 16px 34px -18px rgba(255,78,27,.55)} }
+@media(any-hover:hover){ .ws-mic:hover{transform:translateY(-2px);box-shadow:0 16px 34px -18px rgba(255,78,27,.55)} }
 .ws-mic:active{transform:scale(.985);transition-duration:90ms}
 .ws-mic-orb{width:66px;height:66px;flex:none;border-radius:50%;display:grid;place-items:center;color:#fff;
   background:radial-gradient(circle at 32% 28%,var(--lava-2),var(--lava) 62%,#d6390c);
@@ -88,7 +88,7 @@
 .ws-row{display:flex;align-items:stretch;gap:12px;min-height:90px;padding:14px 14px 14px 18px;
   border-radius:18px;background:var(--panel);text-decoration:none;color:var(--ink);
   box-shadow:var(--shadow-card);transition:transform 150ms var(--snap),box-shadow 220ms var(--snap)}
-@media(hover:hover){ .ws-row:hover{transform:translateY(-2px);box-shadow:0 18px 36px -18px rgba(2,3,5,.5)} }
+@media(any-hover:hover){ .ws-row:hover{transform:translateY(-2px);box-shadow:0 18px 36px -18px rgba(2,3,5,.5)} }
 .ws-row:active{transform:scale(.99);transition-duration:90ms}
 .ws-row-body{display:flex;flex-direction:column;gap:5px;min-width:0;flex:1;justify-content:center}
 .ws-row-body b{font:600 clamp(18px,5.2vw,21px) Sora;letter-spacing:-.02em;font-variant-numeric:tabular-nums;white-space:nowrap}
@@ -113,7 +113,7 @@
   transition:transform 150ms var(--snap),box-shadow 220ms var(--snap)}
 .ws-btn svg{width:32px;height:32px;color:var(--lava-ink)}
 .ws-btn span{font:600 15px Sora;letter-spacing:-.01em}
-@media(hover:hover){ .ws-btn:hover{transform:translateY(-2px);box-shadow:0 18px 36px -18px rgba(2,3,5,.5)} }
+@media(any-hover:hover){ .ws-btn:hover{transform:translateY(-2px);box-shadow:0 18px 36px -18px rgba(2,3,5,.5)} }
 .ws-btn:active{transform:scale(.985);transition-duration:90ms}
 .ws-btn.is-accent{background:linear-gradient(160deg,var(--lava-2),var(--lava));color:#fff;
   box-shadow:0 14px 30px -14px var(--lava-ring)}

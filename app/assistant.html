@@ -53,7 +53,7 @@
   font:600 12px Inter;transition:background 160ms var(--snap),color 160ms var(--snap),transform 160ms var(--snap)}
 .ag-gbtn.icon{width:36px;padding:0;justify-content:center}
 .ag-gbtn svg{width:17px;height:17px;flex:none}
-@media(hover:hover){ .ag-gbtn:hover{background:rgba(244,245,247,.14);color:var(--on-stage)} }
+@media(any-hover:hover){ .ag-gbtn:hover{background:rgba(244,245,247,.14);color:var(--on-stage)} }
 .ag-gbtn:active{transform:scale(.94)}
 .ag-gbtn[aria-pressed="true"]{background:var(--lava-tint);border-color:var(--lava-ring);color:var(--lava-2)}
 
@@ -85,7 +85,7 @@
   font:500 12.5px Inter;display:inline-flex;align-items:center;gap:8px;
   transition:background 150ms var(--snap),color 150ms var(--snap),transform 150ms var(--snap)}
 .ag-chip::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--lava);flex:none;opacity:.85}
-@media(hover:hover){ .ag-chip:hover{background:rgba(244,245,247,.13);color:var(--on-stage);transform:translateY(-1px)} }
+@media(any-hover:hover){ .ag-chip:hover{background:rgba(244,245,247,.13);color:var(--on-stage);transform:translateY(-1px)} }
 .ag-chip:active{transform:scale(.97)}
 .ag-chips[hidden]{display:none}
 
@@ -97,7 +97,7 @@
   transition:transform 160ms var(--snap),background 160ms var(--snap),color 160ms var(--snap),box-shadow 220ms var(--snap)}
 .ag-mic svg{width:20px;height:20px}
 .ag-mic .halo{position:absolute;inset:0;border-radius:50%;border:2px solid var(--lava-2);opacity:0;pointer-events:none}
-@media(hover:hover){ .ag-mic:hover{background:rgba(244,245,247,.14);color:var(--on-stage)} }
+@media(any-hover:hover){ .ag-mic:hover{background:rgba(244,245,247,.14);color:var(--on-stage)} }
 .ag-mic:active{transform:scale(.94)}
 .ag-mic.is-live{background:radial-gradient(circle at 32% 28%,var(--lava-2),var(--lava) 58%,#d6390c);color:#fff;
   border-color:var(--lava-ring);box-shadow:0 0 0 8px rgba(255,78,27,.12),0 10px 22px -10px var(--lava-ring)}
@@ -120,12 +120,12 @@
     radial-gradient(1.5px 1.5px at 86% 38%,rgba(210,190,255,.65),transparent 100%),
     radial-gradient(1px 1px at 23% 84%,rgba(255,255,255,.5),transparent 100%);
   opacity:.4;animation:aiDrift 26s linear infinite alternate}
-.card.ag>*{position:relative;z-index:1}
+.card.ag>:not(.tab-tl):not(.tab-corner){position:relative;z-index:1}
 .ag-msg.is-me{background:linear-gradient(180deg,rgba(139,92,246,.34),rgba(122,92,255,.22))!important;
   border:1px solid rgba(167,139,250,.25)!important}
 .ag-msg.is-bot{background:rgba(244,245,247,.09)!important}
-#agLog{flex:1 1 auto;min-height:200px}
-.ag-inputrow{background:rgba(20,14,50,.55);border:1px solid rgba(167,139,250,.22);
+#agLog{flex:1 1 auto;min-height:200px;max-height:none}
+.ag-inputrow{border-radius:999px;padding:5px;background:rgba(20,14,50,.55);border:1px solid rgba(167,139,250,.22);
   -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
 @media(prefers-reduced-motion:reduce){ .card.ag::after{animation:none} }
 /* the notched corner tab was designed for the page surface — on the violet
@@ -145,7 +145,7 @@
   display:inline-flex;align-items:center;gap:8px;box-shadow:0 10px 22px -10px var(--lava-ring);
   transition:transform 150ms var(--snap),box-shadow 200ms var(--snap)}
 .ag-send svg{width:16px;height:16px}
-@media(hover:hover){ .ag-send:hover{transform:translateY(-2px);box-shadow:0 14px 28px -10px var(--lava-ring)} }
+@media(any-hover:hover){ .ag-send:hover{transform:translateY(-2px);box-shadow:0 14px 28px -10px var(--lava-ring)} }
 .ag-send:active{transform:scale(.97)}
 
 .ag :focus-visible{outline-color:var(--lava-2);box-shadow:0 0 0 4px rgba(2,3,5,.55)}

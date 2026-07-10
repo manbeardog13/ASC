@@ -147,6 +147,7 @@ html:not(.island).splash-cold .sp-topglow{display:block;position:fixed;left:0;ri
 #greetClock{font-variant-numeric:tabular-nums}
 .stage .photo{transform:scale(1.04) translate(calc(var(--px,0)*6px),calc(var(--py,0)*4px));transition:transform .2s ease-out}
 html.warm-nav .greet{animation:none}
+html.splashing .greet{animation-play-state:paused}
 
 
 /* HERO grid: stage spans 2 rows beside two action cards; the AI card sits in a
@@ -175,13 +176,13 @@ html.warm-nav .greet{animation:none}
 .stream-track{display:flex;width:max-content;will-change:transform;animation:streamMove 34s linear infinite}
 .stream-track .slide{flex:0 0 auto;position:relative;margin-right:12px}
 @keyframes streamMove{to{transform:translateX(-50%)}}
-@media(hover:hover){ .stream:hover .stream-track{animation-play-state:paused} }
+@media(any-hover:hover){ .stream:hover .stream-track{animation-play-state:paused} }
 @media(prefers-reduced-motion:reduce){ .stream-track{animation:none} .stream{overflow-x:auto;-webkit-mask-image:none;mask-image:none} }
 /* Each streamed set shows its acquisition photo with the printed QR label stuck
    on it; the set number rides in a notched corner tab (top-left). */
 .stream .slide .thumb{position:relative}
 .stream .qr-sticker{position:absolute;right:8px;bottom:8px;z-index:2;background:#fbfbfb;padding:4px;border-radius:6px;transform:rotate(-5deg);box-shadow:0 4px 12px -3px rgba(0,0,0,.55);border:1px solid rgba(0,0,0,.06);cursor:pointer;transition:transform 160ms var(--snap),box-shadow 200ms var(--snap)}
-@media(hover:hover){ .stream .qr-sticker:hover{transform:rotate(-5deg) scale(1.12);box-shadow:0 8px 18px -4px rgba(0,0,0,.6)} }
+@media(any-hover:hover){ .stream .qr-sticker:hover{transform:rotate(-5deg) scale(1.12);box-shadow:0 8px 18px -4px rgba(0,0,0,.6)} }
 .stream .qr-sticker:active{transform:rotate(-5deg) scale(.96)}
 .stream .qr-sticker img{display:block;width:38px;height:38px;image-rendering:pixelated;border-radius:2px}
 .stream .slide .tab-tl{font-size:10px;padding:5px 9px 6px}
@@ -198,7 +199,7 @@ html.warm-nav .greet{animation:none}
 /* Real notch: the label's exact box is SUBTRACTED from the card via mask, so the
    true background shows through — guaranteed clean. --tw/--th from JS (measures
    the label). The label is an overlay (.notch-tab), OUTSIDE the mask. */
-.agent-card{position:relative;border-radius:24px;overflow:hidden;display:flex;flex-direction:column;min-height:322px;
+.agent-card{position:relative;border-radius:var(--radius);overflow:hidden;display:flex;flex-direction:column;min-height:322px;
   background:linear-gradient(165deg,#0e0b1c,#131024 58%,#0a0912);
   border:1px solid rgba(150,100,255,.22);box-shadow:var(--shadow-card);
   transition:border-color .5s var(--smooth),box-shadow .5s var(--smooth);
@@ -226,7 +227,7 @@ html.warm-nav .greet{animation:none}
 /* the label floats in the cut, sitting directly on the real background behind */
 .notch-tab{position:absolute;top:0;left:0;z-index:6;font:600 10.5px Inter;letter-spacing:.07em;
   text-transform:uppercase;color:var(--ink-2);padding:7px 13px 8px;white-space:nowrap;pointer-events:none}
-@media(hover:hover){ .agent-card:hover{border-color:rgba(170,120,255,.42);box-shadow:0 22px 50px -22px rgba(90,50,200,.6),var(--shadow-card)} }
+@media(any-hover:hover){ .agent-card:hover{border-color:rgba(170,120,255,.42);box-shadow:0 22px 50px -22px rgba(90,50,200,.6),var(--shadow-card)} }
 .agent-card::before{content:"";position:absolute;inset:-35%;z-index:0;pointer-events:none;opacity:.55;
   background:
     radial-gradient(38% 46% at 22% 32%,rgba(130,70,255,.55),transparent 60%),
@@ -253,7 +254,7 @@ html.warm-nav .greet{animation:none}
 .agent-hook.out{opacity:0;transform:translateY(-7px)}
 .agent-hook.in{opacity:0;transform:translateY(13px);transition:none}
 /* hover: the 2nd + 3rd lines quickly fade-blur out (then the window appears) */
-@media(hover:hover){
+@media(any-hover:hover){
   .agent-card:hover .agent-hook.l2,.agent-card:focus-within .agent-hook.l2,
   .agent-card:hover .agent-hook.l3,.agent-card:focus-within .agent-hook.l3{
     opacity:0;transform:translateY(-4px);filter:blur(7px) drop-shadow(0 2px 13px rgba(139,92,246,0));
@@ -268,7 +269,7 @@ html.warm-nav .greet{animation:none}
   font:500 12.5px/1.45 Inter;color:var(--on-stage)}
 .tb-reply .tb-ans{display:block}
 .agent-reveal{position:absolute;left:26px;right:26px;bottom:26px;display:flex;flex-direction:column;gap:12px;pointer-events:none}
-@media(hover:hover){ .agent-card:hover .agent-reveal,.agent-card:focus-within .agent-reveal{pointer-events:auto} }
+@media(any-hover:hover){ .agent-card:hover .agent-reveal,.agent-card:focus-within .agent-reveal{pointer-events:auto} }
 /* touch has no hover → keep the chat window tappable there; and while a reply is
    live, keep it open + interactive regardless of hover so the answer doesn't vanish. */
 html[data-device="tablet"] .agent-reveal,html[data-device="mobile"] .agent-reveal,
@@ -291,16 +292,16 @@ html[data-device="tablet"] .agent-reveal,html[data-device="mobile"] .agent-revea
 .tb-send{flex:none;width:38px;height:38px;border-radius:11px;border:0;cursor:pointer;display:grid;place-items:center;color:#fff;
   background:linear-gradient(135deg,#8b5cf6,#e040d0);box-shadow:0 6px 16px -6px rgba(139,92,246,.7);
   transition:transform 150ms var(--snap),box-shadow .2s var(--smooth)}
-@media(hover:hover){ .tb-send:hover{transform:translateY(-1px);box-shadow:0 10px 22px -8px rgba(224,64,208,.7)} }
+@media(any-hover:hover){ .tb-send:hover{transform:translateY(-1px);box-shadow:0 10px 22px -8px rgba(224,64,208,.7)} }
 .tb-send:active{transform:scale(.92)}
 .chips{display:flex;flex-wrap:wrap;gap:9px}
 .qchip{display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:0 15px;border-radius:999px;cursor:pointer;
   background:rgba(150,110,255,.12);border:1px solid rgba(150,110,255,.3);color:#e9e2ff;font:600 12.5px Inter;letter-spacing:.005em;
   opacity:0;transform:translateY(14px);
   transition:opacity .5s cubic-bezier(.16,1,.3,1),transform .5s cubic-bezier(.16,1,.3,1),border-color .2s var(--smooth),background .2s var(--smooth)}
-@media(hover:hover){ .qchip:hover{border-color:rgba(224,64,208,.55);background:rgba(150,110,255,.22)} }
+@media(any-hover:hover){ .qchip:hover{border-color:rgba(224,64,208,.55);background:rgba(150,110,255,.22)} }
 /* reveal: bubble first, then the chips cascade up one-by-one just after */
-@media(hover:hover){
+@media(any-hover:hover){
   .agent-card:hover .text-bubble,.agent-card:focus-within .text-bubble{opacity:1;filter:blur(0);transform:none;transition-delay:.24s}
   .agent-card:hover .qchip,.agent-card:focus-within .qchip{opacity:1;transform:none;transition-delay:calc(.34s + var(--ci,0)*.055s)}
 }
@@ -399,7 +400,7 @@ html.dark .note{background:rgba(244,245,247,.05)}
 .note-text{font:400 12.5px/1.45 Inter;color:var(--ink-2);word-break:break-word}
 .note-x{position:absolute;top:7px;right:7px;width:19px;height:19px;border:0;border-radius:50%;cursor:pointer;
   background:transparent;color:var(--muted);display:grid;place-items:center;font:400 14px/1 Inter;transition:background .18s,color .18s,transform 120ms var(--snap)}
-@media(hover:hover){ .note-x:hover{background:var(--lava-tint);color:var(--lava-ink)} }
+@media(any-hover:hover){ .note-x:hover{background:var(--lava-tint);color:var(--lava-ink)} }
 .note-x:active{transform:scale(.85)}
 .notes-empty{font:500 12.5px Inter;color:var(--muted);padding:12px 4px}
 .notes-form{margin-top:12px;padding-top:12px;border-top:1px solid var(--hairline);display:flex;flex-direction:column;gap:8px}
@@ -411,7 +412,7 @@ html.dark .notes-name,html.dark .notes-text{background:rgba(244,245,247,.05)}
 .notes-text{flex:1;min-width:0}
 .notes-add{flex:none;width:38px;border:0;border-radius:10px;cursor:pointer;background:var(--lava);color:#fff;font:400 20px/1 Inter;
   transition:transform 150ms var(--snap),background .2s var(--smooth)}
-@media(hover:hover){ .notes-add:hover{background:var(--lava-2)} }
+@media(any-hover:hover){ .notes-add:hover{background:var(--lava-2)} }
 .notes-add:active{transform:scale(.92)}
 </style>
 </head>
