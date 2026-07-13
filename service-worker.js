@@ -2,7 +2,7 @@
    Makes the app installable and loads the shell instantly. Network-first for
    same-origin files (so deploys show up right away), cache fallback when
    offline. Live data always comes from Supabase online. */
-const CACHE = "asc-tirehotel-v84";   // v84 = offline nav ignoreSearch (deep ?code= links) + index loop-breaker
+const CACHE = "asc-tirehotel-v85";   // v85 = Sluh voice agent (app/sluh.js) added to shell
 // Cross-origin dependencies the app cannot boot (or scan) without. Same-origin
 // files are precached below; these are runtime-cached network-first so an
 // offline cold boot doesn't die on the supabase-js ESM import.
@@ -38,6 +38,7 @@ const SHELL = [
   "./app/agent-gemini.js",
   "./app/live-dashboard.js",
   "./app/live-checkin.js",
+  "./app/sluh.js",
   "./app/live-set-detail.js",
   "./app/live-scan.js",
   "./app/live-warehouse.js",

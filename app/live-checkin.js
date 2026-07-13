@@ -361,3 +361,124 @@ window.ascLiveFirst = new Promise((r) => { liveFirstDone = r; });
 // either control.
 if ($('s_paid')) $('s_paid').addEventListener('change', () => { paidTouched = true; });
 if ($('s_onrims')) $('s_onrims').addEventListener('change', () => { onRimsTouched = true; });
+
+// ============================================================================
+// Sluh v1.1 — hold-to-talk check-in (Brain-1)
+// Wires #sluhBtn → voice.js listenHold → sluh.js extractSlots → form fill.
+// ============================================================================
+
+// Fill form fields from slotsToPreifll output (overwrites — this is intentional user speech).
+function fillFromSluh(pf) {
+  const fi = (id, v) => { const el = $(id); if (el && v != null && v !== '') el.value = String(v); };
+  fi('c_name',  pf.customer_name);
+  fi('c_phone', pf.phone);
+  fi('c_email', pf.email);
+  fi('v_plate', pf.plate);
+  fi('v_make',  pf.make);
+  fi('v_model', pf.model);
+  if (pf.year)  fi('v_year', pf.year);
+  fi('s_zone',  pf.zone);
+  fi('s_rack',  pf.rack);
+  fi('s_shelf', pf.shelf);
+  fi('s_slot',  pf.slot);
+  if (pf.season) {
+    const sb = document.querySelector('[data-season="' + pf.season + '"]');
+    if (sb) sb.click();
+  }
+  if (pf.quantity != null) {
+    const qtyEl = $('s_qty');
+    if (qtyEl) { qtyEl.value = pf.quantity; qtyEl.dispatchEvent(new Event('change')); }
+  }
+  if (pf.on_rims != null) {
+    const onr = $('s_onrims');
+    if (onr && onr.checked !== pf.on_rims) {
+      onr.checked = pf.on_rims;
+      onr.dispatchEvent(new Event('change'));
+    }
+  }
+  if (pf.bolts_location    && window.setSegOpt) window.setSegOpt('s_bolts',   pf.bolts_location);
+  if (pf.hubcaps_location  && window.setSegOpt) window.setSegOpt('s_hubcaps', pf.hubcaps_location);
+  const rows = qa('#tires .tire-edit-row');
+  rows.forEach((r) => {
+    const setE = (sel, v) => { const el = q(sel, r); if (el && v && !el.value) el.value = v; };
+    if (pf.tire_size) setE('[data-t="size"]',  pf.tire_size);
+    if (pf.brand)     setE('[data-t="brand"]', pf.brand);
+  });
+}
+
+// Sluh init — runs once; skips silently if #sluhBtn absent or voice unsupported.
+(async () => {
+  const btn = document.getElementById('sluhBtn');
+  if (!btn) return;
+
+  // Dynamic imports keep this wiring lazy — no cost if the button is never touched.
+  const { voiceSupported, listenHold, abortListening } = await import('../js/voice.js');
+  const { extractSlots, groundCustomer, confidence, slotsToPreifll } = await import('./sluh.js');
+  const { listCustomers } = await import('../js/db.js');
+
+  if (!voiceSupported()) { btn.hidden = true; return; }
+
+  const label = btn.querySelector('.sluh-label');
+  let holdHandle = null;
+
+  function setListening(on) {
+    btn.classList.toggle('listening', on);
+    if (label) label.textContent = on ? 'Slušam…' : 'Drži i govori';
+  }
+
+  async function onPointerDown(e) {
+    if (e.button !== undefined && e.button !== 0) return;
+    e.preventDefault();
+    // Capture btn before any await — e.currentTarget nulls out after async yields
+    setListening(true);
+
+    // Warm the customer cache in parallel with starting the listen
+    const [customersResult, handle] = await Promise.all([
+      listCustomers().catch(() => []),
+      Promise.resolve(listenHold({ onInterim: () => {} })),
+    ]);
+    holdHandle = handle;
+    const transcript = await holdHandle.done;
+
+    setListening(false);
+    holdHandle = null;
+
+    if (!transcript?.trim()) return;
+
+    const slots    = extractSlots(transcript);
+    const score    = confidence(slots);
+
+    if (score >= 0.6) {
+      const { customer } = groundCustomer(slots, customersResult);
+      fillFromSluh(slotsToPreifll(slots, customer));
+      showToast('Forma ispunjena (' + Math.round(score * 100) + '%)');
+    } else if (navigator.onLine) {
+      // Brain-2 fallback: write transcript for the Gemini agent to pick up
+      sessionStorage.setItem('asc.sluh_transcript', transcript);
+      document.dispatchEvent(new CustomEvent('asc:sluh-fallback', { detail: { transcript, slots } }));
+      // Also do a partial fill so at least the high-conf slots land
+      const { customer } = groundCustomer(slots, customersResult);
+      fillFromSluh(slotsToPreifll(slots, customer));
+      showToast('Šaljem agentu…');
+    } else {
+      // Offline: partial fill with what we have
+      const { customer } = groundCustomer(slots, customersResult);
+      fillFromSluh(slotsToPreifll(slots, customer));
+      showToast('Djelomično ispunjeno (offline)');
+    }
+  }
+
+  function releaseHold() {
+    if (holdHandle) { holdHandle.release(); holdHandle = null; }
+    setListening(false);
+  }
+
+  btn.addEventListener('pointerdown', onPointerDown);
+  btn.addEventListener('pointerup',     releaseHold);
+  btn.addEventListener('pointerleave',  releaseHold);
+  btn.addEventListener('pointercancel', releaseHold);
+
+  // Tear down mic if the page is leaving or the SPA route changes
+  document.addEventListener('asc:teardown', () => { abortListening(); holdHandle = null; setListening(false); });
+  window.addEventListener('hashchange',     () => { abortListening(); holdHandle = null; setListening(false); });
+})();
