@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ASC — Skladište</title>
+<style>
+  :root { --ink:#1c1e24; --slate:#6b7280; --line:rgba(28,30,36,.08); --lava:#f25c1d; --paper:#f4f6f9; --card:#fff; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: radial-gradient(900px 280px at 0 0, #fff, transparent 50%), var(--paper); color: var(--ink); font: 14px/1.4 Inter, "Segoe UI", sans-serif; }
+  .shell { max-width: 1100px; margin: 0 auto; padding: 22px 18px 40px; }
+  header { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; }
+  .logo { font-weight: 800; letter-spacing: .08em; color: var(--lava); }
+  nav a { color: var(--slate); text-decoration: none; margin-right: 14px; }
+  nav a.on { color: var(--ink); font-weight: 650; }
+  .hero { background: #1c1e24; color: #f4f5f7; border-radius: 22px; padding: 22px; box-shadow: 0 18px 40px rgba(28,30,36,.12); }
+  .hero small { letter-spacing: .1em; text-transform: uppercase; color: rgba(244,245,247,.6); }
+  h1 { margin: 6px 0; font-size: 36px; }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 14px; }
+  .stats div { background: rgba(244,245,247,.08); border-radius: 12px; padding: 10px; }
+  .stats b { display: block; font-size: 24px; }
+  .stats span { color: rgba(244,245,247,.6); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; }
+  .pills { display: flex; gap: 8px; margin: 14px 0; }
+  .pills button, .slot { border: 0; cursor: pointer; }
+  .pills button { background: #fff; border-radius: 999px; padding: 8px 12px; box-shadow: 0 6px 16px rgba(28,30,36,.06); }
+  .zone { background: #fff; border-radius: 18px; padding: 16px; margin-top: 12px; box-shadow: 0 10px 24px rgba(28,30,36,.06); }
+  .zone h2 { margin: 0 0 10px; font-size: 16px; }
+  .rack { margin-top: 8px; }
+  .rack span { color: var(--slate); font-size: 12px; }
+  .slots { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+  .slot { width: 54px; height: 54px; border-radius: 12px; background: #f3f4f6; color: var(--ink); }
+  .slot.filled { background: var(--lava); color: #fff; }
+  .slot.reserved { background: #ffe4d6; color: #9a3412; }
+  .slot.on { outline: 2px solid #1c1e24; }
+  .card { position: fixed; right: 18px; bottom: 18px; width: 280px; background: #fff; border-radius: 16px; padding: 16px; box-shadow: 0 18px 40px rgba(28,30,36,.16); display: none; }
+  .card.show { display: block; }
+  .card b { display: block; font-size: 16px; }
+  .card p { margin: 6px 0; color: var(--slate); }
+  .note { color: var(--slate); font-size: 12px; margin-top: 8px; }
+</style>
+</head>
+<body>
+  <div class="shell">
+    <header>
+      <div class="logo">ASC</div>
+      <nav><a href="#">Ploča</a><a class="on" href="#">Skladište</a><a href="#">Kupci</a></nav>
+    </header>
+    <section class="hero">
+      <small>Hotel za gume · Dubrovnik</small>
+      <h1>Skladište</h1>
+      <div class="stats">
+        <div><b id="stored">0</b><span>Spremljeno</span></div>
+        <div><b id="reserved">0</b><span>Rezervirano</span></div>
+        <div><b>3</b><span>Zone</span></div>
+      </div>
+      <p class="note">Karta za sastanak. Nije živo stanje iz baze.</p>
+    </section>
+    <div class="pills" id="pills"></div>
+    <div id="map"></div>
+  </div>
+  <aside class="card" id="card"></aside>
+  <script>
+    const floor = [
+      { zone: "A", rack: "1", shelf: "1", slots: [
+        { n: "01", state: "filled", name: "Ivana Kovač", plate: "DU 214-AB", set: "Zimski" },
+        { n: "02", state: "filled", name: "Marko Burić", plate: "DU 880-CK", set: "Ljetni" },
+        { n: "03", state: "empty" },
+        { n: "04", state: "reserved", name: "Rezervacija", plate: "DU 102-EE", set: "Cjelogodišnji" }
+      ]},
+      { zone: "A", rack: "1", shelf: "2", slots: [
+        { n: "01", state: "filled", name: "Petra Jurjević", plate: "DU 441-LM", set: "Zimski" },
+        { n: "02", state: "empty" }, { n: "03", state: "empty" }, { n: "04", state: "empty" }
+      ]},
+      { zone: "B", rack: "2", shelf: "1", slots: [
+        { n: "01", state: "filled", name: "Hotel Excelsior", plate: "DU 019-HX", set: "Ljetni" },
+        { n: "02", state: "filled", name: "Ante Vuković", plate: "DU 773-TR", set: "Zimski" },
+        { n: "03", state: "reserved", name: "Rezervacija", plate: "DU 330-QP", set: "Ljetni" },
+        { n: "04", state: "empty" }
+      ]},
+      { zone: "C", rack: "3", shelf: "1", slots: [
+        { n: "01", state: "empty" }, { n: "02", state: "empty" }, { n: "03", state: "filled", name: "Luka Perić", plate: "DU 556-ND", set: "Zimski" }, { n: "04", state: "empty" }
+      ]}
+    ];
+    const stored = floor.flatMap(r => r.slots).filter(s => s.state === "filled").length;
+    const reserved = floor.flatMap(r => r.slots).filter(s => s.state === "reserved").length;
+    document.getElementById("stored").textContent = stored;
+    document.getElementById("reserved").textContent = reserved;
+    const zones = [...new Set(floor.map(r => r.zone))];
+    const pills = document.getElementById("pills");
+    const map = document.getElementById("map");
+    pills.innerHTML = zones.map(z => `<button data-z="${z}">Zona ${z}</button>`).join("");
+    map.innerHTML = zones.map(z => {
+      const racks = floor.filter(r => r.zone === z);
+      return `<section class="zone" id="z${z}"><h2>Zona ${z}</h2>` + racks.map(r =>
+        `<div class="rack"><span>Regal ${r.rack} · Polica ${r.shelf}</span><div class="slots">` +
+        r.slots.map(s => `<button class="slot ${s.state}" data-name="${s.name || "Slobodno"}" data-plate="${s.plate || ""}" data-set="${s.set || ""}" data-loc="Zona ${z} · Regal ${r.rack} · Polica ${r.shelf} · Mjesto ${s.n}">${s.n}</button>`).join("") +
+        `</div></div>`).join("") + `</section>`;
+    }).join("");
+    pills.addEventListener("click", (e) => {
+      const b = e.target.closest("button"); if (!b) return;
+      document.getElementById("z" + b.dataset.z).scrollIntoView({ behavior: "smooth" });
+    });
+    const card = document.getElementById("card");
+    map.addEventListener("click", (e) => {
+      const s = e.target.closest(".slot"); if (!s) return;
+      document.querySelectorAll(".slot.on").forEach(el => el.classList.remove("on"));
+      s.classList.add("on");
+      card.className = "card show";
+      card.innerHTML = `<b>${s.dataset.name}</b><p>${s.dataset.plate || "Nema kompleta"}</p><p>${s.dataset.loc}</p><p>${s.dataset.set}</p>`;
+    });
+  </script>
+</body>
+</html>
