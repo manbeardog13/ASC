@@ -176,22 +176,25 @@ html.dark .slot.empty{background:rgba(244,245,247,.04)}
   <div class="wh-zonebar" id="floorTabs" role="group" aria-label="Prostori"></div>
   <div id="floorStage" class="card reveal"></div>
   <style>
-    #floorStage{position:relative;margin-top:12px;border-radius:22px;overflow:hidden;min-height:280px;background:var(--panel,#fff)}
-    #floorStage img{width:100%;display:block;transform:scale(1.02);animation:floorIn 520ms var(--smooth,cubic-bezier(.2,.8,.2,1))}
+    #floorStage{position:relative;margin-top:12px;border-radius:22px;overflow:hidden;height:min(72vh,760px);background:#1c1e24;perspective:1200px}
+    #floorStage .world{position:absolute;inset:0;transform-origin:0 0;transition:transform 900ms cubic-bezier(.22,.8,.24,1)}
+    #floorStage img{width:100%;height:100%;object-fit:cover;display:block}
     #floorStage .tire{position:absolute;width:36px;height:36px;margin:-18px 0 0 -18px;border:0;border-radius:50%;cursor:pointer;
       background:radial-gradient(circle at 32% 28%,var(--lava-2,#ff8a5c),var(--lava,#ff4e1b) 64%,#d6390c);color:#fff;
       font:700 10px Inter,sans-serif;box-shadow:0 8px 16px rgba(255,78,27,.35);transform:scale(.6);opacity:0;
-      animation:tireIn 420ms var(--smooth,cubic-bezier(.2,.8,.2,1)) forwards}
-    #floorStage .tire:hover{transform:scale(1.08);z-index:2}
-    #floorStage .tire.on{outline:2px solid #fff;outline-offset:2px}
-    .wh-win{position:fixed;z-index:40;background:#fff;color:#0a0a0a;border-radius:16px;padding:14px 14px 12px;min-width:210px;
-      box-shadow:0 18px 40px rgba(0,0,0,.18);transform:translateY(6px);opacity:0;transition:opacity 180ms,transform 180ms}
-    .wh-win.show{opacity:1;transform:none}
-    .wh-win b{display:block;font:700 15px Sora,sans-serif}
-    .wh-win span{display:block;margin-top:3px;color:#666;font:600 12.5px Inter,sans-serif}
-    @keyframes floorIn{from{opacity:0;transform:scale(1.04)}to{opacity:1;transform:none}}
+      animation:tireIn 420ms cubic-bezier(.22,.8,.24,1) forwards}
+    #floorStage .tire.on{outline:2px solid #fff;outline-offset:3px;z-index:2}
+    #floorHud{position:absolute;left:14px;right:14px;bottom:14px;display:flex;justify-content:space-between;gap:12px;align-items:end;pointer-events:none}
+    #floorHud .cardish{pointer-events:auto;background:rgba(255,255,255,.94);color:#1c1e24;border-radius:16px;padding:12px 14px;min-width:180px;
+      box-shadow:0 16px 36px rgba(0,0,0,.22);transform:translateY(8px);opacity:0;transition:opacity 240ms,transform 240ms}
+    #floorHud .cardish.show{opacity:1;transform:none}
+    #floorHud b{display:block;font:700 16px Sora,sans-serif}
+    #floorHud span{display:block;margin-top:3px;color:#666;font:600 12.5px Inter,sans-serif}
+    #flyBack{pointer-events:auto;border:0;border-radius:999px;padding:10px 14px;background:var(--lava,#ff4e1b);color:#fff;font:650 13px Inter,sans-serif;cursor:pointer;
+      opacity:0;transform:translateY(8px);transition:opacity 240ms,transform 240ms}
+    #flyBack.show{opacity:1;transform:none}
     @keyframes tireIn{to{opacity:1;transform:scale(1)}}
-    @media(prefers-reduced-motion:reduce){#floorStage img,#floorStage .tire{animation:none;opacity:1;transform:none}}
+    @media(prefers-reduced-motion:reduce){#floorStage .world{transition:none}#floorStage .tire{animation:none;opacity:1;transform:none}}
   </style>
   <script>
     (function(){
@@ -224,27 +227,35 @@ html.dark .slot.empty{background:rgba(244,245,247,.04)}
         ]}
       ];
       var tabs=document.getElementById('floorTabs'), stage=document.getElementById('floorStage');
-      var win=document.createElement('div'); win.className='wh-win'; win.hidden=true; document.body.appendChild(win);
+      stage.innerHTML='<div class="world" id="floorWorld"></div><div id="floorHud"><div class="cardish" id="floorCard"></div><button id="flyBack" type="button">Natrag na prostor</button></div>';
+      var world=document.getElementById('floorWorld'), card=document.getElementById('floorCard'), back=document.getElementById('flyBack');
       function show(room){
         tabs.querySelectorAll('button').forEach(function(b){b.classList.toggle('on', b.dataset.id===room.id);});
-        stage.innerHTML='<img src="'+room.img+'" alt="'+room.name+'">'+room.stacks.map(function(s,i){
-          return '<button class="tire" style="left:'+s.x+'%;top:'+s.y+'%;animation-delay:'+(40+i*28)+'ms" data-n="'+s.n+'" data-name="'+(s.name||'Slobodno')+'" data-plate="'+(s.plate||'')+'">'+s.n+'</button>';
+        world.style.transition='none';
+        world.style.transform='scale(1.08) translate(0,0)';
+        world.innerHTML='<img src="'+room.img+'" alt="'+room.name+'">'+room.stacks.map(function(s,i){
+          return '<button class="tire" style="left:'+s.x+'%;top:'+s.y+'%;animation-delay:'+(40+i*22)+'ms" data-x="'+s.x+'" data-y="'+s.y+'" data-n="'+s.n+'" data-name="'+(s.name||'Slobodno')+'" data-plate="'+(s.plate||'')+'">'+s.n+'</button>';
         }).join('');
-        win.hidden=true; win.classList.remove('show');
+        card.classList.remove('show'); back.classList.remove('show');
+        requestAnimationFrame(function(){world.style.transition=''; world.style.transform='scale(1) translate(0,0)';});
+      }
+      function flyTo(s){
+        var x=parseFloat(s.dataset.x), y=parseFloat(s.dataset.y), z=2.6;
+        world.style.transform='scale('+z+') translate('+((50-x)/z)+'%,'+((42-y)/z)+'%)';
+        stage.querySelectorAll('.tire.on').forEach(function(el){el.classList.remove('on');});
+        s.classList.add('on');
+        card.innerHTML='<b>'+s.dataset.name+'</b><span>'+s.dataset.n+(s.dataset.plate?' · '+s.dataset.plate:' · slobodno')+'</span>';
+        card.classList.add('show'); back.classList.add('show');
+      }
+      function flyOut(){
+        world.style.transform='scale(1) translate(0,0)';
+        stage.querySelectorAll('.tire.on').forEach(function(el){el.classList.remove('on');});
+        card.classList.remove('show'); back.classList.remove('show');
       }
       tabs.innerHTML='<div class="wh-zonebar">'+rooms.map(function(r){return '<button class="chip wh-zonepill" data-id="'+r.id+'">'+r.name+'</button>';}).join('')+'</div>';
       tabs.addEventListener('click', function(e){var b=e.target.closest('button'); if(!b) return; show(rooms.filter(function(r){return r.id===b.dataset.id;})[0]);});
-      stage.addEventListener('click', function(e){
-        var s=e.target.closest('.tire'); if(!s) return;
-        stage.querySelectorAll('.tire.on').forEach(function(el){el.classList.remove('on');});
-        s.classList.add('on');
-        win.hidden=false;
-        win.innerHTML='<b>'+s.dataset.name+'</b><span>'+s.dataset.n+(s.dataset.plate?' · '+s.dataset.plate:'')+'</span>';
-        var r=s.getBoundingClientRect();
-        win.style.left=Math.max(8, Math.min(r.left, innerWidth-230))+'px';
-        win.style.top=(r.bottom+10)+'px';
-        requestAnimationFrame(function(){win.classList.add('show');});
-      });
+      stage.addEventListener('click', function(e){var s=e.target.closest('.tire'); if(!s) return; flyTo(s);});
+      back.addEventListener('click', flyOut);
       show(rooms[0]);
     })();
   </script>
