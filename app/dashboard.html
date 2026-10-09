@@ -437,10 +437,38 @@ if(sat>=59){d.classList.add('island');d.style.setProperty('--isl-y',(sat-48)+'px
   <header class="top">
     <img class="logo" src="assets/logo.png" alt="ASC — Auto servisni centar">
     <nav class="pill" aria-label="Glavna navigacija">
-      <span class="pill-links"><a class="on" href="#">Ploča</a><a href="#">Zaprimi</a><a href="#">Skladište</a><a href="#">Kupci</a></span>
+      <span class="pill-links"><a class="on" href="dashboard.html">Ploča</a><a href="checkin.html">Zaprimi</a><a href="sastanak-skladiste.html">Skladište</a><a href="customers.html">Kupci</a></span>
       <button class="mode" id="mode" aria-label="Promijeni temu"><i></i></button>
     </nav>
   </header>
+
+
+  <section id="skladiste" class="card reveal" style="margin-top:18px;padding:18px;animation-delay:220ms">
+    <span class="tab-tl">skladište</span>
+    <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px">
+      <h2 style="margin:0;font:600 22px Sora,sans-serif">Skladište</h2>
+      <a href="sastanak-skladiste.html" style="color:var(--lava,#f25c1d);font-weight:650">Otvori kartu</a>
+    </div>
+    <p style="margin:6px 0 12px;color:var(--ink-2,#6b7280)">Zone A, B i C. Klik na mjesto otvara set. Karta za sastanak, nije živo stanje.</p>
+    <div id="dashFloor"></div>
+  </section>
+  <style>
+    #dashFloor .zone{background:var(--panel,#fff);border-radius:16px;padding:12px;margin-top:10px}
+    #dashFloor .slots{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+    #dashFloor .slot{width:48px;height:48px;border:0;border-radius:12px;background:#f3f4f6;cursor:pointer}
+    #dashFloor .slot.filled{background:#f25c1d;color:#fff}
+    #dashFloor .slot.reserved{background:#ffe4d6}
+    #dashFloor .slot.on{outline:2px solid #1c1e24}
+  </style>
+  <script>
+    (function(){
+      var floor=[{zone:'A',rack:'1',shelf:'1',slots:[{n:'01',state:'filled',name:'Ivana Kovač',plate:'DU 214-AB'},{n:'02',state:'filled',name:'Marko Burić',plate:'DU 880-CK'},{n:'03',state:'empty'},{n:'04',state:'reserved',name:'Rezervacija',plate:'DU 102-EE'}]},{zone:'B',rack:'2',shelf:'1',slots:[{n:'01',state:'filled',name:'Hotel Excelsior',plate:'DU 019-HX'},{n:'02',state:'empty'},{n:'03',state:'reserved',name:'Rezervacija',plate:'DU 330-QP'},{n:'04',state:'empty'}]},{zone:'C',rack:'3',shelf:'1',slots:[{n:'01',state:'empty'},{n:'02',state:'filled',name:'Luka Perić',plate:'DU 556-ND'},{n:'03',state:'empty'},{n:'04',state:'empty'}]}];
+      var map=document.getElementById('dashFloor');
+      if(!map) return;
+      map.innerHTML=floor.map(function(r){return '<div class="zone"><b>Zona '+r.zone+' · Regal '+r.rack+'</b><div class="slots">'+r.slots.map(function(s){return '<button class="slot '+s.state+'" data-name="'+(s.name||'Slobodno')+'" data-plate="'+(s.plate||'')+'">'+s.n+'</button>';}).join('')+'</div></div>';}).join('');
+      map.addEventListener('click', function(e){var s=e.target.closest('.slot'); if(!s) return; map.querySelectorAll('.slot.on').forEach(function(el){el.classList.remove('on');}); s.classList.add('on'); alert(s.dataset.name+'\n'+(s.dataset.plate||'Nema kompleta'));});
+    })();
+  </script>
 
   <!-- HERO: stage (spans 2 rows) + two stacked action cards, heights aligned -->
   <section class="hero">
@@ -614,7 +642,7 @@ document.addEventListener('click', function(e){
     el.addEventListener('keydown', function(e){ if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } });
   }
   clickable(document.querySelector('.stage .hero-num'), 'customers.html', 'Otvori bazu svih kompleta');
-  clickable(document.querySelector('.stage .meter'), 'warehouse.html', 'Otvori kartu skladišta');
+  clickable(document.querySelector('.stage .meter'), 'sastanak-skladiste.html', 'Otvori kartu skladišta');
   var spillHref = ['checkin.html', 'reminders.html', 'reminders.html'];
   document.querySelectorAll('.stage .spill').forEach(function(b, i){
     b.addEventListener('click', function(){ location.href = spillHref[i] || 'customers.html'; });
