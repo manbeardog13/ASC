@@ -113,17 +113,29 @@
     var floor = new THREE.Mesh(new THREE.PlaneGeometry(room.w, room.d), new THREE.MeshStandardMaterial({ color: 0xd7d2cb }));
     floor.rotation.x = -Math.PI / 2; world.add(floor);
     wall(room.w, 0, 0, room.d);
+    var people = ['Ivana Kovač','Marko Burić','Hotel Excelsior','Petra Jurjević','Ante Vuković'];
+    var colors = [0x4c6fff, 0x1f9d55, 0xc45c26, 0x7c5cff, 0x0e7490];
     room.stacks.forEach(function (st, i) {
-      var g = new THREE.Group(); g.position.set(st[0], 0, st[1]); g.userData = { i: i, filled: st[2], id: room.id + '-' + i };
+      var who = st[2] ? people[i % people.length] : '';
+      var color = colors[i % colors.length];
+      var g = new THREE.Group(); g.position.set(st[0], 0, st[1]);
+      g.userData = { i: i, filled: st[2], who: who, color: color };
       for (var n = 0; n < STACK; n++) {
         var geo = new THREE.TorusGeometry(0.28, 0.09, 8, 16);
         var mat = n < st[2]
-          ? new THREE.MeshStandardMaterial({ color: 0x24272d })
+          ? new THREE.MeshStandardMaterial({ color: 0x24272d, emissive: color, emissiveIntensity: 0 })
           : new THREE.MeshBasicMaterial({ color: 0x9aa1ab, wireframe: true });
         var tire = new THREE.Mesh(geo, mat);
         tire.rotation.x = Math.PI / 2;
         tire.position.y = 0.16 + n * 0.16;
         g.add(tire);
+      }
+      if (who) {
+        var c = document.createElement('canvas'); c.width = 256; c.height = 64;
+        var ctx = c.getContext('2d'); ctx.fillStyle = '#1c1e24'; ctx.font = '600 28px sans-serif'; ctx.fillText(who, 8, 40);
+        var sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), transparent: true }));
+        sprite.position.y = 1.7; sprite.scale.set(1.4, 0.35, 1); sprite.visible = false; sprite.userData.label = true;
+        g.add(sprite);
       }
       world.add(g);
     });
@@ -163,6 +175,14 @@
   function loop() {
     if (inspect.hidden) return;
     yaw += Math.sin(performance.now() / 1800) * 0.0008;
+    var close = dist < 10;
+    world.children.forEach(function (g) {
+      if (!g.userData || !g.userData.who) return;
+      g.children.forEach(function (tire) {
+        if (tire.userData && tire.userData.label) tire.visible = close;
+        if (tire.material && tire.material.emissive) tire.material.emissiveIntensity = close ? 0.55 : 0;
+      });
+    });
     placeCamera(); renderer.render(scene, camera);
     requestAnimationFrame(loop);
   }
