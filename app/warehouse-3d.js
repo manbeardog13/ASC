@@ -7,32 +7,26 @@
   var people = ['Ivana Kovač', 'Marko Burić', 'Hotel Excelsior', 'Petra Jurjević', 'Ante Vuković'];
   var colors = [0x4c6fff, 0x1f9d55, 0xc45c26, 0x7c5cff, 0x0e7490];
   var rooms = [
-    { id:'hall', name:'Dvorana', w:7.2, d:14.5, stacks:[
-      [-2.2,-5.6,8],[-1.1,-5.6,8],[0,-5.6,6],[1.1,-5.6,8],[2.2,-5.6,4],
-      [-2.2,-4.4,8],[-1.1,-4.4,8],[0,-4.4,8],[1.1,-4.4,5],[2.2,-4.4,8],
-      [-2.2,-3.2,8],[-1.1,-3.2,3],[0,-3.2,8],[1.1,-3.2,8],[2.2,-3.2,2],
-      [-2.2,-2.0,8],[-1.1,-2.0,8],[0,-2.0,7],[1.1,-2.0,8],
-      [-2.2,-0.8,8],[-1.1,-0.8,8],[0,-0.8,8],[1.1,-0.8,6],
-      [-0.8,3.4,4],[0.4,3.4,8],[1.6,3.4,2],[-0.8,4.8,8],[0.4,4.8,3],[1.6,4.8,8]
+    { id:'aisle', name:'Hodnik', w:4.2, d:16, ceiling:2.3, beams:true, shelf:true, stacks:[
+      [-1.35,-6.2,8],[-1.35,-5.0,8],[-1.35,-3.8,7],[-1.35,-2.6,8],[-1.35,-1.4,6],[-1.35,-0.2,8],[-1.35,1.0,8],[-1.35,2.2,5],[-1.35,3.4,8],
+      [1.35,-6.2,8],[1.35,-5.0,8],[1.35,-3.8,8],[1.35,-2.6,4],[1.35,-1.4,8],[1.35,-0.2,8],[1.35,1.0,7],[1.35,2.2,8],[1.35,3.4,3],
+      [-1.35,4.8,8],[1.35,4.8,8],[0,5.6,6]
     ]},
-    { id:'square', name:'Kvadrat', w:8, d:8, stacks:[
-      [-2.6,-2.2,8],[-2.6,-0.4,5],[-2.6,1.4,8],[-2.6,2.6,2],
-      [-1.2,-2.8,8],[0.4,-2.8,6],[2.0,-2.8,8],[2.6,-1.2,4],[2.6,0.6,8],[2.6,2.2,3],
-      [-1.0,2.6,8],[0.6,2.6,8],[2.0,2.6,1]
+    { id:'floor', name:'Prizemlje', w:7.4, d:9, ceiling:2.6, beams:true, shelf:false, stacks:[
+      [-2.4,-2.6,8],[-1.2,-2.6,8],[0,-2.6,5],[1.2,-2.6,8],[2.4,-2.6,8],
+      [-2.4,-1.2,8],[-1.2,-1.2,3],[1.2,-1.2,8],[2.4,-1.2,6],
+      [-2.4,1.4,8],[-1.2,1.4,8],[0,1.4,8],[1.2,1.4,2],[2.4,1.4,8],
+      [2.6,2.8,4]
     ]},
-    { id:'triangle', name:'Trokut', w:9, d:10, stacks:[
-      [-2.8,3.2,8],[-2.2,2.0,8],[-1.6,0.8,6],[-1.0,-0.4,8],[-0.4,-1.6,4],
-      [0.2,2.4,8],[0.6,1.0,5],[1.0,-0.4,8],[2.4,-2.2,8],[2.2,-0.8,8],[2.0,0.6,3],[1.8,2.0,8],[1.6,3.2,2],
-      [-0.4,3.6,8],[-0.1,3.6,6]
+    { id:'shelf', name:'Polica', w:5.2, d:4.2, ceiling:1.6, beams:true, shelf:false, stacks:[
+      [-1.4,-0.8,6],[-0.3,-0.8,6],[0.8,-0.8,5],[1.6,-0.8,6],
+      [-1.4,0.6,4],[-0.2,0.6,6],[1.0,0.6,3]
     ]},
-    { id:'ell', name:'Kut', w:10, d:12, stacks:[
-      [-2.6,-1.2,8],[-1.6,-1.2,8],[-0.6,-1.2,4],[-2.6,0,8],[-1.6,0,6],[-0.6,0,8],
-      [-2.6,1.2,8],[-1.6,1.2,2],[-0.6,1.2,8],[-2.6,2.4,5],[-1.6,2.4,8],[-0.6,2.4,8],
-      [1.0,-1.2,8],[2.0,-1.2,8],[3.0,-1.2,7],[4.0,-1.2,8],[1.0,0,8],[2.0,0,3],[3.0,0,8],[4.0,0,8],
-      [1.0,1.2,6],[2.0,1.2,8],[3.0,1.2,8],[4.0,1.2,1],[1.0,2.4,8],[2.0,2.4,8],[3.0,2.4,4],[4.0,2.4,8]
+    { id:'attic', name:'Tavan', w:5.6, d:6, ceiling:2.1, beams:false, slope:true, stacks:[
+      [-1.4,-1.2,7],[-0.3,-1.2,7],[0.8,-1.2,5],
+      [-1.4,0.4,6],[-0.2,0.4,4],[1.6,1.4,1]
     ]}
   ];
-
   mount.innerHTML = '<div class="wh-scroll" id="whScroll"></div><div class="wh-inspect" id="whInspect" hidden></div>';
   var scroll = document.getElementById('whScroll');
   var inspect = document.getElementById('whInspect');
@@ -98,8 +92,8 @@
     renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
     renderer.shadowMap.enabled = true;
     scene = new THREE.Scene();
-    scene.background = new THREE.Color('#f6f3ee');
-    scene.fog = new THREE.Fog(0xf6f3ee, 18, 36);
+    scene.background = new THREE.Color('#6e6a64');
+    scene.fog = new THREE.Fog(0x6e6a64, 8, 22);
     camera = new THREE.PerspectiveCamera(38, 1, 0.1, 80);
     scene.add(new THREE.AmbientLight(0xffffff, 0.72));
     scene.add(new THREE.HemisphereLight(0xfff6ee, 0xc8c2b8, 0.45));
@@ -125,9 +119,30 @@
     while (world.children.length) world.remove(world.children[0]);
     var floor = new THREE.Mesh(
       new THREE.PlaneGeometry(room.w, room.d),
-      new THREE.MeshStandardMaterial({ color: 0xe4ddd4, roughness: 0.9 })
+      new THREE.MeshStandardMaterial({ color: 0x8d8a84, roughness: 1 })
     );
     floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; world.add(floor);
+    var ceil = new THREE.Mesh(
+      new THREE.PlaneGeometry(room.w, room.d),
+      new THREE.MeshStandardMaterial({ color: room.slope ? 0xc8b89a : 0xb08958, roughness: 0.85 })
+    );
+    ceil.rotation.x = Math.PI / 2; ceil.position.y = room.ceiling || 2.3; world.add(ceil);
+    if (room.beams) {
+      for (var b = -room.w / 2; b <= room.w / 2; b += 0.85) {
+        var beam = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.12, room.d), new THREE.MeshStandardMaterial({ color: 0x6b4a2b }));
+        beam.position.set(b, (room.ceiling || 2.3) - 0.08, 0); world.add(beam);
+      }
+      var steel = new THREE.Mesh(new THREE.BoxGeometry(room.w, 0.08, 0.12), new THREE.MeshStandardMaterial({ color: 0x5a4036 }));
+      steel.position.set(0, (room.ceiling || 2.3) - 0.22, 0); world.add(steel);
+    }
+    if (room.shelf) {
+      var board = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.06, 1.4), new THREE.MeshStandardMaterial({ color: 0xd9d3c6 }));
+      board.position.set(0, 1.35, -5.2); world.add(board);
+    }
+    [-1.6, 1.6, 4.2].forEach(function (z) {
+      var tube = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.04, 0.06), new THREE.MeshStandardMaterial({ color: 0xf4f1e8, emissive: 0xfff4d2, emissiveIntensity: 0.4 }));
+      tube.position.set(room.w / 2 - 0.2, (room.ceiling || 2.3) - 0.45, z); world.add(tube);
+    });
     addWalls(room);
     room.stacks.forEach(function (st, i) {
       var who = st[2] ? people[i % people.length] : '';
