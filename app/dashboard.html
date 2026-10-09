@@ -437,66 +437,11 @@ if(sat>=59){d.classList.add('island');d.style.setProperty('--isl-y',(sat-48)+'px
   <header class="top">
     <img class="logo" src="assets/logo.png" alt="ASC — Auto servisni centar">
     <nav class="pill" aria-label="Glavna navigacija">
-      <span class="pill-links"><a class="on" href="dashboard.html">Ploča</a><a href="checkin.html">Zaprimi</a><a href="#skladiste">Skladište</a><a href="customers.html">Kupci</a></span>
+      <span class="pill-links"><a class="on" href="dashboard.html">Ploča</a><a href="checkin.html">Zaprimi</a><a href="warehouse.html">Skladište</a><a href="customers.html">Kupci</a></span>
       <button class="mode" id="mode" aria-label="Promijeni temu"><i></i></button>
     </nav>
   </header>
 
-
-  <section id="skladiste" class="card reveal" style="margin-top:18px;padding:16px">
-    <span class="tab-tl">skladište</span>
-    <div style="display:flex;justify-content:space-between;align-items:end;gap:12px;flex-wrap:wrap">
-      <div>
-        <h2 style="margin:0;font:600 28px Sora,sans-serif">Skladište</h2>
-        <p style="margin:4px 0 0;color:var(--muted,#8b909a)">Četiri prostora, složeno kako na crtežu. Klik na hrpu otvara set.</p>
-      </div>
-      <div id="floorTabs" style="display:flex;gap:8px;flex-wrap:wrap"></div>
-    </div>
-    <div id="floorStage" style="position:relative;margin-top:14px;border-radius:18px;overflow:hidden;background:#eceae6"></div>
-  </section>
-  <script>
-    (function(){
-      var rooms=[
-        {id:'hall',name:'Dvorana',img:'assets/floors/hall.jpg',stacks:[
-          {x:22,y:8,n:'A1',name:'Ivana Kovač',plate:'DU 214-AB'},{x:32,y:8,n:'A2',name:'Marko Burić',plate:'DU 880-CK'},{x:42,y:8,n:'A3',name:'Petra Jurjević',plate:'DU 441-LM'},{x:52,y:8,n:'A4',name:'Ante Vuković',plate:'DU 773-TR'},{x:63,y:10,n:'A5',name:'Luka Perić',plate:'DU 556-ND'},
-          {x:22,y:16,n:'A6'},{x:32,y:16,n:'A7'},{x:42,y:16,n:'A8'},{x:52,y:16,n:'A9'},{x:62,y:18,n:'A10'},
-          {x:28,y:62,n:'B1',name:'Hotel Excelsior',plate:'DU 019-HX'},{x:40,y:62,n:'B2'},{x:52,y:62,n:'B3'},
-          {x:28,y:78,n:'B4'},{x:40,y:78,n:'B5'},{x:52,y:78,n:'B6'}
-        ]},
-        {id:'square',name:'Kvadrat',img:'assets/floors/square.jpg',stacks:[
-          {x:18,y:22,n:'L1'},{x:22,y:36,n:'L2'},{x:20,y:58,n:'L3'},{x:28,y:82,n:'L4'},
-          {x:38,y:12,n:'T1'},{x:52,y:12,n:'T2'},{x:66,y:14,n:'T3'},
-          {x:78,y:28,n:'R1'},{x:80,y:48,n:'R2'},{x:74,y:72,n:'R3'}
-        ]},
-        {id:'triangle',name:'Trokut',img:'assets/floors/triangle.jpg',stacks:[
-          {x:18,y:78,n:'C1'},{x:22,y:62,n:'C2'},{x:28,y:48,n:'C3'},{x:34,y:36,n:'C4'},{x:40,y:28,n:'C5'},
-          {x:48,y:70,n:'S1'},{x:52,y:52,n:'S2'},{x:56,y:38,n:'S3'},
-          {x:70,y:22,n:'D1'},{x:74,y:36,n:'D2'},{x:72,y:52,n:'D3'},{x:78,y:68,n:'D4'}
-        ]},
-        {id:'ell',name:'Kut',img:'assets/floors/ell.jpg',stacks:[
-          {x:18,y:42,n:'K1'},{x:26,y:42,n:'K2'},{x:34,y:42,n:'K3'},
-          {x:18,y:54,n:'K4'},{x:26,y:54,n:'K5'},{x:34,y:54,n:'K6'},
-          {x:18,y:66,n:'K7'},{x:26,y:66,n:'K8'},{x:34,y:66,n:'K9'},
-          {x:18,y:80,n:'K10'},{x:26,y:80,n:'K11'},{x:34,y:80,n:'K12'},
-          {x:50,y:42,n:'M1'},{x:60,y:42,n:'M2'},{x:70,y:42,n:'M3'},{x:80,y:42,n:'M4'},
-          {x:50,y:54,n:'M5'},{x:60,y:54,n:'M6'},{x:70,y:54,n:'M7'},{x:80,y:54,n:'M8'},
-          {x:50,y:66,n:'M9'},{x:60,y:66,n:'M10'},{x:70,y:66,n:'M11'},{x:80,y:66,n:'M12'},
-          {x:50,y:80,n:'M13'},{x:60,y:80,n:'M14'},{x:70,y:80,n:'M15'},{x:80,y:80,n:'M16'}
-        ]}
-      ];
-      var tabs=document.getElementById('floorTabs'), stage=document.getElementById('floorStage');
-      function show(room){
-        tabs.querySelectorAll('button').forEach(function(b){b.style.background=b.dataset.id===room.id?'#1c1e24':'#fff';b.style.color=b.dataset.id===room.id?'#fff':'#1c1e24';});
-        stage.innerHTML='<img src="'+room.img+'" alt="'+room.name+'" style="width:100%;display:block">'+room.stacks.map(function(s){
-          return '<button class="tire" data-n="'+s.n+'" data-name="'+(s.name||'Slobodno')+'" data-plate="'+(s.plate||'')+'" style="position:absolute;left:'+s.x+'%;top:'+s.y+'%;width:34px;height:34px;border-radius:50%;border:2px solid #fff;background:rgba(28,30,36,.55);color:#fff;font:700 10px Inter,sans-serif;cursor:pointer">'+s.n+'</button>';
-        }).join('');
-      }
-      tabs.innerHTML=rooms.map(function(r){return '<button data-id="'+r.id+'" style="border:0;border-radius:999px;padding:8px 12px;cursor:pointer">'+r.name+'</button>';}).join('');
-      tabs.addEventListener('click', function(e){var b=e.target.closest('button'); if(!b) return; show(rooms.filter(function(r){return r.id===b.dataset.id;})[0]);});
-      stage.addEventListener('click', function(e){var s=e.target.closest('.tire'); if(!s) return; alert(s.dataset.n+' · '+(s.dataset.name||'Slobodno')+(s.dataset.plate?' · '+s.dataset.plate:''));});
-      show(rooms[0]);
-    })();
-  </script>
 
   <!-- HERO: stage (spans 2 rows) + two stacked action cards, heights aligned -->
   <section class="hero">
@@ -670,7 +615,7 @@ document.addEventListener('click', function(e){
     el.addEventListener('keydown', function(e){ if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } });
   }
   clickable(document.querySelector('.stage .hero-num'), 'customers.html', 'Otvori bazu svih kompleta');
-  clickable(document.querySelector('.stage .meter'), '#skladiste', 'Otvori kartu skladišta');
+  clickable(document.querySelector('.stage .meter'), 'warehouse.html', 'Otvori kartu skladišta');
   var spillHref = ['checkin.html', 'reminders.html', 'reminders.html'];
   document.querySelectorAll('.stage .spill').forEach(function(b, i){
     b.addEventListener('click', function(){ location.href = spillHref[i] || 'customers.html'; });

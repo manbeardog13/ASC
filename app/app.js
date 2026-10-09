@@ -14,7 +14,7 @@
 // (The mock preview/ demo has no gate.) Hide the page until the check resolves so
 // no mock data flashes before we know who's here; on no session → the login page.
 (() => {
-  if (/\/(login|dashboard)\.html$/.test(location.pathname)) return;
+  if (/\/(login|dashboard|warehouse)\.html$/.test(location.pathname)) return;
   document.documentElement.style.visibility = 'hidden';
   // Prag splash interplay: pages that carry the boot script expose window.ASCSplash;
   // on all other gated pages this stub keeps today's behavior byte-for-byte.
