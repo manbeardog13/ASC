@@ -194,6 +194,18 @@ html.dark .slot.empty{background:rgba(244,245,247,.04)}
       opacity:0;transform:translateY(8px);transition:opacity 240ms,transform 240ms}
     #flyBack.show{opacity:1;transform:none}
     @keyframes tireIn{to{opacity:1;transform:scale(1)}}
+
+    #idxSheet{position:fixed;inset:0;z-index:60;background:rgba(28,30,36,.42);display:grid;place-items:end center}
+    #idxSheet[hidden]{display:none}
+    #idxSheet form{width:min(440px,100%);background:#fff;color:#1c1e24;border-radius:22px 22px 0 0;padding:18px;max-height:86vh;overflow:auto}
+    #idxSheet h3{font:600 22px Sora,sans-serif;margin:4px 0 12px}
+    #idxSheet label{display:block;font:600 12px Inter,sans-serif;margin:8px 0}
+    #idxSheet input,#idxSheet select,#idxSheet textarea{width:100%;margin-top:4px;border:1px solid #e6e6e6;border-radius:12px;padding:10px;font:500 14px Inter,sans-serif}
+    #idxSheet .row{display:flex;gap:8px;margin-top:12px}
+    #idxSheet button{border:0;border-radius:999px;padding:10px 12px;background:var(--lava,#ff4e1b);color:#fff;font:650 13px Inter,sans-serif}
+    #idxSheet .qrbox{margin-top:12px;display:grid;place-items:center}
+    #idxSheet .qrbox svg{width:180px;height:180px}
+    #floorCard button{margin-top:8px;border:0;border-radius:999px;padding:8px 10px;background:var(--lava,#ff4e1b);color:#fff}
     @media(prefers-reduced-motion:reduce){#floorStage .world{transition:none}#floorStage .tire{animation:none;opacity:1;transform:none}}
   </style>
   <script>
@@ -239,13 +251,55 @@ html.dark .slot.empty{background:rgba(244,245,247,.04)}
         card.classList.remove('show'); back.classList.remove('show');
         requestAnimationFrame(function(){world.style.transition=''; world.style.transform='scale(1) translate(0,0)';});
       }
+      function loadIndex(){ try { return JSON.parse(localStorage.getItem('asc.index')||'{}'); } catch(e){ return {}; } }
+      function saveIndex(db){ localStorage.setItem('asc.index', JSON.stringify(db)); }
+      function nextCode(db){
+        var n = 1; Object.keys(db).forEach(function(k){ var m=/ASC-2026-(\d+)/.exec(db[k].code||''); if(m) n=Math.max(n, parseInt(m[1],10)+1); });
+        return 'ASC-2026-'+String(n).padStart(4,'0');
+      }
+      function qrSvg(url){
+        if(!window.qrcode) return '';
+        var q=qrcode(0,'M'); q.addData(url); q.make();
+        return q.createSvgTag(4,0);
+      }
+      function openSheet(s){
+        var db=loadIndex(), rec=db[s.dataset.n]||{};
+        var code=rec.code||'';
+        var url=code?location.origin+location.pathname.replace('warehouse.html','set-detail.html')+'?code='+code:'';
+        sheet.hidden=false;
+        sheet.innerHTML='<form id="idxForm"><span class="k">Indeksiraj hrpu '+s.dataset.n+'</span><h3>Zalijepi QR na vrh guma</h3>'
+          +'<label>Ime i prezime<input name="who" required value="'+(rec.who||'')+'"></label>'
+          +'<label>Telefon<input name="phone" value="'+(rec.phone||'')+'"></label>'
+          +'<label>Registracija<input name="plate" required value="'+(rec.plate||'')+'"></label>'
+          +'<label>Vozilo<input name="vehicle" value="'+(rec.vehicle||'')+'"></label>'
+          +'<label>Sezona<select name="season"><option>Zimske</option><option>Ljetne</option><option>Cjelogodišnje</option></select></label>'
+          +'<label>Bilješka<textarea name="note">'+(rec.note||'')+'</textarea></label>'
+          +'<div class="qrbox">'+(url?qrSvg(url):'<p>Spremi podatke. QR se pojavi za naljepnicu.</p>')+'</div>'
+          +(code?'<p class="code">'+code+'</p>':'')
+          +'<div class="row"><button type="submit">Spremi i poveži vlasnika</button><button type="button" id="idxPrint">Ispiši QR</button><button type="button" id="idxClose">Zatvori</button></div></form>';
+        var season=sheet.querySelector('[name=season]'); if(rec.season) season.value=rec.season;
+        sheet.querySelector('#idxClose').onclick=function(){ sheet.hidden=true; };
+        sheet.querySelector('#idxPrint').onclick=function(){ if(url) window.print(); };
+        sheet.querySelector('#idxForm').onsubmit=function(ev){
+          ev.preventDefault();
+          var fd=new FormData(ev.target);
+          var codeNow=rec.code||nextCode(db);
+          var urlNow=location.origin+location.pathname.replace('warehouse.html','set-detail.html')+'?code='+codeNow;
+          db[s.dataset.n]={code:codeNow, who:fd.get('who'), phone:fd.get('phone'), plate:fd.get('plate'), vehicle:fd.get('vehicle'), season:fd.get('season'), note:fd.get('note'), loc:s.dataset.n, url:urlNow, status:'Spremljeno'};
+          saveIndex(db);
+          s.dataset.name=fd.get('who'); s.dataset.plate=fd.get('plate'); s.textContent='QR';
+          openSheet(s);
+        };
+      }
       function flyTo(s){
         var x=parseFloat(s.dataset.x), y=parseFloat(s.dataset.y), z=2.6;
         world.style.transform='scale('+z+') translate('+((50-x)/z)+'%,'+((42-y)/z)+'%)';
         stage.querySelectorAll('.tire.on').forEach(function(el){el.classList.remove('on');});
         s.classList.add('on');
-        card.innerHTML='<b>'+s.dataset.name+'</b><span>'+s.dataset.n+(s.dataset.plate?' · '+s.dataset.plate:' · slobodno')+'</span>';
+        var db=loadIndex(), rec=db[s.dataset.n];
+        card.innerHTML='<b>'+(rec?rec.who:s.dataset.name)+'</b><span>'+s.dataset.n+(rec?' · '+rec.plate+' · '+rec.code:' · nije indeksirano')+'</span><button type="button" id="idxOpen">Upiši vlasnika</button>';
         card.classList.add('show'); back.classList.add('show');
+        card.querySelector('#idxOpen').onclick=function(){ openSheet(s); };
       }
       function flyOut(){
         world.style.transform='scale(1) translate(0,0)';
@@ -254,7 +308,8 @@ html.dark .slot.empty{background:rgba(244,245,247,.04)}
       }
       tabs.innerHTML='<div class="wh-zonebar">'+rooms.map(function(r){return '<button class="chip wh-zonepill" data-id="'+r.id+'">'+r.name+'</button>';}).join('')+'</div>';
       tabs.addEventListener('click', function(e){var b=e.target.closest('button'); if(!b) return; show(rooms.filter(function(r){return r.id===b.dataset.id;})[0]);});
-      stage.addEventListener('click', function(e){var s=e.target.closest('.tire'); if(!s) return; flyTo(s);});
+      var sheet=document.createElement('div'); sheet.id='idxSheet'; sheet.hidden=true; document.body.appendChild(sheet);
+      stage.addEventListener('click', function(e){var s=e.target.closest('.tire'); if(!s) return; flyTo(s); openSheet(s);});
       back.addEventListener('click', flyOut);
       show(rooms[0]);
     })();
@@ -264,6 +319,7 @@ html.dark .slot.empty{background:rgba(244,245,247,.04)}
 </main>
 
 
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
 <script src="app.js"></script>
 <!-- LIVE: build the zone map, pills and occupancy numbers from real Supabase data. -->
 <script type="module" src="live-warehouse.js"></script>

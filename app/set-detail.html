@@ -553,5 +553,19 @@ html.dark .tl-item:nth-child(odd){background:rgba(244,245,247,.04)}
 })();
 </script>
 <script type="module" src="live-set-detail.js"></script>
+<script>
+(function(){
+  var code = new URLSearchParams(location.search).get('code');
+  if(!code) return;
+  var db={}; try{ db=JSON.parse(localStorage.getItem('asc.index')||'{}'); }catch(e){}
+  var rec=null; Object.keys(db).forEach(function(k){ if(db[k].code===code) rec=db[k]; });
+  if(!rec) return;
+  var codeEl=document.querySelector('.detail-head .code'); if(codeEl) codeEl.textContent=rec.code;
+  var set=function(sel,val){ var el=document.querySelector(sel); if(el&&val) el.textContent=val; };
+  set('[data-f="who"]', rec.who); set('[data-f="plate"]', rec.plate); set('[data-f="vehicle"]', rec.vehicle);
+  set('[data-f="phone"]', rec.phone); set('[data-f="season"]', rec.season); set('[data-f="status"]', rec.status||'Spremljeno');
+  set('[data-f="location"]', rec.loc);
+})();
+</script>
 </body>
 </html>
