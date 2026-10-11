@@ -2,7 +2,7 @@
    Makes the app installable and loads the shell instantly. Network-first for
    same-origin files (so deploys show up right away), cache fallback when
    offline. Live data always comes from Supabase online. */
-const CACHE = "asc-tirehotel-v85";   // v85 = Sluh voice agent (app/sluh.js) added to shell
+const CACHE = "asc-tirehotel-v86-warehouse-preview";
 // Cross-origin dependencies the app cannot boot (or scan) without. Same-origin
 // files are precached below; these are runtime-cached network-first so an
 // offline cold boot doesn't die on the supabase-js ESM import.
@@ -139,14 +139,17 @@ self.addEventListener("fetch", (e) => {
     // Only a navigation to the app shell itself may overwrite the cached shell —
     // a 200 for any other same-origin URL (a stray asset opened in the address
     // bar) must never replace index.html for offline users.
-    const isShell = url.pathname.endsWith("/") || url.pathname.endsWith("/index.html");
+    const scope = new URL(self.registration.scope);
+    const isShell = url.pathname === scope.pathname || url.pathname === new URL("index.html",scope).pathname;
+    const preview = new URL("app/warehouse-preview/",scope);
+    const isPreview = url.pathname === preview.pathname || url.pathname === preview.pathname + "index.html";
     e.respondWith(
       // Revalidate with the server (bypass the ~10-min GitHub Pages HTTP cache) so a
       // fresh deploy shows up immediately. Fetch by URL because a navigate-mode
       // Request can't take a cache override.
       fetch(req.url, { cache: "no-cache" })
-        .then((res) => {
-          if (cacheable(res) && isShell) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put("./index.html", copy)).catch(() => {}); }
+        .then(async (res) => {
+          if (cacheable(res)) { const key = isShell ? new URL("index.html",scope).href : new URL(url.pathname,scope).href; try { const cache=await caches.open(CACHE);await cache.put(key,res.clone()); } catch {} }
           return res;
         })
         // Offline: serve the cached copy of the PAGE THE USER ASKED FOR first.
@@ -154,10 +157,14 @@ self.addEventListener("fetch", (e) => {
         // prefill=1) matches its precached bare page instead of falling through
         // to the dashboard. Answering every navigation with index.html re-ran its
         // relative redirect against /app/ URLs and looped forever (…/app/app/…).
-        .catch(() => caches.match(req, { ignoreSearch: true })
-          .then((r) => r || caches.match("./app/dashboard.html"))
-          .then((r) => r || caches.match("./index.html"))
-          .then((r) => r || caches.match("./")))
+        .catch(async () => {
+          const exact=await caches.match(req,{ignoreSearch:true});if(exact)return exact;
+          if(isPreview){
+            const saved=await caches.match(new URL("index.html",preview).href);if(saved)return saved;
+            return new Response('<!doctype html><html lang="hr"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>ASC · Probni prikaz</title><h1>Probni prikaz nije dostupan bez veze</h1><p>Povežite se i pokušajte ponovno.</p><a href="'+new URL("app/warehouse.html",scope).pathname+'">Evidencija skladišta</a><p><a href="'+new URL("app/dashboard.html",scope).pathname+'">Početna ploča</a></p></html>',{status:503,headers:{"Content-Type":"text/html; charset=utf-8","Cache-Control":"no-store"}});
+          }
+          return (await caches.match("./app/dashboard.html"))||(await caches.match("./index.html"))||(await caches.match("./"));
+        })
     );
     return;
   }
