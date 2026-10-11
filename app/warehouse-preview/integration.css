@@ -1,0 +1,8 @@
+#preview-gate{min-height:50vh;padding-block:48px}
+#preview-gate a,.preview-return a{display:inline-flex;align-items:center;min-height:44px;padding:8px 12px;color:var(--ink);border-radius:8px}
+#preview-gate a:focus-visible,.preview-return a:focus-visible{outline:3px solid var(--sel-ink);outline-offset:3px}
+.preview-return{display:flex;flex-wrap:wrap;align-items:center;gap:4px 12px;margin:12px 0}
+.preview-return p{flex-basis:100%;margin:0;color:var(--muted);font-size:13px}
+html[data-preview-state="locked"] .side-scrim{display:none}
+#preview-root[hidden],#preview-gate[hidden]{display:none!important}
+@media(max-width:640px){.preview-return a{padding-inline:8px}}

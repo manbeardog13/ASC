@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="hr" class="has-side warm-nav" data-module="warehouse" data-preview-state="locked">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#eef0f1"><meta name="description" content="ASC skladište. Pronađite gume, istražite kuću i isprobajte raspored u probnom prikazu s izmišljenim podacima.">
+  <title>ASC · Prostorni pregled skladišta</title>
+  <script>try{if(localStorage.getItem('asc.theme')==='dark')document.documentElement.classList.add('dark');}catch{}</script>
+  <link rel="icon" href="vendor/asc-logo.png"><link rel="stylesheet" href="../app.css"><link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="integration.css">
+  <script type="importmap">{"imports":{"three":"./vendor/three.module.js"}}</script>
+  <script src="vendor/qrcode.js"></script><script src="vendor/jsQR.js"></script>
+</head>
+<body class="spatial-app">
+<main id="preview-gate" class="shell" aria-labelledby="preview-title">
+  <h1 id="preview-title">Prostorni pregled · probno</h1>
+  <p>Probni podaci, odvojeni od evidencije guma.</p>
+  <p id="preview-message" role="status">Provjeravamo prijavu…</p>
+  <nav aria-label="Povratak u ASC"><a href="../dashboard.html">Početna ploča</a><a href="../warehouse.html">Evidencija skladišta</a><a href="../login.html">Prijava</a><a href="./index.html">Ponovno učitaj</a></nav>
+  <noscript>Za probni prikaz uključite JavaScript. Poveznice za povratak ostaju dostupne.</noscript>
+</main>
+<div id="preview-root" hidden inert>
+<div class="canvas" aria-hidden="true"></div><div class="grain" aria-hidden="true"></div>
+<a class="skip-link" href="#search">Prijeđi na pretragu</a>
+<button id="side-scrim" class="side-scrim" aria-label="Zatvori navigaciju" tabindex="-1"></button>
+<aside id="sidebar" class="side" aria-label="Navigacija skladišta">
+  <div class="sb-head"><span class="sb-eyebrow">ASC · Skladište</span><button id="close-sidebar" class="icon-button mobile-only" aria-label="Zatvori navigaciju">×</button></div>
+  <nav class="sb-nav" aria-label="Prostori u kući">
+    <button id="house-button" class="sb-item" data-m="warehouse" aria-pressed="false"><span id="house-icon"></span><span class="t">Pregled kuće</span></button>
+    <div class="nav-caption">PROSTORI</div><div id="areas"></div>
+  </nav>
+  <div class="sb-foot"><button id="guide-button" class="sb-item"><span class="nav-help-mark" aria-hidden="true">?</span><span class="t">Kratke upute</span></button><button id="theme-button" class="sb-item"><span class="theme-mark" aria-hidden="true"></span><span id="theme-label" class="t">Tamni prikaz</span></button><p class="local-note">Probni podaci · ovaj uređaj</p></div>
+</aside>
+<main class="shell" id="main-content">
+  <header class="top spatial-top">
+    <button id="open-sidebar" class="sb-burger" aria-label="Otvori navigaciju" aria-controls="sidebar" aria-expanded="false">☰</button>
+    <a class="brand" href="../dashboard.html" aria-label="ASC — početna ploča"><img class="logo" src="vendor/asc-logo.png" alt="ASC — Auto servisni centar"></a>
+    <div class="top-actions"><button id="help-button" class="button quiet" aria-label="Otvori kratke upute">Pomoć</button><button class="icon-button" id="menu-button" aria-label="Dodatne mogućnosti" aria-expanded="false" aria-controls="app-menu"></button></div>
+    <div id="app-menu" class="menu" hidden><button id="export-button">Preuzmi probne podatke</button><button id="capture-button">Spremi sliku prikaza</button><button id="test-status-button">Provjera i bilješke</button><button id="reset-button" class="danger">Vrati početni raspored</button><span>Promjene se spremaju samo na ovom uređaju.</span></div>
+  </header>
+  <nav class="preview-return" aria-label="Povratak u ASC"><a href="../dashboard.html">Početna ploča</a><a href="../warehouse.html">Evidencija skladišta</a><p>Prostorni pregled · u razvoju. Probni podaci, odvojeni od evidencije guma.</p></nav>
+  <section class="card dark spatial-heading"><span class="tab-corner">Probni prikaz</span><p class="eyebrow">HOTEL ZA GUME · DUBROVNIK</p><div><h1>Skladište</h1><p>Kuća · tri prostora</p></div></section>
+  <section id="welcome" class="welcome" aria-label="Kratke upute" hidden><div><b>Prvi put ovdje?</b><span>Tri koraka do vaših guma.</span></div><button id="start-tour" class="button primary">Pokaži mi</button><button id="dismiss-tour" class="icon-button" aria-label="Preskoči uvod">×</button></section>
+  <section class="workspace" aria-label="Prostorni pregled skladišta">
+    <div class="spatial-main">
+      <nav class="breadcrumb" aria-label="Trenutačni položaj"><button id="back-overview">Pregled kuće</button><span aria-hidden="true">/</span><span id="location-area">Potkrovlje</span><span id="location-stack" hidden></span></nav>
+      <div class="search-row"><div class="search-wrap"><span class="search-icon" id="search-icon"></span><input type="search" id="search" placeholder="Pronađi gume: ime, registracija, oznaka" aria-label="Pronađi gume po imenu, registraciji ili oznaci" aria-controls="search-results" aria-expanded="false" autocomplete="off"><kbd>⌘ K</kbd><button id="voice-button" class="icon-button" aria-label="Glasovna pretraga"></button><div id="search-results" class="search-results" hidden></div></div><button id="scan-button" class="scan-button" aria-label="Skeniraj QR oznaku"><span id="scan-icon"></span><span>Skeniraj</span></button></div>
+      <nav id="area-tabs" class="area-tabs" aria-label="Brzi odabir skladišta"></nav>
+      <div class="spatial-stage card" id="stage">
+        <div class="stage-header"><div><span class="area-code" id="area-code">2.3</span><h2 id="area-name">Potkrovlje</h2><p id="area-subtitle">Odaberite stupac za detalje</p></div><div class="view-toggle" role="group" aria-label="Način prikaza"><button id="view-3d" class="active" aria-pressed="true">3D</button><button id="view-plan" aria-pressed="false">Tlocrt</button></div></div>
+        <div id="scene" role="img" aria-label="Prostorni prikaz skladišta. Za pristup tipkovnicom otvorite popis stupaca."></div>
+        <div id="plan-view" class="plan-view" hidden></div>
+        <div id="scene-loading" class="scene-loading"><span class="loader"></span><b>Pripremamo prostor</b><small>Učitavanje prikaza</small></div>
+        <div id="found-location" class="found-location" role="status" hidden><b>Ovdje su</b><span id="found-location-text"></span></div>
+        <div class="scene-notes"><span id="geometry-note">Okviran tlocrt · visine nisu izmjerene</span><span id="gesture-note">Povucite za okretanje · približite s dva prsta</span></div>
+        <div class="camera-controls"><button id="zoom-out" aria-label="Udalji prikaz"></button><button id="camera-reset" aria-label="Vrati kameru"></button><button id="zoom-in" aria-label="Približi prikaz"></button></div>
+        <div id="placement-card" class="placement-card" hidden><div class="placement-heading"><span class="placement-dot"></span><b id="placement-title">Dodaj stupac</b><button id="cancel-placement" class="icon-button" aria-label="Odustani od položaja">×</button></div><p id="placement-hint">Dodirnite pod za odabir položaja.</p><div class="placement-fields"><label>Kapacitet<input id="place-capacity" type="number" min="1" max="16" value="8"></label><label>X<input id="place-x" type="number" step="0.1" value="0"></label><label>Z<input id="place-z" type="number" step="0.1" value="0"></label></div><small>Koordinate su okvirne, nisu u metrima.</small><button id="confirm-placement" class="button primary" disabled>Odaberi položaj</button></div>
+      </div>
+      <div class="stage-toolbar"><div class="inventory-summary"><span><b id="stat-tyres">—</b> guma</span><span><b id="stat-vacant">—</b> slobodnih mjesta</span></div><div class="stage-actions"><button id="list-button" class="button quiet"><span id="list-icon"></span><span>Stupci</span></button><button id="place-button" class="button primary"><span id="place-icon"></span><span>Dodaj stupac</span></button></div></div>
+      <div class="context-line"><span id="save-status" role="status">Probni podaci spremni</span><button id="context-help">Kako pronaći gume?</button></div>
+    </div>
+    <aside id="inspector" class="inspector card" hidden aria-label="Detalji odabranog stupca" tabindex="-1"></aside>
+  </section>
+  <footer class="spatial-footer"><span>ASC · Prostorni pregled</span><span>Izgled materijala je ilustrativan.</span></footer>
+</main>
+<div id="toast" role="status" aria-live="polite" hidden></div>
+<section id="tour-card" class="tour-card card" aria-label="Kratke upute" hidden></section>
+<dialog id="dialog" aria-labelledby="dialog-title"><div id="dialog-content"></div></dialog>
+</div>
+<script type="module" src="bootstrap.js"></script>
+</body>
+</html>
