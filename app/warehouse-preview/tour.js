@@ -3,7 +3,7 @@ const KEY='asc.warehouse.preview.tutorial.hr.v1';
 const steps=[
   {title:'Odaberite prostor',text:'Kuća ima tri skladišta. Krenimo od potkrovlja.',action:'Otvori potkrovlje'},
   {title:'Pronađite gume',text:'Upišite ime, registraciju ili oznaku. Isprobajmo jedan stupac.',action:'Pronađi primjer'},
-  {title:'Ovdje su',text:'Stupac je označen. Dodirnite gumu za detalje i QR oznaku.',action:'Završi vodič'},
+  {title:'Ovdje su',text:'Stupac je označen. Detalji su ispod prikaza. Dodirnite gumu za QR oznaku.',action:'Završi vodič'},
 ];
 export function createTour({getState,navigate,findExample,closeOverlays,onFinish=()=>{},isActive=()=>true}) {
   const card=document.getElementById('tour-card'), welcome=document.getElementById('welcome');
