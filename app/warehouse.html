@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>ASC — Skladište</title>
+<title>ASC — Evidencija skladišta</title>
 <meta name="theme-color" content="#edf0f5">
 <script>try{if(localStorage.getItem('asc.theme')==='dark'){document.documentElement.classList.add('dark');document.querySelector('meta[name="theme-color"]').content='#0a0c11';}}catch(e){}try{if(sessionStorage.getItem('asc.splash.warm')==='1'&&document.referrer&&new URL(document.referrer).origin===location.origin){document.documentElement.classList.add('warm-nav');}}catch(e){}</script>
 <link rel="icon" href="assets/favicon-32.png" sizes="32x32">
@@ -139,7 +139,6 @@ html.dark .slot.empty{background:rgba(244,245,247,.04)}
 <body>
 <div class="canvas" aria-hidden="true"></div>
 <div class="grain" aria-hidden="true"></div>
-<span class="preview-tag">Preview · nije uživo</span>
 
 <main class="shell">
   <header class="top">
@@ -155,7 +154,7 @@ html.dark .slot.empty{background:rgba(244,245,247,.04)}
     <span class="tab-corner">danas · Dubrovnik</span>
     <span class="eyebrow">Hotel za gume · Dubrovnik</span>
     <div class="wh-title">
-      <h1>Skladište</h1>
+      <h1>Evidencija skladišta</h1>
       <span class="sub"><span data-count="0">0</span> kompleta na karti</span>
     </div>
     <div class="wh-stats">
@@ -172,17 +171,7 @@ html.dark .slot.empty{background:rgba(244,245,247,.04)}
     </div>
   </section>
 
-  <!-- Photographed floors, under Skladište. Live map still fills #map when stock exists. -->
-  <section id="wh3d" aria-label="Skladišta"></section>
-  <style>
-    .wh-one{position:relative;margin-top:12px}
-    #whCanvas{width:100%;display:block;border-radius:18px;background:#f6f4f1}
-    .wh-note{position:absolute;left:14px;bottom:14px;background:rgba(255,255,255,.86);border-radius:14px;padding:10px 12px;display:flex;gap:10px;align-items:baseline}
-    .wh-note b{font:650 16px Sora,sans-serif}
-    .wh-note span{font:500 12px Inter,sans-serif;color:#6b7280}
-  </style>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
-  <script src="warehouse-3d.js"></script>
+  <!-- Saved locations remain available independently of the spatial demo. -->
   <div id="zonebar"></div>
   <div id="map"></div>
 </main>

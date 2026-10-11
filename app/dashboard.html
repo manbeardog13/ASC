@@ -615,7 +615,7 @@ document.addEventListener('click', function(e){
     el.addEventListener('keydown', function(e){ if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } });
   }
   clickable(document.querySelector('.stage .hero-num'), 'customers.html', 'Otvori bazu svih kompleta');
-  clickable(document.querySelector('.stage .meter'), 'warehouse.html', 'Otvori kartu skladišta');
+  clickable(document.querySelector('.stage .meter'), 'warehouse.html', 'Otvori evidenciju skladišta');
   var spillHref = ['checkin.html', 'reminders.html', 'reminders.html'];
   document.querySelectorAll('.stage .spill').forEach(function(b, i){
     b.addEventListener('click', function(){ location.href = spillHref[i] || 'customers.html'; });

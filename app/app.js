@@ -220,7 +220,7 @@ function animate(){
       '<div class="sb-group' + (whOpen ? ' open' : '') + '">' +
         '<button class="sb-item" type="button" data-m="warehouse" aria-expanded="' + whOpen + '">' + I.pin + '<span class="t">Skladište</span>' + I.chev + '</button>' +
         '<div class="sb-group-kids"><div>' +
-          item('warehouse', 'warehouse.html', I.map, 'Karta skladišta', true) +
+          item('warehouse', 'warehouse.html', I.pin, 'Evidencija skladišta', true) +
           item('warehouse', 'warehouse-preview/index.html', I.map, 'Prostorni pregled · probno', true) +
           item('warehouse', 'recycle.html', I.bin, 'Košarica', true) +
         '</div></div></div>' +
