@@ -2,7 +2,7 @@
    Makes the app installable and loads the shell instantly. Network-first for
    same-origin files (so deploys show up right away), cache fallback when
    offline. Live data always comes from Supabase online. */
-const CACHE = "asc-tirehotel-v89-visible-warehouse-details";
+const CACHE = "asc-tirehotel-v90-integrated-warehouse-menu";
 // Cross-origin dependencies the app cannot boot (or scan) without. Same-origin
 // files are precached below; these are runtime-cached network-first so an
 // offline cold boot doesn't die on the supabase-js ESM import.
@@ -32,6 +32,7 @@ const SHELL = [
   "./app/users.html",
   "./app/app.css",
   "./app/app.js",
+  "./app/navigation.js",
   "./app/qr.js",
   "./app/layout-edit.js",
   "./app/agent-config.js",
@@ -41,7 +42,6 @@ const SHELL = [
   "./app/sluh.js",
   "./app/live-set-detail.js",
   "./app/live-scan.js",
-  "./app/live-warehouse.js",
   "./app/live-customers.js",
   "./app/live-reminders.js",
   "./app/live-workshop.js",
@@ -161,7 +161,7 @@ self.addEventListener("fetch", (e) => {
           const exact=await caches.match(req,{ignoreSearch:true});if(exact)return exact;
           if(isPreview){
             const saved=await caches.match(new URL("index.html",preview).href);if(saved)return saved;
-            return new Response('<!doctype html><html lang="hr"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>ASC · Probni prikaz</title><h1>Probni prikaz nije dostupan bez veze</h1><p>Povežite se i pokušajte ponovno.</p><a href="'+new URL("app/warehouse.html",scope).pathname+'">Evidencija skladišta</a><p><a href="'+new URL("app/dashboard.html",scope).pathname+'">Početna ploča</a></p></html>',{status:503,headers:{"Content-Type":"text/html; charset=utf-8","Cache-Control":"no-store"}});
+            return new Response('<!doctype html><html lang="hr"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>ASC · Probni prikaz</title><h1>Probni prikaz nije dostupan bez veze</h1><p>Povežite se i pokušajte ponovno.</p><a href="'+new URL("app/customers.html",scope).pathname+'">Kupci i kompleti</a><p><a href="'+new URL("app/dashboard.html",scope).pathname+'">Početna ploča</a></p></html>',{status:503,headers:{"Content-Type":"text/html; charset=utf-8","Cache-Control":"no-store"}});
           }
           return (await caches.match("./app/dashboard.html"))||(await caches.match("./index.html"))||(await caches.match("./"));
         })

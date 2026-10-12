@@ -96,7 +96,9 @@
 .spatial-app .result-location{font-size:11px;color:var(--sel-ink);text-align:right;flex-shrink:0}
 .spatial-app .no-results,.spatial-app .result-count{padding:12px;font-size:12px;color:var(--muted);line-height:1.6}
 .spatial-app .no-results button{color:var(--sel-ink);text-decoration:underline;padding:8px 0}
-.spatial-app .area-tabs{display:none}
+.spatial-app .area-tabs{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:12px}
+.spatial-app .area-tabs button{flex:1;white-space:nowrap;min-height:44px;padding:10px 12px;border-radius:12px;background:var(--panel-2);border:1px solid var(--line);color:var(--muted);font-size:12px}
+.spatial-app .area-tabs button.active{background:var(--sel-tint);border-color:var(--sel-ring);color:var(--sel-ink);font-weight:600}
 .spatial-app .spatial-stage{padding:0;height:58vh;min-height:450px;max-height:780px;overflow:hidden;background:var(--panel);isolation:isolate}
 .spatial-app .stage-header{position:absolute;top:22px;left:22px;right:22px;display:flex;justify-content:space-between;gap:12px;z-index:4;pointer-events:none}
 .spatial-app .stage-header h2{font:600 22px Sora,Inter,sans-serif;letter-spacing:-.04em;margin:5px 0}
@@ -171,7 +173,7 @@
 .spatial-app .tour-actions{display:flex;gap:8px;margin-top:16px}.spatial-app .tour-actions .primary{flex:1}
 .spatial-app .tour-target{outline:3px solid var(--sel)!important;outline-offset:4px;scroll-margin:100px 0}
 .spatial-app .listening{background:var(--sel-tint)!important;color:var(--sel-ink)!important;box-shadow:0 0 0 3px var(--sel-ring)}
-@media(max-width:1020px){.spatial-app .mobile-only{display:inline-flex}.spatial-app .sb-burger{width:44px;height:44px}.spatial-app .area-tabs{display:flex;gap:7px;overflow-x:auto;margin-bottom:12px;scrollbar-width:none}.spatial-app .area-tabs button{flex:1;white-space:nowrap;min-height:44px;padding:10px 12px;border-radius:12px;background:var(--panel-2);border:1px solid var(--line);color:var(--muted);font-size:12px}.spatial-app .area-tabs button.active{background:var(--sel-tint);border-color:var(--sel-ring);color:var(--sel-ink);font-weight:600}.spatial-app .tour-card{left:20px;bottom:20px}}
+@media(max-width:1020px){.spatial-app .mobile-only{display:inline-flex}.spatial-app .sb-burger{width:44px;height:44px}.spatial-app .area-tabs{display:flex;flex-wrap:nowrap;gap:7px;overflow-x:auto;margin-bottom:12px;scrollbar-width:none}.spatial-app .area-tabs button{flex:1;white-space:nowrap;min-height:44px;padding:10px 12px;border-radius:12px;background:var(--panel-2);border:1px solid var(--line);color:var(--muted);font-size:12px}.spatial-app .area-tabs button.active{background:var(--sel-tint);border-color:var(--sel-ring);color:var(--sel-ink);font-weight:600}.spatial-app .tour-card{left:20px;bottom:20px}}
 @media(max-width:640px){.spatial-app .spatial-heading{padding:19px 18px 29px}.spatial-app .spatial-heading>div{gap:9px}.spatial-app .spatial-heading>div>p{font-size:12px}.spatial-app .search-wrap{gap:7px;padding-left:10px}.spatial-app .search-wrap input{font-size:12px}.spatial-app .search-wrap kbd{display:none}.spatial-app .scan-button{padding:0 12px}.spatial-app .scan-button>span:last-child{display:none}.spatial-app .spatial-stage{height:57dvh;min-height:410px}.spatial-app .stage-header{top:18px;left:16px;right:12px}.spatial-app .stage-header h2{font-size:18px}.spatial-app #area-subtitle{font-size:10px;max-width:160px}.spatial-app .view-toggle button{padding:0 9px;font-size:11px}.spatial-app .scene-notes{left:14px;bottom:70px;max-width:85%;font-size:10px}.spatial-app #gesture-note{display:none}.spatial-app .found-location{left:14px;top:106px}.spatial-app .stage-toolbar{align-items:flex-start}.spatial-app .inventory-summary{font-size:10px;gap:8px;width:100%;padding:0 2px}.spatial-app .stage-actions{width:100%}.spatial-app .stage-actions .button{flex:1}.spatial-app .welcome{padding:12px 10px;gap:6px}.spatial-app .welcome .button{padding:0 11px;font-size:12px}.spatial-app .welcome b{font-size:12px}.spatial-app .welcome span{font-size:11px}.spatial-app .welcome .icon-button{width:44px}.spatial-app .plan-view{inset:110px 18px 95px}.spatial-app .tour-card{left:14px;right:14px;bottom:calc(12px + env(safe-area-inset-bottom));width:auto;padding:16px}.spatial-app.tour-active #toast{bottom:calc(var(--tour-height,250px) + 25px)}.spatial-app .dialog-inner{padding:20px}.spatial-app .dialog-top h3{font-size:21px}.spatial-app .spatial-footer{font-size:10px;flex-wrap:wrap}.spatial-app .search-results{max-height:48dvh}.spatial-app .result{padding:10px 8px;gap:6px}.spatial-app .result-location{font-size:10px}}
 @media(prefers-reduced-motion:reduce){.spatial-app *,.spatial-app *::before,.spatial-app *::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 @media(prefers-reduced-transparency:reduce){.spatial-app dialog::backdrop{backdrop-filter:none}}
@@ -180,3 +182,8 @@
 .spatial-app dialog{margin:auto}
 .spatial-app .side-scrim{background:rgba(6,7,10,.45)}
 .spatial-app .sb-burger{background:var(--panel)}
+
+.spatial-app .area-tabs button[data-area="all"]{position:sticky;left:0;z-index:1;background:var(--panel-2);box-shadow:4px 0 8px -6px var(--ink)}
+.spatial-app .area-tabs button[data-area="all"].active{background:var(--panel-2);color:var(--sel-ink);border-color:var(--sel-ring)}
+.spatial-app .tyre-details{padding:14px;margin:8px 0 14px;border:1px solid var(--line);border-radius:14px;background:var(--panel-2)}
+.spatial-app .tyre-details h4{margin:0;font-size:14px}

@@ -69,7 +69,7 @@ function notFound(code) {
     '<div style="font:400 clamp(20px,5.5vw,26px) Sora;letter-spacing:-.02em">Komplet nije pronađen</div>' +
     '<p class="muted" style="margin:8px 0 0;font:500 13.5px Inter">' +
       (code ? esc(code) + ' nije u evidenciji.' : 'Kôd nedostaje ili nije ispravan.') + '</p>' +
-    '<a class="btn btn-ghost" href="warehouse.html" style="margin-top:16px;align-self:flex-start">Natrag na skladište</a>';
+    '<a class="btn btn-ghost" href="customers.html" style="margin-top:16px;align-self:flex-start">Kupci i kompleti</a>';
   wrap.appendChild(card);
   document.title = 'ASC — Komplet nije pronađen';
 }
@@ -315,7 +315,7 @@ function wire(s) {
   if (delItem) delItem.addEventListener('click', guard(delItem, async () => {
     if (!confirm('Obrisati komplet ' + s.public_code + '? Završit će u košu za smeće.')) return;
     await softDeleteSet(s.id);
-    location.href = 'warehouse.html';
+    location.href = 'recycle.html';
   }, 'Brisanje nije uspjelo. Pokušajte ponovno.'));
 
   const addBtn = document.getElementById('addPhotoBtn');

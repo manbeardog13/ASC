@@ -437,7 +437,7 @@ if(sat>=59){d.classList.add('island');d.style.setProperty('--isl-y',(sat-48)+'px
   <header class="top">
     <img class="logo" src="assets/logo.png" alt="ASC — Auto servisni centar">
     <nav class="pill" aria-label="Glavna navigacija">
-      <span class="pill-links"><a class="on" href="dashboard.html">Ploča</a><a href="checkin.html">Zaprimi</a><a href="warehouse.html">Skladište</a><a href="customers.html">Kupci</a></span>
+      <span class="pill-links"><a class="on" href="dashboard.html">Ploča</a><a href="checkin.html">Zaprimi</a><a href="warehouse-preview/index.html">Skladište</a><a href="customers.html">Kupci</a></span>
       <button class="mode" id="mode" aria-label="Promijeni temu"><i></i></button>
     </nav>
   </header>
@@ -603,7 +603,7 @@ document.addEventListener('click', function(e){
 
 /* The stage card is no longer just statistics — every stat is clickable. The
    headline count opens the whole database (customers → cars → sets); the meter
-   opens the warehouse map; each spill jumps to today's relevant screen. */
+   opens saved customer records; each spill jumps to today's relevant screen. */
 (function(){
   function clickable(el, href, label){
     if (!el) return;
@@ -615,7 +615,7 @@ document.addEventListener('click', function(e){
     el.addEventListener('keydown', function(e){ if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } });
   }
   clickable(document.querySelector('.stage .hero-num'), 'customers.html', 'Otvori bazu svih kompleta');
-  clickable(document.querySelector('.stage .meter'), 'warehouse.html', 'Otvori evidenciju skladišta');
+  clickable(document.querySelector('.stage .meter'), 'customers.html', 'Otvori kupce i komplete');
   var spillHref = ['checkin.html', 'reminders.html', 'reminders.html'];
   document.querySelectorAll('.stage .spill').forEach(function(b, i){
     b.addEventListener('click', function(){ location.href = spillHref[i] || 'customers.html'; });
