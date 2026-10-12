@@ -3,7 +3,7 @@ const KEY='asc.warehouse.preview.tutorial.hr.v1';
 const steps=[
   {title:'Odaberite prostor',text:'Kuća ima tri skladišta. Krenimo od potkrovlja.',action:'Otvori potkrovlje'},
   {title:'Pronađite gume',text:'Upišite ime, registraciju ili oznaku. Isprobajmo jedan stupac.',action:'Pronađi primjer'},
-  {title:'Ovdje su',text:'Stupac je označen. Dodirnite gumu za detalje i QR oznaku.',action:'Završi vodič'},
+  {title:'Ovdje su',text:'Stupac je označen. Detalji su ispod prikaza. Dodirnite gumu za QR oznaku.',action:'Završi vodič'},
 ];
 export function createTour({getState,navigate,findExample,closeOverlays,onFinish=()=>{},isActive=()=>true}) {
   const card=document.getElementById('tour-card'), welcome=document.getElementById('welcome');
@@ -15,14 +15,14 @@ export function createTour({getState,navigate,findExample,closeOverlays,onFinish
   function finish(status='completed'){
     if(step<0)return;
     step=-1;card.hidden=true;clearHighlight();document.body.classList.remove('tour-active');remember(status);
-    if(initialFocus?.isConnected && !initialFocus.closest('[hidden],[inert]') && initialFocus.getClientRects().length)initialFocus.focus({preventScroll:true});
-    else document.getElementById('help-button').focus({preventScroll:true});
+    if(initialFocus?.isConnected && !initialFocus.closest('[hidden],[inert]') && initialFocus.getClientRects().length)initialFocus.focus();
+    else document.getElementById('help-button').focus();
     onFinish(status);
   }
   function render(){
     if(step<0)return;clearHighlight();const item=steps[step];
     const target=step===0?(matchMedia('(max-width:1020px)').matches?document.getElementById('area-tabs'):document.getElementById('areas')):step===1?document.querySelector('.search-wrap'):document.getElementById('inspector');
-    if(target&&!target.hidden)target.classList.add('tour-target');
+    if(target&&!target.hidden){target.classList.add('tour-target');target.scrollIntoView({block:'start',behavior:'auto'});}
     card.innerHTML=`<div class="tour-header"><div class="tour-progress" aria-label="Korak ${step+1} od 3">${steps.map((_,i)=>`<i class="${i<=step?'done':''}" aria-hidden="true"></i>`).join('')}<span>${step+1} / 3</span></div><button id="tour-close" class="icon-button" aria-label="Zatvori vodič">×</button></div><h3 id="tour-heading" tabindex="-1">${item.title}</h3><p>${item.text}</p><div class="tour-actions">${step?'<button id="tour-back" class="button quiet">Natrag</button>':'<button id="tour-skip" class="button quiet">Preskoči</button>'}<button id="tour-next" class="button primary">${item.action}</button></div>`;
     card.hidden=false;document.body.style.setProperty('--tour-height',`${card.getBoundingClientRect().height}px`);
     document.getElementById('tour-close').onclick=()=>finish('dismissed');
