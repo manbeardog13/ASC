@@ -424,7 +424,10 @@ try{window.__ascPrefill=JSON.parse(sessionStorage.getItem('asc.prefill')||'null'
       if (pf.bolts_location) setSegOpt('s_bolts', pf.bolts_location);
       if (pf.hubcaps_location || pf.hubcaps_stored) setSegOpt('s_hubcaps', pf.hubcaps_location || (pf.hubcaps_stored ? 'stored' : ''));
       setVal('s_notes', pf.notes);
-      if (pf.season) { const sb = form.querySelector('[data-season="' + pf.season + '"]'); if (sb) sb.click(); }
+      setVal('s_out', pf.expected_out_date);
+      if (pf.fee != null && pf.fee !== '' && Number.isFinite(Number(pf.fee)) && Number(pf.fee) >= 0) setVal('s_fee', Number(pf.fee));
+      if (typeof pf.on_rims === 'boolean') { $('s_onrims').checked = pf.on_rims; $('s_onrims').dispatchEvent(new Event('change')); }
+      if (['winter', 'summer', 'all_season'].includes(pf.season)) { const sb = form.querySelector('[data-season="' + pf.season + '"]'); if (sb) sb.click(); }
       const qty = Math.max(1, Math.min(8, Number(pf.quantity) || 4));
       $('s_qty').value = qty; renderTires(qty);
       if (pf.tire_size || pf.brand) tiresBox.querySelectorAll('.tire-edit-row').forEach((r) => {

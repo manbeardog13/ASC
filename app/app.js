@@ -348,276 +348,93 @@ document.addEventListener('click', (e) => {
 if (document.readyState !== 'loading') syncDisc(); else addEventListener('DOMContentLoaded', syncDisc);
 
 // ============================================================================
-// Global ASC Agent — right-edge voice dock (all pages).
-// Tucked tab → tap opens the panel (slides out from the edge). The orb is
-// press-and-HOLD to talk: Web Speech (hr-HR) streams a live transcript; on
-// RELEASE it acts like Enter and routes the intent (navigate / search). Typed
-// input is the always-available fallback (and when speech is unsupported).
-// Rule-based understanding — no cloud LLM — but real, useful, and $0.
+// One ASC assistant surface for every signed-in app page. The same surface
+// handles the header, dashboard prompts and the check-in voice fallback.
+// It stays in document flow so it never covers the task the user is working on.
 // ============================================================================
 (() => {
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition || null;
-  // Load the Gemini brain + endpoint config + data (order-preserved). The panel
-  // uses Gemini when ASC_AGENT_URL is set; otherwise it falls back to the local
-  // rule-based router below. Loaded once, from the current /preview/ dir.
-  ['agent-config.js', 'qr.js', 'agent-gemini.js'].forEach((src) => {
-    if (![].some.call(document.scripts, (sc) => sc.src && sc.src.indexOf('/' + src) !== -1)) {
-      const el = document.createElement('script'); el.src = src; el.async = false; document.head.appendChild(el);
-    }
+  // Sticker printing and scanning still share ASCQR independently of chat.
+  const ensureQR = () => {
+    if ([...document.scripts].some(sc => sc.src && new URL(sc.src).pathname.endsWith('/qr.js'))) return;
+    const script = document.createElement('script');
+    script.src = 'qr.js'; script.async = false; document.head.appendChild(script);
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', ensureQR, {once: true});
+  else ensureQR();
+  const shell = document.querySelector('.shell');
+  const header = shell?.querySelector('header.top');
+  if (!shell || !header || window.ASCChatReady) return;
+
+  let mount = document.getElementById('asc-agent');
+  if (!mount) {
+    mount = document.createElement('section');
+    mount.id = 'asc-agent';
+    mount.setAttribute('aria-label', 'ASC pomoćnik');
+    header.after(mount);
+  }
+  const launcher = document.createElement('button');
+  launcher.type = 'button';
+  launcher.className = 'asc-chat-launcher';
+  launcher.textContent = 'Pitaj ASC';
+  launcher.setAttribute('aria-controls', mount.id);
+  launcher.disabled = true;
+  // The legacy navigation pill is hidden when the sidebar is active.
+  // Keep the assistant reachable as a direct header control at every width.
+  header.appendChild(launcher);
+
+  const context = () => {
+    const params = new URLSearchParams(location.search);
+    return {
+      page: location.pathname.split('/').pop() || 'dashboard.html',
+      customerId: params.get('id') || null,
+      setCode: params.get('code') || null
+    };
+  };
+  let pendingTranscript = null;
+  let pageActive = true;
+  const consumeTranscript = (text) => {
+    if (typeof text !== 'string' || !text.trim()) return;
+    try { sessionStorage.removeItem('asc.sluh_transcript'); } catch (_) {}
+    if (window.ASCChat) window.ASCChat.open(text.trim(), true);
+    else pendingTranscript = text.trim(); // retain only the latest intent while loading
+  };
+  document.addEventListener('asc:sluh-fallback', event => {
+    if (pageActive) consumeTranscript(event.detail?.transcript);
   });
-  const esc = (s) => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-  const ICON = {
-    tab:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 3v18M8 6.5v11M16 6.5v11M4 10v4M20 10v4"/></svg>',
-    mic:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="8.6" y="2.8" width="6.8" height="11.4" rx="3.4"/><path d="M5.2 11.4a6.8 6.8 0 0013.6 0"/><path d="M12 18.2v3"/></svg>',
-    close:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>',
-    send: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M12 5l7 7-7 7"/></svg>'
-  };
+  // live-checkin sets the key before dispatching its event. Consuming it here
+  // also handles a transcript produced before this module's listener existed.
+  if (location.pathname.endsWith('/checkin.html')) {
+    try { consumeTranscript(sessionStorage.getItem('asc.sluh_transcript')); } catch (_) {}
+  }
 
-  // Gemini lives ONLY inside #asc-agent (the check-in page) now — integrated,
-  // press-and-hold. No floating side dock anywhere. (The brain — agent-gemini.js
-  // etc. — is loaded above on every page, so the dashboard card + sticker still work.)
-  const inlineMount = document.getElementById('asc-agent');
-  if (!inlineMount) return;
-  const dock = document.createElement('div');
-  dock.className = 'ai-dock';
-  dock.dataset.open = 'false';
-  dock.innerHTML =
-    '<button class="ai-tab" aria-label="ASC Agent — glasovni pomoćnik" aria-expanded="false">' + ICON.tab + '</button>' +
-    '<div class="ai-scrim"></div>' +
-    '<section class="ai-panel" role="dialog" aria-modal="false" aria-label="ASC Agent" aria-hidden="true">' +
-      '<div class="ai-head"><span class="ai-title"><span class="dot"></span> ASC Agent</span>' +
-        '<button class="ai-close" aria-label="Zatvori">' + ICON.close + '</button></div>' +
-      '<div class="ai-stage">' +
-        '<button class="ai-mic" aria-label="Drži i govori">' + ICON.mic + '<span class="ai-mic-orb">' + ICON.mic + '</span></button>' +
-        '<p class="ai-hint" aria-live="polite"></p>' +
-        '<div class="ai-heard"></div>' +
-        '<div class="ai-result" role="status" aria-live="polite"></div>' +
-      '</div>' +
-      '<div class="ai-chips">' +
-        '<button class="ai-chip" data-cmd="skladište">Skladište</button>' +
-        '<button class="ai-chip" data-cmd="zaprimi">Zaprimi</button>' +
-        '<button class="ai-chip" data-cmd="radionica">Radionica</button>' +
-        '<button class="ai-chip" data-cmd="podsjetnici">Podsjetnici</button>' +
-      '</div>' +
-      '<form class="ai-type"><input type="text" placeholder="…ili upiši što trebaš" autocomplete="off" aria-label="Upiši naredbu">' +
-        '<button class="ai-send" type="submit" aria-label="Pošalji">' + ICON.send + '</button></form>' +
-    '</section>';
-  inlineMount.appendChild(dock); dock.classList.add('ai-inline');
-
-  // Skin the agent as a random studio-tire CUTOUT (background-removed PNGs of the
-  // recent-sets photos) with a random brake-caliper under-glow (yellow / orange /
-  // green / red). Re-rolled every load. Transparent PNG → just the tire, no disc.
-  const TIRES = ['tire-1.png','tire-2.png','tire-4.png'];   // only full circular side-portraits (3/5/6 were cropped or angled)
-  const GLOWS = ['#ffcf33','#ff8a1a','#3ddc84','#ff4d4d'];
-  dock.style.setProperty('--tire', "url('assets/" + TIRES[Math.floor(Math.random() * TIRES.length)] + "')");
-  dock.style.setProperty('--glow', GLOWS[Math.floor(Math.random() * GLOWS.length)]);
-
-  const $ = (s) => dock.querySelector(s);
-  const tab = $('.ai-tab'), panel = $('.ai-panel'), scrim = $('.ai-scrim'),
-        mic = $('.ai-mic'), hint = $('.ai-hint'), heard = $('.ai-heard'),
-        result = $('.ai-result'), form = $('.ai-type'), input = form.querySelector('input');
-
-  const idleHint = SR ? 'Drži i govori' : 'Upiši što trebaš';
-  hint.textContent = idleHint;
-  if (!SR) mic.classList.add('is-off');
-
-  // ---- open / close ---------------------------------------------------------
-  // NON-MODAL by design: the page BENEATH stays live + visible while Gemini is open
-  // (no inert, no blocking scrim) so you can watch actions land and edit beneath it
-  // without dismissing. The closed panel is inert so its controls are never phantom
-  // tab-stops. Dismiss = short-tap the tire, the panel ×, or Escape.
-  let openState = false, actTimer = null, closeT = null;
-  panel.inert = !inlineMount;                                       // inline agent is always shown → never inert (the tab that clears it is hidden)
-  const open = () => {
-    if (openState) return;
-    openState = true;
-    clearTimeout(closeT); dock.classList.remove('ai-closing');      // cancel any in-flight roll-out
-    dock.dataset.open = 'true';
-    heard.textContent = '';                                         // fresh session — no stale transcript bubble
-    tab.setAttribute('aria-expanded','true'); tab.setAttribute('tabindex','-1');
-    panel.setAttribute('aria-hidden','false'); panel.inert = false;
-    setTimeout(() => { try { (SR ? mic : input).focus({ preventScroll:true }); } catch(e){} }, 380);
-  };
-  const close = () => {
-    if (!openState) return;
-    openState = false; endVoice(true);
-    try { if (window.ASCAgent && ASCAgent.cancel) ASCAgent.cancel(); } catch(e){}   // dismissing cancels a pending Gemini navigation
-    tab.removeAttribute('tabindex'); tab.setAttribute('aria-expanded','false');
-    panel.setAttribute('aria-hidden','true'); panel.inert = true;
-    // play the roll-OUT (entrance reversed), THEN drop the open flag so the tire
-    // tucks back behind the shell edge and the tab reappears.
-    dock.classList.add('ai-closing');
-    clearTimeout(closeT);
-    closeT = setTimeout(() => {
-      dock.classList.remove('ai-closing'); dock.dataset.open = 'false';
-      try { tab.focus({ preventScroll:true }); } catch(e){}
-    }, reduce ? 0 : 560);
-  };
-  tab.addEventListener('click', open);
-  $('.ai-close').addEventListener('click', close);
-  scrim.addEventListener('click', close);
-  addEventListener('keydown', (e) => { if (e.key === 'Escape' && openState) { e.stopPropagation(); close(); } });
-
-  // ---- press-and-hold voice (walkie-talkie) --------------------------------
-  // Robust across engines: iOS Safari ignores `continuous` and ends mid-hold, so
-  // a SPONTANEOUS end while still held RESTARTS (keep-alive). A session `token`
-  // guards every async callback, so a fast re-press can't replay a stale command
-  // or clobber a newer session. RELEASE submits (like Enter); an interrupted press
-  // (pointercancel) DISCARDS. Permission/no-speech hints survive finger-up.
-  let rec = null, finalText = '', interimText = '', holding = false, userStopping = false, lastError = false, token = 0, pointerUsed = false, pressT = 0;
-
-  function startRec(my){
-    if (!SR || rec || my !== token) return;
-    const r = new SR();
-    r.lang = 'hr-HR'; r.continuous = true; r.interimResults = true; r.maxAlternatives = 1;
-    r.onresult = (e) => {
-      if (my !== token) return;
-      interimText = '';
-      for (let i = e.resultIndex; i < e.results.length; i++) {
-        const txt = e.results[i][0].transcript;
-        if (e.results[i].isFinal) finalText += txt + ' '; else interimText += txt;
+  window.ASCChatReady = import('./assistant-surface.js')
+    .then(({mountAssistant}) => {
+      const chat = mountAssistant(mount, {context, isActive: () => pageActive});
+      window.ASCChat = chat;
+      launcher.disabled = false;
+      launcher.addEventListener('click', () => chat.open());
+      document.dispatchEvent(new CustomEvent('asc:chat-ready'));
+      if (pendingTranscript && pageActive) {
+        const text = pendingTranscript; pendingTranscript = null;
+        chat.open(text, true);
       }
-      heard.textContent = (finalText + interimText).trim() || '…';
-    };
-    r.onerror = (e) => {
-      if (my !== token) return;
-      if (e.error === 'not-allowed' || e.error === 'service-not-allowed') { lastError = true; hint.textContent = 'Dopusti mikrofon u pregledniku'; }
-      else if (e.error === 'no-speech') { lastError = true; hint.textContent = 'Nisam čula — pokušaj ponovno'; }
-    };
-    r.onend = () => {
-      if (rec === r) rec = null;
-      if (my !== token) return;                                       // superseded by a newer press
-      if (holding && !userStopping && !lastError) { startRec(my); return; }  // engine ended mid-hold → keep listening
-      mic.classList.remove('is-live');
-      finalize(my);
-    };
-    rec = r;
-    try { r.start(); mic.classList.add('is-live'); if (!lastError) hint.textContent = 'Slušam…'; }
-    catch(e){ if (rec === r) rec = null; }
-  }
-  function press(){
-    if (!SR) { input.focus(); return; }
-    document.dispatchEvent(new CustomEvent('asc:agent-listen'));     // island halo on
-    holding = true; userStopping = false; lastError = false;
-    finalText = ''; interimText = '';
-    heard.textContent = '…'; result.textContent = ''; result.classList.remove('pop');
-    const my = ++token;
-    if (rec) { try { rec.abort(); } catch(e){} rec = null; }         // discard any draining recognizer
-    startRec(my);
-  }
-  function release(submit){
-    if (!holding) return;
-    document.dispatchEvent(new CustomEvent('asc:agent-idle'));       // island halo off
-    holding = false; userStopping = true;
-    mic.classList.remove('is-live');                                 // stop the pulse immediately (both paths)
-    if (!lastError) hint.textContent = idleHint;
-    if (!submit) { ++token; if (rec) { try { rec.abort(); } catch(e){} } return; }  // interrupted → discard, never Enter
-    if (rec) { try { rec.stop(); } catch(e){ finalize(token); } }    // stop → onend → finalize
-    else finalize(token);
-  }
-  function finalize(my){
-    if (my !== token) return;
-    mic.classList.remove('is-live');
-    if (!lastError) hint.textContent = idleHint;
-    const text = (finalText || interimText || '').trim();
-    finalText = ''; interimText = '';                                // consume — never replay
-    if (text && text !== '…') { heard.textContent = text; submitToAgent(text); }   // release = Enter
-  }
-  function endVoice(silent){
-    if (holding) return release(false);                              // closing mid-hold discards, never submits
-    ++token;                                                         // invalidate a released-but-still-draining session
-    if (rec) { try { rec.abort(); } catch(e){} }                    // kill the pending onend → can't navigate after close
-    clearTimeout(actTimer);                                          // and cancel a queued navigation
-    if (silent) { mic.classList.remove('is-live'); if (!lastError) hint.textContent = idleHint; }
-  }
-
-  mic.addEventListener('contextmenu', (e) => e.preventDefault());
-  mic.addEventListener('pointerdown', (e) => {
-    if (e.button && e.button !== 0) return;
-    pointerUsed = true; pressT = performance.now();
-    if (!SR) { input.focus(); return; }
-    e.preventDefault();
-    try { mic.setPointerCapture(e.pointerId); } catch(err){}
-    press();
+      return chat;
+    })
+    .catch(() => {
+      pendingTranscript = null;
+      launcher.textContent = 'Pomoćnik nedostupan';
+      launcher.title = 'Pomoćnik se nije učitao. Ponovno učitaj stranicu.';
+      const status = document.createElement('p');
+      status.setAttribute('role', 'status');
+      status.textContent = 'Pomoćnik se nije učitao. Ponovno učitaj stranicu.';
+      mount.appendChild(status);
+      return null;
+    });
+  addEventListener('pagehide', () => {
+    pageActive = false; pendingTranscript = null;
+    window.ASCChat?.suspend();
   });
-  const clearPointer = () => setTimeout(() => { pointerUsed = false; }, 0);
-  mic.addEventListener('pointerup', () => {
-    if (!SR) { clearPointer(); return; }                           // no speech engine → the orb tap just focuses the input (pointerdown did that)
-    const spoke = (finalText + interimText).trim();
-    release(spoke || lastError ? true : false);                    // spoke / mic-error → submit-finalize; else just discard (inline agent stays put)
-    clearPointer();
-  });
-  mic.addEventListener('pointercancel', () => { release(false); clearPointer(); });  // OS interruption → abort, not Enter
-  mic.addEventListener('lostpointercapture', () => { if (holding) release(true); clearPointer(); });
-  // keyboard / switch users can't press-and-hold — route activation to the field.
-  // A real touch's synthetic click fires BEFORE the macrotask above clears the
-  // flag (so it's suppressed); a bare keyboard/AT click sees it already cleared.
-  mic.addEventListener('click', () => { if (pointerUsed) return; input.focus(); });
-
-  // ---- typed + chip fallbacks ----------------------------------------------
-  form.addEventListener('submit', (e) => { e.preventDefault(); const t = input.value.trim(); if (t) { heard.textContent = t; input.value = ''; submitToAgent(t); } });
-  dock.querySelectorAll('.ai-chip').forEach(c => c.addEventListener('click', () => { const cmd = c.dataset.cmd; heard.textContent = c.textContent; submitToAgent(cmd); }));
-
-  // Route input to Gemini when configured (agent-gemini.js), else the local
-  // rule-based router. Gemini's reply shows in the result line and is spoken.
-  function speak(text){
-    try {
-      if (!('speechSynthesis' in window) || !text) return;
-      try { if (localStorage.getItem('asc.speak') === '0') return; } catch(e){}  // muted in Postavke → stay silent
-      const v = (speechSynthesis.getVoices() || []).filter(x => (x.lang || '').toLowerCase().indexOf('hr') === 0)[0];
-      if (!v) return;                                   // no Croatian voice → stay silent, don't mangle it
-      const u = new SpeechSynthesisUtterance(text); u.voice = v; u.lang = 'hr-HR'; u.rate = 1.05;
-      speechSynthesis.cancel(); speechSynthesis.speak(u);
-    } catch(e){}
-  }
-  function submitToAgent(text){
-    if (window.ASCAgent && ASCAgent.configured()) {
-      hint.textContent = 'Razmišljam…'; result.classList.remove('pop'); result.textContent = '…';
-      ASCAgent.ask(text, (ev) => {
-        if (ev.type === 'text') { result.innerHTML = esc(ev.text); result.classList.remove('pop'); void result.offsetWidth; result.classList.add('pop'); }
-        else if (ev.type === 'error') { result.textContent = ev.message; }
-        else if (ev.type === 'tool') { hint.textContent = 'Radim…'; }
-      }).then((txt) => { hint.textContent = idleHint; if (txt) speak(txt); }).catch(() => { hint.textContent = idleHint; handle(text); });   // Gemini down / not deployed yet → local fallback
-    } else {
-      handle(text);                                     // $0 rule-based fallback
-    }
-  }
-
-  // ---- understand + do ------------------------------------------------------
-  const NAV = [
-    [/(plo[čc]a|naslovnic|po[čc]etn|dashboard|\bhome\b|glavn)/, 'dashboard.html', 'Ploču'],
-    [/(skladi[šs]t|warehouse|regal|zon[aei]|polic|gdje.*(gume|set)|lokacij|slobodn|mjest|kapacit|popunjen)/, 'workshop.html', 'Pretragu spremljenih kompleta'],
-    [/(zaprim|primi|check.?in|novi set|dolaz)/, 'checkin.html', 'Zaprimanje'],
-    [/(kupc|klijent|customer|vlasnik)/, 'customers.html', 'Kupce'],
-    [/(radionic|workshop|majstor|servis)/, 'workshop.html', 'Radionicu'],
-    [/(skenir|scan|\bqr\b|kôd|barkod)/, 'scan.html', 'Skener'],
-    [/(podsjetnic|preuzim|pickup|reminder|danas.*(preuzet|gotov))/, 'reminders.html', 'Podsjetnike'],
-    [/(korisnic|djelatnic|\buser|osoblje|zaposlenic)/, 'users.html', 'Korisnike'],
-    [/(reciklir|recikla|otpad|zbrin|recycle)/, 'recycle.html', 'Reciklažu'],
-  ];
-  function act(html, fn){ result.innerHTML = html; result.classList.remove('pop'); void result.offsetWidth; result.classList.add('pop'); clearTimeout(actTimer); actTimer = setTimeout(fn, reduce ? 120 : 620); }
-  function search(term){
-    const box = document.getElementById('wsSearch');
-    if (box) { box.value = term; box.dispatchEvent(new Event('input', { bubbles:true })); box.scrollIntoView({ behavior:'smooth', block:'center' }); close(); }
-    else act('Tražim <b>' + esc(term) + '</b>…', () => { location.href = 'workshop.html?q=' + encodeURIComponent(term); });
-  }
-  function handle(text){
-    const q = ' ' + text.toLowerCase().replace(/[.,!?]/g,' ').replace(/\s+/g,' ').trim() + ' ';
-    const plate = text.match(/\b([A-Za-zČĆĐŠŽ]{2})\s?-?\s?(\d{3})\s?-?\s?([A-Za-zČĆĐŠŽ]{1,2})\b/);
-    const code  = text.match(/asc[-\s]?\d{3,4}(?:[-\s]?\d{2,4})?/i);
-    const findM = q.match(/(?:na[đd]i|tra[žz]i|prona[đd]i|gdje je|poka[žz]i|show|find)\s+(.+?)\s*$/i);
-    if (plate) return search(plate[0].toUpperCase().replace(/\s/g,'').replace(/^([A-ZČĆĐŠŽ]{2})(\d{3})/,'$1-$2-').replace(/--/g,'-'));
-    if (code)  return search(code[0].toUpperCase().replace(/\s/g,'-'));
-    if (findM) return search(findM[1].trim());
-    for (const [re, href, label] of NAV) {
-      if (re.test(q)) {
-        if (location.pathname.split('/').pop() === href) { act('Već si na <b>' + esc(label) + '</b>', () => { close(); }); return; }
-        return act('Otvaram <b>' + esc(label) + '</b>…', () => { location.href = href; });
-      }
-    }
-    // didn't map to a screen → treat the whole phrase as a search
-    act('Tražim <b>' + esc(text) + '</b>', () => { location.href = 'workshop.html?q=' + encodeURIComponent(text); });
-  }
+  addEventListener('pageshow', () => { pageActive = true; });
 })();
 
 // ============================================================================

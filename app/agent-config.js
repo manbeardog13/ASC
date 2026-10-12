@@ -1,6 +1,5 @@
-/* ASC Agent — Gemini endpoint config.
-   Paste the URL of your deployed `asc-agent-demo` Supabase function below, e.g.
-     https://YOUR-PROJECT-REF.supabase.co/functions/v1/asc-agent-demo
-   Leave it empty ("") to keep the $0 rule-based fallback agent.
-   (No API key here — the key lives ONLY inside the function, server-side.) */
-window.ASC_AGENT_URL = "https://ilnqhlrvchuvpjgptjfx.supabase.co/functions/v1/asc-agent-demo-v2";
+/* Existing authenticated ASC function. No provider key belongs in the browser.
+   Opening chat does not invoke it; explicit user submission does. Actual model
+   availability/cost is governed by the existing server account, not this file. */
+window.ASC_AGENT_URL = "https://ilnqhlrvchuvpjgptjfx.supabase.co/functions/v1/asc-agent";
+window.ASC_AGENT_REQUIRE_AUTH = true;

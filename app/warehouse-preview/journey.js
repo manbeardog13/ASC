@@ -1,7 +1,7 @@
 import { AREAS } from './model.js';
+import { matchScore } from '../agent-search.js';
 
 export const normalizeCroatian = value => String(value ?? '').replace(/[đĐ]/g, 'd').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
-const compact = value => normalizeCroatian(value).replace(/[^a-z0-9]/g, '');
 const normalizeSetId = value => String(value ?? '').trim().toUpperCase();
 export const customerLabel = value => String(value ?? '').replace(/^(Demo|Primjer)\s+/i, '');
 
@@ -18,10 +18,7 @@ export function parseCroatianIntent(text) {
 }
 
 function includesQuery(values, query) {
-  const text=normalizeCroatian(query), words=text.split(/\s+/), combined=normalizeCroatian(values.join(' '));
-  const tokens=combined.split(/[^a-z0-9]+/).filter(Boolean);
-  const wordMatch=words.every(word=>/^[0-9]+$/.test(word)?tokens.includes(word):combined.includes(word));
-  return wordMatch || (compact(text).length>0 && values.some(v=>compact(v).includes(compact(text))));
+  return matchScore(values, query) !== null;
 }
 export function searchLocations(state, query) {
   if (!String(query).trim()) return [];
