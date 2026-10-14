@@ -1,6 +1,7 @@
-/* ASC Agent — Gemini endpoint config.
-   Paste the URL of your deployed `asc-agent-demo` Supabase function below, e.g.
-     https://YOUR-PROJECT-REF.supabase.co/functions/v1/asc-agent-demo
-   Leave it empty ("") to keep the $0 rule-based fallback agent.
-   (No API key here — the key lives ONLY inside the function, server-side.) */
-window.ASC_AGENT_URL = "https://ilnqhlrvchuvpjgptjfx.supabase.co/functions/v1/asc-agent-demo-v2";
+/* Provider calls are disabled under the €0 policy. Local ASC assistance uses
+   the existing app data connection; it does not call a language model.
+   Enable remote requests only in a separately verified/authorized deployment.
+   This flag is configuration, not a server authorization or billing control. */
+globalThis.ASC_AGENT_REMOTE_ALLOWED = false;
+globalThis.ASC_AGENT_URL = "https://ilnqhlrvchuvpjgptjfx.supabase.co/functions/v1/asc-agent";
+globalThis.ASC_AGENT_REQUIRE_AUTH = true;
