@@ -127,6 +127,7 @@
 .spatial-app .spatial-footer{display:flex;justify-content:space-between;gap:12px;padding:20px 3px 0;font-size:10px;line-height:1.5;color:var(--muted)}
 .spatial-app .inspector{position:relative;inset:auto;width:100%;min-width:0;padding:18px;margin:var(--gap) 0 0;max-height:none;overflow:visible;overflow-wrap:anywhere}
 .spatial-app .inspector-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.spatial-app .live-pin{margin:0 0 10px;padding:10px 12px;border-radius:12px;background:rgba(255,78,27,.12);font:600 13px/1.4 Inter,system-ui,sans-serif}
 .spatial-app .inspector .eyebrow{font-size:9px;color:var(--muted);letter-spacing:.06em}
 .spatial-app .inspector h3{font-size:20px;letter-spacing:-.035em;margin:3px 0 7px}
 .spatial-app .inspector .sub{font-size:13px;color:var(--muted);line-height:1.5}

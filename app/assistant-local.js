@@ -56,8 +56,33 @@ function pickupPeriod(q) {
   return /danas|today/.test(match[1] || '') ? 'today' : /sutra|tomorrow/.test(match[1] || '') ? 'tomorrow' : 'week';
 }
 
-export function createLocalAssistant({ loadData, navigate, context, now = () => new Date() } = {}) {
-  let revision = 0, previous = null, previousScope = null;
+function formatSlot(data) {
+  const loc = data?.location || data || {};
+  const parts = [loc.zone, loc.rack, loc.shelf, loc.slot].filter(value => value != null && value !== '');
+  return (parts.join(' · ') || 'mjesto') + (loc.qr_code ? ' · ' + loc.qr_code : '');
+}
+async function rpc(name, args) {
+  const { supabase } = await import('../js/supabaseClient.js');
+  const auth = await supabase.auth.getSession();
+  if (!auth?.data?.session?.user?.id) {
+    const error = new Error('Prijavi se za podatke skladišta.');
+    error.code = 'session_required';
+    throw error;
+  }
+  const { data, error } = await supabase.rpc(name, args);
+  if (error) throw error;
+  return data;
+}
+const defaultOps = {
+  suggest: () => rpc('suggest_free_slot', { warehouse: 'main' }),
+  place: ({ publicCode, qrCode }) => rpc('place_set', { public_code: publicCode, qr_code: qrCode }),
+  move: ({ publicCode, qrCode }) => rpc('move_set', { public_code: publicCode, qr_code: qrCode }),
+  checkout: ({ publicCode }) => rpc('checkout_set', { public_code: publicCode })
+};
+
+export function createLocalAssistant({ loadData, navigate, context, now = () => new Date(), ops } = {}) {
+  let revision = 0, previous = null, previousScope = null, pending = null;
+  const actions = ops || defaultOps;
   const currentContext = () => parseContext(typeof context === 'function' ? context() : context);
   const go = navigate || (path => { location.href = new URL(path, APP).href; });
   const read = loadData || (async ({ signal, assertActive }) => {
@@ -87,7 +112,7 @@ export function createLocalAssistant({ loadData, navigate, context, now = () => 
     return rows;
   });
   return {
-    reset() { revision++; previous = null; previousScope = null; },
+    reset() { revision++; previous = null; previousScope = null; pending = null; },
     async reply(text, options = {}) {
       const ticket = ++revision, ctx = parseContext(options.context ?? currentContext()), scope = contextKey(ctx);
       if (previousScope !== scope) previous = null;
@@ -117,7 +142,8 @@ export function createLocalAssistant({ loadData, navigate, context, now = () => 
       function setActions(row) {
         const code = safeString(row.public_code, 100);
         return code ? [action(code + ' · Detalji', 'set-detail.html?code=' + encodeURIComponent(code)),
-          { label: code + ' · Lokacija', prompt: 'Gdje je komplet ' + code + '?', submit: true }] : [];
+          { label: code + ' · Lokacija', prompt: 'Gdje je komplet ' + code + '?', submit: true },
+          action(code + ' · Na karti', 'warehouse-preview/index.html?set=' + encodeURIComponent(code))] : [];
       }
       function describe(row) {
         const quantity = Number.isInteger(row.quantity) && row.quantity >= 0 ? `${row.quantity} guma` : 'količina nije upisana';
@@ -145,16 +171,98 @@ export function createLocalAssistant({ loadData, navigate, context, now = () => 
       // A fresh search supersedes the previous referent before loading starts.
       // Failed/unsupported requests must not leave an older customer as "they".
       if (!followup) previous = null;
+      if (!/^(?:potvrdi|confirm)$/.test(q)) pending = null;
       // The warehouse preview has its own adapter and fictional inventory.
       // Unhandled preview questions never import live db.js or show live actions.
-      if (demo(ctx) || ctx.dataScope === 'unknown') return result('Ovo je probni prikaz. Pitaj za probnu oznaku stupca, slobodna mjesta ili odaberi stupac na karti. Stvarne kupce ovdje ne pretražujem.', [
+      if (demo(ctx) || ctx.dataScope === 'unknown') { pending = null; return result('Ovo je probni prikaz. Pitaj za probnu oznaku stupca, slobodna mjesta ili odaberi stupac na karti. Stvarne kupce ovdje ne pretražujem.', [
         { label: 'Slobodna mjesta', prompt: 'Gdje ima slobodnih mjesta?', submit: true },
         { label: 'Sva skladišta', prompt: 'Sva skladišta', submit: true }
-      ]);
+      ]); }
       if (!q || /^(?:pomoc|help|sto mozes(?: uciniti)?|kako koristiti(?: asc)?|what can you do|bok|hello|hi)$/.test(q)) return result('Mogu pretražiti ASC komplete, pokazati evidentiranu lokaciju, stanje i rokove te otvoriti obrazac. Radim bez vanjskog AI modela; promjene potvrđuješ u aplikaciji.');
       const routeQuery = q.replace(/^(?:otvori|pokazi|prikazi|idi na|odi na|open|go to|show)\s+/, '');
       const route = Object.values(ROUTES).find(([, , aliases]) => aliases.includes(routeQuery));
       if (route) { assertActive(); go(route[0]); return { text: `Otvaram: ${route[1]}.`, actions: [] }; }
+      const rawCmd = raw.replace(/^(?:molim(?: te)?|please|mozes li|can you)\s+/i, '').trim();
+      const token = value => safeString(String(value || '').replace(/[.,;:]+$/g, ''), 80).toUpperCase();
+      async function runPending() {
+        const job = pending;
+        pending = null;
+        assertActive();
+        if (!job) return 'Nema radnje za potvrdu. Ništa nisam promijenio.';
+        try {
+          if (job.kind === 'place' || job.kind === 'move') {
+            const data = await actions[job.kind]({ publicCode: job.code, qrCode: job.qr });
+            return (job.kind === 'move' ? 'Premješteno: ' : 'Smješteno: ') + job.code + ' → ' + formatSlot(data) + '.';
+          }
+          await actions.checkout({ publicCode: job.code });
+          return 'Preuzeto: ' + job.code + '. Mjesto je slobodno.';
+        } catch (error) {
+          assertActive();
+          return error.code === 'session_required'
+            ? 'Prijavi se za podatke skladišta. Ništa nije spremljeno.'
+            : 'Radnja nije spremljena. ' + safeString(error.message || 'Pokušaj ponovno.', 160);
+        }
+      }
+      if (/^(?:potvrdi|confirm)$/.test(q)) {
+        if (!pending) return result('Nema radnje za potvrdu. Ništa nisam promijenio.');
+        return result(await runPending());
+      }
+      if (/^(?:odustani|cancel)$/.test(q)) return result('Odustajem. Ništa nisam promijenio.');
+      if (/^(?:predlozi(?: mi)? slobodno mjesto|suggest(?: a)? free slot)$/.test(q)) {
+        try {
+          const slot = await actions.suggest();
+          assertActive();
+          if (!slot) return result('Nema slobodnog mjesta. Otvori Mjesta i dodaj police.', [action('Mjesta', 'locations.html')]);
+          return result('Slobodno mjesto: ' + formatSlot(slot) + '.', [action('Otvori smještaj', 'place.html')]);
+        } catch (error) {
+          return result(error.code === 'session_required' ? 'Prijavi se za podatke skladišta.' : 'Slobodno mjesto nisam mogao provjeriti. Ništa nije spremljeno.');
+        }
+      }
+      const placeMatch = rawCmd.match(/^(?:stavi|smjesti|postavi|place)\s+(\S+)\s+(?:na|u|to|into|on)\s+(\S+)/i);
+      const moveMatch = rawCmd.match(/^(?:premjesti|prebaci|move)\s+(\S+)\s+(?:na|u|to|into|on)\s+(\S+)/i);
+      const outMatch = rawCmd.match(/^(?:izdaj|checkout|check out|preuzmi komplet)\s+(\S+)/i);
+      const armed = placeMatch || moveMatch;
+      if (armed && !/^LOC-/i.test(armed[2])) {
+        const code = token(armed[1]);
+        return result('Za ' + code + ' skeniraj naljepnicu mjesta. Još ništa nije spremljeno.', [
+          action('Otvori smještaj', 'place.html?set=' + encodeURIComponent(code))
+        ]);
+      }
+      if (armed && /^LOC-/i.test(armed[2])) {
+        const kind = moveMatch ? 'move' : 'place';
+        pending = { kind, code: token(armed[1]), qr: token(armed[2]) };
+        return result((kind === 'move' ? 'Spreman sam premjestiti ' : 'Spreman sam smjestiti ') + pending.code + ' na ' + pending.qr + '. Još ništa nije spremljeno.', [
+          { label: 'Potvrdi', run() { assertActive(); return runPending(); } },
+          { label: 'Odustani', prompt: 'Odustani', submit: true }
+        ]);
+      }
+      if (outMatch) {
+        pending = { kind: 'checkout', code: token(outMatch[1]) };
+        return result('Spreman sam preuzeti ' + pending.code + '. Mjesto se oslobađa tek nakon potvrde. Još ništa nije spremljeno.', [
+          { label: 'Potvrdi', run() { assertActive(); return runPending(); } },
+          { label: 'Odustani', prompt: 'Odustani', submit: true }
+        ]);
+      }
+      const mapMatch = rawCmd.match(/^(?:pokaži|pokazi|prikaži|prikazi)\s+na\s+karti\s+(.+)$|^(?:show)\s+on\s+(?:the\s+)?map\s+(.+)$/i);
+      if (mapMatch) {
+        let rows;
+        try {
+          const loaded = await wait(() => read({ signal: options.signal, context: ctx, assertActive }));
+          rows = (Array.isArray(loaded) ? loaded : loaded?.sets || []).filter(row => row && !row.deleted_at);
+        } catch (error) {
+          if (error.name === 'AbortError') throw error;
+          return result('Podatke nisam uspio učitati. Pokušaj ponovno.');
+        }
+        const query = searchQuery(mapMatch[1] || mapMatch[2]);
+        const exact = rows.filter(row => row.public_code && sameCode(row.public_code, query));
+        const hits = exact.length ? exact : searchSets(rows, query);
+        if (hits.length === 1 && hits[0].public_code) {
+          const code = safeString(hits[0].public_code, 100);
+          go('warehouse-preview/index.html?set=' + encodeURIComponent(code));
+          return result('Otvaram kartu za ' + code + '.', []);
+        }
+        return showMatches(hits, query);
+      }
       if (/^(?:dodaj|zaprimi|unesi|create|add|check in)\b/.test(q)) {
         if (/^(?:dodaj|zaprimi|unesi|create|add|check in)\s+(?:(?:novi|novu|nove|new|a|an|the)\s+)*(?:gumu|gume|guma|komplet|set|tyres?|tires?)\b/.test(q)) return result('Mogu otvoriti zaprimanje kompleta. Unesi ili provjeri podatke i potvrdi spremanje u obrascu. Još ništa nije spremljeno.', [action('Otvori zaprimanje', 'checkin.html')]);
         return result('Tu vrstu dodavanja ovdje ne podržavam. Mogu pripremiti prijam guma: napiši „Zaprimi novi komplet”. Za druge promjene otvori odgovarajući dio aplikacije. Ništa nije spremljeno.', [

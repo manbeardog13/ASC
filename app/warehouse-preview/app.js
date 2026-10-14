@@ -4,6 +4,7 @@ import { parseCroatianIntent, searchLocations, customerLabel } from './journey.j
 import { createTour } from './tour.js';
 import { mountWarehouseAssistant } from './assistant-adapter.js';
 import { AREAS, seedState, validateState, canPlace, createStack, moveStack, setCapacity, addTire, removeTire, stats, LAYOUT_VERSION } from './model.js';
+import { pinForSet } from '../../js/mapPin.js';
 export function startPreview({isActive=()=>false,registerRuntime=()=>{}}={}){
 if(!isActive())throw new Error('ASC preview inactive');
 let disposed=false;const listeners=[];
@@ -37,7 +38,7 @@ let state;
 try {const raw=localStorage.getItem(KEY);state=raw===null?seedState():JSON.parse(raw);if(!state||!validateState(state).valid){storageProblem=true;state=seedState();}}catch{state=seedState();storageProblem=true;}
 const storedView=readJSON(VIEW_KEY,{});
 let areaId=AREAS.some(a=>a.id===storedView.areaId)||storedView.areaId==='all'?storedView.areaId:'2.3';
-let selectedId=null, viewer=null, viewMode='3d', placing=null, toastTimer, scannerStream=null, scannerFrame=null, recognition=null;
+let selectedId=null, viewer=null, viewMode='3d', placing=null, toastTimer, scannerStream=null, scannerFrame=null, recognition=null, livePin=null;
 let tour=null, assistant=null, scannerStarting=false, scannerGeneration=0;
 let checkState=readJSON(CHECK_KEY,{}), viewReady=false;
 try{localStorage.getItem(KEY);}catch{storageAvailable=false;}
@@ -91,7 +92,8 @@ function renderInspector(){
  const qrOpen=sameStack&&Boolean($('tyre-qr')?.open);
  const focusId=sameStack&&inspector.contains(document.activeElement)?document.activeElement.id:null;
  inspector.dataset.stackId=stack.id;
- inspector.innerHTML=`<div class="inspector-top"><div><h3>${esc(stack.id)}</h3><p class="sub">${esc(AREAS.find(a=>a.id===stack.areaId)?.name)}</p></div><button id="close-inspector" class="icon-button" aria-label="Zatvori detalje stupca">${icon('close',17)}</button></div>
+ const liveBanner=livePin&&livePin.stackId===stack.id?`<div class="live-pin"><b>${esc(livePin.text)}</b></div>`:'';
+ inspector.innerHTML=`${liveBanner}<div class="inspector-top"><div><h3>${esc(stack.id)}</h3><p class="sub">${esc(AREAS.find(a=>a.id===stack.areaId)?.name)}</p></div><button id="close-inspector" class="icon-button" aria-label="Zatvori detalje stupca">${icon('close',17)}</button></div>
  <div class="stack-occupancy"><div class="stack-meter" aria-hidden="true">${Array.from({length:stack.capacity},(_,i)=>`<i class="${i<occupied?'filled':''}"></i>`).join('')}</div><span><b>${occupied}/${stack.capacity}</b> mjesta</span></div>
  <div class="tyres">${tyres.map((t,i)=>`<button class="tyre-row" data-tyre="${esc(t.id)}" aria-expanded="false"><span class="tyre-dot" style="border-color:${/^#[a-f0-9]{6}$/i.test(t.color)?t.color:'#343c40'}"></span><span class="tyre-text"><b>${esc(customerLabel(t.customer))}</b><small>${esc(t.plate)}</small></span><em aria-label="Položaj ${i+1}">${i+1}</em><span class="tyre-chevron" aria-hidden="true">⌄</span></button>`).join('')||'<p class="empty-stack">Stupac je prazan.</p>'}</div>
  <div class="inspector-actions"><button id="add-tyre" class="button primary" ${occupied>=stack.capacity?'disabled':''}>${icon('plus',15)}Dodaj gumu</button><button id="ask-stack" class="button quiet" aria-controls="warehouse-assistant">Pitaj ASC</button><button id="focus-stack" class="button quiet">Približi</button></div>
@@ -288,7 +290,26 @@ const runtime={
  resume(){if(disposed||!isActive())return;tour?.resume();if(pausedDialog){pausedDialog=false;$('dialog').showModal();}if(viewer)viewer.resume();else void ensureScene();},
  dispose(){if(disposed)return;disposed=true;pausedDialog=false;if($('dialog').open)$('dialog').close();stopScanner();stopVoice();assistant?.dispose();clearTimeout(toastTimer);tour?.dispose();for(const remove of listeners)remove();listeners.length=0;viewer?.dispose();viewer=null;}
 };
-registerRuntime(runtime);render();void ensureScene();
+registerRuntime(runtime);render();
+async function highlightLiveQuery(){
+ const params=new URLSearchParams(location.search);
+ const setCode=params.get('set'), slot=params.get('slot');
+ if(!setCode&&!slot)return;
+ try{
+  const db=await import('../../js/db.js');
+  let row=null;
+  if(setCode&&db.loadStorageSet)row=await db.loadStorageSet(setCode);
+  else if(slot&&db.findLocationByQr)row=await db.findLocationByQr(slot);
+  if(!row){toast('Živi komplet nije pronađen. Karta je i dalje probni prikaz.');return;}
+  const pin=pinForSet(row,state.stacks);
+  livePin={...pin,text:`${row.public_code||setCode||slot}${pin.where?' · '+pin.where:''}${pin.approx?' · približno na karti':''}`};
+  if(pin.areaId&&AREAS.some(a=>a.id===pin.areaId))areaId=pin.areaId;
+  if(pin.stackId&&state.stacks.some(s=>s.id===pin.stackId))selectedId=pin.stackId;
+  render();
+  if(selectedId)viewer?.focusStack(selectedId);
+ }catch{toast('Živi položaj nije učitan. Karta je i dalje probni prikaz.');}
+}
+void ensureScene().then(()=>highlightLiveQuery());
 const deepCode=new URLSearchParams(location.hash.slice(1)).get('tyre');if(deepCode)resolveCode(deepCode);
 if(storageProblem){$('save-status').textContent='Potrebno je obnoviti probne podatke';toast('Spremljeni podaci nisu valjani. U dodatnim mogućnostima preuzmite izvorni zapis i vratite početni raspored.');}
 if(!storageAvailable)$('save-status').textContent='Spremanje nije dostupno';

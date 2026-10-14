@@ -42,7 +42,7 @@ export function mountAssistant(mount,{context=()=>({}),tools,isActive=()=>true,l
     next.replaceChildren();
     for(const item of (list||[]).slice(0,4)){
       const button=document.createElement('button');button.type='button';button.textContent=item.label;
-      button.onclick=()=>{if(!active()||busy)return;if(item.run){try{item.run();}catch{status.textContent='Radnja nije uspjela. Pokušaj ponovno.';}}else open(item.prompt||item.label,Boolean(item.submit));};next.append(button);
+      button.onclick=async()=>{if(!active()||busy)return;if(item.run){try{const value=await item.run();if(typeof value==='string'&&value)message('local',value);}catch(error){status.textContent=error?.name==='AbortError'?'Zaustavljeno.':'Radnja nije uspjela. Pokušaj ponovno.';}}else open(item.prompt||item.label,Boolean(item.submit));};next.append(button);
     }
   }
   function message(who,text) {

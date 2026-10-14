@@ -43,6 +43,18 @@
     return null;
   }
   // Pull a code out of anything a scan yields (?code=, #/set/CODE, or a bare code).
+  function extractSlot(text) {
+    if (text == null) return null;
+    var s = String(text);
+    var marked = s.match(/#\/slot\/(LOC-[A-Fa-f0-9]{6,32})/i);
+    if (marked) return marked[1].toUpperCase();
+    var bare = s.match(/\b(LOC-[A-Fa-f0-9]{12})\b/i);
+    return bare ? bare[1].toUpperCase() : null;
+  }
+  function slotLink(qr) {
+    var dir = location.href.split('#')[0].split('?')[0].replace(/[^/]*$/, '');
+    return dir + 'place.html#/slot/' + encodeURIComponent(qr);
+  }
   function extractCode(text, typed) {
     if (text == null) return null;
     var s = String(text).trim(); if (!s) return null;
@@ -176,6 +188,29 @@
         '<div class="sm-foot">Skenirajte kamerom telefona · ' + esc(code) + '</div>' +
       '</div>';
     openSheet(inner, 'Naljepnica ' + code);
+    return true;
+  }
+
+  function slotSvg(qr) {
+    if (!window.qrcode) return '';
+    var code = window.qrcode(0, 'M');
+    code.addData(slotLink(qr));
+    code.make();
+    return code.createSvgTag({ cellSize: 4, margin: 1, scalable: true });
+  }
+  function printSlotLabels(rows) {
+    var list = (rows || []).filter(function (row) { return row && row.qr_code; });
+    if (!list.length) return false;
+    var cards = list.map(function (row) {
+      var where = [row.zone, row.rack, row.shelf, row.slot].filter(Boolean).join(' · ');
+      return '<div class="sm-label sm-shape-rounded" style="display:inline-block;width:46%;margin:1%;vertical-align:top">' +
+        '<div class="sm-top"><span class="sm-brand">ASC</span><span class="sm-season">MJESTO</span></div>' +
+        '<div class="sm-qr">' + (slotSvg(row.qr_code) || esc(row.qr_code)) + '</div>' +
+        '<div class="sm-code">' + esc(row.qr_code) + '</div>' +
+        '<div class="sm-loc"><span class="sm-lk">Lokacija</span>' + esc(where) + '</div>' +
+      '</div>';
+    }).join('');
+    openSheet('<div>' + cards + '</div>', 'Naljepnice mjesta');
     return true;
   }
 
@@ -317,7 +352,7 @@
       var inst = new H(elId, { verbose: false }); active = inst;
       var handled = false;
       starting = inst.start({ facingMode: 'environment' }, { fps: 12, qrbox: { width: 240, height: 240 } },
-        function (text) { if (handled) return; handled = true; var code = extractCode(text); stopScan(); onResult(code, text); },
+        function (text) { if (handled) return; handled = true; window.ASCQR.lastScan = text; var code = extractCode(text); stopScan(); onResult(code, text); },
         function () { /* per-frame misses are normal */ }
       ).catch(function (err) { if (onError) onError(err); });
       return starting.then(function () { starting = null; }, function () { starting = null; });
@@ -332,14 +367,15 @@
     var inst = new H(tmp.id);
     var cleanup = function () { try { inst.clear(); } catch (e) {} tmp.remove(); };
     return inst.scanFile(file, false).then(
-      function (text) { cleanup(); return extractCode(text); },
+      function (text) { cleanup(); window.ASCQR.lastScan = text; return extractCode(text); },
       function (err) { cleanup(); throw err; }
     );
   }
 
   window.ASCQR = {
-    normalize: normalize, extractCode: extractCode, deepLink: deepLink, checksum: checksum,
-    svg: svg, printSticker: printSticker, printReport: printReport,
+    normalize: normalize, extractCode: extractCode, extractSlot: extractSlot, deepLink: deepLink, checksum: checksum,
+    svg: svg, printSticker: printSticker, printSlotLabels: printSlotLabels, printReport: printReport,
+    lastScan: '',
     scanInto: scanInto, stopScan: stopScan, scanFile: scanFile,
     lookup: function (code) { return BY_CODE[code] || null; },
     ownerId: function (code) { var s = BY_CODE[code]; return s ? s.owner : null; },

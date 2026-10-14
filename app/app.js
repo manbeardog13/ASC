@@ -141,7 +141,7 @@ document.getElementById('mode').addEventListener('click', () => {
   if (document.getElementById('agentCard')) {   // the dashboard
     const link = (sel, href) => document.querySelectorAll(sel).forEach(a => { if (a.tagName === 'A') a.setAttribute('href', href); });
     link('.act.green', 'checkin.html');
-    link('.act.red', 'reminders.html');
+    link('.act.red', 'checkout.html');
     // each recent-stream slide opens the set it shows (code from the corner number)
     document.querySelectorAll('.stream .slide').forEach(a => {
       const n = ((a.querySelector('.tab-tl') || {}).textContent || '').trim();
@@ -186,7 +186,8 @@ function animate(){
   const doc = document, root = doc.documentElement;
   const {navigationIcons:I,renderAppNavigation,installWarehouseMenuReturn}=await import('./navigation.js');
   const here = location.pathname.split('/').pop() || 'dashboard.html';
-  const whOpen = here === 'recycle.html' ||
+  const whPages = ['recycle.html', 'locate.html', 'locations.html', 'place.html', 'checkout.html'];
+  const whOpen = whPages.includes(here) ||
     (localStorage.getItem('asc.side.wh') !== '0' && here === 'set-detail.html');
   const aside = doc.createElement('aside');
   aside.className = 'side';
@@ -211,6 +212,8 @@ function animate(){
   // module stamp for page-level tinting
   const MOD = { 'dashboard.html': 'dashboard', 'checkin.html': 'checkin', 'scan.html': 'scan',
     'recycle.html': 'warehouse', 'set-detail.html': 'warehouse',
+    'locate.html': 'warehouse', 'locations.html': 'warehouse',
+    'place.html': 'warehouse', 'checkout.html': 'warehouse',
     'customers.html': 'customers', 'reminders.html': 'reminders', 'workshop.html': 'workshop',
     'users.html': 'users' };
   if (MOD[here]) root.setAttribute('data-module', MOD[here]);
@@ -229,7 +232,7 @@ function animate(){
     if (!q) return;
     const code = window.ASCQR && ASCQR.normalize ? ASCQR.normalize(q, true) : null;
     location.href = code ? 'set-detail.html?code=' + encodeURIComponent(code)
-                         : 'customers.html?c=' + encodeURIComponent(q);
+                         : 'locate.html?q=' + encodeURIComponent(q);
   });
   // rail mode: the search collapses to its icon — clicking expands and focuses
   sbs.addEventListener('click', () => {

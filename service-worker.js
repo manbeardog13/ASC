@@ -2,7 +2,7 @@
    Makes the app installable and loads the shell instantly. Network-first for
    same-origin files (so deploys show up right away), cache fallback when
    offline. Live data always comes from Supabase online. */
-const CACHE = "asc-tirehotel-v92-local-assistant";
+const CACHE = "asc-tirehotel-v93-warehouse-flow";
 // Cross-origin dependencies the app cannot boot (or scan) without. Same-origin
 // files are precached below; these are runtime-cached network-first so an
 // offline cold boot doesn't die on the supabase-js ESM import.
@@ -51,6 +51,18 @@ const SHELL = [
   "./app/live-workshop.js",
   "./app/live-recycle.js",
   "./app/live-users.js",
+  "./app/place.html",
+  "./app/checkout.html",
+  "./app/locate.html",
+  "./app/locations.html",
+  "./app/flow.css",
+  "./app/flow-ui.js",
+  "./app/live-place.js",
+  "./app/live-checkout.js",
+  "./app/live-locate.js",
+  "./app/live-locations.js",
+  "./js/locationGrid.js",
+  "./js/mapPin.js",
   "./app/manifest.webmanifest",
   "./app/assets/logo.png",
   "./app/assets/icon.svg",

@@ -15,7 +15,7 @@ const errors=[];
 await context.route('**/*',async route=>{const u=new URL(route.request().url());if(u.origin!==origin)return route.abort();if(u.pathname==='/ASC/js/db.js')return route.fulfill({contentType:'text/javascript',body:db});if(u.pathname==='/ASC/js/supabaseClient.js')return route.fulfill({contentType:'text/javascript',body:auth});if(u.pathname.endsWith('/agent-config.js'))return route.fulfill({contentType:'text/javascript',body:'window.ASC_AGENT_URL="";'});return route.continue();});
 const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));
 await page.goto(origin+'/ASC/app/warehouse-preview/index.html');await page.waitForSelector('html[data-preview-state="ready"] #asc-navigation a');
-assert.equal(await page.locator('#asc-navigation a').count(),9);
+assert.equal(await page.locator('#asc-navigation a').count(),11);
 assert.equal(await page.locator('a[href$="warehouse.html"]').count(),0);
 const initialHistory=await page.evaluate(()=>history.length);
 const all=page.locator('#area-tabs [data-area="all"]');await all.click();assert.equal(await all.getAttribute('aria-pressed'),'true');assert.equal(await page.locator('#area-code').textContent(),'KUĆA / 02');assert.equal(await page.locator('#inspector').isVisible(),false);
