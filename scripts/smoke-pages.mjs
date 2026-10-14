@@ -9,43 +9,50 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const mime = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.webmanifest': 'application/manifest+json', '.jpg': 'image/jpeg' };
+function exportNames(file) {
+  const src = fs.readFileSync(file, 'utf8');
+  const names = new Map();
+  for (const match of src.matchAll(/export\s+(?:async\s+)?function\s+(\w+)/g)) names.set(match[1], 'fn');
+  for (const match of src.matchAll(/export\s+(?:const|let|class)\s+(\w+)/g)) names.set(match[1], 'val');
+  for (const match of src.matchAll(/export\s*\{([^}]+)\}/g)) {
+    for (const part of match[1].split(',')) {
+      const name = part.trim().split(/\s+as\s+/).pop().trim();
+      if (name) names.set(name, 'fn');
+    }
+  }
+  return names;
+}
 const session = '{user:{id:"smoke",email:"smoke@example.com"},expires_at:Math.floor(Date.now()/1000)+3600}';
-const auth = `const session=${session};export const supabase={auth:{getSession:async()=>({data:{session},error:null}),onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}}),signInWithPassword:async()=>({}),signOut:async()=>{}}};`;
-const db = `const session=${session};
-const ok=async()=>[];
-export const getSession=async()=>session;
-export const loadMyProfile=async()=>({full_name:'Smoke',role:'employee',email:'smoke@example.com'});
-export const signOut=async()=>{};
-export const onAuthChange=()=>({data:{subscription:{unsubscribe(){}}}});
-export const healthStats=async()=>({inventory:0,todayCheckIns:0,todayPickups:0,lastBackup:null});
-export const countsByStatus=async()=>({in_storage:0,reserved:0,checked_out:0,missing:0});
-export const listStorageSets=${'async()=>[]'};
-export const listCustomers=ok;
-export const listRecycleBin=ok;
-export const subscribeToChanges=()=>null;
-export const unsubscribe=()=>{};
-export const countPendingApprovals=async()=>0;
-export const loadStorageSet=async()=>{const error=new Error('missing');throw error;};
-export const suggestFreeSlot=async()=>null;
-export const createLocations=async()=>[];
-export const placeSet=async()=>({ok:true});
-export const moveSet=async()=>({ok:true});
-export const checkoutSet=async()=>({ok:true});
-export const setMyAvatar=async()=> '';
-export const findLocationByQr=async()=>null;
-export const locationLabel=()=>'';
-`;
+const auth = `export function isConfigured(){return true;}
+const session=${session};
+export const supabase={auth:{getSession:async()=>({data:{session},error:null}),onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}}),signInWithPassword:async()=>({}),signOut:async()=>{},updateUser:async()=>({})}};`;
+const dbOverrides = {
+  getSession: 'export const getSession=async()=>session;',
+  loadMyProfile: 'export const loadMyProfile=async()=>({full_name:"Smoke",role:"employee",email:"smoke@example.com"});',
+  signOut: 'export const signOut=async()=>{};',
+  onAuthChange: 'export const onAuthChange=()=>({data:{subscription:{unsubscribe(){}}}});',
+  healthStats: 'export const healthStats=async()=>({inventory:0,todayCheckIns:0,todayPickups:0,lastBackup:null});',
+  countsByStatus: 'export const countsByStatus=async()=>({in_storage:0,reserved:0,checked_out:0,missing:0});',
+  listStorageSets: 'export const listStorageSets=async()=>[];',
+  listCustomers: 'export const listCustomers=async()=>[];',
+  listRecycleBin: 'export const listRecycleBin=async()=>[];',
+  OWNER_EMAIL: 'export const OWNER_EMAIL="smoke@example.com";',
+  ADMIN_ROLES: 'export const ADMIN_ROLES=["admin"];',
+};
+const db = `const session=${session};\n` + [...exportNames(path.join(root, 'js/db.js'))].map(([name, kind]) => (
+  dbOverrides[name] || (kind === 'fn' ? `export const ${name}=async()=>null;` : `export const ${name}=null;`)
+)).join('\n') + '\n';
 
 const pages = [
-  ['/app/login.html', 'Dobrodošli natrag'],
+  ['/app/login.html', ['Dobrodošli natrag', 'Ploča']],
   ['/app/dashboard.html', 'Ploča'],
-  ['/app/checkin.html', 'Spremi gume'],
+  ['/app/checkin.html', 'Spremi gume', '() => { const loc=document.getElementById("locField"); const steps=document.getElementById("flowSteps"); return Boolean(loc && loc.hidden && steps && steps.children.length===3); }'],
   ['/app/scan.html', 'Skeniraj naljepnicu'],
-  ['/app/place.html', 'Smjesti komplet'],
-  ['/app/checkout.html', 'Preuzmi komplet'],
-  ['/app/locate.html', 'Pronađi komplet'],
-  ['/app/locations.html', 'Naljepnice mjesta'],
-  ['/app/warehouse-preview/index.html', 'Prostorni pregled'],
+  ['/app/place.html', 'Smjesti komplet', '() => Boolean(document.getElementById("flow-reader"))'],
+  ['/app/checkout.html', 'Preuzmi komplet', '() => Boolean(document.getElementById("flow-reader"))'],
+  ['/app/locate.html', 'Pronađi komplet', '() => Boolean(document.querySelector("#flow-root input"))'],
+  ['/app/locations.html', 'Naljepnice mjesta', '() => Boolean(document.getElementById("loc-zone"))'],
+  ['/app/warehouse-preview/index.html', 'Prostorni pregled', '() => document.querySelectorAll("#asc-navigation a").length===11'],
 ];
 
 function chromeBin() {
@@ -81,15 +88,26 @@ async function cdp(wsUrl, expression) {
   ws.addEventListener('message', (event) => {
     const message = JSON.parse(event.data);
     if (message.id && pending.has(message.id)) pending.get(message.id)(message);
-    if (message.method === 'Runtime.exceptionThrown') exceptions.push(redact(message.params?.exceptionDetails?.text || message.params?.exceptionDetails?.exception?.description));
+    if (message.method === 'Runtime.exceptionThrown') {
+      const details = message.params?.exceptionDetails || {};
+      exceptions.push(redact([details.exception?.description, details.url, details.lineNumber, details.text].filter(Boolean).join(' @ ')));
+    }
   });
   const send = (method, params = {}) => new Promise((resolve) => { const next = ++id; pending.set(next, resolve); ws.send(JSON.stringify({ id: next, method, params })); });
   await send('Runtime.enable');
   await send('Page.enable');
-  await new Promise((resolve) => setTimeout(resolve, 1600));
+  const started = Date.now();
+  let text = '';
+  while (Date.now() - started < 8000) {
+    const evaluated = await send('Runtime.evaluate', { expression, returnByValue: true });
+    text = evaluated.result?.result?.value || '';
+    if (text.trim()) break;
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+  await new Promise((resolve) => setTimeout(resolve, 400));
   const evaluated = await send('Runtime.evaluate', { expression, returnByValue: true });
   ws.close();
-  return { text: evaluated.result?.result?.value || '', exceptions };
+  return { text: evaluated.result?.result?.value || text, exceptions };
 }
 
 const bin = chromeBin();
@@ -106,12 +124,25 @@ try {
   }
   if (!version?.webSocketDebuggerUrl) throw new Error('Chrome DevTools did not start');
   const failures = [];
-  for (const [page, expected] of pages) {
-    const tab = await (await fetch('http://127.0.0.1:9333/json/new?' + encodeURIComponent(origin + page))).json();
+  for (const [page, expected, check] of pages) {
+    const tab = await (await fetch('http://127.0.0.1:9333/json/new?' + encodeURIComponent(origin + page), { method: 'PUT' })).json();
     const result = await cdp(tab.webSocketDebuggerUrl, 'document.body ? document.body.innerText : ""');
+    let behavior = true;
+    if (check) {
+      const ws = new WebSocket(tab.webSocketDebuggerUrl);
+      await new Promise((resolve, reject) => { ws.addEventListener('open', resolve, { once: true }); ws.addEventListener('error', reject, { once: true }); });
+      const evaluated = await new Promise((resolve) => {
+        ws.addEventListener('message', (event) => { const message = JSON.parse(event.data); if (message.id === 1) resolve(message); });
+        ws.send(JSON.stringify({ id: 1, method: 'Runtime.evaluate', params: { expression: `(${check})()`, returnByValue: true } }));
+      });
+      behavior = evaluated.result?.result?.value === true;
+      ws.close();
+    }
     await fetch('http://127.0.0.1:9333/json/close/' + tab.id).catch(() => {});
+    const expectedText = Array.isArray(expected) ? expected : [expected];
     if (result.exceptions.length) failures.push(page + ' exception: ' + result.exceptions[0]);
-    if (!result.text.includes(expected)) failures.push(page + ' missing expected text');
+    if (!expectedText.some((item) => result.text.includes(item))) failures.push(page + ' missing expected text');
+    if (!behavior) failures.push(page + ' behavior check failed');
   }
   if (failures.length) {
     console.error(failures.join('\n'));
