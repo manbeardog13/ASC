@@ -8,7 +8,7 @@
 // sticker / edit-prefill / report handlers read real data.
 // ============================================================================
 import {
-  getSession, loadStorageSet, changeStatus, setPaid, moveStorageSet,
+  getSession, loadStorageSet, changeStatus, checkoutSet, setPaid, moveStorageSet,
   softDeleteSet, findSetAtLocation, signedPhotoUrls, addPhoto, loadAuditTrail,
 } from '../js/db.js';
 
@@ -277,8 +277,9 @@ function guard(btn, fn, failMsg) {
 function wire(s) {
   const statusBtn = document.getElementById('statusBtn');
   if (statusBtn) statusBtn.addEventListener('click', guard(statusBtn, async () => {
-    await changeStatus(s.id, 'checked_out');
-    s.status = 'checked_out'; s.picked_up_at = new Date().toISOString();
+    if (!confirm('Preuzeti komplet ' + s.public_code + '? Mjesto u skladištu se oslobađa.')) return;
+    await checkoutSet({ setId: s.id, publicCode: s.public_code });
+    s.status = 'checked_out'; s.picked_up_at = new Date().toISOString(); s.location_id = null;
     renderChips(s); renderActions(s);
   }, 'Promjena statusa nije uspjela. Pokušajte ponovno.'));
 

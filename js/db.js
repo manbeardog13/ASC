@@ -263,13 +263,30 @@ const SET_LIST_COLUMNS = `
   vehicle:vehicles ( id, make, model, year, plate,
     customer:customers ( id, name, phone, email ) ),
   tires ( size, brand, model, tread_mm, dot_code, position )`;
+const SET_LIST_WITH_LOCATION = SET_LIST_COLUMNS.replace(
+  "zone, rack, shelf, slot",
+  "location_id, zone, rack, shelf, slot",
+);
+
+function missingColumn(error, name) {
+  return Boolean(error && (error.code === "PGRST204" || error.code === "42703")
+    && new RegExp(name, "i").test(error.message || ""));
+}
+
+// location_id arrives with the locations migration. Until then the same
+// query is retried without that column so lists keep loading.
+async function querySetList(apply) {
+  let res = await apply(SET_LIST_WITH_LOCATION);
+  if (missingColumn(res.error, "location_id")) res = await apply(SET_LIST_COLUMNS);
+  return res;
+}
 
 // Everything currently in the shop (recycle-bin rows excluded).
 export async function listStorageSets() {
-  const { data, error } = await supabase.from("storage_sets")
-    .select(SET_LIST_COLUMNS)
+  const { data, error } = await querySetList((cols) => supabase.from("storage_sets")
+    .select(cols)
     .is("deleted_at", null)
-    .order("updated_at", { ascending: false });
+    .order("updated_at", { ascending: false }));
   if (error) throw fail(error, "load the storage list");
   return data ?? [];
 }
@@ -462,19 +479,32 @@ async function replayPendingUnwinds() {
 }
 
 export async function createStorageSet(form) {
-  const customer = await lenientWrite("save the customer", {
+  const customerPatch = {
     name: form.customer.name, phone: form.customer.phone || null, email: form.customer.email || null,
     address: form.customer.address || null,
-  }, (p) => supabase.from("customers").insert(p).select().single());
+  };
+  const reusedCustomer = Boolean(form.customer?.id);
+  const customer = reusedCustomer
+    ? await updateCustomer(form.customer.id, customerPatch).then(() => ({ id: form.customer.id }))
+    : await lenientWrite("save the customer", customerPatch,
+      (p) => supabase.from("customers").insert(p).select().single());
 
   // Everything after the customer either fully saves or fully unwinds — a failed
   // check-in must leave nothing behind, or retrying creates duplicate customers.
+  // An existing customer or vehicle is updated in place and never deleted here.
   let set;
+  let freshVehicleId = null;
   try {
-    const vehicle = await lenientWrite("save the vehicle", {
-      customer_id: customer.id, make: form.vehicle.make || null, model: form.vehicle.model || null,
-      year: form.vehicle.year || null, plate: form.vehicle.plate || null, vin: form.vehicle.vin || null,
-    }, (p) => supabase.from("vehicles").insert(p).select().single());
+    const vehiclePatch = {
+      make: form.vehicle.make || null, model: form.vehicle.model || null,
+      year: form.vehicle.year || null, plate: form.vehicle.plate || null,
+    };
+    const vehicle = form.vehicle?.id
+      ? await updateVehicle(form.vehicle.id, vehiclePatch).then(() => ({ id: form.vehicle.id }))
+      : await lenientWrite("save the vehicle", {
+        ...vehiclePatch, customer_id: customer.id, vin: form.vehicle.vin || null,
+      }, (p) => supabase.from("vehicles").insert(p).select().single());
+    if (!form.vehicle?.id) freshVehicleId = vehicle.id;
 
     set = await lenientWrite("save the tire set", {
       vehicle_id: vehicle.id, season: form.set.season, on_rims: form.set.on_rims,
@@ -492,9 +522,16 @@ export async function createStorageSet(form) {
         (p) => supabase.from("tires").insert(p));
     }
   } catch (e) {
-    const job = { setId: set?.id ?? null, customerId: customer.id, at: new Date().toISOString() };
+    if (freshVehicleId && reusedCustomer) {
+      await supabase.from("vehicles").delete().eq("id", freshVehicleId);
+    }
+    const job = {
+      setId: set?.id ?? null,
+      customerId: reusedCustomer ? null : customer.id,
+      at: new Date().toISOString(),
+    };
     const done = await unwindCreate(job).catch(() => false);
-    if (!done) writeUnwinds([...readUnwinds(), job]);  // replayed on next boot / reconnect
+    if (!done && job.customerId) writeUnwinds([...readUnwinds(), job]);  // replayed on next boot / reconnect
     throw e;
   }
 
@@ -559,6 +596,110 @@ export async function markReminded(setId) {
   return updateStorageSet(setId, { reminded_at: new Date().toISOString() });
 }
 
+function rpcMissing(error) {
+  return Boolean(error && (error.code === "PGRST202"
+    || /could not find the function|schema cache/i.test(error.message || "")));
+}
+function relationMissing(error) {
+  return Boolean(error && (error.code === "PGRST205" || error.code === "42P01"
+    || /could not find the table/i.test(error.message || "")));
+}
+function rpcFail(error, doing) {
+  if (rpcMissing(error) || relationMissing(error)) {
+    return new Error("Locations are not switched on yet. Apply the locations migration, then try again.");
+  }
+  const message = error?.message || "";
+  if (/already holds|already in a slot|blocked|not found|Scan|Only a stored/i.test(message)) {
+    return new Error(message);
+  }
+  return fail(error, doing);
+}
+
+export async function placeSet({ setId = null, publicCode = null, locationId = null, qrCode = null } = {}) {
+  const { data, error } = await supabase.rpc("place_set", {
+    set_id: setId, public_code: publicCode, location_id: locationId, qr_code: qrCode,
+  });
+  if (error) throw rpcFail(error, "place the set");
+  return data;
+}
+
+export async function moveSet({ setId = null, publicCode = null, locationId = null, qrCode = null } = {}) {
+  const { data, error } = await supabase.rpc("move_set", {
+    set_id: setId, public_code: publicCode, location_id: locationId, qr_code: qrCode,
+  });
+  if (error) throw rpcFail(error, "move the set");
+  return data;
+}
+
+// Frees the slot. If the migration is not applied yet, fall back to a status
+// change so checkout still records the pickup.
+export async function checkoutSet({ setId = null, publicCode = null } = {}) {
+  const { data, error } = await supabase.rpc("checkout_set", {
+    set_id: setId, public_code: publicCode,
+  });
+  if (!error) return data;
+  if (rpcMissing(error) && setId) {
+    await changeStatus(setId, "checked_out");
+    return { ok: true, fallback: true, public_code: publicCode };
+  }
+  throw rpcFail(error, "check the set out");
+}
+
+export async function suggestFreeSlot(warehouse = "main") {
+  const { data, error } = await supabase.rpc("suggest_free_slot", { warehouse });
+  if (error) throw rpcFail(error, "suggest a free slot");
+  return data;
+}
+
+export async function findLocationByQr(qrCode) {
+  const code = String(qrCode || "").trim().toUpperCase();
+  if (!code) return null;
+  const { data, error } = await supabase.from("locations")
+    .select("id, warehouse, zone, rack, shelf, slot, qr_code, status")
+    .eq("qr_code", code)
+    .maybeSingle();
+  if (relationMissing(error)) return null;
+  if (error) throw fail(error, "find the slot");
+  return data;
+}
+
+// Insert missing slots only. ignoreDuplicates keeps an occupied slot occupied.
+export async function createLocations(rows) {
+  const payload = (rows || []).map((row) => ({
+    warehouse: row.warehouse || "main",
+    zone: row.zone || "",
+    rack: row.rack || "",
+    shelf: row.shelf || "",
+    slot: row.slot || "",
+    status: "free",
+  }));
+  if (!payload.length) return [];
+  const inserted = await supabase.from("locations").upsert(payload, {
+    onConflict: "warehouse,zone,rack,shelf,slot",
+    ignoreDuplicates: true,
+  }).select("id, warehouse, zone, rack, shelf, slot, qr_code, status");
+  if (relationMissing(inserted.error)) {
+    throw new Error("Locations are not switched on yet. Apply the locations migration, then try again.");
+  }
+  if (inserted.error) throw fail(inserted.error, "create the slots");
+  const warehouse = payload[0].warehouse;
+  const zone = payload[0].zone;
+  const listed = await supabase.from("locations")
+    .select("id, warehouse, zone, rack, shelf, slot, qr_code, status")
+    .eq("warehouse", warehouse)
+    .eq("zone", zone);
+  if (listed.error) return inserted.data ?? [];
+  const want = new Set(payload.map((row) => [row.rack, row.shelf, row.slot].join("\0")));
+  return (listed.data ?? []).filter((row) => want.has([row.rack, row.shelf, row.slot].join("\0")));
+}
+
+export function locationLabel(loc) {
+  if (!loc) return "";
+  const parts = [loc.zone, loc.rack, loc.shelf, loc.slot].filter((part) => part != null && part !== "");
+  const place = parts.join(" · ");
+  return loc.qr_code ? (place ? `${place} · ${loc.qr_code}` : loc.qr_code) : place;
+}
+
 export async function moveStorageSet(set, newLocation) {
   const occupant = await findSetAtLocation(newLocation, set.id).catch(() => null);
   if (occupant) throw new Error(`${occupant.public_code} is already at that location.`);
@@ -601,10 +742,10 @@ export async function restoreSet(setId) {
   await applySetPatch(setId, { deleted_at: null });
 }
 export async function listRecycleBin() {
-  const { data, error } = await supabase.from("storage_sets")
-    .select(SET_LIST_COLUMNS)
+  const { data, error } = await querySetList((cols) => supabase.from("storage_sets")
+    .select(cols)
     .not("deleted_at", "is", null)
-    .order("deleted_at", { ascending: false });
+    .order("deleted_at", { ascending: false }));
   if (error) throw fail(error, "load the recycle bin");
   return data ?? [];
 }
@@ -684,7 +825,7 @@ export function subscribeToChanges(onChange) {
     if (data.session) supabase.realtime.setAuth(data.session.access_token);
   });
   const channel = supabase.channel("asc-realtime");
-  for (const table of ["customers", "vehicles", "storage_sets", "tires", "photos", "audit_events", "backup_runs"]) {
+  for (const table of ["customers", "vehicles", "storage_sets", "tires", "photos", "audit_events", "backup_runs", "locations", "set_movements"]) {
     channel.on("postgres_changes", { event: "*", schema: "public", table }, onChange);
   }
   channel.subscribe();

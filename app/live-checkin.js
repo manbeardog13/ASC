@@ -12,9 +12,10 @@
 // Both navigate to set-detail.html?code=<code> after ~900ms.
 // ============================================================================
 import {
-  getSession, healthStats, createStorageSet, loadStorageSet,
-  updateCustomer, updateVehicle, updateStorageSet, replaceTires,
+  getSession, healthStats, createStorageSet, loadStorageSet, listCustomers,
+  suggestFreeSlot, locationLabel, updateCustomer, updateVehicle, updateStorageSet, replaceTires,
 } from '../js/db.js';
+import { t } from '../js/i18n.js';
 // db.js's createStorageSet persists the location via store.rememberLocation →
 // localStorage 'asc.recentLocations'. Loading here (same module instance as
 // db.js uses) hydrates the in-memory list so saving doesn't clobber history.
@@ -43,6 +44,8 @@ function setNum(el, val) {
 // ---- Edit mode (module-level flag) ----------------------------------------
 const pf = window.__ascPrefill || null;
 const editMode = Boolean(pf && pf.edit && pf.code);
+const wizard = !editMode;
+let wizardStep = wizard ? 1 : 2;
 const editCode = editMode ? String(pf.code) : null;
 let editCtx = null;   // { setId, customerId, vehicleId } once the set is loaded
 let editSet = null;   // the full loaded row — tire merge + hydration gate need it
@@ -194,8 +197,12 @@ function readForm() {
   let fee = num('s_fee');
   if (fee != null && fee < 0) fee = null;
   return {
-    customer: { name: val('c_name'), phone: val('c_phone'), email: val('c_email'), address: val('c_address') },
+    customer: {
+      id: val('c_id') || null,
+      name: val('c_name'), phone: val('c_phone'), email: val('c_email'), address: val('c_address'),
+    },
     vehicle: {
+      id: val('v_id') || null,
       make: val('v_make'), model: val('v_model'), year,
       plate: val('v_plate').toUpperCase(), vin: null,
     },
@@ -227,6 +234,221 @@ function goToSet(code) {
   setTimeout(() => { location.href = 'set-detail.html?code=' + encodeURIComponent(code); }, 900);
 }
 
+function hiddenId(id) {
+  let node = $(id);
+  if (!node && form) {
+    node = document.createElement('input');
+    node.type = 'hidden';
+    node.id = id;
+    form.appendChild(node);
+  }
+  return node;
+}
+
+function showWizard(step) {
+  wizardStep = step;
+  const sections = qa('#ci > section');
+  sections.forEach((section, index) => { section.hidden = step === 1 ? index !== 0 : false; });
+  const loc = $('locField');
+  if (loc) loc.hidden = true;
+  const bar = q('#ci .action-bar');
+  if (bar) bar.hidden = step === 3;
+  const btn = q('#ci .btn-primary');
+  if (btn) {
+    const label = step === 1 ? t('flow.next') : t('flow.savePrint');
+    const text = [...btn.childNodes].find((node) => node.nodeType === 3);
+    if (text) text.textContent = ' ' + label;
+  }
+  const panel = $('placeStep');
+  if (panel) panel.hidden = step !== 3;
+  const steps = $('flowSteps');
+  if (steps) {
+    [...steps.children].forEach((child, index) => child.classList.toggle('on', index + 1 === Math.min(step, 3)));
+  }
+}
+
+function rememberWho(customer, vehicle) {
+  const cid = hiddenId('c_id');
+  const vid = hiddenId('v_id');
+  if (cid) cid.value = customer?.id || '';
+  if (vid) vid.value = vehicle?.id || '';
+  const fill = (id, value) => { const node = $(id); if (node && value != null && value !== '') node.value = value; };
+  fill('c_name', customer?.name);
+  fill('c_phone', customer?.phone);
+  fill('c_email', customer?.email);
+  fill('c_address', customer?.address);
+  fill('v_make', vehicle?.make);
+  fill('v_model', vehicle?.model);
+  fill('v_year', vehicle?.year);
+  fill('v_plate', vehicle?.plate);
+}
+
+function installWhoSearch() {
+  const host = q('#ci fieldset');
+  if (!host || $('whoSearch')) return;
+  const box = document.createElement('input');
+  box.id = 'whoSearch';
+  box.autocomplete = 'off';
+  box.placeholder = t('flow.locatePh');
+  const label = document.createElement('label');
+  label.className = 'field';
+  const span = document.createElement('span');
+  span.className = 'label';
+  span.textContent = t('flow.stepWho');
+  label.append(span, box);
+  const hits = document.createElement('div');
+  hits.className = 'who-hits';
+  host.prepend(hits);
+  host.prepend(label);
+  let timer = 0;
+  box.addEventListener('input', () => {
+    clearTimeout(timer);
+    const query = box.value.trim().toLowerCase();
+    timer = setTimeout(async () => {
+      hits.replaceChildren();
+      if (query.length < 2) return;
+      const customers = await listCustomers().catch(() => []);
+      const seen = new Set();
+      const matches = [];
+      for (const customer of customers) {
+        const vehicles = customer.vehicles || [];
+        const nameHit = String(customer.name || '').toLowerCase().includes(query);
+        const plates = vehicles.filter((vehicle) => String(vehicle.plate || '').toLowerCase().includes(query));
+        const chosen = plates.length ? plates : (nameHit ? vehicles.slice(0, 1) : []);
+        if (!nameHit && !plates.length) continue;
+        const list = chosen.length ? chosen : [null];
+        for (const vehicle of list) {
+          const key = customer.id + ':' + (vehicle?.id || '');
+          if (seen.has(key)) continue;
+          seen.add(key);
+          matches.push({ customer, vehicle });
+        }
+      }
+      for (const match of matches.slice(0, 6)) {
+        const item = document.createElement('button');
+        item.type = 'button';
+        item.className = 'btn ghost';
+        item.textContent = [match.customer.name, match.vehicle?.plate].filter(Boolean).join(' · ');
+        item.addEventListener('click', () => { rememberWho(match.customer, match.vehicle); hits.replaceChildren(); });
+        hits.append(item);
+      }
+    }, 180);
+  });
+}
+
+function installSidewall() {
+  const tires = $('tires');
+  if (!tires || $('sidewallBtn')) return;
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.id = 'sidewallBtn';
+  btn.className = 'btn ghost';
+  btn.textContent = t('flow.sidewall');
+  const file = document.createElement('input');
+  file.type = 'file';
+  file.accept = 'image/*';
+  file.capture = 'environment';
+  file.hidden = true;
+  btn.addEventListener('click', () => file.click());
+  file.addEventListener('change', async () => {
+    const picked = file.files && file.files[0];
+    file.value = '';
+    if (!picked) return;
+    btn.disabled = true;
+    showToast(t('flow.reading'));
+    try {
+      const [{ scanSidewall }, { fillNextTireRow }] = await Promise.all([
+        import('../js/ocr.js'),
+        import('../js/views/shared.js'),
+      ]);
+      const found = await scanSidewall(picked);
+      fillNextTireRow(tires, found?.size || '', found?.dot || '');
+      showToast(t('flow.sidewallOk'));
+    } catch (error) {
+      showToast(error?.message || t('flow.camera'));
+    } finally {
+      btn.disabled = false;
+    }
+  });
+  tires.before(btn, file);
+}
+
+function showPlaceStep(code, formData) {
+  showWizard(3);
+  qa('#ci > section').forEach((section) => { section.hidden = true; });
+  let panel = $('placeStep');
+  if (!panel) {
+    panel = document.createElement('section');
+    panel.id = 'placeStep';
+    panel.className = 'card stack flow-card';
+    form.after(panel);
+  }
+  panel.hidden = false;
+  panel.replaceChildren();
+  const title = document.createElement('h2');
+  title.textContent = code;
+  const lead = document.createElement('p');
+  lead.className = 'lead';
+  lead.textContent = t('flow.saved', { code });
+  const actions = document.createElement('div');
+  actions.className = 'flow-actions';
+  const print = document.createElement('button');
+  print.type = 'button';
+  print.className = 'btn';
+  print.textContent = t('flow.print');
+  print.addEventListener('click', () => {
+    if (window.ASCQR) window.ASCQR.printSticker(code, {
+      who: formData.customer.name,
+      plate: formData.vehicle.plate,
+      season: formData.set.season,
+    });
+  });
+  const suggest = document.createElement('button');
+  suggest.type = 'button';
+  suggest.className = 'btn ghost';
+  suggest.textContent = t('flow.suggest');
+  const note = document.createElement('p');
+  note.className = 'flow-note';
+  suggest.addEventListener('click', async () => {
+    try {
+      const slot = await suggestFreeSlot('main');
+      if (!slot) { showToast(t('flow.noSlot')); return; }
+      note.textContent = t('flow.suggested', { where: locationLabel(slot) });
+      place.href = 'place.html?set=' + encodeURIComponent(code) + (slot.qr_code ? '&slot=' + encodeURIComponent(slot.qr_code) : '');
+    } catch (error) {
+      showToast(error.message || t('flow.migration'));
+    }
+  });
+  const place = document.createElement('a');
+  place.className = 'btn btn-primary';
+  place.href = 'place.html?set=' + encodeURIComponent(code);
+  place.textContent = t('flow.openPlace');
+  const record = document.createElement('a');
+  record.className = 'btn ghost';
+  record.href = 'set-detail.html?code=' + encodeURIComponent(code);
+  record.textContent = t('flow.openRecord');
+  actions.append(print, suggest, place, record);
+  panel.append(title, lead, note, actions);
+  if (window.ASCQR && window.qrcode) print.click();
+}
+
+function installWizard() {
+  if (!wizard || !form) return;
+  const steps = document.createElement('div');
+  steps.id = 'flowSteps';
+  steps.className = 'flow-steps';
+  for (const key of ['flow.stepWho', 'flow.stepTires', 'flow.stepPlace']) {
+    const chip = document.createElement('span');
+    chip.textContent = t(key);
+    steps.append(chip);
+  }
+  form.before(steps);
+  installWhoSearch();
+  installSidewall();
+  showWizard(1);
+}
+installWizard();
+
 if (form) form.addEventListener('submit', async (e) => {
   e.preventDefault();
   if (inFlight) return;
@@ -252,6 +474,19 @@ if (form) form.addEventListener('submit', async (e) => {
       editHydrated = true;
     }
     const f = readForm();
+    if (wizard && wizardStep === 1) {
+      if (!f.customer.name && !f.vehicle.plate) {
+        if ($('c_name')) $('c_name').focus();
+        showToast(t('flow.needWho'));
+        unlock();
+        return;
+      }
+      if (!f.customer.name) f.customer.name = f.vehicle.plate;
+      if ($('c_name') && !$('c_name').value.trim()) $('c_name').value = f.customer.name;
+      showWizard(2);
+      unlock();
+      return;
+    }
     if (!f.customer.name) {
       if ($('c_name')) $('c_name').focus();
       showToast('Ime kupca je obavezno.');
@@ -304,10 +539,14 @@ if (form) form.addEventListener('submit', async (e) => {
       showToast('Ažurirano ' + editCode);
       goToSet(editCode);
     } else {
+      if (wizard) {
+        f.set.zone = ''; f.set.rack = ''; f.set.shelf = ''; f.set.slot = '';
+      }
       const code = await createStorageSet(f);
       renderRecentChips(); // createStorageSet just persisted this location
-      showToast('Spremljeno ' + code);
-      goToSet(code);
+      showToast(wizard ? t('flow.saved', { code }) : ('Spremljeno ' + code));
+      if (wizard) showPlaceStep(code, f);
+      else goToSet(code);
     }
     // stay disabled — navigation is in flight; re-enabling would invite doubles
   } catch (err) {

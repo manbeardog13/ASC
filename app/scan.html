@@ -263,8 +263,11 @@ html.dark .tip svg{color:var(--lava-2)}
     fileInput.value = '';
     if(!f || !window.ASCQR) return;
     cueText('Čitam fotografiju…');
-    ASCQR.scanFile(f).then(function(code){ if(code) go(code); else flash('Na fotografiji nema QR koda.'); },
-                          function(){ flash('Fotografiju nije moguće pročitati.'); });
+    ASCQR.scanFile(f).then(function(code){
+      var slot = ASCQR.extractSlot && ASCQR.extractSlot(ASCQR.lastScan);
+      if(slot){ location.href = 'place.html#/slot/' + encodeURIComponent(slot); return; }
+      if(code) go(code); else flash('Na fotografiji nema QR koda.');
+    }, function(){ flash('Fotografiju nije moguće pročitati.'); });
   });
 
   // ---- live camera ----
@@ -273,7 +276,9 @@ html.dark .tip svg{color:var(--lava-2)}
     var reader = document.getElementById('reader');
     if(!reader){ reader = document.createElement('div'); reader.id = 'reader'; reader.className = 'vf-reader'; vf.insertBefore(reader, vf.firstChild); }
     vf.classList.remove('vf-off'); vf.classList.add('scanning');
-    ASCQR.scanInto('reader', function(code){
+    ASCQR.scanInto('reader', function(code, text){
+      var slot = ASCQR.extractSlot && ASCQR.extractSlot(text);
+      if(slot){ vf.classList.add('hit'); cueText('Otvaram mjesto…'); location.href = 'place.html#/slot/' + encodeURIComponent(slot); return; }
       if(code){ vf.classList.add('hit'); cueText('Otvaram…'); go(code); }
       else { cueText('To nije ASC naljepnica — tražim dalje…'); setTimeout(startCamera, 650); }   // decode stopped the camera; auto-resume
     }, function(err){

@@ -1,0 +1,20 @@
+.flow{max-width:640px;margin:0 auto}
+.flow-head{margin:2px 4px 14px}
+.flow-head .k{color:var(--muted);font:600 10.5px Inter;letter-spacing:.09em;text-transform:uppercase}
+.flow-head h1{font-family:Sora;font-weight:600;font-size:clamp(21px,5vw,26px);letter-spacing:-.01em;margin-top:5px}
+.flow-card{padding:22px 18px 18px}
+.flow-card h2{font-family:Sora;font-weight:600;font-size:18px;margin:0 0 8px}
+.flow-card p.lead{color:var(--muted);font-size:13.5px;line-height:1.45;margin:0 0 14px}
+.flow-steps{display:flex;gap:8px;margin:0 0 14px}
+.flow-steps span{font:600 11px Inter;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);padding:6px 10px;border-radius:999px;border:1px solid var(--line)}
+.flow-steps span.on{color:var(--ink);border-color:transparent;background:rgba(255,78,27,.14)}
+.flow-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+.flow-actions .btn{flex:1}
+.flow-list{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+.flow-hit{display:flex;flex-direction:column;gap:2px;text-align:left;text-decoration:none;color:inherit;padding:12px 14px;border-radius:16px;border:1px solid var(--line);background:var(--panel-2)}
+.flow-hit b{font:650 14px Inter}
+.flow-hit small{color:var(--muted);font:500 12.5px Inter}
+.flow-reader{min-height:180px;border-radius:16px;overflow:hidden;background:#111;margin:8px 0 12px}
+.flow-note{font:600 13px Inter;padding:10px 12px;border-radius:12px;background:rgba(255,78,27,.1);margin:8px 0}
+.who-hits{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.who-hits button{text-align:left}

@@ -37,7 +37,7 @@
 .spatial-app :is(button,input,textarea){font-family:Inter,system-ui,sans-serif}
 .spatial-app button{cursor:pointer;color:inherit;border:0;background:none;touch-action:manipulation}
 .spatial-app button:disabled{opacity:.45;cursor:not-allowed}
-.spatial-app :is(button,a,input,textarea):focus-visible{outline:3px solid var(--sel-ink);outline-offset:3px}
+.spatial-app :is(button,a,input,textarea,summary):focus-visible{outline:3px solid var(--sel-ink);outline-offset:3px}
 .spatial-app .skip-link{position:fixed;left:20px;top:-80px;background:var(--panel-2);color:var(--ink);padding:15px;z-index:200;border-radius:12px}
 .spatial-app .skip-link:focus{top:20px}
 .spatial-app .spatial-top{position:relative;height:auto;min-height:44px}
@@ -127,21 +127,22 @@
 .spatial-app .spatial-footer{display:flex;justify-content:space-between;gap:12px;padding:20px 3px 0;font-size:10px;line-height:1.5;color:var(--muted)}
 .spatial-app .inspector{position:relative;inset:auto;width:100%;min-width:0;padding:18px;margin:var(--gap) 0 0;max-height:none;overflow:visible;overflow-wrap:anywhere}
 .spatial-app .inspector-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.spatial-app .live-pin{margin:0 0 10px;padding:10px 12px;border-radius:12px;background:rgba(255,78,27,.12);font:600 13px/1.4 Inter,system-ui,sans-serif}
 .spatial-app .inspector .eyebrow{font-size:9px;color:var(--muted);letter-spacing:.06em}
 .spatial-app .inspector h3{font-size:20px;letter-spacing:-.035em;margin:3px 0 7px}
-.spatial-app .inspector .sub{font-size:11px;color:var(--muted);line-height:1.5}
-.spatial-app .stack-meter{display:flex;gap:4px;margin:18px 0 9px}.spatial-app .stack-meter i{height:5px;flex:1;border-radius:3px;background:var(--line)}.spatial-app .stack-meter i.filled{background:var(--sel)}
+.spatial-app .inspector .sub{font-size:13px;color:var(--muted);line-height:1.5}
+.spatial-app .stack-meter{display:flex;gap:4px;flex:1;max-width:220px}.spatial-app .stack-meter i{height:5px;flex:1;border-radius:3px;background:var(--line)}.spatial-app .stack-meter i.filled{background:var(--sel)}
 .spatial-app .stack-meta{display:flex;justify-content:space-between;gap:5px;font-size:11px;color:var(--muted);margin-bottom:12px}
 .spatial-app .tyre-row{display:flex;align-items:center;gap:9px;width:100%;padding:12px 0;min-height:56px;text-align:left;border-bottom:1px solid var(--line)}
 .spatial-app .tyre-dot{width:25px;height:25px;border-radius:50%;border:6px solid #343c40;flex:none}
-.spatial-app .tyre-text{flex:1;min-width:0}.spatial-app .tyre-row b{display:block;font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.spatial-app .tyre-row small{display:block;font-size:11px;color:var(--muted);margin-top:4px}.spatial-app .tyre-row em{font-style:normal;font-size:11px;color:var(--muted)}
+.spatial-app .tyre-text{flex:1;min-width:0}.spatial-app .tyre-row b{display:block;font-size:14px;font-weight:600;overflow-wrap:anywhere}
+.spatial-app .tyre-row small{display:block;font-size:13px;color:var(--muted);margin-top:4px}.spatial-app .tyre-row em{font-style:normal;font-size:12px;color:var(--muted)}
 .spatial-app .tyre-row.empty .tyre-dot{border:1px dashed var(--muted)}
-.spatial-app .inspector-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:16px}
-.spatial-app .inspector-actions .button{padding:6px 8px;font-size:11px}
+.spatial-app .inspector-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+.spatial-app .inspector-actions .button{flex:1;padding:8px 12px;font-size:13px;white-space:nowrap}
 .spatial-app .capacity-field{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12px;color:var(--muted);border-top:1px solid var(--line);padding-top:14px;margin-top:16px}
 .spatial-app .capacity-field input{width:62px;height:44px;padding:8px;border:1px solid var(--line);border-radius:10px;background:var(--panel-2);color:var(--ink);font-size:14px}
-.spatial-app .inspector-note{font-size:10px;line-height:1.6;color:var(--muted);margin-top:12px}
+.spatial-app .inspector-note{font-size:13px;line-height:1.6;color:var(--muted);margin-top:12px}
 .spatial-app .placement-card{position:absolute;bottom:72px;left:16px;width:min(310px,calc(100% - 32px));z-index:6;padding:16px;border-radius:var(--radius);background:var(--panel-2);border:1px solid var(--line);box-shadow:var(--shadow-card)}
 .spatial-app .placement-heading{display:flex;align-items:center;gap:8px}.spatial-app .placement-heading b{font-size:13px}.spatial-app .placement-heading .icon-button{margin-left:auto}
 .spatial-app .placement-dot{width:6px;height:6px;background:var(--lava);border-radius:50%;flex:none}
@@ -187,3 +188,41 @@
 .spatial-app .area-tabs button[data-area="all"].active{background:var(--panel-2);color:var(--sel-ink);border-color:var(--sel-ring)}
 .spatial-app .tyre-details{padding:14px;margin:8px 0 14px;border:1px solid var(--line);border-radius:14px;background:var(--panel-2)}
 .spatial-app .tyre-details h4{margin:0;font-size:14px}
+
+/* Short disclosures keep the map and the next action in view. */
+.spatial-app .stack-occupancy{display:flex;align-items:center;gap:12px;margin:14px 0 8px;color:var(--muted);font-size:13px}
+.spatial-app .stack-occupancy>span{white-space:nowrap}
+.spatial-app .stack-occupancy b{color:var(--ink-2)}
+.spatial-app .empty-stack{padding:12px 0;color:var(--muted);font-size:14px}
+.spatial-app .compact-details{border-top:1px solid var(--line);margin-top:14px;min-width:0}
+.spatial-app .compact-details>summary{display:list-item;min-height:44px;padding:13px 6px;font-size:14px;font-weight:600;line-height:1.4;color:var(--ink-2);cursor:pointer;border-radius:10px;list-style-position:inside;touch-action:manipulation}
+.spatial-app .compact-details>summary::marker{color:var(--muted);font-size:12px}
+.spatial-app .compact-details>summary:hover{background:var(--sel-tint)}
+.spatial-app .disclosure-body{padding:0 6px 10px;font-size:14px;line-height:1.6;color:var(--muted)}
+.spatial-app .disclosure-body p+p{margin-top:8px}
+.spatial-app .secondary-actions{display:flex;flex-wrap:wrap;gap:8px}
+.spatial-app .secondary-actions .button{flex:1}
+.spatial-app .tyre-chevron{font-size:18px;color:var(--muted);transition:transform 180ms var(--snap)}
+.spatial-app .tyre-row[aria-expanded="true"] .tyre-chevron{transform:rotate(180deg)}
+.spatial-app .tyre-row[aria-expanded="true"]{border-bottom-color:transparent}
+.spatial-app .tyre-details{border-color:var(--hairline);box-shadow:0 4px 14px -12px var(--ink);margin-top:0}
+.spatial-app .tyre-brand{font-size:13px;color:var(--muted)}
+.spatial-app .tyre-details .dialog-actions{justify-content:flex-start;margin-top:12px}
+.spatial-app .tyre-details .code-label{padding:14px}
+.spatial-app .warehouse-help{margin-top:8px}
+.spatial-app .warehouse-help ol{padding-left:20px;margin:0 0 12px}
+.spatial-app .warehouse-help li+li{margin-top:6px}
+.spatial-app .found-location{border-color:var(--hairline);box-shadow:0 4px 18px -12px var(--ink);border-radius:16px}
+.spatial-app .found-location b{font-size:14px}.spatial-app .found-location span{font-size:12px}
+.spatial-app :is(.button,.tyre-row,.compact-details>summary){transition:background 160ms var(--snap),transform 160ms var(--snap)}
+.spatial-app :is(.button,.tyre-row):active{transform:scale(.99)}
+@media(prefers-reduced-motion:no-preference){
+ .spatial-app :is(.tyre-details,.found-location):not([hidden]),.spatial-app .compact-details[open]>.disclosure-body{animation:spatial-reveal 180ms var(--snap) both}
+ @keyframes spatial-reveal{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+}
+@media(max-width:420px){
+ .spatial-app .spatial-top{flex-wrap:wrap;gap:8px}
+ .spatial-app .top-actions{flex:1;justify-content:flex-end}
+ .spatial-app .top-actions .button{padding-inline:11px}
+ .spatial-app .inspector{padding:16px}
+}

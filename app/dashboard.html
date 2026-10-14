@@ -185,169 +185,38 @@ html.splashing .greet{animation-play-state:paused}
 .stream .qr-sticker img{display:block;width:38px;height:38px;image-rendering:pixelated;border-radius:2px}
 .stream .slide .tab-tl{font-size:10px;padding:5px 9px 6px}
 
-/* ===== ASC Agent card — an "intelligent" agent surface ======================
-   No click-to-expand any more. The rotating hook (loved — refreshed daily by the
-   engine at the bottom of the page) sits on the left; a tall type box BLURS into
-   existence on the right on hover / focus. The old "bulb" spark is now a smoothly
-   spinning tire. Notched corner tab kept (the ASC signature). Deliberately
-   off-palette — this is the AI affordance. */
+/* ASC assistant entry — one invitation, one field and three next steps.
+   Always visible for mouse, touch and keyboard; conversation lives in the
+   shared expandable surface above the page content. */
 .agent-shell{position:relative}
 .hero .agent-shell{grid-column:1;grid-row:3}
-@media(max-width:900px){ .hero .agent-shell{grid-column:auto;grid-row:auto} }
-/* Real notch: the label's exact box is SUBTRACTED from the card via mask, so the
-   true background shows through — guaranteed clean. --tw/--th from JS (measures
-   the label). The label is an overlay (.notch-tab), OUTSIDE the mask. */
-.agent-card{position:relative;border-radius:var(--radius);overflow:hidden;display:flex;flex-direction:column;min-height:322px;
-  background:linear-gradient(165deg,#0e0b1c,#131024 58%,#0a0912);
-  border:1px solid rgba(150,100,255,.22);box-shadow:var(--shadow-card);
-  transition:border-color .5s var(--smooth),box-shadow .5s var(--smooth);
-  --r:14px;
-  /* 6 mask layers, XOR-composited (all regions disjoint):
-     1 base · 2 top band · 3 left band · 4 deep-corner round (convex) ·
-     5 top-edge fillet · 6 left-edge fillet (the two concave transitions that
-     make the gap sweep smoothly around the tab — the Apple-grade detail). */
-  -webkit-mask:
-    linear-gradient(#000,#000),
-    linear-gradient(#000,#000) 0 0/var(--tw,0px) calc(var(--th,0px) - var(--r)) no-repeat,
-    linear-gradient(#000,#000) 0 calc(var(--th,0px) - var(--r))/calc(var(--tw,0px) - var(--r)) var(--r) no-repeat,
-    radial-gradient(circle var(--r) at 0 0,#000 calc(var(--r) - .6px),#0000 var(--r)) calc(var(--tw,0px) - var(--r)) calc(var(--th,0px) - var(--r))/var(--r) var(--r) no-repeat,
-    radial-gradient(circle var(--r) at 100% 100%,#0000 calc(var(--r) - .6px),#000 var(--r)) var(--tw,0px) 0/var(--r) var(--r) no-repeat,
-    radial-gradient(circle var(--r) at 100% 100%,#0000 calc(var(--r) - .6px),#000 var(--r)) 0 var(--th,0px)/var(--r) var(--r) no-repeat;
-  -webkit-mask-composite:xor,xor,xor,xor,xor;
-  mask:
-    linear-gradient(#000,#000),
-    linear-gradient(#000,#000) 0 0/var(--tw,0px) calc(var(--th,0px) - var(--r)) no-repeat,
-    linear-gradient(#000,#000) 0 calc(var(--th,0px) - var(--r))/calc(var(--tw,0px) - var(--r)) var(--r) no-repeat,
-    radial-gradient(circle var(--r) at 0 0,#000 calc(var(--r) - .6px),#0000 var(--r)) calc(var(--tw,0px) - var(--r)) calc(var(--th,0px) - var(--r))/var(--r) var(--r) no-repeat,
-    radial-gradient(circle var(--r) at 100% 100%,#0000 calc(var(--r) - .6px),#000 var(--r)) var(--tw,0px) 0/var(--r) var(--r) no-repeat,
-    radial-gradient(circle var(--r) at 100% 100%,#0000 calc(var(--r) - .6px),#000 var(--r)) 0 var(--th,0px)/var(--r) var(--r) no-repeat;
-  mask-composite:exclude,exclude,exclude,exclude,exclude}
-/* the label floats in the cut, sitting directly on the real background behind */
+.agent-card{position:relative;overflow:hidden;border-radius:var(--radius);background:linear-gradient(150deg,#181522,#211c2e);
+  border:1px solid rgba(190,165,230,.2);box-shadow:var(--shadow-card)}
 .notch-tab{position:absolute;top:0;left:0;z-index:6;font:600 10.5px Inter;letter-spacing:.07em;
   text-transform:uppercase;color:var(--ink-2);padding:7px 13px 8px;white-space:nowrap;pointer-events:none}
-@media(any-hover:hover){ .agent-card:hover{border-color:rgba(170,120,255,.42);box-shadow:0 22px 50px -22px rgba(90,50,200,.6),var(--shadow-card)} }
-.agent-card::before{content:"";position:absolute;inset:-35%;z-index:0;pointer-events:none;opacity:.55;
-  background:
-    radial-gradient(38% 46% at 22% 32%,rgba(130,70,255,.55),transparent 60%),
-    radial-gradient(40% 48% at 78% 38%,rgba(232,64,208,.42),transparent 60%),
-    radial-gradient(46% 54% at 58% 82%,rgba(50,100,255,.42),transparent 62%);
-  filter:blur(34px);animation:agAurora 15s ease-in-out infinite alternate}
-@keyframes agAurora{to{transform:translate(7%,-6%) rotate(10deg) scale(1.12)}}
-
-/* body fills the card; THREE cycling hook lines are spread with equal gaps —
-   l1 left, l2 right, l3 left. On hover the 2nd + 3rd fade-blur out and the chat
-   window (bubble + chips) takes their place. */
-.agent-body{position:relative;z-index:1;flex:1;display:flex;flex-direction:column;justify-content:space-between;padding:40px 26px 30px;color:#f4f5f7}
-.agent-hook{font-family:"Sora",Inter;font-weight:500;font-size:clamp(15px,1.65vw,19px);
-  line-height:1.32;letter-spacing:-.012em;max-width:30ch;
-  background:linear-gradient(96deg,#ffffff 0%,#e7dcff 46%,#b7a3ff 78%,#8ee6ff 100%);
-  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;
-  filter:drop-shadow(0 2px 13px rgba(139,92,246,.28));
-  transition:opacity .48s var(--smooth),transform .48s var(--smooth),filter .48s var(--smooth);
-  will-change:opacity,transform}
-.agent-hook.l1{align-self:flex-start;text-align:left}
-.agent-hook.l2{align-self:flex-end;text-align:right;opacity:.9}
-.agent-hook.l3{align-self:flex-start;text-align:left;opacity:.9}
-/* sequential swap for a single line: outro = fade out + lift; intro = rise + fade in */
-.agent-hook.out{opacity:0;transform:translateY(-7px)}
-.agent-hook.in{opacity:0;transform:translateY(13px);transition:none}
-/* hover: the 2nd + 3rd lines quickly fade-blur out (then the window appears) */
-@media(any-hover:hover){
-  .agent-card:hover .agent-hook.l2,.agent-card:focus-within .agent-hook.l2,
-  .agent-card:hover .agent-hook.l3,.agent-card:focus-within .agent-hook.l3{
-    opacity:0;transform:translateY(-4px);filter:blur(7px) drop-shadow(0 2px 13px rgba(139,92,246,0));
-    transition:opacity .3s var(--smooth),transform .3s var(--smooth),filter .3s var(--smooth)}
-}
-
-/* the hover-revealed chat window: the bubble BLUR-FADES in, then the three
-   suggestion chips fade-RISE one after another. Space is reserved (opacity /
-   transform only, never layout) so nothing reflows — buttery, Apple-grade. */
-.tb-reply .tb-me{display:block;align-self:flex-end;text-align:right;margin:0 0 8px auto;max-width:86%;
-  padding:7px 12px;border-radius:14px 14px 4px 14px;background:rgba(244,245,247,.14);
-  font:500 12.5px/1.45 Inter;color:var(--on-stage)}
-.tb-reply .tb-ans{display:block}
-.agent-reveal{position:absolute;left:26px;right:26px;bottom:26px;display:flex;flex-direction:column;gap:12px;pointer-events:none}
-@media(any-hover:hover){ .agent-card:hover .agent-reveal,.agent-card:focus-within .agent-reveal{pointer-events:auto} }
-/* touch has no hover → keep the chat window tappable there; and while a reply is
-   live, keep it open + interactive regardless of hover so the answer doesn't vanish. */
-html[data-device="tablet"] .agent-reveal,html[data-device="mobile"] .agent-reveal,
-.agent-card.agent-live .agent-reveal{pointer-events:auto}
-.agent-card.agent-live .text-bubble,.agent-card.agent-live .qchip{opacity:1;filter:blur(0);transform:none}
-.agent-card.agent-live .agent-hook.l2,.agent-card.agent-live .agent-hook.l3{opacity:0}
-.tb-reply{display:none;margin:0 0 2px;font:500 13.5px/1.42 Inter;color:#ece6ff;background:rgba(12,10,24,.6);
-  border:1px solid rgba(150,110,255,.26);border-radius:13px;padding:10px 13px;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
-  max-height:112px;overflow:auto;box-shadow:0 14px 34px -20px rgba(0,0,0,.7)}
-.tb-reply.on{display:block;animation:rise .4s var(--smooth) both}
-.text-bubble{position:relative;display:flex;align-items:center;gap:8px;min-height:50px;padding:0 6px 0 17px;border-radius:15px;
-  background:rgba(12,10,24,.55);border:1px solid rgba(150,110,255,.3);
-  -webkit-backdrop-filter:blur(12px) saturate(150%);backdrop-filter:blur(12px) saturate(150%);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 18px 42px -22px rgba(0,0,0,.72);
-  opacity:0;filter:blur(16px);transform:translateY(12px) scale(.98);
-  transition:opacity .55s cubic-bezier(.16,1,.3,1),filter .55s cubic-bezier(.16,1,.3,1),transform .55s cubic-bezier(.16,1,.3,1),border-color .3s var(--smooth);
-  will-change:opacity,filter,transform}
-.tb-input{flex:1;min-width:0;background:transparent;border:0;outline:0;color:#f3efff;font:500 14.5px Inter}
-.tb-input::placeholder{color:rgba(233,224,255,.46)}
-.tb-send{flex:none;width:38px;height:38px;border-radius:11px;border:0;cursor:pointer;display:grid;place-items:center;color:#fff;
-  background:linear-gradient(135deg,#8b5cf6,#e040d0);box-shadow:0 6px 16px -6px rgba(139,92,246,.7);
-  transition:transform 150ms var(--snap),box-shadow .2s var(--smooth)}
-@media(any-hover:hover){ .tb-send:hover{transform:translateY(-1px);box-shadow:0 10px 22px -8px rgba(224,64,208,.7)} }
-.tb-send:active{transform:scale(.92)}
-.chips{display:flex;flex-wrap:wrap;gap:9px}
-.qchip{display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:0 15px;border-radius:999px;cursor:pointer;
-  background:rgba(150,110,255,.12);border:1px solid rgba(150,110,255,.3);color:#e9e2ff;font:600 12.5px Inter;letter-spacing:.005em;
-  opacity:0;transform:translateY(14px);
-  transition:opacity .5s cubic-bezier(.16,1,.3,1),transform .5s cubic-bezier(.16,1,.3,1),border-color .2s var(--smooth),background .2s var(--smooth)}
-@media(any-hover:hover){ .qchip:hover{border-color:rgba(224,64,208,.55);background:rgba(150,110,255,.22)} }
-/* reveal: bubble first, then the chips cascade up one-by-one just after */
-@media(any-hover:hover){
-  .agent-card:hover .text-bubble,.agent-card:focus-within .text-bubble{opacity:1;filter:blur(0);transform:none;transition-delay:.24s}
-  .agent-card:hover .qchip,.agent-card:focus-within .qchip{opacity:1;transform:none;transition-delay:calc(.34s + var(--ci,0)*.055s)}
-}
-/* ===== RESPONSIVE — adapt the agent window to each device tier ==============
-   Capability-based detection (NOT user-agent sniffing): app.js reads matchMedia
-   hover/pointer + width and sets html[data-device] = desktop | tablet | mobile
-   (re-evaluated on resize/rotate).
-   · desktop (a mouse → real hover): the hover-to-reveal window above.
-   · tablet / mobile (touch → no hover): nothing to hover, so the window is laid
-     out STATICALLY in normal flow (headline → input → chips) — it can't overlap
-     the lines the way the hover-only reveal did (that was the mobile bug).
-   @media(hover:none) is the pre-JS / JS-off CSS safety net; [data-device] is the
-   precise per-tier control. */
-@media (hover: none){
-  .agent-card{min-height:auto}
-  .agent-body{justify-content:flex-start;gap:16px;padding:32px 22px 22px}
-  .agent-hook.l2,.agent-hook.l3{display:none}
-  .agent-reveal{position:static;inset:auto;pointer-events:auto;gap:11px}
-  .text-bubble,.qchip{opacity:1;filter:none;transform:none;transition:none}
-}
-/* real narrow-touch phones get the compact treatment immediately (no pre-JS reflow) */
-@media (hover: none) and (max-width: 640px){
-  .agent-body{padding:26px 18px 18px;gap:13px}
-  .agent-hook.l1{font-size:16px;max-width:none}
-  .text-bubble{min-height:46px}
-  .qchip{min-height:34px;padding:0 13px;font-size:12px}
-  .chips .qchip:nth-child(n+7){display:none}
-}
-html[data-device="tablet"] .agent-card,html[data-device="mobile"] .agent-card{min-height:auto}
-html[data-device="tablet"] .agent-body,html[data-device="mobile"] .agent-body{justify-content:flex-start;gap:16px;padding:32px 22px 22px}
-html[data-device="tablet"] .agent-hook.l2,html[data-device="tablet"] .agent-hook.l3,
-html[data-device="mobile"] .agent-hook.l2,html[data-device="mobile"] .agent-hook.l3{display:none}
-html[data-device="tablet"] .agent-reveal,html[data-device="mobile"] .agent-reveal{position:static;inset:auto;pointer-events:auto;gap:11px}
-html[data-device="tablet"] .text-bubble,html[data-device="tablet"] .qchip,
-html[data-device="mobile"] .text-bubble,html[data-device="mobile"] .qchip{opacity:1;filter:none;transform:none;transition:none}
-/* mobile — tighter than tablet, and cap the chips so the card stays compact */
-html[data-device="mobile"] .agent-body{padding:26px 18px 18px;gap:13px}
-html[data-device="mobile"] .agent-hook.l1{font-size:16px;max-width:none}
-html[data-device="mobile"] .text-bubble{min-height:46px}
-html[data-device="mobile"] .qchip{min-height:34px;padding:0 13px;font-size:12px}
-html[data-device="mobile"] .chips .qchip:nth-child(n+7){display:none}
-@media(prefers-reduced-motion:reduce){
-  .agent-card::before{animation:none}
-  .agent-hook{transition:opacity .3s linear}
-  .agent-card:hover .agent-hook.l2,.agent-card:hover .agent-hook.l3,.agent-card:focus-within .agent-hook.l2,.agent-card:focus-within .agent-hook.l3{filter:none!important;transform:none!important}
-  .text-bubble,.qchip{transition:opacity .25s linear!important;filter:none!important;transform:none!important}
-  .agent-card:hover .qchip,.agent-card:focus-within .qchip{transition-delay:0s!important}
-}
+.agent-shell>.notch-tab{color:#d5c6eb;padding:10px 20px}
+.agent-body{position:relative;display:flex;flex-direction:column;gap:18px;padding:38px 22px 22px;color:#f4f5f7}
+.agent-hook{font:500 18px/1.4 "Sora",Inter;letter-spacing:-.012em;color:#f4effc}
+.agent-reveal{display:flex;flex-direction:column;gap:12px}
+.text-bubble{display:flex;align-items:center;gap:8px;min-height:50px;padding:4px 4px 4px 15px;border-radius:19px;
+  background:rgba(255,255,255,.06);box-shadow:inset 0 0 0 1px rgba(221,203,245,.14);
+  transition:box-shadow 180ms cubic-bezier(.22,1,.36,1)}
+.text-bubble:focus-within{box-shadow:inset 0 0 0 2px #cbb5ef}
+.tb-input{flex:1;min-width:0;background:transparent;border:0;outline:0;color:#f3efff;font:500 16px/1.4 Inter}
+.tb-input::placeholder{color:#b8accb}
+.tb-send{flex:none;width:44px;height:44px;border-radius:15px;border:0;cursor:pointer;display:grid;place-items:center;color:#241830;
+  background:#d7bfef;transition:transform 150ms cubic-bezier(.22,1,.36,1)}
+.tb-send:active:not(:disabled){transform:scale(.96)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.qchip{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 13px;border-radius:999px;cursor:pointer;
+  background:rgba(221,203,245,.08);border:1px solid rgba(221,203,245,.18);color:#e9e2ff;font:500 12.5px/1.4 Inter;
+  transition:background 180ms cubic-bezier(.22,1,.36,1)}
+.tb-send:disabled,.qchip:disabled{opacity:.5;cursor:wait}
+.tb-send:focus-visible,.qchip:focus-visible{outline:2px solid #ead7ff;outline-offset:3px}
+@media(any-hover:hover){.qchip:hover:not(:disabled){background:rgba(221,203,245,.18)}}
+@media(max-width:900px){.hero .agent-shell{grid-column:auto;grid-row:auto}}
+@media(max-width:640px){.agent-body{padding:36px 18px 18px;gap:14px}.agent-hook{font-size:16px}}
+@media(prefers-reduced-motion:reduce){.text-bubble,.tb-send,.qchip{transition:none}}
 
 /* ===== General corner CUT — the same real mask subtraction as the agent card,
    applied by JS to the other cards so every notch reveals the TRUE background
@@ -479,31 +348,21 @@ if(sat>=59){d.classList.add('island');d.style.setProperty('--isl-y',(sat-48)+'px
       <div class="body"><h2>Preuzmi komplet</h2></div>
     </a>
 
-    <!-- ASC AGENT — a calm AI window UNDER the stage (col 1), matching its width.
-         Resting: just the rotating hook. On hover the chat bubble blur-fades in,
-         then the three suggestion chips fade-rise one by one. Notch = real mask cut. -->
+    <!-- Dashboard entry into the same assistant used by the page header. -->
     <div class="agent-shell reveal" id="agentShell" style="animation-delay:230ms">
       <span class="notch-tab" id="agentTab">agent</span>
-      <section class="agent-card" id="agentCard" role="group" aria-label="ASC pomoćnik — AI za skladište guma">
+      <section class="agent-card agent-live" id="agentCard" role="group" aria-label="ASC pomoćnik — AI za skladište guma">
         <div class="agent-body">
-          <span class="agent-hook l1" id="agentHook">…</span>
-          <span class="agent-hook l2" id="agentHook2" aria-hidden="true">…</span>
-          <span class="agent-hook l3" id="agentHook3" aria-hidden="true">…</span>
+          <span class="agent-hook l1" id="agentHook">Što trebaš u ASC-u?</span>
           <div class="agent-reveal">
             <div class="text-bubble">
-              <input class="tb-input" id="tbInput" type="text" autocomplete="off" placeholder="Pitaj bilo što…" aria-label="Pitaj ASC pomoćnika">
-              <button class="tb-send" type="button" aria-label="Pošalji"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M13 6l6 6-6 6"/></svg></button>
+              <input class="tb-input" id="tbInput" type="text" autocomplete="off" placeholder="Pitaj o ASC-u…" aria-label="Pitaj ASC pomoćnika">
+              <button class="tb-send" type="button" aria-label="Pošalji" disabled><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M13 6l6 6-6 6"/></svg></button>
             </div>
-            <div class="chips" role="list">
-              <button class="qchip" type="button" role="listitem" style="--ci:0" data-q="Nađi gume za DU 123-AB">nađi set</button>
-              <button class="qchip" type="button" role="listitem" style="--ci:1" data-q="Koliko je slobodno u skladištu?">koliko je slobodno</button>
-              <button class="qchip" type="button" role="listitem" style="--ci:2" data-q="Tko čeka na preuzimanje danas?">tko čeka</button>
-              <button class="qchip" type="button" role="listitem" style="--ci:3" data-q="Nađi gume po registraciji">gume po tablici</button>
-              <button class="qchip" type="button" role="listitem" style="--ci:4" data-q="Koji su podsjetnici za danas?">podsjetnici danas</button>
-              <button class="qchip" type="button" role="listitem" style="--ci:5" data-q="Koje police su slobodne?">slobodne police</button>
-              <button class="qchip" type="button" role="listitem" style="--ci:6" data-q="Koji je zadnji zaprimljeni set?">zadnji unos</button>
-              <button class="qchip" type="button" role="listitem" style="--ci:7" data-q="Napravi izvještaj smjene">izvještaj smjene</button>
-              <button class="qchip" type="button" role="listitem" style="--ci:8" data-q="Spremi SMS za preuzimanje">spremi SMS</button>
+            <div class="chips" aria-label="Predložena pitanja">
+              <button class="qchip" type="button" style="--ci:0" data-q="Pronađi komplet" disabled>Pronađi komplet</button>
+              <button class="qchip" type="button" style="--ci:1" data-q="Otvori zaprimanje" disabled>Zaprimi</button>
+              <button class="qchip" type="button" style="--ci:2" data-q="Otvori skladište" disabled>Skladište</button>
             </div>
           </div>
         </div>
@@ -622,132 +481,32 @@ document.addEventListener('click', function(e){
   });
 })();
 </script>
+
 <script>
-  /* ==========================================================================
-     ASC Agent — the "alive" hook engine.
-     The rotating invitations are LOVED, so the pool is refreshed EVERY DAY by
-     tools/refresh-agent-hooks.md (prepend 20 fresh lines, drop the 20 oldest).
-     The dashboard just fetches assets/agent-hooks.json and walks it in a
-     day-seeded order — so even the same pool shows a different sequence each day
-     and never replays yesterday's loop. A small embedded set is the fallback if
-     the fetch fails (e.g. opened over file://).
-     ========================================================================== */
-  (() => {
-    const els = [document.getElementById('agentHook'), document.getElementById('agentHook2'), document.getElementById('agentHook3')].filter(Boolean);
-    if (!els.length) return;
-
-    const FALLBACK = [
-      "Koliko kompleta čeka na preuzimanje ovaj tjedan?",
-      "Reci mi registraciju — naći ću gume u sekundi.",
-      "Tražiš nešto? Znam gdje leži svaka guma.",
-      "Koga danas treba nazvati za preuzimanje?",
-      "Zaprimi set glasom — samo reci, ja zapisujem.",
-      "Pitaj me bilo što — tu sam, na mreži."
-    ];
-
-    // mulberry32 — deterministic per-day seed for the display order
-    const mul = (a) => () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
-    const DAY = Math.floor(Date.now() / 86400000);
-
-    const begin = (list) => {
-      const pool = (Array.isArray(list) && list.length) ? list.slice() : FALLBACK.slice();
-      // day-seeded shuffle: stable within the day, different sequence each day
-      const r = mul(DAY ^ 0x9E3779B1);
-      for (let k = pool.length - 1; k > 0; k--) { const j = (r() * (k + 1)) | 0; const t = pool[k]; pool[k] = pool[j]; pool[j] = t; }
-      let ptr = (Math.random() * pool.length) | 0;
-      const next = () => pool[(ptr++) % pool.length];   // distinct lines, no immediate repeats
-      const reduce = matchMedia('(prefers-reduced-motion:reduce)').matches;
-
-      // fill the three lines (hidden-below to start, unless reduced motion)
-      els.forEach((el) => { el.textContent = next(); if (!reduce) el.classList.add('in'); });
-      if (reduce || pool.length < 2) return;            // static three lines
-      void els[0].offsetWidth;                          // reflow so the .in start sticks
-      // ENTRANCE: rise + fade in, one after the other
-      els.forEach((el, k) => setTimeout(() => el.classList.remove('in'), 90 + k * 240));
-
-      // CYCLE: swap the next line every ~4.6s (rolling, normal pace)
-      const swap = (el) => {
-        el.classList.add('out');                        // fade out + lift away
-        setTimeout(() => {
-          el.textContent = next();
-          el.classList.remove('out'); el.classList.add('in');
-          void el.offsetWidth;
-          el.classList.remove('in');                    // rise + fade in
-        }, 500);
-      };
-      let turn = 0;
-      setInterval(() => { swap(els[turn % els.length]); turn++; }, 4600);
-    };
-
-    fetch('assets/agent-hooks.json', { cache: 'no-store' })
-      .then((res) => res.ok ? res.json() : Promise.reject(res.status))
-      .then((data) => begin(data && data.hooks))
-      .catch(() => begin(FALLBACK));
-  })();
-
-  /* Notch tab — measure the overlay label and hand its exact box to the card so
-     the mask subtracts precisely that footprint (re-measures after fonts/resize). */
-  (() => {
-    const card = document.getElementById('agentCard');
-    const tab = document.getElementById('agentTab');
-    if (!card || !tab) return;
-    const sync = () => {
-      card.style.setProperty('--tw', tab.offsetWidth + 'px');
-      card.style.setProperty('--th', tab.offsetHeight + 'px');
-    };
-    sync();
-    addEventListener('load', sync);
-    if (document.fonts && document.fonts.ready) document.fonts.ready.then(sync);
-    if (window.ResizeObserver) new ResizeObserver(sync).observe(tab);
-  })();
-</script>
-<script>
-  /* ASC Agent card — chips + input, wired to the LIVE Gemini brain (window.ASCAgent,
-     loaded by app.js). Send / Enter / a chip asks the agent; the reply shows in-card
-     (informational answers) or the agent navigates (find a set/customer). Falls back
-     to the search page if Gemini isn't configured. The hover reveal is pure CSS. */
+  // Every prompt goes through the shared page assistant, including cancellation.
   (() => {
     const card = document.getElementById('agentCard');
     if (!card) return;
     const input = document.getElementById('tbInput');
     const send = card.querySelector('.tb-send');
-    const reveal = card.querySelector('.agent-reveal');
     const chips = [...card.querySelectorAll('.qchip')];
-    const pulse = () => { if (send && send.animate) send.animate([{ transform: 'scale(1)' }, { transform: 'scale(.9)' }, { transform: 'scale(1)' }], { duration: 220, easing: 'cubic-bezier(.22,1,.36,1)' }); };
-    const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-
-    const reply = document.createElement('div');
-    reply.className = 'tb-reply'; reply.setAttribute('role', 'status'); reply.setAttribute('aria-live', 'polite');
-    if (reveal) reveal.insertBefore(reply, reveal.firstChild);
-    const show = (html) => { reply.innerHTML = html; reply.classList.add('on'); card.classList.add('agent-live'); };
-
-    let busy = false;
+    let chat = null;
+    window.ASCChatReady?.then(surface => {
+      chat = surface;
+      if (chat) [send, ...chips].forEach(button => { if (button) button.disabled = false; });
+      else document.getElementById('agentHook').textContent = 'Pomoćnik se nije učitao.';
+    });
     function ask(text) {
       text = (text || '').trim();
-      if (!text || busy) return;
-      pulse();
-      if (input) input.value = '';                       // the question moves into the thread
-      if (window.ASCAgent && ASCAgent.configured && ASCAgent.configured()) {
-        busy = true;
-        const me = '<span class="tb-me">' + esc(text) + '</span>';
-        const ans = (h) => show(me + '<span class="tb-ans">' + h + '</span>');
-        ans('Razmišljam…');
-        ASCAgent.ask(text, (ev) => {
-          if (ev.type === 'text') ans(esc(ev.text));
-          else if (ev.type === 'tool') ans('Radim…');
-          else if (ev.type === 'error') ans(esc(ev.message || 'Greška.'));
-        }).then((txt) => { busy = false; if (txt) ans(esc(txt)); })
-          .catch(() => { busy = false; ans('Veza je pukla — pokušaj ponovno.'); });
-      } else {                                   // Gemini not wired → route to search
-        show('Tražim…');
-        setTimeout(() => { location.href = 'workshop.html?q=' + encodeURIComponent(text); }, 120);
-      }
+      if (!text || !chat) return;
+      input.value = '';
+      chat.open(text, true);
     }
-    chips.forEach(c => c.addEventListener('click', () => { const q = c.dataset.q || c.textContent; if (input) input.value = q; ask(q); }));
-    if (send) send.addEventListener('click', () => ask(input && input.value));
-    if (input) input.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') { e.preventDefault(); ask(input.value); }
-      else if (e.key === 'Escape') { reply.classList.remove('on'); card.classList.remove('agent-live'); input.blur(); }
+    chips.forEach(button => button.addEventListener('click', () => ask(button.dataset.q)));
+    send?.addEventListener('click', () => ask(input.value));
+    input?.addEventListener('keydown', event => {
+      if (event.key === 'Enter' && !event.isComposing) { event.preventDefault(); ask(input.value); }
+      else if (event.key === 'Escape') { chat?.suspend(); input.blur(); }
     });
   })();
 </script>

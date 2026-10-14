@@ -30,6 +30,8 @@ export function renderAppNavigation({warehouseOpen=false, currentPath=location.p
         '<button class="sb-item" type="button" data-m="warehouse" aria-expanded="' + whOpen + '">' + I.pin + '<span class="t">Skladište</span>' + I.chev + '</button>' +
         '<div class="sb-group-kids"'+(whOpen?'':' inert')+'><div>' +
           item('warehouse', 'warehouse-preview/index.html', I.map, 'Prostorni pregled · probno', true) +
+          item('locate', 'locate.html', I.pin, 'Pronađi', true) +
+          item('locations', 'locations.html', I.spark, 'Mjesta', true) +
           item('warehouse', 'recycle.html', I.bin, 'Košarica', true) +
         '</div></div></div>' +
       item('customers', 'customers.html', I.people, 'Kupci') +

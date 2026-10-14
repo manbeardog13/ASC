@@ -24,6 +24,7 @@
   in js/i18n.js (hr). Placeholder data is illustrative.
 -->
 <link rel="stylesheet" href="app.css">
+<link rel="stylesheet" href="flow.css">
 <style>
 /* ---- Check-in-page-specific layout only (shared rules live in app.css) ---- */
 
@@ -243,7 +244,7 @@ html.dark .btn-primary{background:linear-gradient(180deg,var(--lava-2),var(--lav
           <button type="button" data-season="all_season" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.4"/><path d="M12 3.6v16.8"/></svg>Cjelogodišnje</button>
         </div>
       </fieldset>
-      <fieldset>
+      <fieldset id="locField">
         <legend>Lokacija u skladištu</legend>
         <div class="grid-4">
           <label class="field"><span class="label">Zona</span><input id="s_zone" autocomplete="off" placeholder="A"></label>
@@ -318,6 +319,8 @@ html.dark .btn-primary{background:linear-gradient(180deg,var(--lava-2),var(--lav
 
 
 <script src="app.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
+<script src="qr.js"></script>
 <script>
 /* Peek at the agent/Uredi prefill BEFORE the reader below consumes it: module
    scripts (live-checkin.js) run after inline scripts, and the reader removes
@@ -424,7 +427,10 @@ try{window.__ascPrefill=JSON.parse(sessionStorage.getItem('asc.prefill')||'null'
       if (pf.bolts_location) setSegOpt('s_bolts', pf.bolts_location);
       if (pf.hubcaps_location || pf.hubcaps_stored) setSegOpt('s_hubcaps', pf.hubcaps_location || (pf.hubcaps_stored ? 'stored' : ''));
       setVal('s_notes', pf.notes);
-      if (pf.season) { const sb = form.querySelector('[data-season="' + pf.season + '"]'); if (sb) sb.click(); }
+      setVal('s_out', pf.expected_out_date);
+      if (pf.fee != null && pf.fee !== '' && Number.isFinite(Number(pf.fee)) && Number(pf.fee) >= 0) setVal('s_fee', Number(pf.fee));
+      if (typeof pf.on_rims === 'boolean') { $('s_onrims').checked = pf.on_rims; $('s_onrims').dispatchEvent(new Event('change')); }
+      if (['winter', 'summer', 'all_season'].includes(pf.season)) { const sb = form.querySelector('[data-season="' + pf.season + '"]'); if (sb) sb.click(); }
       const qty = Math.max(1, Math.min(8, Number(pf.quantity) || 4));
       $('s_qty').value = qty; renderTires(qty);
       if (pf.tire_size || pf.brand) tiresBox.querySelectorAll('.tire-edit-row').forEach((r) => {

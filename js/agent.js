@@ -112,9 +112,16 @@ export function trimHistory(history) {
 // runTurn(history, callbacks) drives one user turn to completion. `history` is
 // the messages array (mutated in place: assistant turns + tool results are
 // appended). Returns the assistant's final text.
-export async function runTurn(history, { onToolUse, onDraftReview } = {}) {
+export async function runTurn(history, { onToolUse, onDraftReview, remote = false } = {}) {
+  // Legacy entry remains fail-closed too; an endpoint/key alone grants no call.
+  const assertRemoteAllowed = () => {
+    if (globalThis.ASC_AGENT_REMOTE_ALLOWED !== true || remote !== true)
+      throw new Error("Vanjski AI je isključen. Otvori Pitaj ASC u aplikaciji za lokalnu pomoć.");
+  };
+  assertRemoteAllowed();
   trimHistory(history);
   for (let round = 0; round <= MAX_TOOL_ROUNDS; round++) {
+    assertRemoteAllowed();
     const { data, error } = await supabase.functions.invoke("asc-agent", { body: { messages: history } });
     if (error) {
       // Surface the REAL reason — the generic message hid rate limits and

@@ -2,7 +2,9 @@ import { renderAppNavigation } from '../navigation.js';
 import { saveOperation, LocalSaveError } from './persistence.js';
 import { parseCroatianIntent, searchLocations, customerLabel } from './journey.js';
 import { createTour } from './tour.js';
+import { mountWarehouseAssistant } from './assistant-adapter.js';
 import { AREAS, seedState, validateState, canPlace, createStack, moveStack, setCapacity, addTire, removeTire, stats, LAYOUT_VERSION } from './model.js';
+import { pinForSet } from '../../js/mapPin.js';
 export function startPreview({isActive=()=>false,registerRuntime=()=>{}}={}){
 if(!isActive())throw new Error('ASC preview inactive');
 let disposed=false;const listeners=[];
@@ -36,8 +38,8 @@ let state;
 try {const raw=localStorage.getItem(KEY);state=raw===null?seedState():JSON.parse(raw);if(!state||!validateState(state).valid){storageProblem=true;state=seedState();}}catch{state=seedState();storageProblem=true;}
 const storedView=readJSON(VIEW_KEY,{});
 let areaId=AREAS.some(a=>a.id===storedView.areaId)||storedView.areaId==='all'?storedView.areaId:'2.3';
-let selectedId=null, viewer=null, viewMode='3d', placing=null, toastTimer, scannerStream=null, scannerFrame=null, recognition=null;
-let tour=null, scannerStarting=false, scannerGeneration=0;
+let selectedId=null, viewer=null, viewMode='3d', placing=null, toastTimer, scannerStream=null, scannerFrame=null, recognition=null, livePin=null;
+let tour=null, assistant=null, scannerStarting=false, scannerGeneration=0;
 let checkState=readJSON(CHECK_KEY,{}), viewReady=false;
 try{localStorage.getItem(KEY);}catch{storageAvailable=false;}
 const tyreById = id => state.tires.find(t=>t.id===id);
@@ -73,7 +75,7 @@ function renderAreas(){
 function render(){
  renderAreas();const current=area();const n=stats(state,areaId==='all'?null:areaId);
  $('area-code').textContent=areaId==='all'?'KUĆA / 02':areaId;$('area-name').textContent=current?.name||'Pregled kuće';
- $('area-subtitle').textContent=current?`${n.stacks} stupaca · ${n.occupied} probnih guma`:'Tri prostora · razdvojene etaže';
+ $('area-subtitle').textContent=current?`${n.stacks} stupaca · ${n.occupied} guma`:'Tri prostora';
  $('stat-tyres').textContent=n.occupied;$('stat-vacant').textContent=n.vacant;
  $('geometry-note').textContent=areaId==='all'?'Razdvojene etaže · visine su okvirne':areaId==='2.2'?'Pristup i visina platforme nisu izmjereni':'Okviran tlocrt · visine nisu izmjerene';
  viewer?.setData(state,areaId);viewer?.setSelection(selectedId);renderInspector();renderLocation();if(viewMode==='plan')renderPlan();
@@ -84,10 +86,24 @@ function selectStack(id,focus=false){if(placing)endPlacement();const stack=state
 function renderInspector(){
  const stack=selectedStack();const inspector=$('inspector');if(!stack||placing){inspector.hidden=true;return;}inspector.hidden=false;
  const tyres=stack.tireIds.map(tyreById).filter(Boolean);const occupied=tyres.length;
- inspector.innerHTML=`<div class="inspector-top"><div class="eyebrow">${esc(stack.areaId)} / ODABRANI STUPAC</div><button id="close-inspector" class="icon-button" aria-label="Zatvori detalje stupca">${icon('close',17)}</button></div><h3>${esc(stack.id)}</h3><p class="sub">${esc(AREAS.find(a=>a.id===stack.areaId)?.name)} · probni podaci</p><div class="stack-meter" aria-hidden="true">${Array.from({length:stack.capacity},(_,i)=>`<i class="${i<occupied?'filled':''}"></i>`).join('')}</div><div class="stack-meta"><span><b>${occupied}</b> od ${stack.capacity} mjesta</span><span>Slobodno: ${stack.capacity-occupied}</span></div><div class="tyres">${tyres.map((t,i)=>`<button class="tyre-row" data-tyre="${esc(t.id)}" aria-expanded="false" aria-controls="tyre-details"><span class="tyre-dot" style="border-color:${/^#[a-f0-9]{6}$/i.test(t.color)?t.color:'#343c40'}"></span><span class="tyre-text"><b>${esc(customerLabel(t.customer))}</b><small>${esc(t.plate)} · ${esc(t.size)}</small></span><em>${i+1}</em></button>`).join('')}${occupied<stack.capacity?`<button id="empty-position" class="tyre-row empty"><span class="tyre-dot"></span><span class="tyre-text"><b>Slobodna mjesta: ${stack.capacity-occupied}</b><small>Dodajte probnu gumu</small></span><em>+</em></button>`:''}</div><div class="inspector-actions"><button id="add-tyre" class="button primary" ${occupied>=stack.capacity?'disabled':''}>${icon('plus',15)}Dodaj gumu</button><button id="move-stack" class="button quiet">Premjesti stupac</button><button id="focus-stack" class="button quiet">Približi</button><button id="remove-top" class="button quiet" ${occupied===0?'disabled':''}>Ukloni gornju gumu</button></div><label class="capacity-field">Kapacitet stupca<input type="number" id="capacity-input" min="1" max="16" value="${stack.capacity}" aria-label="Kapacitet stupca"></label><p class="inspector-note">Položaj ${stack.x.toFixed(2)}, ${stack.z.toFixed(2)} · okvirne jedinice. Visina prostora nije potvrđena.</p>`;
- $('close-inspector').onclick=()=>{selectedId=null;render();$('search').focus();};$('add-tyre').onclick=showAddTyre;$('empty-position')?.addEventListener('click',showAddTyre);$('move-stack').onclick=()=>beginPlacement('move');$('focus-stack').onclick=()=>viewer?.focusStack(stack.id);$('remove-top').onclick=()=>showRemoveTyre(stack.tireIds.at(-1));
+ const sameStack=inspector.dataset.stackId===stack.id;
+ const editOpen=sameStack&&Boolean($('stack-tools')?.open);
+ const openTyre=sameStack?inspector.querySelector('[data-tyre][aria-expanded="true"]')?.dataset.tyre:null;
+ const qrOpen=sameStack&&Boolean($('tyre-qr')?.open);
+ const focusId=sameStack&&inspector.contains(document.activeElement)?document.activeElement.id:null;
+ inspector.dataset.stackId=stack.id;
+ const liveBanner=livePin&&livePin.stackId===stack.id?`<div class="live-pin"><b>${esc(livePin.text)}</b></div>`:'';
+ inspector.innerHTML=`${liveBanner}<div class="inspector-top"><div><h3>${esc(stack.id)}</h3><p class="sub">${esc(AREAS.find(a=>a.id===stack.areaId)?.name)}</p></div><button id="close-inspector" class="icon-button" aria-label="Zatvori detalje stupca">${icon('close',17)}</button></div>
+ <div class="stack-occupancy"><div class="stack-meter" aria-hidden="true">${Array.from({length:stack.capacity},(_,i)=>`<i class="${i<occupied?'filled':''}"></i>`).join('')}</div><span><b>${occupied}/${stack.capacity}</b> mjesta</span></div>
+ <div class="tyres">${tyres.map((t,i)=>`<button class="tyre-row" data-tyre="${esc(t.id)}" aria-expanded="false"><span class="tyre-dot" style="border-color:${/^#[a-f0-9]{6}$/i.test(t.color)?t.color:'#343c40'}"></span><span class="tyre-text"><b>${esc(customerLabel(t.customer))}</b><small>${esc(t.plate)}</small></span><em aria-label="Položaj ${i+1}">${i+1}</em><span class="tyre-chevron" aria-hidden="true">⌄</span></button>`).join('')||'<p class="empty-stack">Stupac je prazan.</p>'}</div>
+ <div class="inspector-actions"><button id="add-tyre" class="button primary" ${occupied>=stack.capacity?'disabled':''}>${icon('plus',15)}Dodaj gumu</button><button id="ask-stack" class="button quiet" aria-controls="warehouse-assistant">Pitaj ASC</button><button id="focus-stack" class="button quiet">Približi</button></div>
+ <details id="stack-tools" class="compact-details" ${editOpen?'open':''}><summary>Uredi stupac</summary><div class="disclosure-body"><div class="secondary-actions"><button id="move-stack" class="button quiet">Premjesti stupac</button><button id="remove-top" class="button quiet danger" ${occupied===0?'disabled':''}>Ukloni gornju gumu</button></div><label class="capacity-field">Kapacitet<input type="number" id="capacity-input" min="1" max="16" value="${stack.capacity}" aria-label="Kapacitet stupca"></label><p class="inspector-note">Položaj ${stack.x.toFixed(2)}, ${stack.z.toFixed(2)} · okvirne jedinice. Visina nije potvrđena.</p></div></details>`;
+ $('close-inspector').onclick=()=>{selectedId=null;render();$('search').focus();};$('add-tyre').onclick=showAddTyre;$('move-stack').onclick=()=>beginPlacement('move');$('focus-stack').onclick=()=>viewer?.focusStack(stack.id);$('remove-top').onclick=()=>showRemoveTyre(stack.tireIds.at(-1));
+ $('ask-stack').onclick=()=>openAssistant('Što mogu učiniti sa stupcem '+stack.id+'?');
  $('capacity-input').onchange=async e=>{const value=Number(e.target.value);if(!await commit(s=>setCapacity(s,stack.id,value),'Kapacitet je spremljen'))e.target.value=stack.capacity;};
- inspector.querySelectorAll('[data-tyre]').forEach(b=>b.onclick=()=>showTyre(b.dataset.tyre));
+ inspector.querySelectorAll('[data-tyre]').forEach(b=>b.onclick=()=>showTyre(b.dataset.tyre,true));
+ if(openTyre){showTyre(openTyre);if($('tyre-qr'))$('tyre-qr').open=qrOpen;}
+ if(focusId&&canFocus($(focusId)))$(focusId).focus({preventScroll:true});
 }
 function beginPlacement(type='place'){
  if(areaId==='all')changeArea('2.3');const stack=selectedStack();if(type==='move'&&!stack)return;
@@ -165,13 +181,18 @@ $('dialog').addEventListener('close',()=>{
 $('dialog').addEventListener('click',e=>{if(e.target===$('dialog')){const r=$('dialog').getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)closeDialog();}});
 function showAddTyre(){const s=selectedStack();if(!s)return;const t=tyreById(s.tireIds.at(-1));openDialog('Dodaj probnu gumu',`<p class="dialog-intro">Dodajte gumu u <b>${esc(s.id)}</b>. Sprema se samo probni zapis.</p><form id="add-form"><label class="dialog-field">Ime kupca<input id="new-customer" required maxlength="60" value="${esc((t?.customer||'Primjer Novi kupac').replace(/^(Demo|Primjer) /,''))}"></label><label class="dialog-field">Probna registracija<input id="new-plate" required maxlength="20" value="${esc(t?.plate||'PROBNO-NOVO')}"></label><label class="dialog-field">Dimenzija gume<input id="new-size" required maxlength="35" value="${esc(t?.size||'205/55 R16')}"></label><div class="dialog-actions"><button class="button primary" type="submit">Dodaj u stupac</button></div></form>`);$('add-form').onsubmit=async e=>{e.preventDefault();const name='Primjer '+$('new-customer').value.trim().replace(/^(Demo|Primjer) /,'');const plate=$('new-plate').value.trim();const match=state.tires.find(x=>x.customer===name&&x.plate===plate);const details={customer:name,plate,size:$('new-size').value.trim(),...(match?{setId:match.setId,color:match.color,brand:match.brand}:{})};if(await commit(data=>addTire(data,s.id,details),'Probna guma je dodana'))closeDialog();};}
 function showRemoveTyre(id){const s=selectedStack(),t=tyreById(id);if(!s||!t)return;openDialog('Ukloniti probnu gumu?',`<p class="dialog-intro">${esc(t.customer)} · ${esc(t.plate)}<br>Guma će biti uklonjena iz stupca ${esc(s.id)}. Ostale gume zadržavaju svoje oznake.</p><div class="dialog-actions"><button id="keep-tyre" class="button quiet">Zadrži gumu</button><button id="confirm-remove" class="button primary">Ukloni gumu</button></div>`);$('keep-tyre').onclick=closeDialog;$('confirm-remove').onclick=async()=>{if(await commit(data=>removeTire(data,s.id,id),'Guma je uklonjena'))closeDialog();};}
-function showTyre(id){const t=tyreById(id);const row=[...$('inspector').querySelectorAll('[data-tyre]')].find(b=>b.dataset.tyre===id);if(!t||!row)return;const payload=location.origin+location.pathname+'#tyre='+encodeURIComponent(t.code);let svg='';try{const qr=window.qrcode(0,'M');qr.addData(payload);qr.make();svg=qr.createSvgTag({cellSize:5,margin:20,scalable:true});}catch{svg='<p>QR oznaka trenutačno nije dostupna.</p>';}
+function showTyre(id,toggle=false){const t=tyreById(id);const row=[...$('inspector').querySelectorAll('[data-tyre]')].find(b=>b.dataset.tyre===id);if(!t||!row)return;
+ const wasOpen=row.getAttribute('aria-expanded')==='true';
  $('tyre-details')?.remove();
- $('inspector').querySelectorAll('[data-tyre]').forEach(b=>b.setAttribute('aria-expanded',String(b===row)));
- const details=document.createElement('section');details.id='tyre-details';details.className='tyre-details';details.setAttribute('aria-label','Oznaka odabrane gume');
+ $('inspector').querySelectorAll('[data-tyre]').forEach(b=>{b.setAttribute('aria-expanded','false');b.removeAttribute('aria-controls');});
+ if(wasOpen&&toggle){row.focus({preventScroll:true});return;}
+ row.setAttribute('aria-expanded','true');row.setAttribute('aria-controls','tyre-details');
+ const details=document.createElement('section');details.id='tyre-details';details.className='tyre-details';details.setAttribute('aria-label','Detalji odabrane gume');
  row.after(details);
- details.innerHTML=`<div class="inspector-top"><h4>Oznaka gume</h4><button id="close-tyre-details" class="icon-button" aria-label="Zatvori oznaku gume">×</button></div><p class="dialog-intro">${esc(t.customer)} · ${esc(t.plate)}<br>${esc(t.brand)} · ${esc(t.size)}</p><div class="code-label">${svg}<strong>${esc(t.code)}</strong><p>Probna oznaka · vrijedi samo u ovom prikazu</p></div><div class="dialog-actions"><button id="copy-code" class="button quiet">Kopiraj kod</button><button id="remove-label-tyre" class="button quiet danger">Ukloni gumu</button></div>`;
- $('close-tyre-details').onclick=()=>{details.remove();row.setAttribute('aria-expanded','false');row.focus({preventScroll:true});};
+ details.innerHTML=`<div class="inspector-top"><h4>${esc(t.size)}</h4><button id="close-tyre-details" class="icon-button" aria-label="Zatvori detalje gume">×</button></div><p class="tyre-brand">${esc(t.brand)}</p><details id="tyre-qr" class="compact-details"><summary>QR oznaka</summary><div class="code-label disclosure-body"><div id="tyre-qr-image"></div><strong>${esc(t.code)}</strong><p>Probna oznaka · samo ovaj prikaz</p></div></details><div class="dialog-actions"><button id="copy-code" class="button quiet">Kopiraj kod</button><button id="remove-label-tyre" class="button quiet danger">Ukloni gumu</button></div>`;
+ const qrImage=$('tyre-qr-image');
+ $('tyre-qr').ontoggle=e=>{if(disposed||!e.currentTarget.isConnected||!e.currentTarget.open||qrImage.childNodes.length)return;const payload=location.origin+location.pathname+'#tyre='+encodeURIComponent(t.code);try{const qr=window.qrcode(0,'M');qr.addData(payload);qr.make();qrImage.innerHTML=qr.createSvgTag({cellSize:5,margin:20,scalable:true});}catch{qrImage.textContent='QR oznaka trenutačno nije dostupna.';}};
+ $('close-tyre-details').onclick=()=>{details.remove();row.setAttribute('aria-expanded','false');row.removeAttribute('aria-controls');row.focus({preventScroll:true});};
  $('copy-code').onclick=async()=>{try{await navigator.clipboard.writeText(t.code);toast('Kod gume je kopiran');}catch{toast(t.code);}};$('remove-label-tyre').onclick=()=>showRemoveTyre(id);
 }
 function showList(){const stacks=state.stacks.filter(s=>areaId==='all'||s.areaId===areaId);openDialog('Popis stupaca',`<p class="dialog-intro">Odaberite stupac za detalje. Popis radi i bez 3D prikaza.</p><div class="stack-list">${stacks.map(s=>`<button class="result" data-list-stack="${s.id}"><span><b>${esc(s.id)}</b><small>Zauzeto ${s.tireIds.length} od ${s.capacity} mjesta</small></span><span class="result-location">Otvori ↗</span></button>`).join('')}</div>`);$('dialog-content').querySelectorAll('[data-list-stack]').forEach(b=>b.onclick=()=>{closeDialog();selectStack(b.dataset.listStack,true);});}
@@ -220,7 +241,7 @@ function renderLocation(){
  const stack=selectedStack();$('location-area').textContent=area()?.name||'Svi prostori';
  $('location-stack').hidden=!stack;$('location-stack').textContent=stack?' / '+stack.id:'';
  $('found-location').hidden=!stack||Boolean(placing);
- if(stack){$('found-location').querySelector('b').textContent=stack.tireIds.length?'Ovdje su':'Prazno mjesto';$('found-location-text').textContent=area().name+' · '+stack.id;}
+ if(stack){$('found-location').querySelector('b').textContent=stack.id;$('found-location-text').textContent=area().name;}
  $('back-overview').textContent=stack||areaId!=='all'?'Sva skladišta':'Pregled svih skladišta';
 }
 function closeMenu(){$('app-menu').hidden=true;$('menu-button').setAttribute('aria-expanded','false');}
@@ -238,7 +259,12 @@ function themeLabel(){const dark=document.documentElement.classList.contains('da
 $('theme-button').onclick=()=>{document.documentElement.classList.toggle('dark');try{localStorage.setItem('asc.theme',document.documentElement.classList.contains('dark')?'dark':'light');}catch{}themeLabel();};themeLabel();
 $('back-overview').onclick=()=>{changeArea('all');$('search').value='';viewer?.reset();};
 tour=createTour({isActive,getState:()=>state,navigate:changeArea,findExample:id=>{$('search').value=id;search(id);selectStack(id,true);},closeOverlays:()=>{closeDialog();closeMenu();closeSidebar();endPlacement();},onFinish:status=>{if(status==='completed')toast('Spremni ste. Upute su uvijek dostupne pod Pomoć.');}});
-for(const id of ['help-button','guide-button','context-help'])$(id).onclick=()=>tour.start();
+function showHelp(){closeSidebar();$('warehouse-help').open=true;$('warehouse-help').querySelector('summary').focus();}
+for(const id of ['help-button','context-help'])$(id).onclick=showHelp;
+for(const id of ['guide-button','help-tour'])$(id).onclick=()=>tour.start();
+function openAssistant(prompt){if(!isActive()||disposed)return;stopVoice();if(tour?.active)tour.finish('dismissed');assistant?.open(prompt,false);}
+assistant=mountWarehouseAssistant({mount:$('warehouse-assistant'),isActive,getState:()=>state,getArea:()=>areaId,getSelected:()=>selectedId,selectStack,changeArea,showAddTyre,showTyre,beginPlacement,showList,setView});
+$('ask-asc').onclick=()=>openAssistant();
 
 
 let scenePending=false,pausedDialog=false;
@@ -260,11 +286,30 @@ function stopVoice(){
  $('voice-button').classList.remove('listening');$('voice-button').setAttribute('aria-label','Glasovna pretraga');
 }
 const runtime={
- pause(){stopScanner();const status=$('scan-status');if(status)status.textContent='Skeniranje je zaustavljeno. Otvorite kameru ili odaberite fotografiju.';stopVoice();tour?.pause();viewer?.pause();if($('dialog').open){pausedDialog=true;$('dialog').close();}},
+ pause(){stopScanner();const status=$('scan-status');if(status)status.textContent='Skeniranje je zaustavljeno. Otvorite kameru ili odaberite fotografiju.';stopVoice();assistant?.suspend();tour?.pause();viewer?.pause();if($('dialog').open){pausedDialog=true;$('dialog').close();}},
  resume(){if(disposed||!isActive())return;tour?.resume();if(pausedDialog){pausedDialog=false;$('dialog').showModal();}if(viewer)viewer.resume();else void ensureScene();},
- dispose(){if(disposed)return;disposed=true;pausedDialog=false;if($('dialog').open)$('dialog').close();stopScanner();stopVoice();clearTimeout(toastTimer);tour?.dispose();for(const remove of listeners)remove();listeners.length=0;viewer?.dispose();viewer=null;}
+ dispose(){if(disposed)return;disposed=true;pausedDialog=false;if($('dialog').open)$('dialog').close();stopScanner();stopVoice();assistant?.dispose();clearTimeout(toastTimer);tour?.dispose();for(const remove of listeners)remove();listeners.length=0;viewer?.dispose();viewer=null;}
 };
-registerRuntime(runtime);render();void ensureScene();
+registerRuntime(runtime);render();
+async function highlightLiveQuery(){
+ const params=new URLSearchParams(location.search);
+ const setCode=params.get('set'), slot=params.get('slot');
+ if(!setCode&&!slot)return;
+ try{
+  const db=await import('../../js/db.js');
+  let row=null;
+  if(setCode&&db.loadStorageSet)row=await db.loadStorageSet(setCode);
+  else if(slot&&db.findLocationByQr)row=await db.findLocationByQr(slot);
+  if(!row){toast('Živi komplet nije pronađen. Karta je i dalje probni prikaz.');return;}
+  const pin=pinForSet(row,state.stacks);
+  livePin={...pin,text:`${row.public_code||setCode||slot}${pin.where?' · '+pin.where:''}${pin.approx?' · približno na karti':''}`};
+  if(pin.areaId&&AREAS.some(a=>a.id===pin.areaId))areaId=pin.areaId;
+  if(pin.stackId&&state.stacks.some(s=>s.id===pin.stackId))selectedId=pin.stackId;
+  render();
+  if(selectedId)viewer?.focusStack(selectedId);
+ }catch{toast('Živi položaj nije učitan. Karta je i dalje probni prikaz.');}
+}
+void ensureScene().then(()=>highlightLiveQuery());
 const deepCode=new URLSearchParams(location.hash.slice(1)).get('tyre');if(deepCode)resolveCode(deepCode);
 if(storageProblem){$('save-status').textContent='Potrebno je obnoviti probne podatke';toast('Spremljeni podaci nisu valjani. U dodatnim mogućnostima preuzmite izvorni zapis i vratite početni raspored.');}
 if(!storageAvailable)$('save-status').textContent='Spremanje nije dostupno';
