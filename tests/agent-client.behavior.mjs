@@ -15,7 +15,7 @@ const deferred = () => { let resolve, reject; const promise = new Promise((a, b)
 const tick = () => new Promise(resolve => setImmediate(resolve));
 async function until(predicate) { for (let i = 0; i < 30 && !predicate(); i++) await tick(); assert.ok(predicate(), 'expected async checkpoint'); }
 
-function client({ replies = [], fetch: fetchImpl, db = {}, auth = false, endpoint = 'https://project.example/functions/v1/asc-agent', storageFails = false } = {}) {
+function client({ remoteAllowed = true, replies = [], fetch: fetchImpl, db = {}, auth = false, endpoint = 'https://project.example/functions/v1/asc-agent', storageFails = false } = {}) {
   const requests = [], events = [], timers = new Map(), stored = new Map(), imports = [];
   let timerId = 0, sessionReads = 0;
   const location = { pathname: '/ASC/app/warehouse-preview/index.html', search: '', href: 'https://host.example/ASC/app/warehouse-preview/index.html' };
@@ -33,7 +33,7 @@ function client({ replies = [], fetch: fetchImpl, db = {}, auth = false, endpoin
       return response(replies.shift());
     }
   };
-  sandbox.window = { ASC_AGENT_URL: endpoint, ASC_AGENT_REQUIRE_AUTH: auth };
+  sandbox.window = { ASC_AGENT_REMOTE_ALLOWED: remoteAllowed, ASC_AGENT_URL: endpoint, ASC_AGENT_REQUIRE_AUTH: auth };
   const context = vm.createContext(sandbox);
   const dbExports = {
     getSession: async () => { sessionReads++; return { access_token: 'mock-session-token' }; },
@@ -58,7 +58,7 @@ function client({ replies = [], fetch: fetchImpl, db = {}, auth = false, endpoin
   }).runInContext(context);
   return {
     agent: sandbox.window.ASCAgent, window: sandbox.window, requests, events, timers, location, stored, imports,
-    ask: (text = 'Pomozi', options) => sandbox.window.ASCAgent.ask(text, event => events.push(event), options),
+    ask: (text = 'Pomozi', options) => sandbox.window.ASCAgent.ask(text, event => events.push(event), {remote:true,...options}),
     fire(ms) { for (const [id, timer] of [...timers]) if (timer.ms === ms) { timers.delete(id); timer.fn(); } },
     get sessionReads() { return sessionReads; }
   };
@@ -328,4 +328,26 @@ test('history trims only whole user turns and reset removes previous history', a
   c.agent.reset();
   await c.ask('Novi', { tools: { search_sets: () => ({ result: 'Pronađeno' }) } });
   assert.equal(c.requests.at(-2).payload.messages.length, 1);
+});
+
+// All protocol fixtures above explicitly opt into a synthetic remote endpoint.
+test('missing or disabled remote allowance blocks before session imports and fetch', async () => {
+  for (const flag of [false, null, 'true', 1]) {
+    const c=client({remoteAllowed:flag,auth:true});
+    assert.equal(c.agent.configured(),false);
+    await assert.rejects(c.ask('anything'), {code:'remote_disabled'});
+    assert.equal(c.requests.length,0);assert.equal(c.imports.length,0);assert.equal(c.sessionReads,0);
+  }
+  const c=client({auth:true});delete c.window.ASC_AGENT_REMOTE_ALLOWED;
+  await assert.rejects(c.ask(),{code:'remote_disabled'});assert.equal(c.requests.length,0);
+});
+test('configured endpoint still requires an explicit remote turn', async () => {
+  const c=client({auth:true});
+  await assert.rejects(c.agent.ask('anything'),{code:'remote_disabled'});
+  assert.equal(c.requests.length,0);assert.equal(c.sessionReads,0);
+});
+test('revoking remote allowance stops a tool-loop continuation', async () => {
+  const c=client({replies:[call('inventory_overview')]});
+  await assert.rejects(c.ask('count',{tools:{inventory_overview:()=>{c.window.ASC_AGENT_REMOTE_ALLOWED=false;return {result:'0'};}}}),{code:'remote_disabled'});
+  assert.equal(c.requests.length,1);
 });

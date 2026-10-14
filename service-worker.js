@@ -2,7 +2,7 @@
    Makes the app installable and loads the shell instantly. Network-first for
    same-origin files (so deploys show up right away), cache fallback when
    offline. Live data always comes from Supabase online. */
-const CACHE = "asc-tirehotel-v91-contextual-assistant";
+const CACHE = "asc-tirehotel-v92-local-assistant";
 // Cross-origin dependencies the app cannot boot (or scan) without. Same-origin
 // files are precached below; these are runtime-cached network-first so an
 // offline cold boot doesn't die on the supabase-js ESM import.
@@ -39,6 +39,7 @@ const SHELL = [
   "./app/agent-gemini.js",
   "./app/agent-search.js",
   "./app/assistant-surface.js",
+  "./app/assistant-local.js",
   "./app/assistant-surface.css",
   "./app/live-dashboard.js",
   "./app/live-checkin.js",

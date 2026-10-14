@@ -214,7 +214,11 @@
     catch (_) { throw error('invalid_context', 'Kontekst zaslona nije valjan.'); }
     return value.slice(0, 2400);
   }
-  function configured() { return !!textValue(window.ASC_AGENT_URL, 2000); }
+  function configured() { return window.ASC_AGENT_REMOTE_ALLOWED === true && !!textValue(window.ASC_AGENT_URL, 2000); }
+  function assertRemoteAllowed(options) {
+    if (window.ASC_AGENT_REMOTE_ALLOWED !== true || options.remote !== true)
+      throw error('remote_disabled', 'Vanjski AI je isključen. Koristi lokalnog ASC pomoćnika.');
+  }
   async function requestHeaders(turn, url) {
     var headers = { 'Content-Type': 'application/json' };
     if (!window.ASC_AGENT_REQUIRE_AUTH) return headers;
@@ -271,6 +275,7 @@
   // Aborted/failed turns are never replayed or committed to history.
   async function ask(text, onEvent, options) {
     options = options || {};
+    assertRemoteAllowed(options);
     if (activeTurn) throw error('busy', 'Pričekaj završetak prethodnog zahtjeva.');
     if (!configured()) throw error('not_configured', 'Asistent nije konfiguriran.');
     var userText = textValue(text, 4000);
@@ -294,6 +299,7 @@
       for (var round = 0; round < MAX_ROUNDS; round++) {
         messages = trimHistory(messages);
         var response = await waitFor(turn, function () {
+          assertRemoteAllowed(options);
           return fetch(url, { method: 'POST', headers: headers, signal: turn.controller.signal,
             body: JSON.stringify({ messages: messages, context: context }), redirect: 'error' });
         });
