@@ -52,6 +52,18 @@ customers, locations, statuses, pickups). ALWAYS use tools to answer questions
 about inventory, customers, or sets — never invent data. If a tool returns
 nothing, say so plainly.
 
+WHERE THEY ARE: The user message includes [Kontekst aplikacije]. That is the
+screen in front of them — page, open set, live counts, the form they are
+filling. Answer THAT screen. On check-in, help finish the intake. On a set,
+talk about that set. On the warehouse map, talk about the space they have
+open. Do not give a tour of the whole app when the screen already has the subject.
+
+OPENING A SCREEN: call open_page. page is one of dashboard, checkin, warehouse,
+locate, locations, place, checkout, customers, scan, reminders, workshop,
+recycle, users, set. For set, also pass code when you know it.
+
+A FREE SLOT: call suggest_free_slot. Never invent a zone, rack, shelf or slot.
+
 CREATING A NEW SET: When the user wants to store/check in a new tire set, first
 gather what you can from their words (customer name, phone, plate, vehicle,
 season, quantity, tire size, location, fee...). Ask briefly for anything
@@ -159,6 +171,31 @@ const FUNCTION_DECLARATIONS = [
         notes: { type: "string" },
       },
       required: ["customer_name"],
+    },
+  },
+  {
+    name: "suggest_free_slot",
+    description: "Suggest one free warehouse slot for a tire set. Call when the user asks where to put tires. Never invent a location.",
+    parameters: {
+      type: "object",
+      properties: {
+        warehouse: { type: "string", description: "Warehouse id, usually main" },
+      },
+    },
+  },
+  {
+    name: "open_page",
+    description: "Open a screen in the ASC app after the reply. Use the page id, not a URL.",
+    parameters: {
+      type: "object",
+      properties: {
+        page: {
+          type: "string",
+          enum: ["dashboard", "checkin", "warehouse", "locate", "locations", "place", "checkout", "customers", "scan", "reminders", "workshop", "recycle", "users", "set"],
+        },
+        code: { type: "string", description: "Set public code, only when page is set" },
+      },
+      required: ["page"],
     },
   },
 ];

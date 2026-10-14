@@ -514,6 +514,8 @@ export async function createStorageSet(form) {
       fee: form.set.fee ?? null, paid: form.set.paid, notes: form.set.notes || null,
       bolts_location: form.set.bolts_location || null, hubcaps_location: form.set.hubcaps_location || null,
       hubcaps_stored: form.set.hubcaps_stored != null ? Boolean(form.set.hubcaps_stored) : form.set.hubcaps_location === 'stored',
+      ...(form.set.keep_plan ? { keep_plan: form.set.keep_plan } : {}),
+      ...(form.set.swap_at ? { swap_at: form.set.swap_at } : {}),
     }, (p) => supabase.from("storage_sets").insert(p).select().single());
 
     const tires = toTireRows(set.id, form.tires);

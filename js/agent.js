@@ -116,7 +116,7 @@ export async function runTurn(history, { onToolUse, onDraftReview, remote = fals
   // Legacy entry remains fail-closed too; an endpoint/key alone grants no call.
   const assertRemoteAllowed = () => {
     if (globalThis.ASC_AGENT_REMOTE_ALLOWED !== true || remote !== true)
-      throw new Error("Vanjski AI je isključen. Otvori Pitaj ASC u aplikaciji za lokalnu pomoć.");
+      throw new Error("Vanjski AI je isključen.");
   };
   assertRemoteAllowed();
   trimHistory(history);

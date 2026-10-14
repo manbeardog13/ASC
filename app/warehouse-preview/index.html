@@ -36,7 +36,7 @@
   <header class="top spatial-top">
     <button id="open-sidebar" class="sb-burger" aria-label="Otvori ASC izbornik" aria-controls="sidebar" aria-expanded="false">☰</button>
     <a class="brand" href="../dashboard.html" aria-label="ASC — početna ploča"><img class="logo" src="vendor/asc-logo.png" alt="ASC — Auto servisni centar"></a>
-    <div class="top-actions"><button id="ask-asc" class="button primary" aria-controls="warehouse-assistant">Pitaj ASC</button><button id="help-button" class="button quiet" aria-label="Otvori kratke upute" aria-controls="warehouse-help">Pomoć</button><button class="icon-button" id="menu-button" aria-label="Dodatne mogućnosti" aria-expanded="false" aria-controls="app-menu"></button></div>
+    <div class="top-actions"><button id="help-button" class="button quiet" aria-label="Otvori kratke upute" aria-controls="warehouse-help">Pomoć</button><button class="icon-button" id="menu-button" aria-label="Dodatne mogućnosti" aria-expanded="false" aria-controls="app-menu"></button></div>
     <div id="app-menu" class="menu" hidden><button id="export-button">Preuzmi probne podatke</button><button id="capture-button">Spremi sliku prikaza</button><button id="test-status-button">Provjera i bilješke</button><button id="reset-button" class="danger">Vrati početni raspored</button><span>Promjene se spremaju samo na ovom uređaju.</span></div>
   </header>
   <nav class="preview-return" aria-label="Povratak u ASC"><button id="asc-menu-button" class="button quiet" type="button" aria-controls="sidebar" aria-expanded="false">☰ ASC izbornik</button><a href="../dashboard.html">Početna ploča</a><a href="../customers.html">Kupci i kompleti</a></nav>
@@ -59,7 +59,6 @@
       </div>
       <aside id="inspector" class="inspector card" hidden aria-label="Detalji odabranog stupca" tabindex="-1"></aside>
       <div class="stage-toolbar"><div class="inventory-summary"><span><b id="stat-tyres">—</b> guma</span><span><b id="stat-vacant">—</b> slobodnih mjesta</span></div><div class="stage-actions"><button id="list-button" class="button quiet"><span id="list-icon"></span><span>Stupci</span></button><button id="place-button" class="button primary"><span id="place-icon"></span><span>Dodaj stupac</span></button></div></div>
-      <section id="warehouse-assistant" aria-label="ASC pomoćnik za skladište"></section>
       <div class="context-line"><span id="save-status" role="status">Probni podaci · ovaj uređaj</span><button id="context-help" aria-controls="warehouse-help">Kako koristiti?</button></div>
       <details id="warehouse-help" class="compact-details warehouse-help"><summary>Kako koristiti</summary><div class="disclosure-body"><ol><li>Odaberite skladište ili sva skladišta.</li><li>Pronađite gume po imenu, registraciji ili oznaci.</li><li>Dodirnite stupac, pa gumu za detalje ispod prikaza.</li></ol><button id="help-tour" class="button quiet">Vodič u 3 koraka</button><details class="compact-details"><summary>O prikazu</summary><div class="disclosure-body"><p>Izmišljeni podaci, odvojeni od evidencije guma. Promjene rasporeda spremaju se na ovom uređaju.</p><p id="geometry-note">Okviran tlocrt · visine nisu izmjerene</p><p>Materijali su ilustrativni.</p></div></details></div></details>
     </div>

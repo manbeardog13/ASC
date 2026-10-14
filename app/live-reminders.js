@@ -14,7 +14,8 @@
 // script: the inline handler does the visual move into "Već podsjećeno"; this
 // module writes reminded_at (markReminded → updateStorageSet, offline-queued).
 // ============================================================================
-import { getSession, listStorageSets, markReminded } from '../js/db.js';
+import { getSession, listStorageSets, markReminded, updateStorageSet } from '../js/db.js';
+import { decodePlan, formatWhen, freeSlotsAfter, busyKeys, mergeNotes, encodePlan, isoDate, inReminderWindow } from '../js/seasonPlan.js';
 
 const SEASON_LABEL = { winter: 'Zimske', summer: 'Ljetne', all_season: 'Cjelogodišnje' };
 const SEASON_CLASS = { winter: 'win', summer: '', all_season: 'all' };
@@ -111,10 +112,10 @@ function actionsHTML(s) {
     ? '<a class="ract" href="tel:' + esc(tel) + '" aria-label="Nazovi — ' + esc(name) + '">' + ICON.phone + 'Nazovi</a>'
     : '<span class="ract is-disabled" aria-disabled="true" title="Nema telefona">' + ICON.phone + 'Nazovi</span>';
   const sms = phone
-    ? '<a class="ract" href="sms:' + esc(tel) + '" aria-label="Pošalji poruku">' + ICON.sms + 'Poruka</a>'
+    ? '<a class="ract" href="sms:' + esc(tel) + (s._message ? '?body=' + encodeURIComponent(s._message) : '') + '" aria-label="Pošalji poruku">' + ICON.sms + 'Poruka</a>'
     : '<span class="ract is-disabled" aria-disabled="true" title="Nema telefona">' + ICON.sms + 'Poruka</span>';
   const mail = email
-    ? '<a class="ract" href="mailto:' + esc(email) + '?subject=' + encodeURIComponent('ASC — ' + (s.public_code || '')) + '" aria-label="Pošalji e-poštu">' + ICON.mail + 'E-pošta</a>'
+    ? '<a class="ract" href="mailto:' + esc(email) + '?subject=' + encodeURIComponent('ASC — ' + (s.public_code || '')) + (s._message ? '&body=' + encodeURIComponent(s._message) : '') + '" aria-label="Pošalji e-poštu">' + ICON.mail + 'E-pošta</a>'
     : '<span class="ract is-disabled" aria-disabled="true" title="Nema e-pošte">' + ICON.mail + 'E-pošta</span>';
   return call + sms + mail;
 }
@@ -132,13 +133,23 @@ function rowHTML(s, tier) {
     ? '<button type="button" class="ract wide again" data-remind>' + ICON.check + 'Podsjećeno — označi ponovno</button>'
     : '<button type="button" class="ract wide" data-remind>' + ICON.check + 'Označi podsjećeno</button>';
   const href = 'set-detail.html?code=' + encodeURIComponent(code);
+  const plan = decodePlan(s.notes);
+  const when = plan?.at ? formatWhen(plan.at) : '';
+  const nudge = plan?.at && inReminderWindow(plan.at, new Date()) ? ' · podsjetnik 5–7 dana prije' : '';
+  const move = plan?.at
+    ? '<button type="button" class="ract wide" data-reschedule>Drugi termin</button>'
+    : '';
+  const smsBody = when
+    ? 'Zamjena guma u ASC-u je ' + when + '. Ako ne odgovara, javite pa pomaknemo termin.'
+    : '';
   return '<article class="' + cls + '" data-set-id="' + esc(s.id) + '" data-code="' + esc(code) + '">' +
-    '<div class="rr-top"><span class="rem-due">' + ICON.clock + 'Rok ' + esc(fmtDate(s.expected_out_date)) + '</span>' +
+    '<div class="rr-top"><span class="rem-due">' + ICON.clock + 'Rok ' + esc(fmtDate(s.expected_out_date))
+      + (when ? ' · ' + esc(when) + esc(nudge) : '') + '</span>' +
     '<a class="rr-code" href="' + href + '">' + esc(code) + '</a></div>' +
     '<div class="rr-id"><span class="rr-name">' + esc(name) + '</span>' + (plate ? '<span class="rr-plate">' + esc(plate) + '</span>' : '') + '</div>' +
     '<div class="rr-meta">' + chip + ok + '</div>' +
-    '<div class="rr-acts">' + actionsHTML(s) + '</div>' +
-    btn + '</article>';
+    '<div class="rr-acts">' + actionsHTML(Object.assign({}, s, { _message: smsBody })) + '</div>' +
+    btn + move + '</article>';
 }
 
 function fillSection(key, items, tier) {
@@ -164,8 +175,10 @@ function showEmpty() {
 }
 
 let counts = null;   // { pending, total } — the CTA handler settles the hero from this
+let booked = [];
 
 function render(sets) {
+  booked = sets;
   const due = sets.filter((s) => s.status !== 'checked_out' && s.expected_out_date);
   const g = { overdue: [], today: [], week: [], later: [], rested: [] };
   for (const s of due) {
@@ -226,6 +239,52 @@ document.addEventListener('click', (e) => {
     if (okEl) okEl.innerHTML = ICON.ok + 'podsjećeno upravo';
   }
   markReminded(id).catch((err) => console.warn('[live] mark reminded failed:', err));
+});
+
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-reschedule]');
+  if (!btn) return;
+  const row = btn.closest('.rr');
+  const id = row && row.dataset.setId;
+  const set = booked.find((item) => item.id === id);
+  const plan = set && decodePlan(set.notes);
+  if (!plan?.at) return;
+  const options = freeSlotsAfter(busyKeys(booked, id), plan.at, 3);
+  let host = row.querySelector('.swap-moves');
+  if (!host) {
+    host = document.createElement('div');
+    host.className = 'swap-moves';
+    host.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;margin-top:8px';
+    btn.after(host);
+  }
+  host.innerHTML = options.map((slot) =>
+    '<button type="button" class="ract" data-move="' + esc(slot.toISOString()) + '">' + esc(formatWhen(slot)) + '</button>'
+  ).join('');
+});
+
+document.addEventListener('click', async (e) => {
+  const pick = e.target.closest('[data-move]');
+  if (!pick) return;
+  const row = pick.closest('.rr');
+  const id = row && row.dataset.setId;
+  const set = booked.find((item) => item.id === id);
+  const plan = set && decodePlan(set.notes);
+  const slot = new Date(pick.dataset.move);
+  if (!plan || Number.isNaN(slot.getTime())) return;
+  const notes = mergeNotes(set.notes, encodePlan(plan.kind, slot));
+  try {
+    await updateStorageSet(id, {
+      notes,
+      expected_out_date: isoDate(slot),
+      keep_plan: plan.kind,
+      swap_at: slot.toISOString(),
+    });
+    set.notes = notes;
+    set.expected_out_date = isoDate(slot);
+    render(booked);
+  } catch (err) {
+    console.warn('[live] reschedule failed:', err);
+  }
 });
 
 // Row click (outside links/buttons) opens the set.
