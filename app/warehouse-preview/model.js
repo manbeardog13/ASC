@@ -1,7 +1,9 @@
 /**
- * ASC house test module — deterministic, local-only demo inventory.
- * Geometry uses schematic units, NOT measured metres. Rectangle x/z are centres.
- * None of this fixture data represents a customer or a verified physical capacity.
+ * ASC warehouse spatial module — blank slate.
+ * No warehouses, zones, stacks or tyres are hardcoded here. Areas are added
+ * only from the real layout once it has been measured on site; until then the
+ * map renders an empty state. Geometry uses schematic units, NOT metres.
+ * Rectangle x/z are centres.
  */
 
 const FIELD_NAMES = { setId:'komplet', customer:'kupac', plate:'registracija', brand:'marka', size:'dimenzija', color:'boja', code:'kod' };
@@ -9,7 +11,7 @@ const EPSILON = 1e-8;
 export const DEFAULT_CAPACITY = 8;
 export const MAX_CAPACITY = 16;
 export const DEFAULT_RADIUS = 0.27;
-export const LAYOUT_VERSION = 'house-schematic-1';
+export const LAYOUT_VERSION = 'blank-1';
 
 function deepFreeze(value) {
   if (value && typeof value === 'object' && !Object.isFrozen(value)) {
@@ -19,35 +21,9 @@ function deepFreeze(value) {
   return value;
 }
 
-export const AREAS = deepFreeze([
-  {
-    id: '2.1', name: 'Prizemlje', subtitle: '87 početnih mjesta za stupce',
-    width: 10, depth: 14, measurementStatus: 'unmeasured',
-    floorRects: [{ x: 0, z: 0, w: 10, d: 14 }], voidRects: [],
-    stair: { x: 4.2, z: 2, w: 1, d: 3.4 },
-    description: 'Prizemlje sa stupcima uz rubove, tri unutarnja niza i istočnim stubištem.',
-  },
-  {
-    id: '2.2', name: 'Drvena platforma', subtitle: '15 početnih mjesta za stupce',
-    width: 10, depth: 14, measurementStatus: 'unmeasured',
-    floorRects: [{ x: 0, z: 2.93, w: 5, d: 5.42 }], voidRects: [], stair: null,
-    description: 'Uvučena drvena platforma prema jugu. Pristup i visina nisu izmjereni.',
-  },
-  {
-    id: '2.3', name: 'Potkrovlje', subtitle: '25 + 6 početnih mjesta za stupce',
-    width: 10, depth: 14, measurementStatus: 'unmeasured',
-    floorRects: [
-      { x: 0, z: -3.35, w: 10, d: 7.3 },
-      { x: 0.825, z: 3.65, w: 4.35, d: 6.7 },
-    ],
-    voidRects: [
-      { x: -3.175, z: 3.65, w: 3.65, d: 6.7 },
-      { x: 4, z: 3.65, w: 2, d: 6.7 },
-    ],
-    stair: { x: 4.2, z: 2, w: 1, d: 3.4 },
-    description: 'Puni pod na sjeveru i ispred stubišta. Bočni otvori počinju od sredine, uz središnji pod i šest južnih stupaca. Visina krova nije izmjerena.',
-  },
-]);
+// Intentionally empty. Each area, once real, has the shape:
+// { id, name, subtitle, width, depth, measurementStatus, floorRects:[{x,z,w,d}], voidRects:[], stair:null|{x,z,w,d}, description }
+export const AREAS = deepFreeze([]);
 
 export function getArea(areaId) {
   return AREAS.find(area => area.id === areaId) || null;
@@ -118,62 +94,9 @@ export function canPlace(state, areaId, x, z, radius = DEFAULT_RADIUS, excludeId
   return { valid: true, reason: 'Pod je potpun. Visina prostora nije potvrđena.' };
 }
 
-const DEMO_CUSTOMERS = [
-  ['Primjer Ana', 'DEMO-101', '#769e96'], ['Primjer Luka', 'DEMO-202', '#8a9cac'],
-  ['Primjer Mia', 'DEMO-303', '#b7a378'], ['Primjer Ivan', 'DEMO-404', '#a99baf'],
-  ['Primjer Petra', 'DEMO-505', '#9fa886'], ['Primjer Marko', 'DEMO-606', '#b59c91'],
-  ['Primjer Ema', 'DEMO-707', '#87a9ac'], ['Primjer Niko', 'DEMO-808', '#a3a3b2'],
-];
-
-const round = value => Math.round(value * 1000000) / 1000000;
-
-function seedPositions() {
-  const positions = [];
-  const add = (areaId, x, z) => positions.push({ areaId, x: round(x), z: round(z) });
-  // Shared north-west / south-west corners occur only in the west run.
-  for (let i = 0; i < 18; i++) add('2.1', -4.4, -6.4 + i * 12.8 / 17);
-  for (let i = 1; i < 5; i++) add('2.1', -4.4 + i * .75, -6.4);
-  for (let i = 1; i < 12; i++) add('2.1', -4.4 + i * 8.1 / 11, 6.4);
-  for (const z of [-5.75, -5.05, -2.6, -1.9, -1.2, 4, 4.75, 5.5, 6.25]) add('2.1', 4.4, z);
-  for (const x of [-1.4, 1.35, 2.02]) {
-    for (let i = 0; i < 15; i++) add('2.1', x, -4.8 + i * .7);
-  }
-  // 15 unique platform positions, with an entry gap in its north-east corner.
-  for (let i = 0; i < 5; i++) add('2.2', -1.85, .95 + i);
-  for (const x of [-.925, 0]) add('2.2', x, .95);
-  for (const x of [-.925, 0, .925, 1.85]) add('2.2', x, 4.95);
-  for (let i = 0; i < 4; i++) add('2.2', 1.85, .95 + i);
-  // Main attic group is tightly clustered, with no invented aisles inside it.
-  for (let row = 0; row < 5; row++) {
-    for (let col = 0; col < 5; col++) add('2.3', -.65 + col * .67, -5.8 + row * .67);
-  }
-  for (let row = 0; row < 2; row++) {
-    for (let col = 0; col < 3; col++) add('2.3', .15 + col * .67, 4.6 + row * .67);
-  }
-  return positions;
-}
-
-export function seedState() {
-  const stacks = [], tires = [];
-  const areaCounts = {};
-  for (const [index, position] of seedPositions().entries()) {
-    const localNumber = areaCounts[position.areaId] = (areaCounts[position.areaId] || 0) + 1;
-    const stack = { id: `${position.areaId}-S${String(localNumber).padStart(3, '0')}`,
-      ...position, radius: DEFAULT_RADIUS, capacity: DEFAULT_CAPACITY, tireIds: [] };
-    const occupied = 3 + (index % 6);
-    for (let level = 0; level < occupied; level++) {
-      const number = tires.length + 1;
-      const setNumber = Math.floor((number - 1) / 4) + 1;
-      const [customer, plate, color] = DEMO_CUSTOMERS[(setNumber - 1) % DEMO_CUSTOMERS.length];
-      const id = `T-${String(number).padStart(6, '0')}`;
-      tires.push({ id, setId: `SET-${String(setNumber).padStart(4, '0')}`,
-        customer, plate, color, brand: ['Continental', 'Michelin', 'Goodyear'][setNumber % 3],
-        size: ['205/55 R16', '225/45 R17', '215/60 R16'][setNumber % 3], code: `ASC-DEMO-${id}` });
-      stack.tireIds.push(id);
-    }
-    stacks.push(stack);
-  }
-  return { version: 1, revision: 0, stacks, tires, history: [] };
+/** A device starts with nothing: no stacks, no tyres, no history. */
+export function emptyState() {
+  return { version: 1, revision: 0, stacks: [], tires: [], history: [] };
 }
 
 export function validateState(state) {
@@ -302,9 +225,12 @@ export function addTire(state, stackId, template = {}) {
   const revision = state.revision + 1;
   let serial = 1, id;
   do { id = `T-D${String(revision).padStart(6, '0')}-${serial++}`; } while (state.tires.some(tire => tire.id === id));
-  const defaults = { setId: `SET-D${String(revision).padStart(6, '0')}`,
-    customer: 'Primjer Novi kupac', plate: 'PROBNO-NOVO', brand: 'Probna guma', size: '205/55 R16', color: '#8a9cac' };
-  const tire = { id, code: `ASC-DEMO-${id}` };
+  const defaults = { setId: `SET-D${String(revision).padStart(6, '0')}`, brand: 'Nepoznato', color: '#8a9cac' };
+  const tire = { id, code: `ASC-${id}` };
+  for (const key of ['customer', 'plate', 'size']) {
+    if (typeof template[key] !== 'string' || !template[key].trim()) throw new Error(`Unesite valjano polje: ${FIELD_NAMES[key] || 'podatak'}.`);
+    tire[key] = template[key].trim();
+  }
   for (const [key, fallback] of Object.entries(defaults)) {
     if (template[key] !== undefined && (typeof template[key] !== 'string' || !template[key].trim())) {
       throw new Error(`Unesite valjano polje: ${FIELD_NAMES[key] || 'podatak'}.`);

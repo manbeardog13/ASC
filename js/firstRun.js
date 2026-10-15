@@ -19,8 +19,9 @@ export const TOUR_KEYS = [
   "flow.suggested", "flow.suggestedNear",
 ];
 
-// Shop preference. The tour names this zone when it still has a free seat.
-export const PREFERRED_TOUR_ZONE = "2.1";
+// Shop preference. Empty until the real layout exists; with no preference
+// the tour names the first free zone in suggest_free_slot order.
+export const PREFERRED_TOUR_ZONE = "";
 
 function cmpText(a, b) {
   if (a < b) return -1;
@@ -43,13 +44,14 @@ function seatFree(row) {
   return String(row.status || "") === "free";
 }
 
-// Empty rack → the create-a-slot script. Otherwise name 2.1 when it has a
-// free seat, else the next zone after 2.1 that does, else the first free zone.
+// Empty rack → the create-a-slot script. Otherwise name the preferred zone when
+// it has a free seat, else the next zone after it that does, else the first free zone.
 export function tourTarget(rows, preferred = PREFERRED_TOUR_ZONE) {
   const list = Array.isArray(rows) ? rows : [];
   if (!list.length) return { mode: "create", zone: "" };
   const free = list.filter(seatFree).slice().sort(compareSeat);
   if (!free.length) return { mode: "create", zone: "" };
+  if (!preferred) return { mode: "zone", zone: String(free[0].zone || "") };
   if (free.some((row) => String(row.zone || "") === preferred)) {
     return { mode: "zone", zone: preferred };
   }
