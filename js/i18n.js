@@ -326,6 +326,8 @@ const DICT = {
     "tour.s4.body": "Print the set QR for this intake.",
     "tour.s5.title": "Scan the slot",
     "tour.s5.body": "Scan the slot label to place the set.",
+    "tour.zone.title": "Start in zone {zone}",
+    "tour.zone.body": "Zone {zone} has open seats. Check the tires in there.",
   },
   hr: {
     "nav.home": "Početna", "nav.checkin": "Zaprimi", "nav.scan": "Skeniraj",
@@ -577,5 +579,7 @@ const DICT = {
     "tour.s4.body": "Ispiši QR naljepnicu kompleta.",
     "tour.s5.title": "Skeniraj mjesto",
     "tour.s5.body": "Skeniraj naljepnicu mjesta da smjestiš komplet.",
+    "tour.zone.title": "Kreni u zoni {zone}",
+    "tour.zone.body": "Zona {zone} ima slobodna mjesta. Zaprimi gume tamo.",
   },
 };

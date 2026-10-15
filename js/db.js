@@ -666,6 +666,15 @@ export async function suggestFreeSlot(warehouse = "main") {
   return data;
 }
 
+// Seats the first-run tour reads so it can name a zone that still has room.
+export async function listLocationSeats() {
+  const { data, error } = await supabase.from("locations")
+    .select("warehouse, zone, rack, shelf, slot, status");
+  if (relationMissing(error)) return [];
+  if (error) throw fail(error, "list slots");
+  return data ?? [];
+}
+
 export async function countLocations() {
   const { count, error } = await supabase.from("locations").select("id", { count: "exact", head: true });
   if (relationMissing(error)) return 0;

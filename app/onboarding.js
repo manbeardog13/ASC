@@ -1,7 +1,7 @@
 // First sign-in walkthrough. The flag is profiles.onboarded_at, never localStorage.
-import { loadMyProfile, markOnboarded } from "../js/db.js";
+import { loadMyProfile, markOnboarded, listLocationSeats } from "../js/db.js";
 import { t } from "./flow-ui.js";
-import { TOUR_STEPS } from "../js/firstRun.js";
+import { tourSteps, tourTarget } from "../js/firstRun.js";
 
 const STYLE = `
 .asc-onboard{position:fixed;inset:0;z-index:10050;display:flex;align-items:flex-end;justify-content:center;
@@ -37,7 +37,7 @@ function ensureStyle() {
   document.head.appendChild(style);
 }
 
-function mount() {
+function mount(steps) {
   ensureStyle();
   const root = document.createElement("div");
   root.id = "asc-onboard";
@@ -66,25 +66,25 @@ function mount() {
     kicker.textContent = t("tour.kicker");
     const progress = document.createElement("p");
     progress.className = "asc-onboard-progress";
-    progress.textContent = t("tour.progress", { n: String(step + 1), total: String(TOUR_STEPS.length) });
+    progress.textContent = t("tour.progress", { n: String(step + 1), total: String(steps.length) });
     const dots = document.createElement("div");
     dots.className = "asc-onboard-dots";
-    TOUR_STEPS.forEach((_, index) => {
+    steps.forEach((_, index) => {
       const dot = document.createElement("i");
       if (index <= step) dot.className = "on";
       dots.append(dot);
     });
-    const item = TOUR_STEPS[step];
+    const item = steps[step];
     const title = document.createElement("h2");
     title.id = "asc-onboard-title";
-    title.textContent = t(item.title);
+    title.textContent = t(item.title, item.vars);
     const body = document.createElement("p");
-    body.textContent = t(item.body);
+    body.textContent = t(item.body, item.vars);
     const note = document.createElement("p");
     note.className = "asc-onboard-note";
     const actions = document.createElement("div");
     actions.className = "asc-onboard-actions";
-    const last = step === TOUR_STEPS.length - 1;
+    const last = step === steps.length - 1;
     if (step > 0) {
       const back = document.createElement("button");
       back.type = "button";
@@ -121,7 +121,7 @@ function mount() {
   document.addEventListener("keydown", (event) => {
     if (event.key !== "Escape" || !document.getElementById("asc-onboard")) return;
     event.preventDefault();
-    if (step === TOUR_STEPS.length - 1) finish();
+    if (step === steps.length - 1) finish();
   });
   render();
 }
@@ -132,5 +132,8 @@ export async function bootOnboarding() {
   try { profile = await loadMyProfile(); }
   catch { return; }
   if (!profile || profile.onboarded_at || profile.onboarding_unavailable) return;
-  mount();
+  let target = { mode: "create", zone: "" };
+  try { target = tourTarget(await listLocationSeats()); }
+  catch { target = { mode: "create", zone: "" }; }
+  mount(tourSteps(target));
 }

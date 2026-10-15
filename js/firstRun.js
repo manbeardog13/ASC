@@ -11,11 +11,57 @@ export const TOUR_STEPS = [
 
 export const TOUR_KEYS = [
   "tour.kicker", "tour.progress", "tour.next", "tour.done", "tour.skip",
+  "tour.zone.title", "tour.zone.body",
   ...TOUR_STEPS.flatMap((step) => [step.title, step.body]),
   "flow.needSlotsTitle", "flow.needSlotsBody",
   "flow.unknownSlotTitle", "flow.unknownSlotBody",
   "flow.createSlot", "flow.backToIntake",
 ];
+
+// Shop preference. The tour names this zone when it still has a free seat.
+export const PREFERRED_TOUR_ZONE = "2.1";
+
+function cmpText(a, b) {
+  if (a < b) return -1;
+  if (a > b) return 1;
+  return 0;
+}
+
+// Same key order as suggest_free_slot: warehouse, zone, rack, shelf, slot.
+function compareSeat(a, b) {
+  for (const key of ["warehouse", "zone", "rack", "shelf", "slot"]) {
+    const diff = cmpText(String(a?.[key] || ""), String(b?.[key] || ""));
+    if (diff) return diff;
+  }
+  return 0;
+}
+
+function seatFree(row) {
+  if (!row || row.free === false) return false;
+  if (row.free === true) return true;
+  return String(row.status || "") === "free";
+}
+
+// Empty rack → the create-a-slot script. Otherwise name 2.1 when it has a
+// free seat, else the next zone after 2.1 that does, else the first free zone.
+export function tourTarget(rows, preferred = PREFERRED_TOUR_ZONE) {
+  const list = Array.isArray(rows) ? rows : [];
+  if (!list.length) return { mode: "create", zone: "" };
+  const free = list.filter(seatFree).slice().sort(compareSeat);
+  if (!free.length) return { mode: "create", zone: "" };
+  if (free.some((row) => String(row.zone || "") === preferred)) {
+    return { mode: "zone", zone: preferred };
+  }
+  const after = free.find((row) => cmpText(String(row.zone || ""), preferred) > 0);
+  return { mode: "zone", zone: String((after || free[0]).zone || "") };
+}
+
+export function tourSteps(target) {
+  const first = target && target.mode === "zone"
+    ? { title: "tour.zone.title", body: "tour.zone.body", vars: { zone: target.zone } }
+    : TOUR_STEPS[0];
+  return [first, ...TOUR_STEPS.slice(1)];
+}
 
 // Only a same-app intake or placement URL may be used as a return hop.
 const RETURN_OK = /^(checkin|place)\.html(?:\?[^#]*)?(?:#.*)?$/;
