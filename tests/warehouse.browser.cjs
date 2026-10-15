@@ -13,18 +13,15 @@ for(const width of [390,768,1440]){
 const context=await browser.newContext({viewport:{width,height:width===390?844:1000},reducedMotion:'reduce',serviceWorkers:'block'});
 const errors=[];
 await context.route('**/*',async route=>{const u=new URL(route.request().url());if(u.origin!==origin)return route.abort();if(u.pathname==='/ASC/js/db.js')return route.fulfill({contentType:'text/javascript',body:db});if(u.pathname==='/ASC/js/supabaseClient.js')return route.fulfill({contentType:'text/javascript',body:auth});if(u.pathname.endsWith('/agent-config.js'))return route.fulfill({contentType:'text/javascript',body:'window.ASC_AGENT_URL="";'});return route.continue();});
-const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));
+await context.addInitScript(()=>{if(!sessionStorage.getItem('seeded')){sessionStorage.setItem('seeded','1');localStorage.setItem('asc.warehouse.preview.v1','{"demo":true}');localStorage.setItem('asc.warehouse.preview.view.v1','{}');localStorage.setItem('asc.warehouse.preview.checks.v1','{}');}});const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));
 await page.goto(origin+'/ASC/app/warehouse-preview/index.html');await page.waitForSelector('html[data-preview-state="ready"] #asc-navigation a');
 assert.equal(await page.locator('#asc-navigation a').count(),11);
 assert.equal(await page.locator('a[href$="warehouse.html"]').count(),0);
 const initialHistory=await page.evaluate(()=>history.length);
-const all=page.locator('#area-tabs [data-area="all"]');await all.click();assert.equal(await all.getAttribute('aria-pressed'),'true');assert.equal(await page.locator('#area-code').textContent(),'KUĆA / 02');assert.equal(await page.locator('#inspector').isVisible(),false);
-await page.locator('#area-tabs [data-area="2.3"]').click();await page.locator('#view-plan').click();
-const stack=page.locator('.plan-stack').first();await stack.scrollIntoViewIfNeeded();const before=await page.locator('#stage').boundingBox();await stack.click();const after=await page.locator('#stage').boundingBox();assert.ok(Math.abs(before.y-after.y)<1,'stack selection scrolled map');
-const inspector=await page.locator('#inspector').boundingBox();assert.ok(inspector.y>=after.y+after.height,'inspector overlaps map');assert.equal(await page.locator('#dialog').evaluate(n=>n.open),false);
-const tyre=page.locator('#inspector [data-tyre]').first();await tyre.click();assert.equal(await page.locator('#dialog').evaluate(n=>n.open),false);assert.equal(await tyre.getAttribute('aria-expanded'),'true');assert.ok(await page.locator('#tyre-details').isVisible());
-await page.screenshot({path:path.join(output,'inline-tyre-'+width+'.png'),fullPage:true});
-await page.locator('#close-tyre-details').click();assert.equal(await page.locator('#tyre-details').count(),0);assert.equal(await tyre.getAttribute('aria-expanded'),'false');
+assert.ok(await page.locator('#empty-state').isVisible(),'empty state hidden');assert.equal(await page.locator('#area-code').textContent(),'SVA');assert.equal(await page.locator('#area-tabs').isVisible(),false);assert.equal(await page.locator('#place-button').isDisabled(),true);assert.equal(await page.locator('#list-button').isDisabled(),true);assert.equal(await page.locator('#inspector').isVisible(),false);assert.equal(await page.locator('#empty-state a[href$="locations.html"]').count(),1);
+assert.equal(await page.evaluate(()=>['asc.warehouse.preview.v1','asc.warehouse.preview.view.v1','asc.warehouse.preview.checks.v1'].some(k=>localStorage.getItem(k)!==null)),false,'legacy demo keys survived');
+await page.locator('#view-plan').click();assert.equal(await page.locator('.plan-stack').count(),0);await page.locator('#view-3d').click();
+await page.screenshot({path:path.join(output,'empty-'+width+'.png'),fullPage:true});
 assert.equal(await page.evaluate(()=>history.length),initialHistory);
 await page.locator('#asc-menu-button').click();assert.equal(await page.locator('#asc-menu-button').getAttribute('aria-expanded'),'true');if(width<=1020)assert.equal(await page.locator('#main-content').evaluate(n=>n.inert),true);
 await page.locator('#asc-navigation .sb-group > button').click();assert.equal(await page.locator('#asc-navigation .sb-group-kids').evaluate(n=>n.inert),true);
@@ -40,6 +37,6 @@ assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWid
 await page.screenshot({path:path.join(output,'menu-return-'+width+'.png')});
 await page.goto(origin+'/ASC/app/warehouse-preview/');await page.waitForSelector('html[data-preview-state="ready"] #asc-navigation a');const directoryHistory=await page.evaluate(()=>history.length);await page.locator('#asc-menu-button').click();await page.locator('#asc-navigation a[aria-current="page"]').click();assert.ok(page.url().endsWith('/warehouse-preview/'));assert.equal(await page.evaluate(()=>history.length),directoryHistory);
 await page.goto(origin+'/ASC/app/warehouse.html');await page.waitForURL('**/customers.html');
-assert.deepEqual(errors,[]);report.cases.push({width,passed:true,checks:['shared nested menu links','all-storage overview','stack details below stage without scroll/overlay','individual tyre details inline','menu inert/expanded state','native browser Back restores originating menu','legacy bookmark redirects to saved records','collapsed subgroup inert','visible opener focus restoration','source submenu and unrelated history state restored','directory self-link adds no Back step','no page errors/overflow']});await context.close();
+assert.deepEqual(errors,[]);report.cases.push({width,passed:true,checks:['shared nested menu links','blank-slate empty state','legacy demo storage removed','no stacks in plan view','menu inert/expanded state','native browser Back restores originating menu','legacy bookmark redirects to saved records','collapsed subgroup inert','visible opener focus restoration','source submenu and unrelated history state restored','directory self-link adds no Back step','no page errors/overflow']});await context.close();
 }
 }finally{await browser.close();await new Promise(r=>server.close(r));fs.writeFileSync(path.join(output,'BROWSER-VERIFICATION.json'),JSON.stringify(report,null,2)+'\n');}console.log(JSON.stringify(report,null,2));})().catch(e=>{console.error(e);server.close();process.exitCode=1;});

@@ -1,30 +1,22 @@
-// Map a live storage location onto the schematic warehouse preview.
-// Zones 2.1 / 2.2 / 2.3 are those floors. Anything else lands on 2.1
-// and is marked approximate. A rack like S025 or 2.3-S025 selects that
-// stack when it exists in the demo geometry.
+// Map a live storage location onto the warehouse map.
+// No floors or racks are hardcoded: a set is pinned only when its zone is a
+// real area on the map and its rack names an existing stack. Otherwise the
+// pin carries just the text location (stackId null, areaId null).
 
-const FLOORS = new Set(["2.1", "2.2", "2.3"]);
-
-export function pinForSet(row, stacks = []) {
+export function pinForSet(row, stacks = [], areaIds = []) {
+  const list = Array.isArray(stacks) ? stacks : [];
   const zone = String(row?.zone ?? "").trim();
-  const areaId = FLOORS.has(zone) ? zone : "2.1";
+  const known = new Set([...(Array.isArray(areaIds) ? areaIds : []), ...list.map((item) => item?.areaId).filter(Boolean)]);
+  const areaId = zone && known.has(zone) ? zone : null;
   const rack = String(row?.rack ?? "").trim().toUpperCase().replace(/\s+/g, "");
-  const numbered = rack.match(/^(?:2\.[123]-)?S?(\d+)$/);
   let stackId = null;
   let approx = true;
-  if (numbered) {
-    const id = `${areaId}-S${String(Number(numbered[1])).padStart(3, "0")}`;
-    const stack = stacks.find((item) => item.id === id && (!item.areaId || item.areaId === areaId));
-    if (stack) {
-      stackId = stack.id;
-      const short = `S${String(Number(numbered[1])).padStart(3, "0")}`;
-      approx = !(zone === areaId && (rack === id.toUpperCase() || rack === short));
-    }
-  }
-  if (!stackId) {
-    const first = stacks.find((item) => item.areaId === areaId) || stacks[0];
-    stackId = first?.id || null;
-    approx = true;
+  if (areaId && rack) {
+    const numbered = rack.match(/^(?:.+-)?S?(\d+)$/);
+    const candidates = [`${areaId}-${rack}`, rack];
+    if (numbered) candidates.push(`${areaId}-S${String(Number(numbered[1])).padStart(3, "0")}`);
+    const stack = list.find((item) => item?.areaId === areaId && candidates.includes(String(item.id).toUpperCase()));
+    if (stack) { stackId = stack.id; approx = false; }
   }
   const where = [row?.zone, row?.rack, row?.shelf, row?.slot].filter((part) => part != null && part !== "").join(" · ");
   return {

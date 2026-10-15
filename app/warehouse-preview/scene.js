@@ -5,7 +5,8 @@ import { createMaterialTextures, createSurroundingsGeometry, TYRE_VARIANTS, tyre
 
 /* The model uses relative layout units, not surveyed building dimensions. */
 const TYRE_HEIGHT = 0.58;
-const AREA_LIFT = { '2.1': 0, '2.2': 4.1, '2.3': 8.8 };
+// Floors stack in AREAS order when every area is shown together.
+const LEVEL_GAP = 4.4;
 const ACCENT = 0xf0c052;
 
 export function createScene(container, callbacks = {}) {
@@ -191,7 +192,7 @@ export function createScene(container, callbacks = {}) {
   const beginOrbit = () => { tween = null; hasUserCamera = true; };
   controls.addEventListener('start', beginOrbit);
 
-  function levelY(id) { return areaId === 'all' ? (AREA_LIFT[id] || 0) : 0; }
+  function levelY(id) { return areaId === 'all' ? Math.max(0, AREAS.findIndex((item) => item.id === id)) * LEVEL_GAP : 0; }
   function getArea(id) { return AREAS.find((item) => item.id === id); }
   function visibleStacks() { return state.stacks.filter((stack) => areaId === 'all' || stack.areaId === areaId); }
   function makeBox(parent, dimensions, at, material, casts = false) {
@@ -240,50 +241,6 @@ export function createScene(container, callbacks = {}) {
       parent.add(beam);
     }
   }
-  function buildGroundArchitecture(parent, area, y) {
-    if (area.floorRects?.length === 1) {
-      const geometry = createSurroundingsGeometry(area.floorRects[0]);
-      if (geometry) {
-        const apron = new THREE.Mesh(temporary(geometry), surroundingsMaterial);
-        apron.position.y = y; apron.receiveShadow = true;
-        apron.userData.isSurroundingsPreview = true;
-        apron.raycast = () => {}; // Decorative material preview, never a selectable storage floor.
-        parent.add(apron);
-      }
-    }
-    // Low cutaway remnants show known perimeter and openings without concealing stock.
-    makeBox(parent, [8.1, .46, .13], [-.95, y + .23, -7.04], wallMaterial);
-    makeBox(parent, [.58, .46, .13], [4.76, y + .23, -7.04], wallMaterial);
-    makeBox(parent, [.13, .46, 14], [-5.06, y + .23, 0], wallMaterial);
-    makeBox(parent, [.13, .46, 2.25], [5.06, y + .23, -5.88], wallMaterial);
-    makeBox(parent, [.13, .46, 2.0], [5.06, y + .23, -.67], wallMaterial);
-    makeBox(parent, [.13, .46, 3.0], [5.06, y + .23, 5.5], wallMaterial);
-    buildStair(parent, area.stair, y, false);
-  }
-  function roofSection(parent, x0, x1, z0, z1, y) {
-    // A sharp roof slice, not a new vertical western wall. Pitch is illustrative.
-    const roofY = (x) => y + .12 + (x + 5) * 1.48;
-    const vertices = new Float32Array([x0, roofY(x0), z0, x1, roofY(x1), z0, x1, roofY(x1), z1, x0, roofY(x0), z1]);
-    const geometry = temporary(new THREE.BufferGeometry());
-    geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
-    geometry.setAttribute('uv', new THREE.Float32BufferAttribute([0, 0, (x1 - x0) / 2, 0, (x1 - x0) / 2, (z1 - z0) / 2, 0, (z1 - z0) / 2], 2));
-    geometry.setIndex([0, 2, 1, 0, 3, 2]); geometry.computeVertexNormals();
-    const mesh = new THREE.Mesh(geometry, roofMaterial); mesh.receiveShadow = true; parent.add(mesh);
-    for (const z of [z0, z1]) {
-      const a = new THREE.Vector3(x0, roofY(x0), z), b = new THREE.Vector3(x1, roofY(x1), z);
-      const edge = new THREE.Mesh(unitBox, roofEdgeMaterial);
-      edge.position.copy(a).add(b).multiplyScalar(.5); edge.scale.set(.06, a.distanceTo(b), .065);
-      edge.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), b.sub(a).normalize()); parent.add(edge);
-    }
-  }
-  function buildAtticArchitecture(parent, area, y) {
-    buildStair(parent, area.stair, y, true);
-    // Most roof cladding is cut away to expose the actual stock and floor openings.
-    roofSection(parent, -5, -2.25, -7, -5.75, y);
-    roofSection(parent, -5, -4.72, -5.75, 7, y);
-    // East roof edge is only a cutaway reference; neither void is infilled.
-    makeBox(parent, [.065, .10, 14], [5, y + .02, 0], roofEdgeMaterial);
-  }
   function areaLabel(parent, area, y) {
     const texture = temporary(makeLabelTexture(`${area.id}  ${area.name || ''}`));
     const material = temporary(new THREE.SpriteMaterial({ map: texture, transparent: true, depthWrite: false, toneMapped: false }));
@@ -300,9 +257,8 @@ export function createScene(container, callbacks = {}) {
     for (const area of areas) {
       const group = new THREE.Group(), y = levelY(area.id);
       staticGroup.add(group);
-      for (const rect of area.floorRects || []) buildFloor(group, rect, y, area.id !== '2.1', area.id);
-      if (area.id === '2.1') buildGroundArchitecture(group, area, y);
-      if (area.id === '2.3') buildAtticArchitecture(group, area, y);
+      for (const rect of area.floorRects || []) buildFloor(group, rect, y, Boolean(area.timber), area.id);
+      buildStair(group, area.stair, y, false);
       if (areaId === 'all') areaLabel(group, area, y);
     }
   }
@@ -412,7 +368,7 @@ export function createScene(container, callbacks = {}) {
     }
   }
   function fitCamera(animated = true) {
-    const all = areaId === 'all', area = getArea(areaId), platformOnly = areaId === '2.2';
+    const all = areaId === 'all', area = getArea(areaId), platformOnly = false;
     const target = new THREE.Vector3(0, all ? 4.3 : .6, platformOnly ? 2.8 : 0);
     const width = platformOnly ? 6.7 : 12.0, depth = platformOnly ? 8.0 : 16;
     const fov = THREE.MathUtils.degToRad(camera.fov);
@@ -512,7 +468,7 @@ export function createScene(container, callbacks = {}) {
   resizeObserver?.observe(container);
   window.addEventListener('resize', resize);
   const api = {
-    setData(nextState, nextAreaId = areaId || '2.1') {
+    setData(nextState, nextAreaId = areaId || 'all') {
       if (disposed) return;
       if (state === nextState && areaId === nextAreaId) return;
       state = nextState || { stacks: [], tires: [] };
