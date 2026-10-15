@@ -2,14 +2,17 @@ import * as THREE from './vendor/three.module.js';
 import { OrbitControls } from './vendor/OrbitControls.js';
 import { AREAS } from './model.js';
 import { createMaterialTextures, createSurroundingsGeometry, TYRE_VARIANTS, tyreAppearance } from './materials.js';
+import { createBuilding } from './building.js';
+import { createActors } from './actors.js';
+import { STORAGE_LEVELS, buildingView, isBuildingView, planPoint } from './building-layout.js';
 
 /* The model uses relative layout units, not surveyed building dimensions. */
 const TYRE_HEIGHT = 0.58;
-const AREA_LIFT = { '2.1': 0, '2.2': 4.1, '2.3': 8.8 };
+const AREA_LIFT = STORAGE_LEVELS;
 const ACCENT = 0xf0c052;
 
 export function createScene(container, callbacks = {}) {
-  const { onSelect = () => {}, onLongPress = () => {}, onFloorPick = () => {}, onFloorHover = () => {}, onReady = () => {}, onError = () => {} } = callbacks;
+  const { onSelect = () => {}, onRoomSelect = () => {}, onActorSelect = () => {}, onLongPress = () => {}, onFloorPick = () => {}, onFloorHover = () => {}, onReady = () => {}, onError = () => {} } = callbacks;
   let renderer;
   try {
     renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
@@ -29,7 +32,7 @@ export function createScene(container, callbacks = {}) {
   container.appendChild(canvas);
 
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(38, 1, 0.08, 180);
+  const camera = new THREE.PerspectiveCamera(38, 1, 0.08, 350);
   const controls = new OrbitControls(camera, canvas);
   controls.enableDamping = true;
   controls.dampingFactor = 0.095;
@@ -90,6 +93,9 @@ export function createScene(container, callbacks = {}) {
   }
   const tagTexture = keep(makeTagTexture());
   const rubberMaterials = TYRE_VARIANTS.map(variant => keep(new THREE.MeshStandardMaterial({ ...surfaces.rubber, color: variant.color, roughness: variant.roughness, bumpScale: .008, metalness: 0 })));
+  const building = createBuilding({ surfaces, tyreGeometry, rubberMaterial: rubberMaterials[0] });
+  world.add(building.root);
+  building.setView('2.1');
   const treadMaterials = TYRE_VARIANTS.map((variant, index) => keep(new THREE.MeshStandardMaterial({ ...surfaces.treads[index], color: variant.color, roughness: variant.treadRoughness, bumpScale: variant.bumpScale, metalness: 0 })));
   const beadMaterial = keep(new THREE.MeshStandardMaterial({ color: 0x17191b, roughness: .73 }));
   const floorEdgeMaterial = keep(new THREE.MeshStandardMaterial({ ...surfaces.wood, color: 0xbaaa91, roughness: 1, bumpScale: .023 }));
@@ -163,6 +169,8 @@ export function createScene(container, callbacks = {}) {
   const qFront = new THREE.Quaternion();
   const tyreRotation = new THREE.Quaternion();
   const upAxis = new THREE.Vector3(0, 1, 0);
+  const actors = createActors({ onChange: invalidate });
+  world.add(actors.root); actors.setView('2.1');
 
   function invalidate() { if (!disposed && !suspended && !frame) frame = requestAnimationFrame(draw); }
   function draw(now) {
@@ -193,7 +201,7 @@ export function createScene(container, callbacks = {}) {
 
   function levelY(id) { return areaId === 'all' ? (AREA_LIFT[id] || 0) : 0; }
   function getArea(id) { return AREAS.find((item) => item.id === id); }
-  function visibleStacks() { return state.stacks.filter((stack) => areaId === 'all' || stack.areaId === areaId); }
+  function visibleStacks() { return state.stacks.filter((stack) => areaId === 'all' || stack.areaId === areaId || (areaId === 'ground' && stack.areaId === '2.1')); }
   function makeBox(parent, dimensions, at, material, casts = false) {
     let geometry = unitBox;
     if (material.userData.tileSize) {
@@ -220,7 +228,7 @@ export function createScene(container, callbacks = {}) {
   }
   function buildStair(parent, stair, y, attic) {
     if (!stair) return;
-    const steps = 15, rise = 2.65, treadDepth = stair.d / steps;
+    const steps = 15, rise = areaId === 'all' ? AREA_LIFT['2.3'] : 2.65, treadDepth = stair.d / steps;
     // At the north end the attic flight meets the solid northern deck exactly.
     for (let index = 0; index < steps; index++) {
       const t = index / (steps - 1);
@@ -241,7 +249,7 @@ export function createScene(container, callbacks = {}) {
     }
   }
   function buildGroundArchitecture(parent, area, y) {
-    if (area.floorRects?.length === 1) {
+    if (area.floorRects?.length === 1 && areaId !== 'all' && areaId !== 'ground') {
       const geometry = createSurroundingsGeometry(area.floorRects[0]);
       if (geometry) {
         const apron = new THREE.Mesh(temporary(geometry), surroundingsMaterial);
@@ -296,13 +304,17 @@ export function createScene(container, callbacks = {}) {
   }
   function buildArchitecture() {
     clearStatic();
-    const areas = areaId === 'all' ? AREAS : AREAS.filter((area) => area.id === areaId);
+    building.setView(areaId);
+    actors.setView(areaId);
+    const areas = areaId === 'all' ? AREAS : AREAS.filter((area) => area.id === (areaId === 'ground' ? '2.1' : areaId));
     for (const area of areas) {
       const group = new THREE.Group(), y = levelY(area.id);
       staticGroup.add(group);
       for (const rect of area.floorRects || []) buildFloor(group, rect, y, area.id !== '2.1', area.id);
       if (area.id === '2.1') buildGroundArchitecture(group, area, y);
       if (area.id === '2.3') buildAtticArchitecture(group, area, y);
+      group.name = `Skladište ${area.id} — ${area.name}`;
+      group.userData.areaId = area.id;
       if (areaId === 'all') areaLabel(group, area, y);
     }
   }
@@ -412,8 +424,29 @@ export function createScene(container, callbacks = {}) {
     }
   }
   function fitCamera(animated = true) {
+    if (areaId === 'all' || isBuildingView(areaId)) {
+      const view = buildingView(areaId);
+      const [u0,v0,u1,v1] = view?.bounds || [-23,-7,14,29];
+      const p = planPoint((u0+u1)/2,(v0+v1)/2,(view?.level || 0)+1.1);
+      const target = new THREE.Vector3(p.x,p.y,p.z);
+      sun.target.position.copy(target);sun.position.copy(target).add(new THREE.Vector3(-16,28,14));
+      Object.assign(sun.shadow.camera,{left:-28,right:28,top:28,bottom:-28,far:90});sun.shadow.camera.updateProjectionMatrix();
+      const fov = THREE.MathUtils.degToRad(camera.fov);
+      const width = u1-u0, depth = v1-v0;
+      const extent = Math.max(depth*.9,width/Math.max(.4,camera.aspect));
+      const distance = extent/(2*Math.tan(fov/2))*1.48;
+      // Looking from the south-west in plan keeps the street on screen-left.
+      const direction = activeView === 'top' ? new THREE.Vector3(-.001,1,0) : new THREE.Vector3(-.62,1.25,-.03).normalize();
+      camera.up.set(0,1,0);
+      animateCamera(target.clone().addScaledVector(direction,distance),target,animated?650:0);
+      controls.maxDistance = Math.max(120,distance*2);hasUserCamera=false;
+      return;
+    }
+    camera.up.set(0,1,0);
     const all = areaId === 'all', area = getArea(areaId), platformOnly = areaId === '2.2';
     const target = new THREE.Vector3(0, all ? 4.3 : .6, platformOnly ? 2.8 : 0);
+    sun.target.position.set(0,0,0);sun.position.set(-8,19,11);
+    Object.assign(sun.shadow.camera,{left:-12,right:12,top:15,bottom:-15,far:60});sun.shadow.camera.updateProjectionMatrix();
     const width = platformOnly ? 6.7 : 12.0, depth = platformOnly ? 8.0 : 16;
     const fov = THREE.MathUtils.degToRad(camera.fov);
     const viewHeight = all ? 22 : Math.max(depth * .79, width / Math.max(.45, camera.aspect));
@@ -466,6 +499,13 @@ export function createScene(container, callbacks = {}) {
       const point = floorPoint(event); if (point) onFloorPick(point); return;
     }
     const hit = pickMesh && raycaster.intersectObject(pickMesh, false)[0];
+    const actorHit = actors.root.visible && actors.cars.visible && raycaster.intersectObjects(actors.root.children, true)[0];
+    if (actorHit && (!hit || actorHit.distance < hit.distance)) {
+      let object=actorHit.object;while(object && !object.userData.actorId)object=object.parent;
+      if(object){onActorSelect(object.userData.actorId);return;}
+    }
+    const roomHit = (areaId === 'all' || areaId === 'ground') && raycaster.intersectObjects([...building.targets.filter(o => o.parent.visible && building.root.visible),...floorMeshes], false)[0];
+    if (roomHit && (!hit || roomHit.distance < hit.distance)) { onRoomSelect(roomHit.object.userData.roomId||roomHit.object.userData.areaId); return; }
     if (hit && hit.instanceId !== undefined) {
       const id = pickIndex[hit.instanceId];
       onSelect(id);
@@ -545,11 +585,63 @@ export function createScene(container, callbacks = {}) {
     pause() { if(disposed)return;suspended=true;controls.enabled=false;cancelHold();cancelAnimationFrame(frame);frame=0;tween=null;movingPointer=null;pointerCount=0; },
     resume() { if(disposed)return;suspended=false;controls.enabled=true;resize();invalidate(); },
     getCanvas() { if (!disposed) { controls.update(); renderer.render(scene, camera); } return canvas; },
+    getActors: () => actors.list(),
+    getActorObject: id => actors.get(id),
+    setActorPose: (id, pose) => actors.setPose(id, pose),
+    rollActorWheels: (id, distance) => actors.rollWheels(id, distance),
+    registerActor: definition => actors.register(definition),
+    resetActors: id => actors.reset(id),
+    setActorsVisible: visible => actors.setVisible(visible),
+    focusActor(id) {
+      const object=actors.get(id);if(!object)return;
+      const target=object.position.clone().add(new THREE.Vector3(0,.7,0));
+      animateCamera(target.clone().add(new THREE.Vector3(-5,7,-1)),target);hasUserCamera=true;
+    },
+    getDiagnostics() { return { areaId, actors:actors.list(), drawCalls: renderer.info.render.calls, triangles: renderer.info.render.triangles, rooms: [...building.rooms.keys()], meshes: renderer.info.memory.geometries }; },
+    async exportModel({ scope = 'ground', includeActors = true } = {}) {
+      const previous = areaId, hidden = [], originals = [], exportMaterials = new Map(), exportTextures = new Map();
+      // r160's glTF metallic/roughness combiner requires canvas images, while
+      // the live renderer deliberately uses compact RGBA DataTextures.
+      const exportMaterial = material => {
+        if (exportMaterials.has(material)) return exportMaterials.get(material);
+        const copy = material.clone(); exportMaterials.set(material,copy);
+        for (const key of ['roughnessMap','metalnessMap']) {
+          const source = material[key]; if (!source?.isDataTexture) continue;
+          if (!exportTextures.has(source)) {
+            const { width,height,data } = source.image;
+            const canvas = document.createElement('canvas');canvas.width=width;canvas.height=height;
+            const context = canvas.getContext('2d'),pixels=context.createImageData(width,height);pixels.data.set(data);context.putImageData(pixels,0,0);
+            const texture = new THREE.CanvasTexture(canvas);
+            for (const property of ['wrapS','wrapT','colorSpace','flipY','channel']) texture[property]=source[property];
+            texture.repeat.copy(source.repeat);texture.offset.copy(source.offset);texture.rotation=source.rotation;texture.center.copy(source.center);
+            exportTextures.set(source,texture);
+          }
+          copy[key]=exportTextures.get(source);
+        }
+        return copy;
+      };
+      try {
+        api.setData(state,scope==='all'?'all':'ground');overlayGroup.visible=false;
+        if(!includeActors){hidden.push(actors.root);actors.root.visible=false;}
+        world.traverse(object => {
+          if (object.visible && (object.material?.colorWrite === false || object.isSprite || object.isLineSegments)) { hidden.push(object);object.visible=false; }
+          if (object.material) { originals.push([object,object.material]);object.material=Array.isArray(object.material)?object.material.map(exportMaterial):exportMaterial(object.material); }
+        });
+        const { GLTFExporter } = await import('./vendor/GLTFExporter.js');
+        return await new GLTFExporter().parseAsync(world,{binary:true,onlyVisible:true,maxTextureSize:512});
+      } finally {
+        for (const [object,material] of originals) object.material=material;
+        for (const material of exportMaterials.values()) material.dispose();
+        for (const texture of exportTextures.values()) texture.dispose();
+        for (const object of hidden) object.visible=true;
+        overlayGroup.visible=true;api.setData(state,previous);invalidate();
+      }
+    },
     dispose() {
       if (disposed) return; disposed = true; cancelHold(); cancelAnimationFrame(frame); resizeObserver?.disconnect(); window.removeEventListener('resize', resize);
       controls.removeEventListener('change', invalidate); controls.removeEventListener('start', beginOrbit); controls.dispose();
       canvas.removeEventListener('pointerdown', handleDown); canvas.removeEventListener('pointerup', handleUp); canvas.removeEventListener('pointercancel', handleCancel); canvas.removeEventListener('pointermove', handleMove); canvas.removeEventListener('dblclick', handleDouble); canvas.removeEventListener('webglcontextlost', contextLost);
-      clearStatic(); for (const child of inventoryGroup.children) if (child.isInstancedMesh) child.dispose(); if (ghostGeometry) ghostGeometry.dispose(); for (const resource of selectedTagResources) resource.dispose(); for (const resource of resources) resource.dispose(); renderer.dispose(); canvas.remove();
+      actors.dispose();building.dispose();clearStatic(); for (const child of inventoryGroup.children) if (child.isInstancedMesh) child.dispose(); if (ghostGeometry) ghostGeometry.dispose(); for (const resource of selectedTagResources) resource.dispose(); for (const resource of resources) resource.dispose(); renderer.dispose(); canvas.remove();
     },
   };
   resize();

@@ -6,12 +6,10 @@ const dash = readFileSync(new URL('../app/dashboard.html', import.meta.url), 'ut
 const nero = readFileSync(new URL('../nero-design-studio/agent-card.css', import.meta.url), 'utf8');
 const appCss = readFileSync(new URL('../app/app.css', import.meta.url), 'utf8');
 
-test('the purple card is the original shaped window, copied into Nero', () => {
-  assert.match(dash, /@keyframes agAurora/);
-  assert.match(dash, /border-radius:11px/);
-  assert.match(dash, /linear-gradient\(135deg,#8b5cf6,#e040d0\)/);
-  assert.match(dash, /id="agentHook3"/);
-  assert.match(dash, /<section class="agent-card" id="agentCard"/);
+test('the original shaped window remains in the design archive; the board shows operational records', () => {
+  assert.match(dash, /id="board-pickups"/);
+  assert.match(dash, /id="board-recent"/);
+  assert.doesNotMatch(dash, /id="agentCard"|data-count="248"|DU-234-AB/);
   assert.match(nero, /border-radius:11px/);
   assert.match(nero, /linear-gradient\(135deg,#8b5cf6,#e040d0\)/);
   assert.match(appCss, /@keyframes aiDrift/);
@@ -20,14 +18,12 @@ test('the purple card is the original shaped window, copied into Nero', () => {
   assert.equal(existsSync(new URL('../nine-studio/tenant.js', import.meta.url)), false);
 });
 
-test('Nero is the card on the board and a carved line on every page', () => {
-  assert.match(dash, /id="agentTab">Nero</);
-  assert.match(dash, /aria-label="Nero"/);
-  assert.match(dash, /placeholder="Pitaj Nero…"/);
+test('the board uses the same Nero composer as every working page', () => {
   assert.match(dash, /powered by <a href="https:\/\/nerosummit.com">nerosummit.com<\/a>/);
   assert.doesNotMatch(dash, /composer\.js/);
   const composer = readFileSync(new URL('../app/composer.js', import.meta.url), 'utf8');
-  assert.match(composer, /getElementById\('agentCard'\)/);
+  assert.match(composer, /getElementById\('neroComposer'\)/);
+  assert.doesNotMatch(composer, /if \(document.getElementById\('agentCard'\)/);
   assert.match(composer, /Pitaj Nero/);
   const pages = [
     'app/checkin.html', 'app/login.html', 'app/customers.html', 'app/scan.html',
@@ -48,7 +44,7 @@ test('Nero is the card on the board and a carved line on every page', () => {
 test('free gemini stays on and the local assistant is gone', () => {
   const config = readFileSync(new URL('../app/agent-config.js', import.meta.url), 'utf8');
   assert.match(config, /ASC_AGENT_REMOTE_ALLOWED = true/);
-  assert.match(dash, /remote: true/);
+  assert.match(readFileSync(new URL('../app/composer.js', import.meta.url), 'utf8'), /remote: true/);
   for (const file of [
     'app/assistant-local.js',
     'app/assistant-surface.js',

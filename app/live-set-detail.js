@@ -11,6 +11,7 @@ import {
   getSession, loadStorageSet, changeStatus, checkoutSet, setPaid, moveStorageSet,
   softDeleteSet, findSetAtLocation, signedPhotoUrls, addPhoto, loadAuditTrail,
 } from '../js/db.js';
+import { setWorkflowContext, registerWorkflowAction } from './workflow.js';
 
 const SEASON_LABEL = { winter: 'Zimske', summer: 'Ljetne', all_season: 'Cjelogodišnje' };
 const SEASON_CLASS = { winter: 'win', summer: '', all_season: 'all' };
@@ -103,6 +104,7 @@ function renderChips(s) {
 }
 
 function renderActions(s) {
+  setWorkflowContext({ set:s });
   const done = s.status === 'checked_out';
   show(document.getElementById('statusBtn'), !done);
   show(document.getElementById('reserveBtn'), !done && s.status !== 'reserved');
@@ -110,6 +112,7 @@ function renderActions(s) {
 }
 
 function renderLocation(s) {
+  setWorkflowContext({ set:s });
   const vals = [s.zone, s.rack, s.shelf, s.slot];
   // blocks: [0] main display, [1] "Iz" move preview ([2] is the live "U" preview)
   qa('.loc-block').slice(0, 2).forEach((block) => {
@@ -359,6 +362,10 @@ function wire(s) {
   if (!set || set.deleted_at) { notFound(code); liveFirstDone(); return; }
 
   window.ascLiveSet = set;                             // the sticker/edit/report handlers read this
+  registerWorkflowAction('print', () => {
+    const print = [...document.querySelectorAll('.sd-menu-item')].find(el => /naljepnic/i.test(el.textContent));
+    print?.click();
+  });
   try { render(set); wire(set); }
   catch (e) { console.warn('[live] render failed — keeping existing markup:', e); }
   liveFirstDone();

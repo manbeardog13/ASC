@@ -125,8 +125,9 @@ html:not(.island).splash-cold .sp-topglow{display:block;position:fixed;left:0;ri
 <link rel="stylesheet" href="app.css">
 <style>
 /* Login — iPhone-calm: ambient canvas, a floating glass card, Google-first. */
-body{display:flex;align-items:center;justify-content:center;min-height:100dvh;padding:22px}
-.auth-card{position:relative;z-index:1;width:min(412px,100%);border-radius:30px;padding:30px 26px 24px;
+body{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100dvh;padding:28px 20px}
+body>main{width:min(420px,100%);min-width:0}
+.auth-card{position:relative;z-index:1;width:100%;min-width:0;border-radius:22px;padding:28px;
   background:var(--shell-solid);border:1px solid var(--rim);border-top-color:var(--rim-top);
   box-shadow:var(--shadow-card);animation:sheetIn 560ms var(--smooth) both}
 @supports ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
@@ -169,15 +170,16 @@ html.dark .auth-card{box-shadow:var(--shadow-card),inset 0 1px 0 rgba(255,255,25
 .auth-div{display:flex;align-items:center;gap:12px;margin:16px 0;color:var(--muted);font:600 11px Inter;letter-spacing:.08em;text-transform:uppercase}
 .auth-div::before,.auth-div::after{content:"";height:1px;flex:1;background:var(--line)}
 
-.fieldx{display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:0 12px;margin-bottom:11px;transition:border-color .2s var(--smooth)}
+.fieldx{display:grid;grid-template-columns:18px minmax(0,1fr) auto;grid-template-rows:auto 1fr;align-items:center;column-gap:10px;min-width:0;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px 12px;margin-bottom:12px;transition:border-color .2s var(--smooth)}
 .fieldx:focus-within{border-color:var(--lava-ring)}
-.fieldx .fx-ic{flex:none;color:var(--muted);display:grid;place-items:center}
-.fieldx input{flex:1;min-width:0;border:0;background:none;outline:none;font:500 15px Inter;color:var(--ink);padding:14px 0}
+.fieldx .fx-ic{grid-column:1;grid-row:1/3;color:var(--muted);display:grid;place-items:center}
+.fx-label{grid-column:2;grid-row:1;font:500 11px/1.5 Inter;color:var(--muted)}
+.fieldx input{grid-column:2;grid-row:2;width:100%;min-width:0;border:0;background:none;outline:none;font:400 16px/1.5 Inter;color:var(--ink);padding:2px 0}
 .fieldx input::placeholder{color:var(--muted);opacity:.85}
-.fx-eye{flex:none;border:0;background:none;cursor:pointer;color:var(--muted);padding:13px;margin-right:-12px;display:grid;place-items:center}
+.fx-eye{grid-column:3;grid-row:1/3;min-width:44px;min-height:44px;border:0;background:none;cursor:pointer;color:var(--muted);margin-right:-8px;display:grid;place-items:center}
 .auth-names{display:none;gap:11px}
-body.signup .auth-names{display:flex}
-body.signup .auth-names .fieldx{flex:1;margin-bottom:11px}
+body.signup .auth-names{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+body.signup .auth-names .fieldx{min-width:0}
 
 .auth-forgot-row{display:flex;justify-content:flex-end;margin:-2px 0 12px}
 .auth-forgot{background:none;border:0;cursor:pointer;font:600 12.5px Inter;color:var(--muted);padding:2px}
@@ -196,6 +198,19 @@ body.signup .auth-forgot-row,body.recover .auth-forgot-row{display:none}
 .auth-msg{min-height:18px;margin:12px 0 0;font:600 12.5px/1.4 Inter;text-align:center}
 .auth-msg.err{color:var(--lava-ink)}
 .auth-msg.ok{color:var(--green-ink)}
+.auth-card :is(button,input):focus-visible{outline:2px solid var(--lava-ink);outline-offset:3px}
+.auth-forgot,.auth-switch button{min-height:44px}
+.auth-card::before,.auth-card::after{display:none}
+.auth-card .btn-amber{box-shadow:none;background:var(--lava);color:#0a0c11}
+body>.nero-mark{width:100%;margin-top:18px;padding:0;font-size:10px;letter-spacing:.1em;text-shadow:none}
+body>.nero-mark a{text-shadow:none}
+html.dark body>.nero-mark,html.dark body>.nero-mark a{color:var(--muted);text-shadow:none}
+.auth-theme{width:52px;height:44px;background:none;box-shadow:none}
+html.dark .auth-theme{background:none;box-shadow:none}
+.auth-theme::before{content:'';position:absolute;inset:11px 7px;border-radius:20px;background:var(--line)}
+.auth-theme i{top:13px;left:9px}
+@media(max-width:380px){.auth-card{padding:22px 18px}body.signup .auth-names{grid-template-columns:1fr;gap:0}}
+@media(max-height:680px){body{justify-content:flex-start}}
 /* signup + recover only ever show what they need */
 body.reset .fieldx.f-pass,body.reset .btn-google,body.reset .auth-div,body.reset .auth-switch{display:none}
 body.recover .fieldx.f-email,body.recover .btn-google,body.recover .auth-div,body.recover .auth-switch{display:none}
@@ -237,14 +252,14 @@ if(sat>=59){d.classList.add('island');d.style.setProperty('--isl-y',(sat-48)+'px
     <form id="form" autocomplete="on">
       <div class="auth-names">
         <label class="fieldx"><span class="fx-ic"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.6"/><path d="M4.5 20a7.5 7.5 0 0115 0"/></svg></span>
-          <input id="first" type="text" autocomplete="given-name" placeholder="Ime"></label>
+          <span class="fx-label">Ime</span><input id="first" type="text" autocomplete="given-name" placeholder="Ime"></label>
         <label class="fieldx"><span class="fx-ic"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.6"/><path d="M4.5 20a7.5 7.5 0 0115 0"/></svg></span>
-          <input id="last" type="text" autocomplete="family-name" placeholder="Prezime"></label>
+          <span class="fx-label">Prezime</span><input id="last" type="text" autocomplete="family-name" placeholder="Prezime"></label>
       </div>
       <label class="fieldx f-email"><span class="fx-ic"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M3.5 7l8.5 6 8.5-6"/></svg></span>
-        <input id="email" type="email" inputmode="email" autocomplete="email" required placeholder="Email"></label>
+        <span class="fx-label">E-pošta</span><input id="email" type="email" inputmode="email" autocomplete="email" required placeholder="ime@primjer.hr"></label>
       <label class="fieldx f-pass"><span class="fx-ic"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="10.5" width="15" height="10" rx="2.5"/><path d="M8 10.5V8a4 4 0 018 0v2.5"/></svg></span>
-        <input id="password" type="password" autocomplete="current-password" required placeholder="Lozinka">
+        <span class="fx-label">Lozinka</span><input id="password" type="password" autocomplete="current-password" required placeholder="Lozinka">
         <button class="fx-eye" id="eye" type="button" aria-label="Prikaži lozinku"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-6.5 10-6.5S22 12 22 12s-3.5 6.5-10 6.5S2 12 2 12z"/><circle cx="12" cy="12" r="2.6"/></svg></button></label>
 
       <div class="auth-forgot-row"><button class="auth-forgot" id="forgot" type="button">Zaboravljena lozinka?</button></div>

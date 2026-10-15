@@ -3,7 +3,7 @@
    and the admin tailnet relay live here. */
 (function () {
   'use strict';
-  if (document.getElementById('agentCard') || document.getElementById('neroComposer')) return;
+  if (document.getElementById('neroComposer')) return;
   if (/\/login\.html$/.test(location.pathname)) return;
 
   var script = document.currentScript;
@@ -27,6 +27,8 @@
   ensure('qr.js', false);
   ensure('agent-gemini.js', false);
   ensure('builder-queue.js', false);
+  var workflow = null;
+  var workflowReady = import(new URL('workflow.js', base).href);
 
   document.documentElement.classList.add('has-composer');
 
@@ -39,6 +41,10 @@
     '<div class="nero-log" hidden></div>' +
     '<p class="nero-connect" hidden></p>' +
     '<div class="nero-queue" hidden></div>' +
+    '<section class="nero-next" aria-label="Predloženi sljedeći koraci">' +
+      '<div class="nero-next-heading"><span class="nero-name">Nero</span><p class="nero-context">Krenimo od onoga što trebate.</p></div>' +
+      '<nav class="nero-proposals" aria-label="Sljedeći korak"><a href="' + new URL('locate.html', base).href + '">Pronađi komplet</a><a href="' + new URL('scan.html', base).href + '">Skeniraj oznaku</a></nav>' +
+    '</section>' +
     '<div class="nero-sheet">' +
       '<div class="nero-files" hidden></div>' +
       '<textarea class="nero-input" rows="1" enterkeyhint="send" placeholder="Pitaj Nero…" aria-label="Pitaj Nero"></textarea>' +
@@ -59,9 +65,7 @@
       '<button class="nero-pill" type="button" data-act="new">Novi razgovor</button>' +
       '<button class="nero-pill" type="button" data-act="history">Povijest</button>' +
       '<button class="nero-pill" type="button" data-act="relay" hidden aria-pressed="false" aria-label="Send to Toni &amp; Nero">Toni &amp; Nero</button>' +
-      '<button class="nero-pill" type="button" data-q="Nađi gume za DU 123-AB">nađi set</button>' +
-      '<button class="nero-pill" type="button" data-q="Koliko je slobodno u skladištu?">koliko je slobodno</button>' +
-      '<button class="nero-pill" type="button" data-q="Tko čeka na preuzimanje danas?">tko čeka</button>' +
+      '<button class="nero-pill nero-close" type="button" data-act="close">Smanji razgovor</button>' +
     '</div>' +
     '<div class="nero-history" hidden></div>';
   document.body.appendChild(root);
@@ -98,6 +102,38 @@
   var flushing = false;
   var offlineNote = false;
   var sbPromise = null;
+  var nextActions = root.querySelector('.nero-proposals');
+  var nextContext = root.querySelector('.nero-context');
+  var proposalSignature = '';
+  workflowReady.then(function (mod) {
+    workflow = mod;
+    mod.subscribeWorkflow(function (snapshot) {
+      nextContext.textContent = snapshot.title;
+      var signature = JSON.stringify([snapshot.actions, snapshot.pending]);
+      if (signature === proposalSignature) return;
+      proposalSignature = signature;
+      var focused = nextActions.contains(document.activeElement) && document.activeElement.dataset.workflow;
+      nextActions.replaceChildren();
+      snapshot.actions.forEach(function (action, i) {
+        var node = document.createElement(action.href ? 'a' : 'button');
+        node.className = 'nero-proposal' + (i === 0 ? ' is-primary' : '');
+        node.dataset.workflow = action.id;
+        node.textContent = action.label;
+        if (action.href) node.href = mod.workflowHref(action.href);
+        else {
+          node.type = 'button';
+          node.disabled = snapshot.pending.length > 0;
+          node.setAttribute('aria-busy', String(snapshot.pending.includes(action.id)));
+          node.addEventListener('click', function () {
+            mod.runWorkflowAction(action.id).catch(function () { card('assistant', 'Radnja nije uspjela. Pokušajte ponovno.'); });
+          });
+        }
+        nextActions.appendChild(node);
+        if (focused === action.id && !node.disabled) node.focus({ preventScroll: true });
+      });
+      fit();
+    });
+  }).catch(function () { nextContext.textContent = 'Pronađite komplet ili skenirajte oznaku.'; });
 
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
@@ -131,10 +167,13 @@
   }
 
   function fit() {
-    var foot = document.querySelector('.nero-mark') || document.querySelector('.spatial-footer');
-    var h = foot ? Math.ceil(foot.getBoundingClientRect().height) : 36;
-    root.style.setProperty('--nero-foot', Math.max(36, h) + 'px');
-    document.documentElement.style.setProperty('--nero-stack', Math.ceil(root.getBoundingClientRect().height + h + 18) + 'px');
+    var viewport = window.visualViewport;
+    var keyboard = viewport ? Math.max(0, innerHeight - viewport.height - viewport.offsetTop) : 0;
+    document.documentElement.classList.toggle('nero-keyboard', keyboard > 120);
+    root.style.setProperty('--nero-keyboard', keyboard > 120 ? keyboard + 'px' : '0px');
+    root.style.setProperty('--nero-view-height', (viewport ? viewport.height : innerHeight) + 'px');
+    var dock = innerWidth <= 1020 && keyboard <= 120 ? 70 : 12;
+    document.documentElement.style.setProperty('--nero-stack', Math.ceil(root.getBoundingClientRect().height + dock + 24) + 'px');
   }
   function openComposer(focus) {
     root.classList.remove('is-compact');
@@ -172,7 +211,7 @@
       var rest = line.replace(code[0], '');
       if (loc) rest = rest.replace(loc[0], '');
       var slot = loc
-        ? '<a class="nero-slot" href="' + esc(href('locate.html?q=' + encodeURIComponent(loc[0]))) + '">' + esc(loc[0]) + '</a>'
+        ? '<span class="nero-slot">' + esc(loc[0]) + '</span>'
         : '';
       return '<a class="nero-set" href="' + esc(href('set-detail.html?code=' + encodeURIComponent(code[0]))) + '">' +
         '<span class="nero-thumb" data-thumb="' + esc(code[0]) + '"></span>' +
@@ -284,7 +323,7 @@
         paint(bubbleFor(), ev.message || 'Greška.', false);
         bubble = null;
       }
-    }, { remote: true, stream: true, attachments: attachments }).then(function () {
+    }, { remote: true, stream: true, attachments: attachments, context: workflow ? workflow.workflowAgentContext() : null }).then(function () {
       setBusy(false);
     }).catch(function (err) {
       setBusy(false);
@@ -442,6 +481,8 @@
   function ask(text) {
     text = (text || '').trim();
     if (!text || busy) return;
+    var destination = !relayMode && !pending.length && workflow && workflow.workflowNavigation(text);
+    if (destination) { location.href = workflow.workflowHref(destination.href); return; }
     if (voiceMode !== 'idle') stopVoice();
     var refs = pending.map(function (f) { return { path: f.path, mime: f.mime, name: f.name }; });
     input.value = '';
@@ -539,9 +580,9 @@
     fit();
   }
   root.addEventListener('pointerdown', function (e) {
-    if (root.classList.contains('is-compact') && !e.target.closest('.nero-mic')) openComposer(true);
+    if (root.classList.contains('is-compact') && e.target.closest('.nero-sheet') && !e.target.closest('button')) openComposer(true);
   });
-  root.addEventListener('focusin', function () { openComposer(false); });
+  root.addEventListener('focusin', function (e) { if (e.target.closest('.nero-sheet')) openComposer(false); });
   root.addEventListener('focusout', function () {
     setTimeout(function () { if (!root.contains(document.activeElement)) maybeCollapse(); }, 0);
   });
@@ -566,6 +607,7 @@
     var act = pill.getAttribute('data-act');
     var q = pill.getAttribute('data-q');
     if (q) { openComposer(true); input.value = q; ask(q); return; }
+    if (act === 'close') { input.blur(); maybeCollapse(); return; }
     if (act === 'new') {
       chatId = null;
       log.innerHTML = '';
@@ -780,6 +822,7 @@
     if (!t || t === mic) return;
     var tag = t.tagName;
     if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || tag === 'BUTTON' || t.isContentEditable) return;
+    if (t.closest('a, summary, [role="button"], [role="link"], [contenteditable]')) return;
     if (!SR && !(navigator.mediaDevices && window.MediaRecorder)) return;
     e.preventDefault();
     startVoice('holding', 'key');
@@ -801,6 +844,8 @@
     if (document.visibilityState === 'visible') tryFlush();
   });
   addEventListener('resize', fit);
+  if (window.ResizeObserver) new ResizeObserver(fit).observe(root);
+  if (window.visualViewport) window.visualViewport.addEventListener('resize', fit);
   fit();
 
   libs().then(function (lib) {
@@ -809,6 +854,7 @@
     return lib.db.loadMyProfile();
   }).then(function (profile) {
     var role = profile && profile.role;
+    workflowReady.then(function (mod) { mod.setWorkflowContext({ role: role || null }); });
     if (role === 'admin' || role === 'manager') {
       relayReady = true;
       relayPill.hidden = false;

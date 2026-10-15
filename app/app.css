@@ -1120,3 +1120,18 @@ html.dark .nero-mark,html.dark .nero-mark a{color:rgba(210,206,200,.28);
 /* Composer glass, states, and chat cards live in composer.css.
    Clearance follows the live stack height that script measures. */
 html.has-composer body{padding-bottom:calc(var(--nero-stack, 120px) + env(safe-area-inset-bottom, 0px))}
+
+/* Shared workflow surfaces: one quiet canvas, visible focus, stable touch bar. */
+html.has-side .grain{display:none}
+html.has-side .side [hidden]{display:none!important}
+html.has-side .shell{border-color:var(--line);box-shadow:0 2px 12px -8px rgba(0,0,0,.18)}
+html.has-side :is(a,button,input,textarea,select,summary):focus-visible{outline:2px solid var(--lava-ink);outline-offset:3px}
+html.has-side :is(input,textarea,select){scroll-margin-block:100px 260px}
+html.has-side .nero-mark{font-size:10px;letter-spacing:.1em;text-shadow:none;color:var(--muted)}
+html.has-side .nero-mark a{color:inherit;text-shadow:none}
+@media(max-width:1020px){
+  html.has-composer .app-dock{bottom:0;background:var(--panel-2)}
+  html.has-composer body:has(.app-dock){padding-bottom:calc(var(--nero-stack,250px) + env(safe-area-inset-bottom,0px))}
+  html.nero-keyboard .app-dock{display:none}
+}
+@media(prefers-reduced-motion:reduce){html.has-side body,html.has-side .side,html.has-side .shell{transition:none}}

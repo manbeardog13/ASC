@@ -18,13 +18,21 @@ ignored `out/assistant-tests`, or `ASC_TEST_OUTPUT` if supplied.
 node tests/warehouse.browser.cjs
 ```
 
-The purple AI window is the original ASC card, copied as-is in `nero-design-studio/`.
-`tests/agent-surface.mjs` locks that card and the free Gemini flag. `tests/season-plan.mjs`
+The original purple AI window remains in `nero-design-studio/`. The operational
+board now uses the same shared Nero composer as the other pages, with direct
+contextual actions above it. `tests/agent-surface.mjs` checks that separation and
+the free Gemini flag. `tests/season-plan.mjs`
 locks the corner-number questions: a seasonal answer takes the first free bay about
 six months out, and the reminder window is five to seven days before that visit.
 Neither test calls Gemini.
 The warehouse browser check covers the spatial preview shell. These checks do not
 certify model reasoning, live latency, or a deployed function.
+
+`node tests/workflow.browser.cjs` exercises the shared proposals through placement,
+pickup confirmation/cancellation, search, and intake validation. It renders the
+board and signup at seven sizes, checks overflow, and tests readonly and failed
+data states. Set `CHROMIUM_PATH` to an installed Chromium executable. Evidence
+goes to `out/workflow-review/`; all records and sessions are synthetic.
 
 Required repository checks for changes under js/:
 

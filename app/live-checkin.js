@@ -19,6 +19,7 @@ import { t } from '../js/i18n.js';
 import { intakeReturn, placementNeedsSlots, suggestionNote } from '../js/firstRun.js';
 import { slotBlock } from './slot-block.js';
 import { bootOnboarding } from './onboarding.js';
+import { setWorkflowContext, registerWorkflowAction } from './workflow.js';
 // db.js's createStorageSet persists the location via store.rememberLocation →
 // localStorage 'asc.recentLocations'. Loading here (same module instance as
 // db.js uses) hydrates the in-memory list so saving doesn't clobber history.
@@ -255,6 +256,7 @@ function hiddenId(id) {
 
 function showWizard(step) {
   wizardStep = step;
+  setWorkflowContext({ step, editing: editMode });
   const sections = qa('#ci > section');
   sections.forEach((section, index) => { section.hidden = step === 1 ? index !== 0 : false; });
   const loc = $('locField');
@@ -374,9 +376,12 @@ async function showPlaceStep(code, formData) {
       season: formData.set.season,
     });
   });
+  setWorkflowContext({ set: { public_code: code } });
+  registerWorkflowAction('print', () => print.click());
   let slotCount = null;
   try { slotCount = await countLocations(); }
   catch (error) { showToast(error.message || t('flow.migration')); }
+  setWorkflowContext({ noSlots: placementNeedsSlots(slotCount) });
   if (placementNeedsSlots(slotCount)) {
     actions.append(print);
     panel.append(title, lead, actions, slotBlock('empty', intakeReturn(code)));
@@ -432,6 +437,9 @@ function installWizard() {
   showWizard(1);
 }
 installWizard();
+registerWorkflowAction('intake-next', () => { if (!inFlight) form?.requestSubmit(); });
+registerWorkflowAction('find-customer', () => { const box = $('whoSearch'); if (box) { if (wizardStep !== 1) showWizard(1); box.focus(); } });
+registerWorkflowAction('enter-plate', () => { if (wizardStep !== 1) showWizard(1); $('v_plate')?.focus(); });
 installPlanMark();
 bootOnboarding();
 

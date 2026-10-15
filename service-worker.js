@@ -2,7 +2,7 @@
    Makes the app installable and loads the shell instantly. Network-first for
    same-origin files (so deploys show up right away), cache fallback when
    offline. Live data always comes from Supabase online. */
-const CACHE = "asc-tirehotel-v104-nero-glass";
+const CACHE = "asc-tirehotel-v106-guided-workflows";
 // Cross-origin dependencies the app cannot boot (or scan) without. Same-origin
 // files are precached below; these are runtime-cached network-first so an
 // offline cold boot doesn't die on the supabase-js ESM import.
@@ -25,6 +25,25 @@ const SHELL = [
   "./app/set-detail.html",
   "./app/scan.html",
   "./app/warehouse.html",
+  "./app/warehouse-preview/index.html",
+  "./app/warehouse-preview/bootstrap.js",
+  "./app/warehouse-preview/gate.js",
+  "./app/warehouse-preview/app.js",
+  "./app/warehouse-preview/scene.js",
+  "./app/warehouse-preview/model.js",
+  "./app/warehouse-preview/building.js",
+  "./app/warehouse-preview/actors.js",
+  "./app/warehouse-preview/building-layout.js",
+  "./app/warehouse-preview/materials.js",
+  "./app/warehouse-preview/persistence.js",
+  "./app/warehouse-preview/journey.js",
+  "./app/warehouse-preview/tour.js",
+  "./app/warehouse-preview/styles.css",
+  "./app/warehouse-preview/integration.css",
+  "./app/warehouse-preview/vendor/three.module.js",
+  "./app/warehouse-preview/vendor/OrbitControls.js",
+  "./app/warehouse-preview/vendor/GLTFExporter.js",
+  "./app/warehouse-preview/vendor/TextureUtils.js",
   "./app/customers.html",
   "./app/reminders.html",
   "./app/workshop.html",
@@ -39,6 +58,9 @@ const SHELL = [
   "./app/concierge.js",
   "./app/composer.js",
   "./app/composer.css",
+  "./app/workflow.js",
+  "./app/workflow-model.js",
+  "./app/dashboard.css",
   "./app/builder-queue.js",
   "./app/agent-config.js",
   "./app/agent-gemini.js",
