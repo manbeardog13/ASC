@@ -660,8 +660,12 @@ export async function checkoutSet({ setId = null, publicCode = null } = {}) {
   throw rpcFail(error, "check the set out");
 }
 
-export async function suggestFreeSlot(warehouse = "main") {
-  const { data, error } = await supabase.rpc("suggest_free_slot", { warehouse });
+export async function suggestFreeSlot(warehouse = "main", who = {}) {
+  const args = { warehouse };
+  if (who && who.customerId) args.customer_id = who.customerId;
+  if (who && who.phone) args.phone = who.phone;
+  if (who && who.plate) args.plate = who.plate;
+  const { data, error } = await supabase.rpc("suggest_free_slot", args);
   if (error) throw rpcFail(error, "suggest a free slot");
   return data;
 }

@@ -16,6 +16,7 @@ export const TOUR_KEYS = [
   "flow.needSlotsTitle", "flow.needSlotsBody",
   "flow.unknownSlotTitle", "flow.unknownSlotBody",
   "flow.createSlot", "flow.backToIntake",
+  "flow.suggested", "flow.suggestedNear",
 ];
 
 // Shop preference. The tour names this zone when it still has a free seat.
@@ -98,4 +99,12 @@ export function placementNeedsSlots(count) {
 
 export function unknownSlotScan(scanned, row) {
   return Boolean(scanned) && !row;
+}
+
+// A clustered seat explains itself. Anything else keeps the plain free-slot line.
+export function suggestionNote(slot, where) {
+  if (slot && slot.near_label) {
+    return { key: "flow.suggestedNear", vars: { where: String(slot.near_label) } };
+  }
+  return { key: "flow.suggested", vars: { where: where || "" } };
 }

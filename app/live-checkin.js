@@ -16,7 +16,7 @@ import {
   suggestFreeSlot, locationLabel, updateCustomer, updateVehicle, updateStorageSet, replaceTires,
 } from '../js/db.js';
 import { t } from '../js/i18n.js';
-import { intakeReturn, placementNeedsSlots } from '../js/firstRun.js';
+import { intakeReturn, placementNeedsSlots, suggestionNote } from '../js/firstRun.js';
 import { slotBlock } from './slot-block.js';
 import { bootOnboarding } from './onboarding.js';
 // db.js's createStorageSet persists the location via store.rememberLocation →
@@ -391,9 +391,14 @@ async function showPlaceStep(code, formData) {
   note.className = 'flow-note';
   suggest.addEventListener('click', async () => {
     try {
-      const slot = await suggestFreeSlot('main');
+      const slot = await suggestFreeSlot('main', {
+        customerId: formData.customer && formData.customer.id,
+        phone: formData.customer && formData.customer.phone,
+        plate: formData.vehicle && formData.vehicle.plate,
+      });
       if (!slot) { showToast(t('flow.noSlot')); return; }
-      note.textContent = t('flow.suggested', { where: locationLabel(slot) });
+      const copy = suggestionNote(slot, locationLabel(slot));
+      note.textContent = t(copy.key, copy.vars);
       place.href = 'place.html?set=' + encodeURIComponent(code) + (slot.qr_code ? '&slot=' + encodeURIComponent(slot.qr_code) : '');
     } catch (error) {
       showToast(error.message || t('flow.migration'));
@@ -564,7 +569,11 @@ window.ascLiveFirst = new Promise((r) => { liveFirstDone = r; });
     try {
       const data = await loadStorageSet(resumeCode);
       await showPlaceStep(data.public_code || resumeCode, {
-        customer: { name: data.vehicle?.customer?.name || '' },
+        customer: {
+          id: data.vehicle?.customer?.id || '',
+          name: data.vehicle?.customer?.name || '',
+          phone: data.vehicle?.customer?.phone || '',
+        },
         vehicle: { plate: data.vehicle?.plate || '' },
         set: { season: data.season || '' },
       });
