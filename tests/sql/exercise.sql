@@ -111,6 +111,60 @@ begin
   end if;
 end $$;
 
+-- A returning customer sits next to their own set, not in the first free zone.
+do $$
+declare
+  v jsonb;
+begin
+  insert into public.customers (id, name, phone)
+  values ('10000000-0000-0000-0000-0000000000aa', 'Borna', '091 555 010');
+  insert into public.vehicles (id, customer_id, plate)
+  values ('20000000-0000-0000-0000-0000000000aa', '10000000-0000-0000-0000-0000000000aa', 'ZG-4532-TP');
+  insert into public.locations (warehouse, zone, rack, shelf, slot) values
+    ('main', '1', 'A', '', '01'),
+    ('main', '2.1', 'A', '', '01'),
+    ('main', '2.1', 'A', '', '03'),
+    ('main', '2.1', 'A', '', '04'),
+    ('main', '2.1', 'B', '', '01');
+  insert into public.storage_sets (id, public_code, vehicle_id, status)
+  values ('30000000-0000-0000-0000-0000000000aa', 'ASC-2026-0091', '20000000-0000-0000-0000-0000000000aa', 'in_storage');
+  perform public.place_set(null, 'ASC-2026-0091', null, (
+    select qr_code from public.locations
+     where zone = '2.1' and rack = 'A' and slot = '03'
+  ));
+
+  v := public.suggest_free_slot('main');
+  if v->>'zone' <> '1' then
+    raise exception 'unordered suggest should stay on zone 1, got %', v;
+  end if;
+  if v->>'near_label' is not null then
+    raise exception 'unordered suggest invented a neighbour %', v;
+  end if;
+
+  v := public.suggest_free_slot('main', null, null, 'zg 4532 tp');
+  if v->>'zone' <> '2.1' or v->>'rack' <> 'A' or v->>'slot' <> '04' then
+    raise exception 'plate cluster missed adjacent 2.1-A-04: %', v;
+  end if;
+  if v->>'near_label' <> '2.1-A-03' then
+    raise exception 'near label is %', v->>'near_label';
+  end if;
+
+  v := public.suggest_free_slot('main', null, '091555010', null);
+  if v->>'slot' <> '04' or v->>'near_label' <> '2.1-A-03' then
+    raise exception 'phone cluster missed: %', v;
+  end if;
+
+  v := public.suggest_free_slot('main', '10000000-0000-0000-0000-0000000000aa', null, null);
+  if v->>'slot' <> '04' then
+    raise exception 'customer id cluster missed: %', v;
+  end if;
+
+  v := public.suggest_free_slot('main', null, null, 'DU100AA');
+  if v->>'zone' <> '1' then
+    raise exception 'unrelated plate was clustered: %', v;
+  end if;
+end $$;
+
 reset role;
 select set_config('request.jwt.claim.sub', '', false);
 
@@ -118,6 +172,7 @@ select set_config('request.jwt.claim.sub', '', false);
 do $$
 declare
   v_path text;
+  v_definer boolean;
 begin
   if has_function_privilege('anon', 'public.asc_audit()', 'execute') then
     raise exception 'anon can still execute asc_audit()';
@@ -137,13 +192,31 @@ begin
   if not has_function_privilege('authenticated', 'public.checkout_set(uuid,text)', 'execute') then
     raise exception 'staff cannot execute checkout_set';
   end if;
-  if not has_function_privilege('authenticated', 'public.suggest_free_slot(text)', 'execute') then
+  if to_regprocedure('public.suggest_free_slot(text)') is not null then
+    raise exception 'old suggest_free_slot(text) is still present';
+  end if;
+  if not has_function_privilege('authenticated', 'public.suggest_free_slot(text,uuid,text,text)', 'execute') then
     raise exception 'staff cannot execute suggest_free_slot';
+  end if;
+  if has_function_privilege('anon', 'public.suggest_free_slot(text,uuid,text,text)', 'execute') then
+    raise exception 'anon can execute suggest_free_slot';
   end if;
   select array_to_string(proconfig, ',') into v_path
     from pg_proc where proname = 'set_updated_at' and pronamespace = 'public'::regnamespace;
   if v_path is null or position('search_path=public, pg_temp' in v_path) = 0 then
     raise exception 'set_updated_at search_path is %', v_path;
+  end if;
+  if has_function_privilege('public', 'public.suggest_free_slot(text,uuid,text,text)', 'execute') then
+    raise exception 'public can execute suggest_free_slot';
+  end if;
+  select p.prosecdef, array_to_string(p.proconfig, ',') into v_definer, v_path
+    from pg_proc p
+   where p.oid = 'public.suggest_free_slot(text,uuid,text,text)'::regprocedure;
+  if v_definer then
+    raise exception 'suggest_free_slot must stay security invoker';
+  end if;
+  if v_path is null or position('search_path=public, pg_temp' in v_path) = 0 then
+    raise exception 'suggest_free_slot search_path is %', v_path;
   end if;
 end $$;
 

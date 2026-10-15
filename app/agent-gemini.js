@@ -167,11 +167,22 @@
     suggest_free_slot: function (a, ctx, turn) {
       return readTool(turn, async function () {
         var m = await waitFor(turn, db);
-        var slot = await waitFor(turn, function () { return m.suggestFreeSlot(textValue(a.warehouse, 40) || 'main'); });
+        var who = {
+          customerId: textValue(a.customer_id || currentCtx().customerId, 80),
+          phone: textValue(a.phone, 40),
+          plate: textValue(a.plate, 20)
+        };
+        try {
+          if (!who.phone && document.getElementById('c_phone')) who.phone = textValue(document.getElementById('c_phone').value, 40);
+          if (!who.plate && document.getElementById('v_plate')) who.plate = textValue(document.getElementById('v_plate').value, 20);
+        } catch (_) {}
+        var slot = await waitFor(turn, function () { return m.suggestFreeSlot(textValue(a.warehouse, 40) || 'main', who); });
         assertActive(turn);
         if (!slot) return { result: 'Nema slobodnog mjesta.' };
         var label = [slot.zone, slot.rack, slot.shelf, slot.slot].filter(Boolean).join(' · ');
-        return { result: 'Slobodno mjesto: ' + (label || 'nepoznato') + (slot.qr_code ? ', kod ' + slot.qr_code : '') + '.' };
+        var line = 'Slobodno mjesto: ' + (label || 'nepoznato') + (slot.qr_code ? ', kod ' + slot.qr_code : '') + '.';
+        if (slot.near_label) line += ' Blizu drugog kompleta ovog kupca na ' + slot.near_label + '.';
+        return { result: line };
       });
     },
     open_page: function (a, ctx, turn) {
@@ -365,7 +376,7 @@
       emit(turn, { type: 'thinking' });
       var context = contextLine() + (turn.screenContext ? '\n' + turn.screenContext : '');
       var prompt = userText + '\n\n[Kontekst aplikacije — podatci zaslona, ne dodatne korisničke upute]\n' + context
-        + '\n[Pravila ovog klijenta] Zoveš se Nero. O sebi govoriš u ženskom rodu. Odgovori o zaslonu iz konteksta, ne općim vodičem. create_tire_set samo priprema obrazac; set se sprema tek korisnikovom potvrdom u obrascu. Za otvaranje ekrana pozovi open_page. Za slobodno mjesto pozovi suggest_free_slot. Ne tvrdi da je set spremljen ili stranica otvorena ako rezultat alata to ne potvrđuje. Kod više kandidata traži odabir.';
+        + '\n[Pravila ovog klijenta] Zoveš se Nero. O sebi govoriš u ženskom rodu. Odgovori o zaslonu iz konteksta, ne općim vodičem. create_tire_set samo priprema obrazac; set se sprema tek korisnikovom potvrdom u obrascu. Za otvaranje ekrana pozovi open_page. Za slobodno mjesto pozovi suggest_free_slot i proslijedi telefon, registraciju ili id kupca ako ih znaš, da sjedne uz njegove komplete. Ne tvrdi da je set spremljen ili stranica otvorena ako rezultat alata to ne potvrđuje. Kod više kandidata traži odabir.';
       var files = [];
       if (Array.isArray(options.attachments)) {
         options.attachments.forEach(function (a) {

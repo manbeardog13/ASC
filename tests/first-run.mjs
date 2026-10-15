@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { hasLocale } from "../js/i18n.js";
 import {
   TOUR_KEYS, TOUR_STEPS, safeAppReturn, intakeReturn, placeReturn,
-  locationsHref, placementNeedsSlots, unknownSlotScan, tourTarget, tourSteps,
+  locationsHref, placementNeedsSlots, unknownSlotScan, tourTarget, tourSteps, suggestionNote,
 } from "../js/firstRun.js";
 
 test("every tour and slot-gate string exists in English and Croatian", () => {
@@ -51,6 +51,14 @@ test("the tour names zone 2.1 when it has a free seat, else the next free zone",
   assert.equal(named[0].vars.zone, "2.2");
   assert.equal(named.length, 5);
   assert.equal(tourSteps({ mode: "create" })[0].title, "tour.s1.title");
+});
+
+test("a clustered seat says why, and a plain seat does not", () => {
+  assert.deepEqual(suggestionNote({ near_label: "2.1-A-03" }, "ignored"), {
+    key: "flow.suggestedNear",
+    vars: { where: "2.1-A-03" },
+  });
+  assert.equal(suggestionNote({ zone: "C" }, "C · 01").key, "flow.suggested");
 });
 
 test("placement blocks only an empty rack or an unknown slot label", () => {

@@ -1,6 +1,6 @@
 import { loadStorageSet, placeSet, moveSet, suggestFreeSlot, locationLabel, findLocationByQr, countLocations } from "../js/db.js";
 import { t, toast, el, button, field, input, queryParam, slotFromHash, whereText, scanText, photoFallback } from "./flow-ui.js";
-import { placeReturn, placementNeedsSlots, unknownSlotScan } from "../js/firstRun.js";
+import { placeReturn, placementNeedsSlots, unknownSlotScan, suggestionNote } from "../js/firstRun.js";
 import { slotBlock } from "./slot-block.js";
 import { bootOnboarding } from "./onboarding.js";
 
@@ -9,6 +9,7 @@ let setRow = null;
 let slotQr = slotFromHash();
 let unknown = false;
 let noSlots = false;
+let nearLabel = "";
 
 bootOnboarding();
 
@@ -65,13 +66,24 @@ async function confirmPlace() {
   }
 }
 
+function customerOf(row) {
+  const customer = row?.vehicle?.customer || {};
+  return {
+    customerId: customer.id || "",
+    phone: customer.phone || "",
+    plate: row?.vehicle?.plate || "",
+  };
+}
+
 async function suggest() {
   try {
-    const slot = await suggestFreeSlot("main");
+    const slot = await suggestFreeSlot("main", customerOf(setRow));
     if (!slot) { toast(t("flow.noSlot")); return; }
     unknown = false;
     slotQr = slot.qr_code || "";
-    toast(t("flow.suggested", { where: locationLabel(slot) }));
+    nearLabel = slot.near_label || "";
+    const copy = suggestionNote(slot, locationLabel(slot));
+    toast(t(copy.key, copy.vars));
     render();
   } catch (error) {
     toast(error.message || t("flow.migration"));
@@ -108,7 +120,9 @@ function render() {
     return;
   }
   if (setRow) {
-    const note = el("p", { class: "flow-note" }, slotQr ? `${t("flow.where")}: ${slotQr}` : t("flow.scanSlot"));
+    const note = el("p", { class: "flow-note", id: "place-suggest" }, slotQr
+      ? (nearLabel ? t("flow.suggestedNear", { where: nearLabel }) : `${t("flow.where")}: ${slotQr}`)
+      : t("flow.scanSlot"));
     root.append(note);
     const placeActions = el("div", { class: "flow-actions" });
     placeActions.append(button(t("flow.suggest"), "btn ghost", suggest));
