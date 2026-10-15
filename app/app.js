@@ -353,10 +353,12 @@ if (document.readyState !== 'loading') syncDisc(); else addEventListener('DOMCon
 // The purple card on the dashboard is Nero. Load its brain here so that card
 // can ask. Task pages keep their own copy of the same form. No second launcher.
 (() => {
-  ['agent-config.js', 'qr.js', 'agent-gemini.js'].forEach((src) => {
+  ['concierge.js', 'agent-config.js', 'qr.js', 'agent-gemini.js'].forEach((src) => {
     if ([...document.scripts].some(sc => sc.src && new URL(sc.src).pathname.endsWith('/' + src))) return;
     const script = document.createElement('script');
-    script.src = src; script.async = false; document.head.appendChild(script);
+    script.src = src; script.async = false;
+    if (src === 'concierge.js') script.type = 'module';
+    document.head.appendChild(script);
   });
 })();
 
