@@ -16,5 +16,13 @@
 .flow-hit small{color:var(--muted);font:500 12.5px Inter}
 .flow-reader{min-height:180px;border-radius:16px;overflow:hidden;background:#111;margin:8px 0 12px}
 .flow-note{font:600 13px Inter;padding:10px 12px;border-radius:12px;background:rgba(255,78,27,.1);margin:8px 0}
+.slot-block{margin-top:12px;padding:16px 16px 14px;border-radius:18px;color:#f4f0ff;
+  background:linear-gradient(165deg,#1a1433,#120e22);border:1px solid rgba(183,163,255,.38);
+  box-shadow:0 16px 40px -24px rgba(139,92,246,.8)}
+.slot-block h2{margin:0 0 6px;font:600 18px Sora;letter-spacing:-.02em;
+  background:linear-gradient(96deg,#fff,#e7dcff 46%,#b7a3ff 78%,#8ee6ff);
+  -webkit-background-clip:text;background-clip:text;color:transparent}
+.slot-block .lead{color:#e4dcf8}
+.slot-block .btn-primary{background:linear-gradient(135deg,#8b5cf6,#e040d0);color:#fff;border-color:transparent}
 .who-hits{display:flex;flex-direction:column;gap:6px;margin-top:8px}
 .who-hits button{text-align:left}

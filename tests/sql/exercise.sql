@@ -97,14 +97,71 @@ begin
 end $$;
 
 -- Trigger still records an update after asc_audit() execute was revoked.
-update public.storage_sets set notes = 'trigger-still-fires' where public_code = 'ASC-2026-0004';
+-- Count rows around the write: the backfill may already have logged this set.
 do $$
+declare
+  v_before int;
+  v_after int;
 begin
-  if not exists (
-    select 1 from public.audit_events
-     where set_code = 'ASC-2026-0004' and summary = 'trigger'
-  ) then
+  select count(*) into v_before from public.audit_events where set_code = 'ASC-2026-0004';
+  update public.storage_sets set notes = 'trigger-still-fires' where public_code = 'ASC-2026-0004';
+  select count(*) into v_after from public.audit_events where set_code = 'ASC-2026-0004';
+  if v_after <= v_before then
     raise exception 'asc_audit trigger stopped firing after execute was revoked';
+  end if;
+end $$;
+
+-- A returning customer sits next to their own set, not in the first free zone.
+do $$
+declare
+  v jsonb;
+begin
+  insert into public.customers (id, name, phone)
+  values ('10000000-0000-0000-0000-0000000000aa', 'Borna', '091 555 010');
+  insert into public.vehicles (id, customer_id, plate)
+  values ('20000000-0000-0000-0000-0000000000aa', '10000000-0000-0000-0000-0000000000aa', 'ZG-4532-TP');
+  insert into public.locations (warehouse, zone, rack, shelf, slot) values
+    ('main', '1', 'A', '', '01'),
+    ('main', '2.1', 'A', '', '01'),
+    ('main', '2.1', 'A', '', '03'),
+    ('main', '2.1', 'A', '', '04'),
+    ('main', '2.1', 'B', '', '01');
+  insert into public.storage_sets (id, public_code, vehicle_id, status)
+  values ('30000000-0000-0000-0000-0000000000aa', 'ASC-2026-0091', '20000000-0000-0000-0000-0000000000aa', 'in_storage');
+  perform public.place_set(null, 'ASC-2026-0091', null, (
+    select qr_code from public.locations
+     where zone = '2.1' and rack = 'A' and slot = '03'
+  ));
+
+  v := public.suggest_free_slot('main');
+  if v->>'zone' <> '1' then
+    raise exception 'unordered suggest should stay on zone 1, got %', v;
+  end if;
+  if v->>'near_label' is not null then
+    raise exception 'unordered suggest invented a neighbour %', v;
+  end if;
+
+  v := public.suggest_free_slot('main', null, null, 'zg 4532 tp');
+  if v->>'zone' <> '2.1' or v->>'rack' <> 'A' or v->>'slot' <> '04' then
+    raise exception 'plate cluster missed adjacent 2.1-A-04: %', v;
+  end if;
+  if v->>'near_label' <> '2.1-A-03' then
+    raise exception 'near label is %', v->>'near_label';
+  end if;
+
+  v := public.suggest_free_slot('main', null, '091555010', null);
+  if v->>'slot' <> '04' or v->>'near_label' <> '2.1-A-03' then
+    raise exception 'phone cluster missed: %', v;
+  end if;
+
+  v := public.suggest_free_slot('main', '10000000-0000-0000-0000-0000000000aa', null, null);
+  if v->>'slot' <> '04' then
+    raise exception 'customer id cluster missed: %', v;
+  end if;
+
+  v := public.suggest_free_slot('main', null, null, 'DU100AA');
+  if v->>'zone' <> '1' then
+    raise exception 'unrelated plate was clustered: %', v;
   end if;
 end $$;
 
@@ -115,6 +172,7 @@ select set_config('request.jwt.claim.sub', '', false);
 do $$
 declare
   v_path text;
+  v_definer boolean;
 begin
   if has_function_privilege('anon', 'public.asc_audit()', 'execute') then
     raise exception 'anon can still execute asc_audit()';
@@ -134,12 +192,191 @@ begin
   if not has_function_privilege('authenticated', 'public.checkout_set(uuid,text)', 'execute') then
     raise exception 'staff cannot execute checkout_set';
   end if;
-  if not has_function_privilege('authenticated', 'public.suggest_free_slot(text)', 'execute') then
+  if to_regprocedure('public.suggest_free_slot(text)') is not null then
+    raise exception 'old suggest_free_slot(text) is still present';
+  end if;
+  if not has_function_privilege('authenticated', 'public.suggest_free_slot(text,uuid,text,text)', 'execute') then
     raise exception 'staff cannot execute suggest_free_slot';
+  end if;
+  if has_function_privilege('anon', 'public.suggest_free_slot(text,uuid,text,text)', 'execute') then
+    raise exception 'anon can execute suggest_free_slot';
   end if;
   select array_to_string(proconfig, ',') into v_path
     from pg_proc where proname = 'set_updated_at' and pronamespace = 'public'::regnamespace;
   if v_path is null or position('search_path=public, pg_temp' in v_path) = 0 then
     raise exception 'set_updated_at search_path is %', v_path;
   end if;
+  if has_function_privilege('public', 'public.suggest_free_slot(text,uuid,text,text)', 'execute') then
+    raise exception 'public can execute suggest_free_slot';
+  end if;
+  select p.prosecdef, array_to_string(p.proconfig, ',') into v_definer, v_path
+    from pg_proc p
+   where p.oid = 'public.suggest_free_slot(text,uuid,text,text)'::regprocedure;
+  if v_definer then
+    raise exception 'suggest_free_slot must stay security invoker';
+  end if;
+  if v_path is null or position('search_path=public, pg_temp' in v_path) = 0 then
+    raise exception 'suggest_free_slot search_path is %', v_path;
+  end if;
 end $$;
+
+-- Definer grants and search_path. RLS helpers stay callable; triggers do not.
+do $$
+declare
+  fn text;
+  v_path text;
+  v_keep text[] := array[
+    'public.asc_role()',
+    'public.asc_is_admin()',
+    'public.set_my_name(text)',
+    'public.asc_owner_email()',
+    'public.mark_onboarded()'
+  ];
+  v_close text[] := array[
+    'public.handle_new_user()',
+    'public.purge_deleted(interval)',
+    'public.asc_protect_owner()',
+    'public.list_users()'
+  ];
+  v_all text[] := v_keep || v_close;
+  v_pinned text[] := array[
+    'asc_role', 'asc_is_admin', 'set_my_name', 'asc_owner_email',
+    'mark_onboarded', 'handle_new_user', 'purge_deleted', 'asc_protect_owner', 'list_users'
+  ];
+begin
+  foreach fn in array v_all loop
+    if has_function_privilege('anon', fn, 'execute') then
+      raise exception 'anon can execute %', fn;
+    end if;
+    if has_function_privilege('public', fn, 'execute') then
+      raise exception 'public can execute %', fn;
+    end if;
+  end loop;
+  foreach fn in array v_keep loop
+    if not has_function_privilege('authenticated', fn, 'execute') then
+      raise exception 'authenticated lost %', fn;
+    end if;
+  end loop;
+  foreach fn in array v_close loop
+    if has_function_privilege('authenticated', fn, 'execute') then
+      raise exception 'authenticated can still execute %', fn;
+    end if;
+  end loop;
+  if not has_function_privilege('service_role', 'public.purge_deleted(interval)', 'execute') then
+    raise exception 'service_role lost purge_deleted';
+  end if;
+  foreach fn in array v_pinned loop
+    select array_to_string(proconfig, ',') into v_path
+      from pg_proc
+     where proname = fn and pronamespace = 'public'::regnamespace
+     order by oid
+     limit 1;
+    if v_path is null or position('search_path=public, pg_temp' in v_path) = 0 then
+      raise exception '% search_path is %', fn, v_path;
+    end if;
+  end loop;
+end $$;
+
+-- Sign-in trigger still writes a profile after EXECUTE was revoked.
+do $$ begin
+  create role auth_writer nologin;
+exception when duplicate_object then null;
+end $$;
+grant usage on schema auth to auth_writer;
+grant insert on table auth.users to auth_writer;
+set role auth_writer;
+insert into auth.users (id, email, raw_user_meta_data)
+values ('00000000-0000-0000-0000-0000000000aa', 'new.staff@example.com', '{"full_name":"Nova Osoba"}'::jsonb);
+reset role;
+do $$
+begin
+  if not exists (
+    select 1 from public.profiles
+     where id = '00000000-0000-0000-0000-0000000000aa'
+       and role = 'readonly'
+       and full_name = 'Nova Osoba'
+  ) then
+    raise exception 'handle_new_user did not create the signup profile';
+  end if;
+end $$;
+
+-- Owner guard still fires.
+insert into public.profiles (id, email, role)
+values ('00000000-0000-0000-0000-0000000000bb', 'cryptonii13@gmail.com', 'employee')
+on conflict (id) do nothing;
+do $$
+begin
+  begin
+    delete from public.profiles where id = '00000000-0000-0000-0000-0000000000bb';
+    raise exception 'owner delete was allowed';
+  exception when others then
+    if sqlerrm not like '%cannot be removed%' then raise; end if;
+  end;
+  if (select role from public.profiles where id = '00000000-0000-0000-0000-0000000000bb') <> 'admin' then
+    raise exception 'owner insert was not forced to admin';
+  end if;
+end $$;
+
+-- Staff can still name themselves, stamp the tour, and read rows through RLS.
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000001', false);
+select set_config('request.jwt.claim.role', 'authenticated', false);
+set role authenticated;
+select public.set_my_name('Ana Horvat');
+do $$
+declare
+  v_first timestamptz;
+  v_second timestamptz;
+  v_sets int;
+begin
+  if public.asc_role() <> 'employee' then
+    raise exception 'asc_role after lock is %', public.asc_role();
+  end if;
+  if public.asc_is_admin() then
+    raise exception 'employee was treated as admin';
+  end if;
+  select count(*) into v_sets from public.storage_sets;
+  if v_sets < 1 then
+    raise exception 'RLS hid storage_sets from staff';
+  end if;
+  v_first := public.mark_onboarded();
+  v_second := public.mark_onboarded();
+  if v_first is null or v_first <> v_second then
+    raise exception 'onboarded_at did not stick (% / %)', v_first, v_second;
+  end if;
+  begin
+    perform * from public.list_users();
+    raise exception 'authenticated executed list_users';
+  exception when insufficient_privilege then
+    null;
+  end;
+end $$;
+reset role;
+do $$
+begin
+  if (select full_name from public.profiles where id = '00000000-0000-0000-0000-000000000001') <> 'Ana Horvat' then
+    raise exception 'set_my_name did not save';
+  end if;
+  if (select onboarded_at from public.profiles where id = '00000000-0000-0000-0000-000000000001') is null then
+    raise exception 'mark_onboarded did not save';
+  end if;
+end $$;
+
+-- Anon sees no sets. A missing policy and a missing grant are both safe.
+set role anon;
+do $$
+declare v_sets int;
+begin
+  begin
+    select count(*) into v_sets from public.storage_sets;
+    if v_sets <> 0 then raise exception 'anon saw % sets', v_sets; end if;
+  exception when insufficient_privilege then
+    null;
+  end;
+  begin
+    perform public.asc_role();
+    raise exception 'anon executed asc_role';
+  exception when insufficient_privilege then
+    null;
+  end;
+end $$;
+reset role;

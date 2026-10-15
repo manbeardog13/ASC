@@ -12,10 +12,13 @@
 // Both navigate to set-detail.html?code=<code> after ~900ms.
 // ============================================================================
 import {
-  getSession, healthStats, createStorageSet, loadStorageSet, listCustomers,
+  getSession, healthStats, createStorageSet, loadStorageSet, listCustomers, countLocations,
   suggestFreeSlot, locationLabel, updateCustomer, updateVehicle, updateStorageSet, replaceTires,
 } from '../js/db.js';
 import { t } from '../js/i18n.js';
+import { intakeReturn, placementNeedsSlots, suggestionNote } from '../js/firstRun.js';
+import { slotBlock } from './slot-block.js';
+import { bootOnboarding } from './onboarding.js';
 // db.js's createStorageSet persists the location via store.rememberLocation →
 // localStorage 'asc.recentLocations'. Loading here (same module instance as
 // db.js uses) hydrates the in-memory list so saving doesn't clobber history.
@@ -341,7 +344,7 @@ function installWhoSearch() {
   });
 }
 
-function showPlaceStep(code, formData) {
+async function showPlaceStep(code, formData) {
   showWizard(3);
   qa('#ci > section').forEach((section) => { section.hidden = true; });
   let panel = $('placeStep');
@@ -371,6 +374,15 @@ function showPlaceStep(code, formData) {
       season: formData.set.season,
     });
   });
+  let slotCount = null;
+  try { slotCount = await countLocations(); }
+  catch (error) { showToast(error.message || t('flow.migration')); }
+  if (placementNeedsSlots(slotCount)) {
+    actions.append(print);
+    panel.append(title, lead, actions, slotBlock('empty', intakeReturn(code)));
+    if (window.ASCQR && window.qrcode) print.click();
+    return;
+  }
   const suggest = document.createElement('button');
   suggest.type = 'button';
   suggest.className = 'btn ghost';
@@ -379,9 +391,14 @@ function showPlaceStep(code, formData) {
   note.className = 'flow-note';
   suggest.addEventListener('click', async () => {
     try {
-      const slot = await suggestFreeSlot('main');
+      const slot = await suggestFreeSlot('main', {
+        customerId: formData.customer && formData.customer.id,
+        phone: formData.customer && formData.customer.phone,
+        plate: formData.vehicle && formData.vehicle.plate,
+      });
       if (!slot) { showToast(t('flow.noSlot')); return; }
-      note.textContent = t('flow.suggested', { where: locationLabel(slot) });
+      const copy = suggestionNote(slot, locationLabel(slot));
+      note.textContent = t(copy.key, copy.vars);
       place.href = 'place.html?set=' + encodeURIComponent(code) + (slot.qr_code ? '&slot=' + encodeURIComponent(slot.qr_code) : '');
     } catch (error) {
       showToast(error.message || t('flow.migration'));
@@ -416,6 +433,7 @@ function installWizard() {
 }
 installWizard();
 installPlanMark();
+bootOnboarding();
 
 if (form) form.addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -545,6 +563,24 @@ window.ascLiveFirst = new Promise((r) => { liveFirstDone = r; });
     console.warn('[live] hero stats failed — keeping zeros:', e);
   }
   liveFirstDone();
+
+  const resumeCode = !editMode && new URLSearchParams(location.search).get('place');
+  if (resumeCode) {
+    try {
+      const data = await loadStorageSet(resumeCode);
+      await showPlaceStep(data.public_code || resumeCode, {
+        customer: {
+          id: data.vehicle?.customer?.id || '',
+          name: data.vehicle?.customer?.name || '',
+          phone: data.vehicle?.customer?.phone || '',
+        },
+        vehicle: { plate: data.vehicle?.plate || '' },
+        set: { season: data.season || '' },
+      });
+    } catch (e) {
+      showToast(e && e.message ? e.message : t('flow.notFound'));
+    }
+  }
 
   if (editMode) {
     try {
