@@ -52,7 +52,8 @@ body:has(.nero-plan:not([hidden])) .nero-composer{visibility:hidden}
 .nero-plus,.nero-mic,.nero-send{flex:none;border:0;cursor:pointer;display:grid;place-items:center;color:#f3efff}
 .nero-plus{width:34px;height:34px;margin-right:auto;border-radius:50%;
   background:rgba(244,245,247,.08);font:500 22px/1 Inter}
-.nero-rec{display:inline-flex;align-items:center;gap:6px;margin-right:auto;
+.nero-rec{display:inline-flex;align-items:center;gap:6px;margin-right:auto;max-width:46%;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
   font:600 12px/1 Inter;letter-spacing:.02em}
 .nero-rec::before{content:"";width:8px;height:8px;border-radius:50%;background:#e040d0;
   box-shadow:0 0 0 4px rgba(224,64,208,.28)}

@@ -13,6 +13,36 @@ test('the agent streams on the free tier and still answers old clients in JSON',
   assert.match(fn, /text\/event-stream/);
   assert.match(fn, /nero-attachments/);
   assert.match(fn, /BLOCKED_ROLES/);
+  assert.match(fn, /transcribeSpeech/);
+  assert.match(fn, /audio\/webm/);
+  assert.match(fn, /inlineData/);
+});
+
+test('the builder function checks asc_is_admin and keeps the webhook on the server', () => {
+  const fn = read('supabase/functions/asc-builder-relay/index.ts');
+  const sql = read('supabase/migrations/20261015053000_builder_relay_log.sql');
+  const composer = read('app/composer.js');
+  assert.match(fn, /--no-verify-jwt/);
+  assert.match(fn, /getUser\(/);
+  assert.match(fn, /asc_is_admin/);
+  assert.match(fn, /BUILDER_WEBHOOK_URL/);
+  assert.match(fn, /BUILDER_WEBHOOK_KEY/);
+  assert.match(fn, /builder_relay_log/);
+  assert.doesNotMatch(fn, /json\(\{[^}]*\bhook\b/);
+  assert.match(sql, /builder_relay_log/);
+  assert.match(sql, /asc_is_admin\(\)/);
+  assert.match(sql, /user_id = auth\.uid\(\)/);
+  assert.doesNotMatch(sql, /BUILDER_WEBHOOK/);
+  assert.match(composer, /hr-HR/);
+  assert.match(composer, /en-US/);
+  assert.match(composer, /sent to Toni & Nero/);
+  assert.match(composer, /transcribe:\s*true/);
+  assert.match(composer, /interimResults/);
+  assert.doesNotMatch(composer, /BUILDER_WEBHOOK/);
+  const transcriptStart = composer.indexOf('function transcribeAudio');
+  const transcript = composer.slice(transcriptStart, composer.indexOf('mic.hidden', transcriptStart));
+  assert.match(transcript, /input\.value = text/);
+  assert.doesNotMatch(transcript, /\bask\(/);
 });
 
 test('the relay binds loopback, checks the admin, and keeps the webhook local', () => {

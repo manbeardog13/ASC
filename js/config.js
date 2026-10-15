@@ -16,8 +16,9 @@ export const config = {
   SUPABASE_URL:      "https://ilnqhlrvchuvpjgptjfx.supabase.co",
   SUPABASE_ANON_KEY: "sb_publishable_wLI8c19MvSw871n9wWSsyw_YpKHnkBA",
   APP_BASE_URL:      "https://manbeardog13.github.io/ASC/",
-  // MagicDNS https name of the NERO-SERVER relay (tailscale serve). Empty hides
-  // "Send to Toni & Nero". Do not put a public Supabase function URL here.
+  // Optional MagicDNS https name of the NERO-SERVER relay (tailscale serve).
+  // Leave empty until that name exists. The webhook URL and key stay in
+  // Supabase secrets. Do not put a public function URL here.
   BUILDER_RELAY_URL: "",
 };
 

@@ -1,8 +1,8 @@
 # Builder relay (NERO-SERVER)
 
-`Send to Toni & Nero` posts from the ASC app to a MagicDNS name on Toni's tailnet. This process is the only listener. It stays on `127.0.0.1`. Tailscale Serve publishes it to the tailnet. Supabase cannot reach the tailnet, so this is not an edge function and there is no public fallback.
+`Send to Toni & Nero` posts to the `asc-builder-relay` edge function first. That function reads `BUILDER_WEBHOOK_URL` and `BUILDER_WEBHOOK_KEY` from Supabase secrets and writes each attempt to `builder_relay_log`. The migration is in the repo and is not applied. Do not deploy the function or set those secrets from here. The browser never receives the webhook URL or key.
 
-Logs are JSON lines on this machine (`BUILDER_RELAY_LOG`, or stdout). They are not written to a `builder_relay_log` table: a table in the public project would be another public path, and the database cannot see the tailnet anyway.
+If that function is unreachable and `BUILDER_RELAY_URL` is a MagicDNS name, the app posts to this process instead. This process stays on `127.0.0.1`. Tailscale Serve publishes it to the tailnet. Supabase cannot reach the tailnet, so this process does not write `builder_relay_log`. Its logs are JSON lines on this machine (`BUILDER_RELAY_LOG`, or stdout).
 
 Nothing here is deployed by the app. Do not commit secrets.
 
@@ -33,7 +33,7 @@ Nothing here is deployed by the app. Do not commit secrets.
    sudo tailscale serve --bg 443 http://127.0.0.1:8787
    ```
 
-6. Copy the MagicDNS name (`https://nero-server.<tailnet>.ts.net`) into `BUILDER_RELAY_URL` in `js/config.js` and `app/agent-config.js`. Leave it empty until then. The composer hides the mode while the value is empty.
+6. Copy the MagicDNS name (`https://nero-server.<tailnet>.ts.net`) into `BUILDER_RELAY_URL` in `js/config.js` and `app/agent-config.js`. Leave it empty until that name exists. Admins still see the mode: the edge function is the send path, and this URL is only the tailnet retry.
 
 Do not run `tailscale funnel`. Funnel would put the relay on the public internet. Serve is tailnet-only.
 

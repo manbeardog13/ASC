@@ -91,6 +91,9 @@
   var voiceRestart = 0;
   var recognition = null;
   var voiceStop = false;
+  var voiceStream = null;
+  var recorder = null;
+  var audioChunks = [];
   var flushTimer = 0;
   var flushing = false;
   var offlineNote = false;
@@ -300,9 +303,10 @@
     if (!items || !items.length) { queueBox.hidden = true; fit(); return; }
     queueBox.hidden = false;
     items.forEach(function (item) {
+      var waiting = relayUrl() ? 'queued, sends when Tailscale reconnects' : 'Poruka čeka vezu.';
       var row = document.createElement('div');
       row.className = 'nero-q';
-      row.innerHTML = '<span>' + esc(item.text.slice(0, 80)) + ' — queued, sends when Tailscale reconnects</span>' +
+      row.innerHTML = '<span>' + esc(item.text.slice(0, 80)) + ' — ' + waiting + '</span>' +
         '<button type="button" data-cancel="' + esc(item.id) + '">Odustani</button>';
       queueBox.appendChild(row);
     });
@@ -318,6 +322,14 @@
     if (!q) return;
     clearTimeout(flushTimer);
     flushTimer = setTimeout(tryFlush, q.backoffMs(attempts));
+  }
+  function projectFunction(lib, name) {
+    try {
+      var root = new URL(lib.config.SUPABASE_URL);
+      var target = new URL('/functions/v1/' + name, root);
+      if (target.origin !== root.origin || target.pathname !== '/functions/v1/' + name) return '';
+      return target.href;
+    } catch (e) { return ''; }
   }
   function postRelay(item) {
     return libs().then(function (lib) {
@@ -339,16 +351,50 @@
       });
     });
   }
+  function postFunction(item) {
+    return libs().then(function (lib) {
+      return lib.db.getSession().then(function (session) {
+        var token = session && session.access_token;
+        var url = projectFunction(lib, 'asc-builder-relay');
+        if (!token || !url) return 'http';
+        return fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: 'Bearer ' + token,
+            apikey: lib.config.SUPABASE_ANON_KEY
+          },
+          body: JSON.stringify({
+            text: item.text,
+            pageUrl: location.href,
+            appVersion: globalThis.ASC_APP_VERSION || '',
+            attachments: item.attachments || []
+          })
+        }).then(function (res) {
+          if (res.ok) return 'ok';
+          if (res.status === 404 || res.status === 503) return 'unconfigured';
+          return 'http';
+        }, function () { return 'offline'; });
+      });
+    });
+  }
+  function postBuilder(item) {
+    return postFunction(item).then(function (outcome) {
+      if (outcome === 'ok' || outcome === 'http') return outcome;
+      if (relayUrl()) return postRelay(item);
+      return outcome;
+    });
+  }
   function tryFlush() {
     var q = queueApi();
-    if (!q || flushing || !relayUrl()) return;
+    if (!q || flushing || (!relayUrl() && !relayReady)) return;
     flushing = true;
     q.list().then(function (items) {
       var chain = Promise.resolve();
       items.forEach(function (item) {
         chain = chain.then(function (stop) {
           if (stop) return true;
-          return postRelay(item).then(function (outcome) {
+          return postBuilder(item).then(function (outcome) {
             if (outcome === 'offline') {
               showConnect(true);
               return q.bump(item.id).then(function (row) { arm(row ? row.attempts : 1); return true; });
@@ -381,12 +427,13 @@
       el.querySelector('.nero-body').appendChild(p);
     }
     setBusy(true);
-    postRelay(item).then(function (outcome) {
+    postBuilder(item).then(function (outcome) {
       setBusy(false);
-      if (outcome === 'ok') { showConnect(false); return; }
+      if (outcome === 'ok') { showConnect(false); mark('sent to Toni & Nero'); return; }
       if (outcome === 'http') { mark('Toni & Nero nisu primili poruku.'); return; }
-      showConnect(true);
-      mark('queued, sends when Tailscale reconnects');
+      if (outcome === 'unconfigured') { mark('Toni & Nero još nisu spojeni.'); return; }
+      if (relayUrl()) showConnect(true);
+      mark(relayUrl() ? 'queued, sends when Tailscale reconnects' : 'Poruka čeka vezu.');
       if (!q) return;
       return q.enqueue(item).then(function () { refreshQueue(); arm(0); });
     }).catch(function () { setBusy(false); });
@@ -572,52 +619,137 @@
     }).catch(function () {});
   }
 
+  function speechLang() {
+    var code = 'hr';
+    try {
+      var saved = localStorage.getItem('asc.lang');
+      if (saved === 'en' || saved === 'hr') code = saved;
+    } catch (e) {}
+    return code === 'en' ? 'en-US' : 'hr-HR';
+  }
   function setVoice(mode) {
     voiceMode = mode;
     var on = mode !== 'idle';
     root.classList.toggle('is-recording', on);
     mic.setAttribute('aria-pressed', on ? 'true' : 'false');
     recLabel.hidden = !on;
-    recLabel.textContent = mode === 'locked' ? 'Slušam… zaključano' : 'Slušam…';
+    if (on) recLabel.textContent = mode === 'locked' ? 'Slušam… zaključano' : 'Slušam…';
     fit();
+  }
+  function stopTracks() {
+    if (!voiceStream) return;
+    voiceStream.getTracks().forEach(function (track) { try { track.stop(); } catch (e) {} });
+    voiceStream = null;
   }
   function stopVoice() {
     voiceStop = true;
+    var recorderWasLive = recorder && recorder.state === 'recording';
     setVoice('idle');
     if (recognition) { try { recognition.stop(); } catch (e) {} }
+    if (recorderWasLive) { try { recorder.stop(); } catch (e) { stopTracks(); } }
+    else stopTracks();
+  }
+  function applyTranscript(ev) {
+    var finals = '';
+    var interim = '';
+    for (var i = 0; i < ev.results.length; i++) {
+      var bit = ev.results[i][0].transcript;
+      if (ev.results[i].isFinal) finals += bit + ' ';
+      else interim += bit;
+    }
+    input.value = (finals + interim).trim();
+    if (interim) recLabel.textContent = interim;
+    else recLabel.textContent = voiceMode === 'locked' ? 'Slušam… zaključano' : 'Slušam…';
+    grow();
+    openComposer(false);
   }
   function startVoice(mode, source) {
     var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SR) return;
+    if (!SR && !(navigator.mediaDevices && window.MediaRecorder)) return;
     if (voiceMode === 'locked') { stopVoice(); return; }
     if (voiceMode === 'holding') return;
     voiceStop = false;
     voiceSource = source || 'pointer';
+    if (!SR) { setVoice(mode); startRecording(); return; }
     if (!recognition) {
       recognition = new SR();
-      recognition.lang = 'hr-HR';
       recognition.continuous = true;
       recognition.interimResults = true;
-      recognition.onresult = function (ev) {
-        var said = '';
-        for (var i = 0; i < ev.results.length; i++) said += ev.results[i][0].transcript;
-        input.value = said.trim();
-        grow();
-        openComposer(false);
-      };
+      recognition.onresult = applyTranscript;
       recognition.onerror = function () { if (voiceMode !== 'idle') stopVoice(); };
       recognition.onend = function () {
         if (voiceStop || voiceMode === 'idle') { recognition = null; setVoice('idle'); return; }
         if (Date.now() - voiceRestart < 400) { stopVoice(); return; }
         voiceRestart = Date.now();
-        try { recognition.start(); } catch (e) { setVoice('idle'); }
+        try { recognition.lang = speechLang(); recognition.start(); } catch (e) { setVoice('idle'); }
       };
     }
+    recognition.lang = speechLang();
     setVoice(mode);
     try { recognition.start(); } catch (e) { setVoice('idle'); }
   }
+  function startRecording() {
+    navigator.mediaDevices.getUserMedia({ audio: true }).then(function (stream) {
+      if (voiceStop || voiceMode === 'idle') {
+        stream.getTracks().forEach(function (track) { try { track.stop(); } catch (e) {} });
+        return;
+      }
+      voiceStream = stream;
+      var mime = window.MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : '';
+      recorder = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
+      audioChunks = [];
+      recorder.ondataavailable = function (ev) { if (ev.data && ev.data.size) audioChunks.push(ev.data); };
+      recorder.onstop = function () {
+        var type = (recorder && recorder.mimeType) || mime || 'audio/webm';
+        var blob = new Blob(audioChunks, { type: type });
+        recorder = null;
+        stopTracks();
+        if (blob.size) transcribeAudio(blob);
+      };
+      recorder.start();
+    }).catch(function () {
+      setVoice('idle');
+      card('assistant', 'Mikrofon nije dopušten.');
+    });
+  }
+  function transcribeAudio(blob) {
+    var mime = String(blob.type || 'audio/webm').split(';')[0];
+    recLabel.hidden = false;
+    recLabel.textContent = 'Prepisujem…';
+    libs().then(function (lib) {
+      return lib.db.getSession().then(function (session) {
+        if (!session) throw new Error('auth');
+        var url = projectFunction(lib, 'asc-agent');
+        if (!url) throw new Error('url');
+        var path = session.user.id + '/' + makeId() + '.webm';
+        return lib.supabase.storage.from('nero-attachments').upload(path, blob, { contentType: mime, upsert: false })
+          .then(function (res) {
+            if (res.error) throw res.error;
+            return fetch(url, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: 'Bearer ' + session.access_token,
+                apikey: lib.config.SUPABASE_ANON_KEY
+              },
+              body: JSON.stringify({ transcribe: true, audio: { path: path, mime: mime }, lang: speechLang() })
+            });
+          });
+      });
+    }).then(function (res) { return res && res.json ? res.json() : null; }).then(function (data) {
+      recLabel.hidden = true;
+      var text = data && data.text ? String(data.text).trim() : '';
+      if (!text) { card('assistant', 'Nisam čula govor. Pokušaj ponovno.'); return; }
+      input.value = text;
+      grow();
+      openComposer(true);
+    }).catch(function () {
+      recLabel.hidden = true;
+      card('assistant', 'Prijepis nije uspio. Možeš upisati poruku.');
+    });
+  }
   var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (SR) {
+  if (SR || (navigator.mediaDevices && window.MediaRecorder)) {
     mic.hidden = false;
     mic.addEventListener('pointerdown', function (e) {
       if (e.button != null && e.button !== 0) return;
@@ -648,7 +780,7 @@
     if (!t || t === mic) return;
     var tag = t.tagName;
     if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || tag === 'BUTTON' || t.isContentEditable) return;
-    if (!SR) return;
+    if (!SR && !(navigator.mediaDevices && window.MediaRecorder)) return;
     e.preventDefault();
     startVoice('holding', 'key');
   });
@@ -674,11 +806,10 @@
   libs().then(function (lib) {
     var fromConfig = lib.config && lib.config.BUILDER_RELAY_URL;
     if (!globalThis.BUILDER_RELAY_URL && fromConfig) globalThis.BUILDER_RELAY_URL = fromConfig;
-    if (!relayUrl()) return null;
     return lib.db.loadMyProfile();
   }).then(function (profile) {
     var role = profile && profile.role;
-    if (relayUrl() && (role === 'admin' || role === 'manager')) {
+    if (role === 'admin' || role === 'manager') {
       relayReady = true;
       relayPill.hidden = false;
       refreshQueue();

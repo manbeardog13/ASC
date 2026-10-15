@@ -217,6 +217,7 @@ const FUNCTION_DECLARATIONS = [
 // (the full history is present each call, so this stays stateless).
 const FILE_PATH = /^[0-9a-f-]{36}\/[A-Za-z0-9._-]{1,180}$/i;
 const FILE_MIME = new Set(["image/jpeg", "image/png", "image/webp", "image/gif", "application/pdf"]);
+const AUDIO_MIME = new Set(["audio/webm", "audio/mp4", "audio/mpeg", "audio/wav", "audio/ogg", "audio/aac"]);
 const MAX_INLINE = 7_000_000;
 
 function toBase64(bytes: Uint8Array): string {
@@ -239,6 +240,54 @@ async function inlineFile(asCaller: any, userId: string, block: any) {
   const bytes = new Uint8Array(await downloaded.data.arrayBuffer());
   if (!bytes.byteLength || bytes.byteLength > MAX_INLINE) return null;
   return { inlineData: { mimeType: mime, data: toBase64(bytes) } };
+}
+
+// Browser speech is missing. The clip already sits in the caller's private
+// folder; Gemini transcribes it on the free tier and the text goes back for review.
+async function transcribeSpeech(asCaller: any, userId: string, audio: any, lang: unknown, apiKey: string) {
+  const path = typeof audio?.path === "string" ? audio.path : "";
+  const mime = typeof audio?.mime === "string" ? audio.mime.split(";")[0].trim() : "";
+  if (!FILE_PATH.test(path) || path.split("/")[0] !== userId || !AUDIO_MIME.has(mime)) {
+    return json({ error: "Bad request." }, 400);
+  }
+  const downloaded = await asCaller.storage.from("nero-attachments").download(path);
+  if (downloaded.error || !downloaded.data) return json({ error: "agent_failed" }, 502);
+  const bytes = new Uint8Array(await downloaded.data.arrayBuffer());
+  if (!bytes.byteLength || bytes.byteLength > MAX_INLINE) return json({ error: "Bad request." }, 413);
+  const hint = lang === "en-US" ? "English" : "Croatian";
+  const body = JSON.stringify({
+    contents: [{
+      role: "user",
+      parts: [
+        { text: `Transcribe this speech. The speaker is using ${hint}. Return only the transcript, with no commentary.` },
+        { inlineData: { mimeType: mime, data: toBase64(bytes) } },
+      ],
+    }],
+    generationConfig: { maxOutputTokens: 2048 },
+  });
+  const busy = (s: number) => s === 429 || s === 503 || s === 500;
+  const call = (model: string) => fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+    { method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey }, body },
+  );
+  let res = await call(MODEL);
+  if (busy(res.status)) {
+    await res.body?.cancel();
+    await new Promise((r) => setTimeout(r, 1600));
+    res = await call(MODEL);
+  }
+  if (busy(res.status) && FALLBACK_MODEL !== MODEL) {
+    await res.body?.cancel();
+    res = await call(FALLBACK_MODEL);
+  }
+  if (!res.ok) return json({ error: "agent_failed" }, 502);
+  const data = await res.json();
+  const text = (data?.candidates?.[0]?.content?.parts || [])
+    .map((p: any) => (typeof p?.text === "string" ? p.text : ""))
+    .join(" ")
+    .trim();
+  if (!text) return json({ error: "empty" }, 502);
+  return json({ text });
 }
 
 async function toGeminiContents(messages: any[], asCaller: any, userId: string): Promise<unknown[]> {
@@ -493,8 +542,9 @@ Deno.serve(async (req) => {
   // -- Request: the conversation so far ---------------------------------------
   const raw = await req.text();
   if (raw.length > MAX_BODY_BYTES) return json({ error: "Conversation too long — start a new chat." }, 413);
-  let body: { messages?: unknown; stream?: boolean };
+  let body: { messages?: unknown; stream?: boolean; transcribe?: boolean; audio?: unknown; lang?: unknown };
   try { body = JSON.parse(raw); } catch { return json({ error: "Bad request." }, 400); }
+  if (body?.transcribe === true) return await transcribeSpeech(asCaller, user.id, body.audio, body.lang, apiKey);
   const messages = body?.messages;
   if (!Array.isArray(messages) || !messages.length) return json({ error: "Bad request." }, 400);
   if (messages.length > MAX_MESSAGES) return json({ error: "Conversation too long — start a new chat." }, 413);
