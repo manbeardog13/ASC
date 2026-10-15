@@ -155,3 +155,14 @@ Everything needed to rebuild is outside Supabase: application **code** on `main`
 **schema** in `supabase/schema.sql`, and **data** in the encrypted `backups`
 branch. Stand up a new Supabase project, run the schema, restore the newest dump,
 repoint `js/config.js`, and you're live again.
+
+
+## Inventory backup scope (2026-10-15)
+
+The encrypted SQL dump includes customers, vehicles, storage sets, tires, photos
+(metadata), audit events, locations (including QR identities), and set movements.
+Apply the reviewed schema and migrations before restoring data. The automated
+recovery drill verifies set-to-location links in addition to customer/vehicle/tire
+relationships. `tests/backup-restore.sh` exercises real encryption and recovery
+using disposable local databases and compares exact QR, occupancy and movement
+values. Auth users and storage-object file bytes are outside this dump.
