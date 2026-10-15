@@ -1,9 +1,10 @@
-import { renderAppNavigation } from '../navigation.js';
+import { renderAppNavigation, renderAppDock, applyNavAccess, syncThemeButton } from '../navigation.js';
 import { saveOperation, LocalSaveError } from './persistence.js';
 import { parseCroatianIntent, searchLocations, customerLabel } from './journey.js';
 import { createTour } from './tour.js';
 import { AREAS, seedState, validateState, canPlace, createStack, moveStack, setCapacity, addTire, removeTire, stats, LAYOUT_VERSION } from './model.js';
 import { pinForSet } from '../../js/mapPin.js';
+import { loadMyProfile } from '../../js/db.js';
 export function startPreview({isActive=()=>false,registerRuntime=()=>{}}={}){
 if(!isActive())throw new Error('ASC preview inactive');
 let disposed=false;const listeners=[];
@@ -27,6 +28,10 @@ const paths = {
 };
 const icon = (name,size=19) => `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.55" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name]||paths.stack}</svg>`;
 $('asc-navigation').innerHTML=renderAppNavigation({warehouseOpen:true});
+applyNavAccess($('asc-navigation'), null);
+loadMyProfile().then((profile)=>applyNavAccess($('asc-navigation'), profile?.role)).catch(()=>{});
+syncThemeButton($('sbTheme'));
+$('sbTheme')?.addEventListener('click', ()=>{ window.ASCTheme?.toggle(); syncThemeButton($('sbTheme')); });
 const appWarehouseGroup=$('asc-navigation').querySelector('.sb-group');
 appWarehouseGroup.querySelector('button').onclick=()=>{const open=appWarehouseGroup.classList.toggle('open');appWarehouseGroup.querySelector('button').setAttribute('aria-expanded',String(open));appWarehouseGroup.querySelector('.sb-group-kids').inert=!open;};
 for (const [id,name] of Object.entries({'menu-button':'menu','house-icon':'home','search-icon':'search','voice-button':'mic','scan-icon':'scan','zoom-in':'plus','zoom-out':'minus','camera-reset':'focus','place-icon':'plus','list-icon':'list'})) $(id).innerHTML=icon(name);
@@ -64,7 +69,7 @@ function changeArea(id){if(id!=='all'&&!AREAS.some(a=>a.id===id))return;
 }
 function renderAreas(){
  const focusHost=document.activeElement?.closest('#areas,#area-tabs')?.id,focusArea=document.activeElement?.dataset.area;
- $('areas').innerHTML=AREAS.map(a=>{const n=stats(state,a.id);return `<button class="sb-item ${areaId===a.id?'on':''}" data-m="warehouse" data-area="${a.id}" aria-pressed="${areaId===a.id}"><span class="nav-code">${a.id}</span><span class="t">${esc(a.name)}<small>${n.occupied} guma · ${n.stacks} stupaca</small></span></button>`;}).join('');
+ $('areas').innerHTML=AREAS.map(a=>{const n=stats(state,a.id);const on=areaId===a.id;return `<button class="sb-item ${on?'on':''}" data-m="warehouse" type="button" data-area="${a.id}" aria-pressed="${on}"><span class="sb-code">${a.id}</span><span class="t"><span>${esc(a.name)}</span><span class="sub">${n.occupied} guma · ${n.stacks} stupaca</span></span></button>`;}).join('');
  $('areas').querySelectorAll('button').forEach(b=>b.onclick=()=>changeArea(b.dataset.area));
  $('area-tabs').innerHTML=[{id:'all',name:'Sva skladišta'},...AREAS].map(a=>`<button class="${areaId===a.id?'active':''}" data-area="${a.id}" aria-pressed="${areaId===a.id}">${a.id==='all'?'':a.id+' · '}${esc(a.name)}</button>`).join('');
  $('area-tabs').querySelectorAll('button').forEach(b=>b.onclick=()=>changeArea(b.dataset.area));
@@ -249,12 +254,16 @@ function syncSidebar(){const open=document.documentElement.classList.contains('s
 function closeSidebar(){const wasOpen=document.documentElement.classList.contains('side-open');document.documentElement.classList.remove('side-open');syncSidebar();if(wasOpen){const target=canFocus(sidebarReturnFocus)?sidebarReturnFocus:$('asc-menu-button');target.focus({preventScroll:true});}}
 function openSidebar(event){sidebarReturnFocus=event.currentTarget;closeMenu();document.documentElement.classList.add('side-open');syncSidebar();$('sidebar').querySelector('#asc-navigation a')?.focus({preventScroll:true});}
 $('open-sidebar').onclick=openSidebar;$('asc-menu-button').onclick=openSidebar;
+const dock=document.createElement('nav');
+dock.className='app-dock';
+dock.setAttribute('aria-label','Brza navigacija');
+dock.innerHTML=renderAppDock();
+document.body.appendChild(dock);
+dock.querySelector('[data-open-menu]')?.addEventListener('click',openSidebar);
 $('close-sidebar').onclick=closeSidebar;$('side-scrim').onclick=closeSidebar;
 listen(mobileNav,'change',()=>{closeSidebar();});syncSidebar();
 $('asc-navigation').addEventListener('click',e=>{const link=e.target.closest('a[href]');if(link&&link.getAttribute('aria-current')==='page'){e.preventDefault();closeSidebar();}});
 $('sidebar').addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();closeSidebar();}if(e.key==='Tab'&&mobileNav.matches&&document.documentElement.classList.contains('side-open')){const focusable=[...$('sidebar').querySelectorAll('button:not(:disabled),a[href]')].filter(el=>!el.closest('[inert],[hidden]')&&el.getClientRects().length);const first=focusable[0],last=focusable.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}}});
-function themeLabel(){const dark=document.documentElement.classList.contains('dark');$('theme-label').textContent=dark?'Svijetli prikaz':'Tamni prikaz';$('theme-button').setAttribute('aria-pressed',String(dark));document.querySelector('meta[name="theme-color"]').content=dark?'#0a0c11':'#eef0f1';}
-$('theme-button').onclick=()=>{document.documentElement.classList.toggle('dark');try{localStorage.setItem('asc.theme',document.documentElement.classList.contains('dark')?'dark':'light');}catch{}themeLabel();};themeLabel();
 $('back-overview').onclick=()=>{changeArea('all');$('search').value='';viewer?.reset();};
 tour=createTour({isActive,getState:()=>state,navigate:changeArea,findExample:id=>{$('search').value=id;search(id);selectStack(id,true);},closeOverlays:()=>{closeDialog();closeMenu();closeSidebar();endPlacement();},onFinish:status=>{if(status==='completed')toast('Spremni ste. Upute su uvijek dostupne pod Pomoć.');}});
 function showHelp(){closeSidebar();$('warehouse-help').open=true;$('warehouse-help').querySelector('summary').focus();}

@@ -653,6 +653,33 @@ export async function suggestFreeSlot(warehouse = "main") {
   return data;
 }
 
+// Free slots already recorded on locations. Null when the table is not there yet.
+export async function freeSlotsByZone() {
+  const { data, error } = await supabase.from("locations").select("zone, status");
+  if (relationMissing(error)) return null;
+  if (error) throw fail(error, "load free slots");
+  const zones = new Map();
+  for (const row of data || []) {
+    const zone = row.zone || "—";
+    const cur = zones.get(zone) || { zone, free: 0, total: 0 };
+    cur.total += 1;
+    if (row.status === "free") cur.free += 1;
+    zones.set(zone, cur);
+  }
+  return [...zones.values()].sort((a, b) => String(a.zone).localeCompare(String(b.zone)));
+}
+
+// Latest placement log. Null when set_movements is not migrated yet.
+export async function recentMovements(limit = 6) {
+  const { data, error } = await supabase.from("set_movements")
+    .select("id, action, created_at, storage_sets(public_code)")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (relationMissing(error)) return null;
+  if (error) throw fail(error, "load recent movements");
+  return data ?? [];
+}
+
 export async function findLocationByQr(qrCode) {
   const code = String(qrCode || "").trim().toUpperCase();
   if (!code) return null;
