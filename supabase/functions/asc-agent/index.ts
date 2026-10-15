@@ -64,7 +64,7 @@ OPENING A SCREEN: call open_page. page is one of dashboard, checkin, warehouse,
 locate, locations, place, checkout, customers, scan, reminders, workshop,
 recycle, users, set. For set, also pass code when you know it.
 
-A FREE SLOT: call suggest_free_slot. Never invent a zone, rack, shelf or slot.
+A FREE SLOT: call suggest_free_slot. Pass customer_id, phone, or plate when you know them so the seat sits next to that customer's other stored sets. Never invent a zone, rack, shelf or slot.
 
 CREATING A NEW SET: When the user wants to store/check in a new tire set, first
 gather what you can from their words (customer name, phone, plate, vehicle,
@@ -177,11 +177,14 @@ const FUNCTION_DECLARATIONS = [
   },
   {
     name: "suggest_free_slot",
-    description: "Suggest one free warehouse slot for a tire set. Call when the user asks where to put tires. Never invent a location.",
+    description: "Suggest one free warehouse slot for a tire set. Prefer the nearest free seat to that customer's other stored sets when customer_id, phone, or plate is known. Call when the user asks where to put tires. Never invent a location.",
     parameters: {
       type: "object",
       properties: {
         warehouse: { type: "string", description: "Warehouse id, usually main" },
+        customer_id: { type: "string", description: "Customer id when this intake is for someone already stored" },
+        phone: { type: "string", description: "Customer phone, used to find their other sets" },
+        plate: { type: "string", description: "License plate, used to find their other sets" },
       },
     },
   },
