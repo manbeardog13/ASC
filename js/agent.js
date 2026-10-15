@@ -67,6 +67,34 @@ async function executeTool(name, input, { onDraftReview }) {
     if (!res?.confirmed) return "User CANCELLED the creation. Ask what to change before trying again.";
     return `Created successfully. New set code: ${res.code}. Tell the user the code.`;
   }
+  if (name === "create_offer_draft") {
+    const created = await db.createOfferDraft(input, { via: "nero" });
+    let message = `Draft saved. Offer id: ${created.id}. Link: ${created.link}. This is a draft waiting for a person to approve it. You cannot approve it or mark it sent. Nothing was emailed or texted.`;
+    if (created.internalDropped) message += " Internal figures were not saved. This account is not authorized to store entry price, cost, margin, or supplier.";
+    if (created.internalSaved) message += " Internal figures were saved and are staff-only. Label them internal. Never put them in customer wording.";
+    return message;
+  }
+  if (name === "list_offers") {
+    const rows = await db.listOffers(input.status || null);
+    if (!rows.length) return "No offers.";
+    const can = await db.canSeeOfferInternal();
+    const brief = rows.slice(0, 20).map((row) => ({
+      id: row.id, customer_name: row.customer_name, status: row.status,
+      total: row.total, currency: row.currency, valid_until: row.valid_until,
+      link: db.offerAppLink(row.id),
+    }));
+    if (!can) return JSON.stringify({ offers: brief, note: "Drafts wait for a person to approve them. You cannot approve or mark sent." });
+    const internal = [];
+    for (const row of rows.slice(0, 8)) {
+      const full = await db.loadOffer(row.id);
+      if (full?.internal) internal.push({ offer_id: row.id, label: "INTERNAL staff only", ...full.internal });
+    }
+    return JSON.stringify({
+      offers: brief,
+      internal,
+      note: "The internal array is staff-only. Do not put those figures in customer wording. You cannot approve or mark sent.",
+    });
+  }
   return `Unknown tool ${name}.`;
 }
 

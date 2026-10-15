@@ -4,6 +4,7 @@ export const navigationIcons = {
     scan: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.2V6.4A2.4 2.4 0 016.4 4h1.8M15.8 4h1.8A2.4 2.4 0 0120 6.4v1.8M20 15.8v1.8a2.4 2.4 0 01-2.4 2.4h-1.8M8.2 20H6.4A2.4 2.4 0 014 17.6v-1.8"/><path d="M7.2 12h9.6"/></svg>',
     pin: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21.2s-7-5.5-7-11a7 7 0 0114 0c0 5.5-7 11-7 11z"/><circle cx="12" cy="10" r="2.4"/></svg>',
     people: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19.5a5.5 5.5 0 0111 0M15.5 5.6a3.2 3.2 0 010 4.8M17.5 13.8a5.5 5.5 0 013 5"/></svg>',
+    tag: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5V5.2A1.2 1.2 0 015.2 4h7.3L20 11.5 12.5 19 4 12.5z"/><circle cx="8.2" cy="8.2" r="1.1"/></svg>',
     bell: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9.5a6 6 0 0112 0c0 4.2 1.6 5.6 2.2 6.2H3.8C4.4 15.1 6 13.7 6 9.5z"/><path d="M9.8 19a2.4 2.4 0 004.4 0"/></svg>',
     wrench: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.2 6.3a4 4 0 015.3 5.3l-8.4 8.4a2.1 2.1 0 01-3-3l8.4-8.4z"/><path d="M14.2 6.3L17.7 3M6 21l-3-3"/></svg>',
     spark: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5l1.8 4.9 4.9 1.8-4.9 1.8L12 17l-1.8-5-4.9-1.8 4.9-1.8L12 3.5z"/><path d="M18.8 15.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8.8-2.2z"/></svg>',
@@ -46,8 +47,7 @@ export function renderAppNavigation({warehouseOpen=false, currentPath=location.p
           item('warehouse', 'recycle.html', I.bin, 'Košarica', true) +
         '</div></div></div>' +
       item('customers', 'customers.html', I.people, 'Kupci') +
-      // Offers slot — the offers page inserts its item here. Not a link.
-      '<div class="sb-slot" data-nav-slot="offers" hidden></div>' +
+      item('offers', 'offers.html', I.tag, 'Ponude') +
       item('reminders', 'reminders.html', I.bell, 'Podsjetnici') +
       item('workshop', 'workshop.html', I.wrench, 'Radionica') +
       '<div class="sb-div" data-admin="1"></div><div class="sb-eyebrow2" data-admin="1">Upravljanje</div>' +

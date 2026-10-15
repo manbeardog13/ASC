@@ -5,6 +5,7 @@
 export const TOOL_ALLOWLIST = new Set([
   "search_sets", "get_set", "inventory_overview", "due_pickups",
   "create_tire_set", "suggest_free_slot", "open_page",
+  "create_offer_draft", "list_offers",
 ]);
 
 // Fields that must never reach the model or a buyer, even if a client bug or a

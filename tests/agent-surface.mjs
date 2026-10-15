@@ -34,7 +34,7 @@ test('Nero is the card on the board and a carved line on every page', () => {
     'app/workshop.html', 'app/reminders.html', 'app/users.html', 'app/recycle.html',
     'app/set-detail.html', 'app/place.html', 'app/checkout.html', 'app/locate.html',
     'app/locations.html', 'app/warehouse.html', 'app/sastanak-skladiste.html',
-    'app/warehouse-preview/index.html', 'index.html',
+    'app/warehouse-preview/index.html', 'app/offers.html', 'index.html',
   ];
   for (const file of pages) {
     const html = readFileSync(new URL('../' + file, import.meta.url), 'utf8');
