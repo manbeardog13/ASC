@@ -657,7 +657,7 @@
       if (ev.results[i].isFinal) finals += bit + ' ';
       else interim += bit;
     }
-    input.value = (finals + interim).trim();
+    input.value = (finals + interim).replace(/\s+/g, ' ').trim();
     if (interim) recLabel.textContent = interim;
     else recLabel.textContent = voiceMode === 'locked' ? 'Slušam… zaključano' : 'Slušam…';
     grow();
