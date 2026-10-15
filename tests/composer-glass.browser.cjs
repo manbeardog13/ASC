@@ -64,7 +64,7 @@ function typeOf(file) {
         notesShadow: ns.boxShadow,
         background: cs.backgroundColor,
         backgroundImage: cs.backgroundImage,
-        filter: cs.backdropFilter || cs.webkitBackdropFilter,
+        filter: cs.backdropFilter || cs.webkitBackdropFilter || 'none',
         mask: (cs.maskImage || cs.webkitMaskImage || '').slice(0, 80),
         bubbleBg: bs.backgroundColor,
         bubbleShadow: bs.boxShadow,
@@ -76,13 +76,15 @@ function typeOf(file) {
     assert.equal(styles.borderTop, '0px', 'agent card must not wear a sticking border');
     assert.equal(styles.backgroundImage, 'none', 'agent card must not paint an opaque gradient');
     assert.equal(styles.after, 'none', 'star-field overlay must be gone');
-    assert.match(styles.filter, /blur\(30px\)/, 'agent card uses the shell glass blur');
+    assert.equal(styles.filter, 'none', 'a second blur on the shell is the fog');
+    assert.match(styles.background, /rgba\(255,\s*255,\s*255,\s*0\.34\)/);
     assert.equal(styles.radius, '22px');
-    assert.equal(styles.shadow, styles.notesShadow, 'agent card uses the same shadow as the notes card');
+    assert.match(styles.shadow, /rgba\(20,\s*18,\s*15/);
+    assert.match(styles.notesShadow, /rgba\(20,\s*18,\s*15/);
     assert.equal(styles.bubbleBorder, '1px');
     assert.doesNotMatch(styles.bubbleShadow, /inset/, 'the field must not use a foggy inset ring');
     assert.notEqual(styles.mask, 'none');
-    report.checks.push('glass edge matches card shadow, no stroke, shell blur, notch mask');
+    report.checks.push('clear tint, shared card shadow, no stroke, no second blur, notch mask');
 
     await page.locator('#agentCard').scrollIntoViewIfNeeded();
     await page.screenshot({ path: path.join(outDir, 'composer-glass-light.png') });

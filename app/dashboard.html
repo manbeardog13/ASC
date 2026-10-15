@@ -190,15 +190,15 @@ html.splashing .greet{animation-play-state:paused}
    shared expandable surface above the page content. */
 .agent-shell{position:relative}
 .hero .agent-shell{grid-column:1;grid-row:3}
-/* Same edge as the other cards: 22px radius, soft card shadow, no stroke.
-   The fill is the shell's translucent glass so the canvas shows through.
-   A border here sticks out of the corner mask; cards don't use one. */
+/* Same edge as the other cards: 22px radius, the shared card shadow, no stroke.
+   A border sticks out of the corner mask. A second backdrop blur, on top of the
+   shell's blur, is what made this panel foggy — the shell is already the glass,
+   so the card is only a clear tint with the shell's top glint drawn inside. */
 .agent-card{position:relative;overflow:hidden;border-radius:var(--radius);color:var(--ink);
-  background:var(--shell-solid);border:0;box-shadow:var(--shadow-card)}
-@supports ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
-  .agent-card{background:var(--shell);-webkit-backdrop-filter:blur(30px) saturate(150%) brightness(108%);backdrop-filter:blur(30px) saturate(150%) brightness(108%)}
-}
-@media(prefers-reduced-transparency:reduce){.agent-card{background:var(--panel-2);backdrop-filter:none;-webkit-backdrop-filter:none}}
+  background:rgba(255,255,255,.34);border:0;
+  box-shadow:var(--shadow-card),inset 0 1px 0 var(--rim-top)}
+html.dark .agent-card{background:rgba(244,245,247,.06)}
+@media(prefers-reduced-transparency:reduce){.agent-card{background:var(--panel-2)}}
 .agent-body{position:relative;z-index:1;display:flex;flex-direction:column;gap:18px;padding:38px 22px 22px;color:var(--ink)}
 .agent-hook{font:500 18px/1.4 "Sora",Inter;letter-spacing:-.012em;color:var(--ink)}
 .agent-reveal{display:flex;flex-direction:column;gap:12px}
