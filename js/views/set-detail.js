@@ -75,6 +75,7 @@ function renderDetail(main, set) {
       ${statusButtons(set, next)}
       <div class="sd-actions">
         <a class="btn btn-ghost sd-edit" href="#/set/${esc(set.public_code)}/edit">${icon("pencil", 18)} ${t("sd.edit")}</a>
+        <a class="btn btn-ghost" href="#/offers/new?set=${esc(set.public_code)}">${icon("tag", 18)} ${t("offer.newForSet")}</a>
         <button type="button" class="btn btn-ghost" id="printBtn">${icon("printer", 18)} ${t("sd.label")}</button>
         ${set.fee != null && !set.paid ? `<button type="button" class="btn btn-ghost" id="payHeroBtn">${icon("alert", 18)} ${t("sd.markPaid")}</button>` : ""}
       </div>

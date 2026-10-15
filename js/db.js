@@ -821,13 +821,243 @@ export async function listEverythingForExport() {
   return data ?? [];
 }
 
+// ---- Offers --------------------------------------------------------------------
+const OFFER_IMAGE_PATH = /^offers\/[0-9a-f-]{36}\/[0-9a-f-]{36}\.(jpg|jpeg|png|webp)$/i;
+const OFFER_BUCKET = "offer-images";
+
+function offerNumber(value) {
+  if (value == null || value === "") return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? Math.round(n * 100) / 100 : null;
+}
+
+export function buyerOfferLines(lines, price) {
+  let raw = Array.isArray(lines) ? lines : [];
+  if (!raw.length && price != null && price !== "") {
+    raw = [{ description: "", qty: 1, unit_price: price }];
+  }
+  return raw.map((line) => {
+    const qty = Number(line?.qty ?? line?.quantity ?? 1);
+    const unit = offerNumber(line?.unit_price ?? line?.price ?? line?.unitPrice);
+    const out = {
+      description: String(line?.description || "").slice(0, 400),
+      qty: Number.isFinite(qty) && qty > 0 ? qty : 1,
+      unit_price: unit ?? 0,
+    };
+    if (typeof line?.image_url === "string" && /^https?:\/\//i.test(line.image_url)) {
+      out.image_url = line.image_url.slice(0, 1000);
+    }
+    if (typeof line?.image_path === "string" && OFFER_IMAGE_PATH.test(line.image_path)) {
+      out.image_path = line.image_path;
+    }
+    return out;
+  });
+}
+
+function internalOfferFields(input) {
+  const source = input?.source && typeof input.source === "object" ? input.source : {};
+  const row = {
+    entry_price: offerNumber(input?.entry_price),
+    internal_cost: offerNumber(input?.internal_cost),
+    margin: offerNumber(input?.margin),
+    internal_notes: String(input?.internal_notes || "").trim() || null,
+    source_name: String(input?.source_name || source.name || source.supplier || "").trim() || null,
+    source_contact: String(input?.source_contact || source.contact || "").trim() || null,
+    source_ref: String(input?.source_ref || source.ref || source.link || source.reference || "").trim() || null,
+    source_notes: String(input?.source_notes || source.notes || "").trim() || null,
+  };
+  const any = Object.values(row).some((value) => value != null && value !== "");
+  return any ? row : null;
+}
+
+export function neutralOfferImagePath(offerId, type) {
+  const ext = /png/i.test(type || "") ? "png" : /webp/i.test(type || "") ? "webp" : "jpg";
+  const id = (globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`);
+  return `offers/${offerId}/${id}.${ext}`;
+}
+
+export function offerAppLink(id) {
+  return `${config.APP_BASE_URL}app/offers.html?id=${encodeURIComponent(id)}`;
+}
+
+export async function canSeeOfferInternal() {
+  const { data, error } = await supabase.rpc("can_see_offer_internal");
+  if (error) return false;
+  return data === true;
+}
+
+export async function listOffers(status) {
+  let query = supabase.from("offers")
+    .select("id, customer_name, phone, email, total, currency, status, valid_until, created_at, created_via, set_id")
+    .order("created_at", { ascending: false });
+  if (status && status !== "all") query = query.eq("status", status);
+  const { data, error } = await query;
+  if (error) throw fail(error, "load offers");
+  return data ?? [];
+}
+
+export async function loadOffer(id) {
+  const { data, error } = await supabase.from("offers")
+    .select("*, offer_related_sets(*)")
+    .eq("id", id)
+    .maybeSingle();
+  if (error) throw fail(error, "load the offer");
+  if (!data) return null;
+  const internal = await supabase.from("offer_internal").select("*").eq("offer_id", id).maybeSingle();
+  data.internal = internal.error ? null : (internal.data ?? null);
+  data.can_see_internal = !internal.error && (await canSeeOfferInternal());
+  const paths = (data.lines || []).map((line) => line.image_path).filter((path) => OFFER_IMAGE_PATH.test(path || ""));
+  if (paths.length) {
+    try {
+      const urls = await signedOfferImageUrls(paths);
+      data.lines = (data.lines || []).map((line) => (
+        urls[line.image_path] ? { ...line, signed_url: urls[line.image_path] } : line
+      ));
+    } catch { /* photos stay as stored paths */ }
+  }
+  return data;
+}
+
+async function resolveOfferSetId(input) {
+  if (input?.set_id) return input.set_id;
+  const code = String(input?.set_code || input?.code || "").trim();
+  if (!code) return null;
+  const { data, error } = await supabase.from("storage_sets").select("id").eq("public_code", code).maybeSingle();
+  if (error) throw fail(error, "find the set");
+  return data?.id ?? null;
+}
+
+export async function createOfferDraft(input, { via = "manual" } = {}) {
+  const name = String(input?.customer_name || "").trim();
+  if (!name) throw new Error("Customer name is required.");
+  const setId = await resolveOfferSetId(input);
+  const lines = buyerOfferLines(input?.lines, input?.price ?? input?.unit_price);
+  const imageUrl = typeof input?.image_url === "string" && /^https?:\/\//i.test(input.image_url)
+    ? input.image_url.slice(0, 1000) : "";
+  if (imageUrl) {
+    if (!lines.length) lines.push({ description: "", qty: 1, unit_price: offerNumber(input?.price) ?? 0, image_url: imageUrl });
+    else if (!lines[0].image_url) lines[0].image_url = imageUrl;
+  }
+  const payload = {
+    customer_name: name,
+    phone: String(input?.phone || "").trim() || null,
+    email: String(input?.email || "").trim() || null,
+    set_id: setId,
+    lines,
+    terms: String(input?.terms || "").trim() || null,
+    valid_until: /^\d{4}-\d{2}-\d{2}$/.test(input?.valid_until || "") ? input.valid_until : null,
+    currency: String(input?.currency || "EUR").trim() || "EUR",
+    created_via: via === "nero" ? "nero" : "manual",
+    status: "draft",
+  };
+  const { data, error } = await supabase.from("offers").insert(payload).select("id").single();
+  if (error) throw fail(error, "save the offer");
+  const internal = internalOfferFields(input);
+  let internalSaved = false;
+  let internalDropped = false;
+  if (internal) {
+    const allowed = await canSeeOfferInternal();
+    if (!allowed) {
+      internalDropped = true;
+    } else {
+      if (internal.margin == null && internal.entry_price != null) {
+        const total = lines.reduce((sum, line) => sum + Number(line.qty) * Number(line.unit_price), 0);
+        internal.margin = Math.round((total - internal.entry_price) * 100) / 100;
+      }
+      const saved = await supabase.from("offer_internal").insert({ offer_id: data.id, ...internal });
+      if (saved.error) internalDropped = true;
+      else internalSaved = true;
+    }
+  }
+  return {
+    id: data.id,
+    link: offerAppLink(data.id),
+    internalSaved,
+    internalDropped,
+  };
+}
+
+export async function updateOfferDraft(id, input) {
+  const lines = buyerOfferLines(input?.lines, input?.price);
+  const payload = {
+    customer_name: String(input?.customer_name || "").trim(),
+    phone: String(input?.phone || "").trim() || null,
+    email: String(input?.email || "").trim() || null,
+    lines,
+    terms: String(input?.terms || "").trim() || null,
+    valid_until: /^\d{4}-\d{2}-\d{2}$/.test(input?.valid_until || "") ? input.valid_until : null,
+  };
+  if (!payload.customer_name) throw new Error("Customer name is required.");
+  const { error } = await supabase.from("offers").update(payload).eq("id", id).eq("status", "draft");
+  if (error) throw fail(error, "save the offer");
+  const internal = internalOfferFields(input);
+  if (!internal) return { internalSaved: false, internalDropped: false };
+  const allowed = await canSeeOfferInternal();
+  if (!allowed) return { internalSaved: false, internalDropped: true };
+  const saved = await supabase.from("offer_internal").upsert({ offer_id: id, ...internal });
+  if (saved.error) throw fail(saved.error, "save the internal figures");
+  return { internalSaved: true, internalDropped: false };
+}
+
+export async function setOfferStatus(id, status) {
+  const { data, error } = await supabase.rpc("set_offer_status", { p_offer_id: id, p_status: status });
+  if (error) throw fail(error, "change the offer");
+  return data;
+}
+
+export async function uploadOfferImage(offerId, file) {
+  const path = neutralOfferImagePath(offerId, file?.type);
+  const { error } = await supabase.storage.from(OFFER_BUCKET).upload(path, file, {
+    cacheControl: "3600",
+    upsert: false,
+    contentType: file?.type || "image/jpeg",
+  });
+  if (error) throw fail(error, "upload the offer photo");
+  return path;
+}
+
+export async function signedOfferImageUrls(paths, expiresIn = 3600) {
+  const clean = (paths || []).filter((path) => OFFER_IMAGE_PATH.test(path || ""));
+  if (!clean.length) return {};
+  const { data, error } = await supabase.storage.from(OFFER_BUCKET).createSignedUrls(clean, expiresIn);
+  if (error) throw fail(error, "load the offer photos");
+  const urls = {};
+  for (const item of data || []) if (item.signedUrl) urls[item.path] = item.signedUrl;
+  return urls;
+}
+
+export async function listOfferInternalAccess() {
+  const { data, error } = await supabase.rpc("list_offer_internal_access");
+  if (error) throw fail(error, "load internal access");
+  return data ?? [];
+}
+
+export async function listOfferInternalAccessLog() {
+  const { data, error } = await supabase.rpc("list_offer_internal_access_log");
+  if (error) throw fail(error, "load the access log");
+  return data ?? [];
+}
+
+export async function grantOfferInternalAccess(userId, canGrant) {
+  const { error } = await supabase.rpc("grant_offer_internal_access", {
+    p_user_id: userId,
+    p_can_grant: Boolean(canGrant),
+  });
+  if (error) throw fail(error, "grant internal access");
+}
+
+export async function revokeOfferInternalAccess(userId) {
+  const { error } = await supabase.rpc("revoke_offer_internal_access", { p_user_id: userId });
+  if (error) throw fail(error, "revoke internal access");
+}
+
 // ---- Realtime ------------------------------------------------------------------
 export function subscribeToChanges(onChange) {
   supabase.auth.getSession().then(({ data }) => {
     if (data.session) supabase.realtime.setAuth(data.session.access_token);
   });
   const channel = supabase.channel("asc-realtime");
-  for (const table of ["customers", "vehicles", "storage_sets", "tires", "photos", "audit_events", "backup_runs", "locations", "set_movements"]) {
+  for (const table of ["customers", "vehicles", "storage_sets", "tires", "photos", "audit_events", "backup_runs", "locations", "set_movements", "offers"]) {
     channel.on("postgres_changes", { event: "*", schema: "public", table }, onChange);
   }
   channel.subscribe();

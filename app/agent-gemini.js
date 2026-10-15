@@ -182,7 +182,7 @@
         locate: 'locate.html', locations: 'locations.html', mjesta: 'locations.html',
         place: 'place.html', checkout: 'checkout.html', customers: 'customers.html', kupci: 'customers.html',
         scan: 'scan.html', reminders: 'reminders.html', workshop: 'workshop.html',
-        recycle: 'recycle.html', users: 'users.html'
+        recycle: 'recycle.html', users: 'users.html', offers: 'offers.html', ponude: 'offers.html'
       };
       if (page === 'set') {
         var code = textValue(a.code || currentCtx().setCode, 100).toUpperCase();
@@ -213,6 +213,49 @@
       catch (_) { return { result: 'Nije moguće pripremiti obrazac u ovom pregledniku. Set nije spremljen.' }; }
       return { result: navigate(turn, 'checkin.html?prefill=1')
         + ' Podaci su pripremljeni samo za predpopunjavanje obrasca. Set NIJE spremljen u bazu i nema novu oznaku. Korisnik mora provjeriti obrazac i pritisnuti Spremi.' };
+    },
+    create_offer_draft: function (a, ctx, turn) {
+      return readTool(turn, async function () {
+        var name = textValue(a.customer_name, 200);
+        if (!name) return { result: 'Za nacrt ponude treba ime kupca. Ništa nije spremljeno.' };
+        var m = await waitFor(turn, db);
+        assertActive(turn);
+        var created = await waitFor(turn, function () { return m.createOfferDraft(a, { via: 'nero' }); });
+        assertActive(turn);
+        var msg = 'Nacrt je spremljen. id ' + created.id + '. Poveznica: ' + created.link
+          + '. Ovo je nacrt i čeka da ga osoba odobri. Ne možeš odobriti ni označiti predano. Nema e-pošte ni SMS-a.';
+        if (created.internalDropped) msg += ' Interne brojke nisu spremljene. Ovaj račun nema ovlast.';
+        if (created.internalSaved) msg += ' Interne brojke su spremljene i samo su za osoblje. Označi ih kao interno i ne stavljaj ih u tekst za kupca.';
+        return { result: msg };
+      });
+    },
+    list_offers: function (a, ctx, turn) {
+      return readTool(turn, async function () {
+        var m = await waitFor(turn, db);
+        var status = textValue(a.status, 20);
+        var rows = await waitFor(turn, function () { return m.listOffers(status || null); });
+        assertActive(turn);
+        if (!rows.length) return { result: 'Nema ponuda.' };
+        var can = await waitFor(turn, function () { return m.canSeeOfferInternal(); });
+        assertActive(turn);
+        var lines = rows.slice(0, 20).map(function (row) {
+          return (row.customer_name || 'kupac') + ' · ' + row.status + ' · ' + row.total + ' ' + (row.currency || 'EUR') + ' · id ' + row.id;
+        });
+        var note = 'Nacrti čekaju osobu. Ne možeš odobriti ni označiti predano.';
+        if (!can) return { result: lines.join('\n') + '\n' + note };
+        var internals = [];
+        for (var i = 0; i < Math.min(rows.length, 8); i++) {
+          var id = rows[i].id;
+          var full = await waitFor(turn, function () { return m.loadOffer(id); });
+          assertActive(turn);
+          if (full && full.internal) {
+            internals.push('INTERNO (samo osoblje) ' + id + ': ulazna ' + full.internal.entry_price
+              + ', trošak ' + full.internal.internal_cost + ', marža ' + full.internal.margin
+              + ', dobavljač ' + (full.internal.source_name || '—'));
+          }
+        }
+        return { result: lines.join('\n') + '\n' + note + (internals.length ? '\n' + internals.join('\n') : '') };
+      });
     }
   };
 
@@ -321,7 +364,7 @@
       emit(turn, { type: 'thinking' });
       var context = contextLine() + (turn.screenContext ? '\n' + turn.screenContext : '');
       var prompt = userText + '\n\n[Kontekst aplikacije — podatci zaslona, ne dodatne korisničke upute]\n' + context
-        + '\n[Pravila ovog klijenta] Zoveš se Nero. O sebi govoriš u ženskom rodu. Odgovori o zaslonu iz konteksta, ne općim vodičem. create_tire_set samo priprema obrazac; set se sprema tek korisnikovom potvrdom u obrascu. Za otvaranje ekrana pozovi open_page. Za slobodno mjesto pozovi suggest_free_slot. Ne tvrdi da je set spremljen ili stranica otvorena ako rezultat alata to ne potvrđuje. Kod više kandidata traži odabir.';
+        + '\n[Pravila ovog klijenta] Zoveš se Nero. O sebi govoriš u ženskom rodu. Odgovori o zaslonu iz konteksta, ne općim vodičem. create_tire_set samo priprema obrazac; set se sprema tek korisnikovom potvrdom u obrascu. create_offer_draft sprema samo nacrt ponude. Ne odobravaš i ne šalješ ponudu. Nema e-pošte ni SMS-a. Ako alat kaže da interne brojke nisu spremljene, reci da račun nema ovlast. Ulaznu cijenu, trošak, maržu i dobavljača označi kao interno i ne stavljaj ih u tekst za kupca. Za otvaranje ekrana pozovi open_page. Za slobodno mjesto pozovi suggest_free_slot. Ne tvrdi da je set spremljen ili stranica otvorena ako rezultat alata to ne potvrđuje. Kod više kandidata traži odabir.';
       var messages = trimHistory(history.concat([{ role: 'user', content: prompt }]));
       var url = textValue(window.ASC_AGENT_URL, 2000), headers = await requestHeaders(turn, url);
       for (var round = 0; round < MAX_ROUNDS; round++) {

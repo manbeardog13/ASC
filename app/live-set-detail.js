@@ -79,6 +79,8 @@ function renderIdentity(s) {
   const codeEl = q('.detail-head .code');
   if (codeEl) codeEl.textContent = s.public_code;
   document.title = 'ASC — ' + s.public_code;
+  const offerLink = document.getElementById('offerLink');
+  if (offerLink && s.public_code) offerLink.href = 'offers.html?new=1&set=' + encodeURIComponent(s.public_code);
   const cust = s.vehicle?.customer || null;
   const who = q('.detail-head .who');
   if (who) {

@@ -35,7 +35,8 @@ html.dark{
 /* ============================== Base reset · canvas ====================== */
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{min-height:100%}
-body{font-family:"Inter",system-ui,sans-serif;color:var(--ink);background:var(--bg);
+body{min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;
+  font-family:"Inter",system-ui,sans-serif;color:var(--ink);background:var(--bg);
   padding:calc(14px + env(safe-area-inset-top,0px)) max(18px,env(safe-area-inset-right,0px)) calc(env(safe-area-inset-bottom,0px) + 40px) max(18px,env(safe-area-inset-left,0px));
   -webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums;
   transition:background 380ms var(--smooth),color 380ms var(--smooth)}
@@ -57,7 +58,7 @@ html.dark .canvas{
 .preview-tag{display:none!important;position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:70;font:700 10px Inter;letter-spacing:.14em;text-transform:uppercase;background:var(--gun);color:#f4f5f7;padding:4px 12px;border-radius:0 0 10px 10px;opacity:.9}
 
 /* ============================== Glass shell ============================== */
-.shell{max-width:var(--shell-max,1180px);margin:0 auto;border-radius:32px;position:relative;z-index:2;
+.shell{width:100%;max-width:var(--shell-max,1180px);margin:0 auto;border-radius:32px;position:relative;z-index:2;
   background:var(--shell-solid);border:1px solid var(--rim);border-top-color:var(--rim-top);
   box-shadow:0 25px 50px rgba(2,3,5,.22);padding:var(--gap);animation:sheetIn 550ms var(--smooth) both;transition:background 380ms var(--smooth)}
 @media(min-width:1021px){ .shell{padding:18px} }
@@ -1031,20 +1032,24 @@ html.dark .sb-search{background:rgba(244,245,247,.05)}
 html[data-side="rail"] .sb-search{justify-content:center;padding:0;cursor:pointer}
 html[data-side="rail"] .sb-search input{display:none}
 
-/* Nero's name, carved into the floor of every page. Not a banner: the letters
-   sit in the surface, highlight on the lower lip, shadow in the cut. */
-.nero-mark{position:fixed;z-index:45;left:0;right:0;bottom:0;margin:0;
-  padding:0 16px calc(8px + env(safe-area-inset-bottom,0px));
+/* Nero's line, in normal document flow at the foot of every page.
+   Short pages pin it with the column layout; long pages leave it after the content. */
+.nero-mark{position:static;z-index:auto;flex:none;width:100%;margin:16px 0 0;margin-top:auto;
+  padding:16px 16px calc(12px + env(safe-area-inset-bottom,0px));
   text-align:center;pointer-events:none;user-select:none;
-  font:600 10px/1 Inter,system-ui,sans-serif;letter-spacing:.22em;text-transform:lowercase}
-.nero-mark,.nero-mark a{color:rgba(32,28,24,.55);text-decoration:none;
-  text-shadow:0 1px 0 rgba(255,255,255,.75),0 -1px 1px rgba(20,16,12,.45)}
-.nero-mark a{pointer-events:auto}
-html.dark .nero-mark,html.dark .nero-mark a{color:rgba(210,206,200,.28);
-  text-shadow:0 -1px 0 rgba(0,0,0,.8),0 1px 0 rgba(255,255,255,.06)}
-body:has(.nero-mark){padding-bottom:calc(34px + env(safe-area-inset-bottom,0px))}
-@media(min-width:1021px){
-  html.has-side .nero-mark{left:calc(30px + var(--sbw))}
+  font-family:"Sora","Inter",system-ui,sans-serif;font-weight:400;font-size:.78rem;line-height:1.45;
+  letter-spacing:.08em;text-transform:lowercase;
+  color:color-mix(in srgb, var(--ink-2) 60%, transparent)}
+.nero-mark a{pointer-events:auto;color:var(--ink-2);opacity:.6;
+  text-decoration-line:underline;text-decoration-thickness:1px;text-underline-offset:3px;
+  text-decoration-color:transparent;
+  transition:color 180ms ease,opacity 180ms ease,text-decoration-color 180ms ease}
+.nero-mark a:hover,.nero-mark a:focus-visible{opacity:.85;color:var(--lava);text-decoration-color:currentColor}
+.nero-mark a:focus-visible{outline:1px solid var(--lava);outline-offset:3px}
+html.dark .nero-mark{color:color-mix(in srgb, var(--ink-2) 60%, transparent)}
+html.dark .nero-mark a{color:var(--ink-2)}
+@media(prefers-reduced-motion:reduce){
+  .nero-mark a{transition:none}
 }
 
 /* Collapsed Nero — the same violet glass as the board card, one row tall.

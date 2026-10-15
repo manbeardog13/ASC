@@ -52,7 +52,7 @@ const pages = [
   ['/app/checkout.html', 'Preuzmi komplet', '() => Boolean(document.getElementById("flow-reader"))'],
   ['/app/locate.html', 'Pronađi komplet', '() => Boolean(document.querySelector("#flow-root input"))'],
   ['/app/locations.html', 'Naljepnice mjesta', '() => Boolean(document.getElementById("loc-zone"))'],
-  ['/app/warehouse-preview/index.html', 'Prostorni pregled', '() => document.querySelectorAll("#asc-navigation a").length===11'],
+  ['/app/warehouse-preview/index.html', 'Prostorni pregled', '() => document.querySelectorAll("#asc-navigation a").length===12'],
 ];
 
 function chromeBin() {

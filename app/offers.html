@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ASC — Ponude</title>
+<meta name="theme-color" content="#edf0f5">
+<script>try{if(localStorage.getItem('asc.theme')==='dark'){document.documentElement.classList.add('dark');document.querySelector('meta[name="theme-color"]').content='#0a0c11';}}catch(e){}try{if(sessionStorage.getItem('asc.splash.warm')==='1'&&document.referrer&&new URL(document.referrer).origin===location.origin){document.documentElement.classList.add('warm-nav');}}catch(e){}</script>
+<link rel="icon" href="assets/favicon-32.png" sizes="32x32">
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;650;700;800&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="app.css">
+<style>
+.vhead{margin:2px 4px 4px}
+.vhead .k{font-family:Inter;font-weight:600;font-size:11px;line-height:1.35;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.vhead h1{font-family:Sora;font-weight:600;font-size:clamp(24px,5.4vw,30px);letter-spacing:-.02em;margin:5px 0 3px}
+.vhead p{font-size:13px;color:var(--muted);max-width:52ch}
+.field{display:flex;flex-direction:column;gap:7px;margin-bottom:14px}
+.label{font:600 10.5px Inter;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.input{width:100%;min-height:46px;border-radius:14px;border:1px solid var(--line);background:var(--panel-2);color:var(--ink);
+  padding:0 15px;font:500 14px Inter}
+textarea.input{min-height:88px;padding:12px 15px;resize:vertical}
+.input::placeholder{color:var(--muted);opacity:.7}
+.input:focus{outline:none;border-color:var(--lava);box-shadow:0 0 0 3px var(--lava-tint)}
+html.dark .input{background:rgba(244,245,247,.05)}
+.hint{font-size:11.5px;color:var(--muted);margin-top:8px;line-height:1.45}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:42px;padding:0 15px;border-radius:14px;
+  border:1px solid var(--line);background:var(--panel-2);color:var(--ink);font:600 13px Inter;cursor:pointer;text-decoration:none}
+html.dark .btn{background:rgba(244,245,247,.05)}
+.btn.on{border-color:var(--lava);color:var(--lava-ink)}
+#offerApp{display:flex;flex-direction:column;gap:12px}
+.offer-actions,.offer-filters{display:flex;flex-wrap:wrap;gap:8px}
+.offer-grid{display:grid;gap:10px}
+@media(min-width:720px){.offer-grid{grid-template-columns:1fr 1fr}}
+.offer-row{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:14px;border-radius:16px;
+  background:var(--panel-2);border:1px solid var(--hairline);text-decoration:none;color:inherit}
+.offer-line{display:grid;gap:8px;padding:12px 0;border-top:1px solid var(--hairline)}
+.offer-line img,.offer-buyer-line img{width:72px;height:72px;object-fit:cover;border-radius:12px}
+.offer-buyer-line{display:flex;gap:12px;align-items:center;padding:8px 0}
+.offer-total{font:600 16px Sora;margin-top:8px}
+.offer-kv{display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-bottom:1px solid var(--hairline);font-size:13.5px}
+.offer-kv span{color:var(--muted)}
+.offer-set{padding:10px 0;border-bottom:1px solid var(--hairline);font-size:13.5px}
+.offer-internal{border:1px dashed var(--lava-ring)}
+.offer-access-row{display:flex;flex-wrap:wrap;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--hairline)}
+.offer-log{margin:8px 0 0;padding-left:18px;color:var(--muted);font-size:12.5px}
+.offer-dlg{border:0;border-radius:18px;padding:0;background:var(--panel);color:var(--ink);max-width:420px}
+.offer-dlg::backdrop{background:rgba(2,3,5,.45)}
+.offer-dlg form{padding:20px}
+.offer-dlg h2{font:600 18px Sora;margin:0 0 8px}
+.offer-dlg p{color:var(--ink-2);font-size:14px;line-height:1.45}
+.offer-dlg-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+</style>
+</head>
+<body>
+<div class="canvas" aria-hidden="true"></div>
+<div class="grain" aria-hidden="true"></div>
+
+<main class="shell">
+  <header class="top">
+    <img class="logo" src="assets/logo.png" alt="ASC — Auto servisni centar">
+    <nav class="pill" aria-label="Glavna navigacija">
+      <span class="pill-links"><a href="dashboard.html">Ploča</a><a href="checkin.html">Zaprimi</a><a href="customers.html">Kupci</a><a href="offers.html" aria-current="page">Ponude</a></span>
+      <button class="mode" id="mode" aria-label="Promijeni temu"><i></i></button>
+    </nav>
+  </header>
+  <div id="offerApp"></div>
+</main>
+
+<script src="app.js"></script>
+<script type="module" src="live-offers.js"></script>
+<p class="nero-mark">powered by <a href="https://nerosummit.com">nerosummit.com</a></p>
+</body>
+</html>

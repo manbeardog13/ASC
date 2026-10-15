@@ -214,7 +214,7 @@ function animate(){
     'recycle.html': 'warehouse', 'set-detail.html': 'warehouse',
     'locate.html': 'warehouse', 'locations.html': 'warehouse',
     'place.html': 'warehouse', 'checkout.html': 'warehouse',
-    'customers.html': 'customers', 'reminders.html': 'reminders', 'workshop.html': 'workshop',
+    'customers.html': 'customers', 'offers.html': 'offers', 'reminders.html': 'reminders', 'workshop.html': 'workshop',
     'users.html': 'users' };
   if (MOD[here]) root.setAttribute('data-module', MOD[here]);
 
@@ -417,7 +417,7 @@ if (document.readyState !== 'loading') syncDisc(); else addEventListener('DOMCon
     '<nav class="md-tabs"><button class="md-tab on" type="button" data-tab="menu">Izbornik</button><button class="md-tab" type="button" data-tab="profile">Profil</button><button class="md-tab" type="button" data-tab="options">Postavke</button></nav>' +
     '<div class="md-body">' +
       '<section class="md-panel" data-panel="menu">' +
-        '<nav class="md-links">' + [['customers.html','Kupci'],['workshop.html','Radionica'],['reminders.html','Podsjetnici'],['users.html','Korisnici'],['recycle.html','Koš za smeće']].map(l => '<a class="md-link" href="' + l[0] + '"><span>' + l[1] + '</span><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></a>').join('') + '</nav>' +
+        '<nav class="md-links">' + [['customers.html','Kupci'],['offers.html','Ponude'],['workshop.html','Radionica'],['reminders.html','Podsjetnici'],['users.html','Korisnici'],['recycle.html','Koš za smeće']].map(l => '<a class="md-link" href="' + l[0] + '"><span>' + l[1] + '</span><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></a>').join('') + '</nav>' +
       '</section>' +
       '<section class="md-panel" data-panel="profile" hidden>' +
         '<div class="md-field"><label for="mp-name">Ime</label><input id="mp-name" type="text" data-f="name" value="' + mesc(profile.name) + '" autocomplete="name"></div>' +

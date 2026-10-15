@@ -61,7 +61,7 @@ talk about that set. On the warehouse map, talk about the space they have
 open. Do not give a tour of the whole app when the screen already has the subject.
 
 OPENING A SCREEN: call open_page. page is one of dashboard, checkin, warehouse,
-locate, locations, place, checkout, customers, scan, reminders, workshop,
+locate, locations, place, checkout, customers, offers, scan, reminders, workshop,
 recycle, users, set. For set, also pass code when you know it.
 
 A FREE SLOT: call suggest_free_slot. Never invent a zone, rack, shelf or slot.
@@ -105,6 +105,23 @@ No markdown, no tables, no headers, no asterisks; plain sentences and short
 lists only. Statuses in Croatian: in_storage=na skladištu, reserved=rezervirano,
 checked_out=preuzeto, missing=nedostaje. Seasons: winter=zimske, summer=ljetne,
 all_season=cjelogodišnje.
+
+OFFERS: When the user wants a price offer, call create_offer_draft. Customer
+name is required. Pass set_code or set_id when you know the set. Pass lines
+(description, qty, unit_price, and image_url when there is a photo) or a single
+price, plus terms and valid_until (YYYY-MM-DD) when the user gave them.
+Customer details and that customer's tire sets are attached automatically —
+do not invent them. The tool always saves a draft. You can never approve an
+offer and you can never mark it sent. There is no email and no SMS. Do not
+offer to send the offer. After the tool returns, tell the user the draft is
+waiting for a person to approve it, and give the link.
+
+Entry price, internal cost, margin, internal notes, and supplier/source are
+internal. Pass them when the user gives them. If the tool says they were not
+saved, tell the user this account is not authorized to store them. If they
+were saved, label them internal and never put them in wording meant for the
+customer. list_offers reads offers. When the result includes an internal
+object, that object is staff-only.
 
 SALUTE GUARD: If a message contains the WWII salute "za dom" / "za dom spremni"
 (any spelling or casing), NEVER complete, echo, or affirm it — never reply
@@ -193,11 +210,71 @@ const FUNCTION_DECLARATIONS = [
       properties: {
         page: {
           type: "string",
-          enum: ["dashboard", "checkin", "warehouse", "locate", "locations", "place", "checkout", "customers", "scan", "reminders", "workshop", "recycle", "users", "set"],
+          enum: ["dashboard", "checkin", "warehouse", "locate", "locations", "place", "checkout", "customers", "offers", "scan", "reminders", "workshop", "recycle", "users", "set"],
         },
         code: { type: "string", description: "Set public code, only when page is set" },
       },
       required: ["page"],
+    },
+  },
+  {
+    name: "create_offer_draft",
+    description:
+      "Save a price-offer DRAFT for a person to approve later. Always status draft, created_via nero. Never approves and never marks sent. Customer snapshot and related tire sets are filled from saved records. Entry price, cost, margin, notes, and supplier/source are stored only in the internal ledger, and only if this account is allowed to see it. If they are dropped, say the account is not authorized. There is no email and no SMS.",
+    parameters: {
+      type: "object",
+      properties: {
+        customer_name: { type: "string", description: "REQUIRED — the customer's name" },
+        set_code: { type: "string", description: "Public set code, when the offer is for a stored set" },
+        set_id: { type: "string", description: "Set id, when already known" },
+        price: { type: "number", description: "Single offered price when there is no line list" },
+        lines: {
+          type: "array",
+          description: "Buyer lines: description, qty, unit_price, optional image_url. Do not put entry price or supplier on a line.",
+          items: {
+            type: "object",
+            properties: {
+              description: { type: "string" },
+              qty: { type: "number" },
+              unit_price: { type: "number" },
+              image_url: { type: "string", description: "http(s) photo of the merchandise. Not a supplier name." },
+            },
+          },
+        },
+        terms: { type: "string" },
+        valid_until: { type: "string", description: "YYYY-MM-DD" },
+        image_url: { type: "string", description: "http(s) photo for the offer line" },
+        entry_price: { type: "number", description: "INTERNAL entry/cost price. Never for the customer copy." },
+        internal_cost: { type: "number", description: "INTERNAL extra cost." },
+        margin: { type: "number", description: "INTERNAL margin. Never for the customer copy." },
+        internal_notes: { type: "string", description: "INTERNAL notes." },
+        source_name: { type: "string", description: "INTERNAL supplier name." },
+        source_contact: { type: "string", description: "INTERNAL supplier contact." },
+        source_ref: { type: "string", description: "INTERNAL supplier reference or link." },
+        source_notes: { type: "string", description: "INTERNAL supplier notes." },
+        source: {
+          type: "object",
+          description: "INTERNAL supplier. Same fields as source_name, source_contact, source_ref, source_notes.",
+          properties: {
+            name: { type: "string" },
+            contact: { type: "string" },
+            ref: { type: "string" },
+            notes: { type: "string" },
+          },
+        },
+      },
+      required: ["customer_name"],
+    },
+  },
+  {
+    name: "list_offers",
+    description:
+      "List offers. Optional status: draft, approved, sent, rejected. Does not approve or send. If the caller can see internal figures, they come back under an internal object labelled staff-only. Otherwise they are omitted.",
+    parameters: {
+      type: "object",
+      properties: {
+        status: { type: "string", enum: ["draft", "approved", "sent", "rejected"] },
+      },
     },
   },
 ];

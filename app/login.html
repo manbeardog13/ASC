@@ -124,7 +124,8 @@ html:not(.island).splash-cold .sp-topglow{display:block;position:fixed;left:0;ri
 <link rel="stylesheet" href="app.css">
 <style>
 /* Login — iPhone-calm: ambient canvas, a floating glass card, Google-first. */
-body{display:flex;align-items:center;justify-content:center;min-height:100dvh;padding:22px}
+body{display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;min-height:100dvh;padding:22px}
+main{flex:1;display:flex;align-items:center;justify-content:center;width:100%}
 .auth-card{position:relative;z-index:1;width:min(412px,100%);border-radius:30px;padding:30px 26px 24px;
   background:var(--shell-solid);border:1px solid var(--rim);border-top-color:var(--rim-top);
   box-shadow:var(--shadow-card);animation:sheetIn 560ms var(--smooth) both}

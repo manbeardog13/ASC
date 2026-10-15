@@ -34,12 +34,19 @@ test('Nero is the card on the board and a carved line on every page', () => {
     'app/workshop.html', 'app/reminders.html', 'app/users.html', 'app/recycle.html',
     'app/set-detail.html', 'app/place.html', 'app/checkout.html', 'app/locate.html',
     'app/locations.html', 'app/warehouse.html', 'app/sastanak-skladiste.html',
-    'app/warehouse-preview/index.html', 'index.html',
+    'app/warehouse-preview/index.html', 'app/offers.html', 'index.html',
   ];
   for (const file of pages) {
     const html = readFileSync(new URL('../' + file, import.meta.url), 'utf8');
     assert.match(html, /powered by <a href="https:\/\/nerosummit.com">nerosummit.com<\/a>/, file);
+    assert.doesNotMatch(html, /\.nero-mark\{[^}]*position:\s*fixed/, file);
   }
+  assert.match(appCss, /\.nero-mark\{[^}]*position:static/);
+  assert.match(appCss, /text-decoration-thickness:1px/);
+  assert.match(appCss, /text-underline-offset:3px/);
+  assert.match(appCss, /\.nero-mark a:hover,\.nero-mark a:focus-visible\{opacity:\.85;color:var\(--lava\)/);
+  assert.match(appCss, /prefers-reduced-motion:reduce\)\{\s*\.nero-mark a\{transition:none\}/);
+  assert.match(appCss, /margin-top:auto/);
   const app = readFileSync(new URL('../app/app.js', import.meta.url), 'utf8');
   assert.match(app, /agentCard/);
   assert.match(app, /composer\.js/);

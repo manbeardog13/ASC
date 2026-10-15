@@ -62,6 +62,10 @@ const ROUTES = [
   { pattern: /^\/users$/,                 load: () => import("./views/users.js") },
   { pattern: /^\/reminders$/,             load: () => import("./views/reminders.js") },
   { pattern: /^\/recycle$/,               load: () => import("./views/recycle.js") },
+  { pattern: /^\/offers\/new$/,           load: () => import("./views/offers.js"), mode: "new" },
+  { pattern: /^\/offers$/,                load: () => import("./views/offers.js"), mode: "list" },
+  { pattern: /^\/offer\/([^/]+)\/edit$/,  load: () => import("./views/offers.js"), mode: "edit" },
+  { pattern: /^\/offer\/([^/]+)$/,        load: () => import("./views/offers.js"), mode: "detail" },
   { pattern: /^\/set\/([^/]+)\/edit$/,    load: () => import("./views/set-detail.js"), mode: "edit" },
   { pattern: /^\/set\/([^/]+)$/,          load: () => import("./views/set-detail.js") },
 ];
@@ -214,6 +218,7 @@ function openMenu() {
   pop.innerHTML = `
     ${canWorkshop ? item("/workshop", "box", t("menu.workshop")) : ""}
     <a href="#/users" role="menuitem" class="btn btn-ghost" style="justify-content:flex-start;width:100%">${icon("people", 18)}${t("menu.users")}${pending ? `<span class="nav-badge" style="margin-left:auto">${pending}</span>` : ""}</a>
+    ${item("/offers", "tag", t("menu.offers"))}
     ${item("/reminders", "clock", t("menu.reminders"))}
     ${item("/recycle", "trash", t("menu.recycle"))}
     <button id="exportBtn" role="menuitem" class="btn btn-ghost" style="justify-content:flex-start;width:100%">${icon("download", 18)}${t("menu.export")}</button>
