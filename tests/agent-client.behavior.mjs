@@ -22,7 +22,7 @@ function client({ remoteAllowed = true, replies = [], fetch: fetchImpl, db = {},
   const document = { currentScript: { src: 'https://host.example/ASC/app/agent-gemini.js' },
     baseURI: location.href, querySelector: () => null };
   const sandbox = {
-    URL, URLSearchParams, AbortController, location, document,
+    URL, URLSearchParams, AbortController, TextDecoder, TextEncoder, location, document,
     sessionStorage: { setItem(key, value) { if (storageFails) throw Error('blocked'); stored.set(key, value); } },
     setTimeout(fn, ms) { const id = ++timerId; timers.set(id, { fn, ms }); return id; },
     clearTimeout(id) { timers.delete(id); },
@@ -346,6 +346,35 @@ test('configured endpoint still requires an explicit remote turn', async () => {
   await assert.rejects(c.agent.ask('anything'),{code:'remote_disabled'});
   assert.equal(c.requests.length,0);assert.equal(c.sessionReads,0);
 });
+test('stream option emits deltas and still one final text', async () => {
+  const sse = new TextEncoder().encode([
+    'event: delta',
+    'data: {"text":"Po"}',
+    '',
+    'event: delta',
+    'data: {"text":"zdrav"}',
+    '',
+    'event: done',
+    'data: {"content":[{"type":"text","text":"Pozdrav"}],"stop_reason":"end_turn"}',
+    '',
+    ''
+  ].join('\n'));
+  let sent = false;
+  const c = client({ fetch: (_url, opts) => {
+    assert.equal(opts.headers.Accept, 'text/event-stream');
+    assert.equal(JSON.parse(opts.body).stream, true);
+    return {
+      ok: true,
+      status: 200,
+      headers: { get: (name) => String(name).toLowerCase() === 'content-type' ? 'text/event-stream' : null },
+      body: { getReader: () => ({ read: async () => (sent ? { done: true } : (sent = true, { done: false, value: sse })) }) }
+    };
+  } });
+  assert.equal(await c.ask('Bok', { stream: true }), 'Pozdrav');
+  assert.deepEqual(c.events.filter((e) => e.type === 'delta').map((e) => e.text), ['Po', 'zdrav']);
+  assert.deepEqual(c.events.filter((e) => e.type === 'text').map((e) => e.text), ['Pozdrav']);
+});
+
 test('revoking remote allowance stops a tool-loop continuation', async () => {
   const c=client({replies:[call('inventory_overview')]});
   await assert.rejects(c.ask('count',{tools:{inventory_overview:()=>{c.window.ASC_AGENT_REMOTE_ALLOWED=false;return {result:'0'};}}}),{code:'remote_disabled'});

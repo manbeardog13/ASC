@@ -41,6 +41,7 @@
   document.addEventListener('click', (e) => {
     if (!e.target.closest('[data-logout],[data-signout]')) return;
     e.preventDefault(); e.stopPropagation();
+    document.dispatchEvent(new CustomEvent('asc:sign-out'));
     dbReady.then((m) => m.signOut()).catch(() => {}).finally(() => S.bloom(() => S.handoff('login.html')));
   }, true);
 })();

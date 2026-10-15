@@ -726,13 +726,15 @@ document.addEventListener('click', function(e){
       if (window.ASCAgent && ASCAgent.configured && ASCAgent.configured()) {
         busy = true;
         const ans = (h) => show(me + '<span class="tb-ans">' + h + '</span>');
+        let streamed = '';
         ans('Razmišljam…');
         ASCAgent.ask(text, (ev) => {
-          if (ev.type === 'text') ans(esc(ev.text));
-          else if (ev.type === 'tool') ans('Radim…');
+          if (ev.type === 'delta') { streamed += ev.text; ans(esc(streamed) + '▍'); }
+          else if (ev.type === 'text') { streamed = ''; ans(esc(ev.text)); }
+          else if (ev.type === 'tool') ans('Nero provjerava…');
           else if (ev.type === 'error') ans(esc(ev.message || 'Greška.'));
-        }, { remote: true }).then((txt) => { busy = false; if (txt) ans(esc(txt)); })
-          .catch(() => { busy = false; ans('Veza je pukla — pokušaj ponovno.'); });
+        }, { remote: true, stream: true }).then((txt) => { busy = false; if (txt) ans(esc(txt)); })
+          .catch((err) => { busy = false; if (err && err.code === 'cancelled') return; ans('Veza je pukla — pokušaj ponovno.'); });
       } else {                                   // Gemini not wired → route to search
         show('Tražim…');
         setTimeout(() => { location.href = 'workshop.html?q=' + encodeURIComponent(text); }, 120);
