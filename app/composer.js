@@ -64,7 +64,21 @@
       '<button class="nero-pill" type="button" data-q="Tko čeka na preuzimanje danas?">tko čeka</button>' +
     '</div>' +
     '<div class="nero-history" hidden></div>';
+  // Docked inside the page column, after the content — never floating over it.
+  // One layer above everything; the page reserves its height at the end so
+  // nothing is ever hidden beneath it.
   document.body.appendChild(root);
+  var suggest = document.createElement('div');
+  suggest.className = 'nero-suggest';
+  suggest.setAttribute('aria-label', 'Prijedlozi');
+  root.insertBefore(suggest, root.querySelector('.nero-sheet'));
+  var shellEl = document.querySelector('main.shell') || document.querySelector('.shell');
+  if (shellEl && !document.querySelector('.nero-mark')) {
+    var mark = document.createElement('p');
+    mark.className = 'nero-mark';
+    mark.innerHTML = 'Powered by <a href="https://nerosummit.com">Nero Summit</a>';
+    shellEl.insertAdjacentElement('afterend', mark);
+  }
 
   var input = root.querySelector('.nero-input');
   var log = root.querySelector('.nero-log');
@@ -134,7 +148,7 @@
     var foot = document.querySelector('.nero-mark') || document.querySelector('.spatial-footer');
     var h = foot ? Math.ceil(foot.getBoundingClientRect().height) : 36;
     root.style.setProperty('--nero-foot', Math.max(36, h) + 'px');
-    document.documentElement.style.setProperty('--nero-stack', Math.ceil(root.getBoundingClientRect().height + h + 18) + 'px');
+    document.documentElement.style.setProperty('--nero-stack', Math.ceil(root.getBoundingClientRect().height + 20) + 'px');
   }
   function openComposer(focus) {
     root.classList.remove('is-compact');
@@ -800,6 +814,147 @@
   document.addEventListener('visibilitychange', function () {
     if (document.visibilityState === 'visible') tryFlush();
   });
+
+  // ---- Night-lamp caret ---------------------------------------------------
+  // Text stays plain white. A mirrored, invisible copy of the text measures
+  // where the native caret sits; a small lamp glow is placed there, lighting
+  // the ~2.5 letters to its left, strongest at the baseline and nothing above
+  // the caret top. Follows typing, clicks and arrow keys. No timed fading.
+  (function () {
+    var field = document.createElement('div');
+    field.className = 'nero-field';
+    input.parentNode.insertBefore(field, input);
+    var mirror = document.createElement('div');
+    mirror.className = 'nero-mirror';
+    mirror.setAttribute('aria-hidden', 'true');
+    var lamp = document.createElement('i');
+    lamp.className = 'nero-lamp';
+    lamp.setAttribute('aria-hidden', 'true');
+    field.appendChild(mirror);
+    field.appendChild(input);
+    field.appendChild(lamp);
+    var raf = 0;
+    function place() {
+      raf = 0;
+      var focused = document.activeElement === input;
+      var pos = input.selectionStart, collapsed = pos === input.selectionEnd;
+      if (!focused || !collapsed) { field.classList.remove('lamp-on'); return; }
+      var v = input.value;
+      mirror.innerHTML = esc(v.slice(0, pos)) + '<b class="nero-mark-caret">\u200b</b>' + esc(v.slice(pos)) + '\u200b';
+      var m = mirror.querySelector('.nero-mark-caret');
+      var x = m.offsetLeft - input.scrollLeft, y = m.offsetTop - input.scrollTop;
+      field.style.setProperty('--cx', x + 'px');
+      field.style.setProperty('--cy', y + 'px');
+      field.style.setProperty('--ch', (m.offsetHeight || 20) + 'px');
+      field.classList.add('lamp-on');
+    }
+    function queue() { if (!raf) raf = requestAnimationFrame(place); }
+    ['input', 'keyup', 'keydown', 'click', 'focus', 'blur', 'select', 'scroll', 'mouseup'].forEach(function (t) { input.addEventListener(t, queue); });
+    document.addEventListener('selectionchange', function () { if (document.activeElement === input) queue(); });
+    addEventListener('resize', queue);
+  })();
+  // ---- Scroll merge ------------------------------------------------------
+  // While the minimized composer passes over a card it melts into that card's
+  // border (tinted from the card's accent), the card gets a quiet ring, and
+  // the card's own actions surface as suggestion bubbles. Leaving a card
+  // plays a short recoil wave and the bubbles fade 1.2s later.
+  var reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var active = null, fadeTimer = 0, scrollTimer = 0;
+  function accentOf(card) {
+    var cs = getComputedStyle(card);
+    var v = cs.getPropertyValue('--acc').trim() || getComputedStyle(document.documentElement).getPropertyValue('--acc').trim();
+    if (v) return v;
+    var m = document.documentElement.getAttribute('data-module') || '';
+    return ({ checkin: '#2fbf5b', scan: '#547898', warehouse: '#f0c052', customers: '#5A63E8', reminders: '#e0a33a', workshop: '#8b5cf6', users: '#63676f' })[m] || '#ff4e1b';
+  }
+  function labelOf(el) {
+    return (el.getAttribute('aria-label') || el.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 32);
+  }
+  function actionsOf(card) {
+    var seen = {}, out = [];
+    [].forEach.call(card.querySelectorAll('a[href], button:not([disabled])'), function (el) {
+      if (out.length >= 3 || el.closest('.nero-composer') || el.offsetParent === null) return;
+      var t = labelOf(el); if (!t || t.length < 2 || seen[t]) return;
+      seen[t] = 1; out.push({ el: el, text: t });
+    });
+    // Forms: offer the next empty field as the step to take.
+    if (out.length < 3) [].forEach.call(card.querySelectorAll('input:not([type=hidden]), select, textarea'), function (el) {
+      if (out.length >= 3 || el.value || el.offsetParent === null || el.closest('.nero-composer')) return;
+      var lab = (el.labels && el.labels[0] && el.labels[0].textContent) || el.getAttribute('aria-label') || el.placeholder || '';
+      lab = lab.replace(/\s+/g, ' ').trim().slice(0, 28);
+      if (!lab || seen[lab]) return;
+      seen[lab] = 1; out.push({ el: el, text: '→ ' + lab });
+    });
+    return out;
+  }
+  function showSuggest(card) {
+    clearTimeout(fadeTimer);
+    var acts = actionsOf(card);
+    suggest.style.setProperty('--merge-tint', accentOf(card));
+    suggest.innerHTML = '';
+    acts.forEach(function (a, i) {
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'nero-bubble'; b.textContent = a.text;
+      b.style.setProperty('--i', i);
+      b.addEventListener('click', function () { if (/^(INPUT|SELECT|TEXTAREA)$/.test(a.el.tagName)) { a.el.scrollIntoView({ block: 'center', behavior: reduce ? 'auto' : 'smooth' }); a.el.focus({ preventScroll: true }); } else { a.el.focus({ preventScroll: true }); a.el.click(); } });
+      suggest.appendChild(b);
+    });
+    suggest.classList.toggle('on', acts.length > 0);
+    ripple();
+  }
+  function ripple() {
+    if (reduce) return;
+    suggest.classList.remove('nero-ripple'); void suggest.offsetWidth; suggest.classList.add('nero-ripple');
+    setTimeout(function () { suggest.classList.remove('nero-ripple'); }, 500);
+  }
+  function engage(card) {
+    if (active === card) return;
+    if (active) disengage(active);
+    active = card;
+    var tint = accentOf(card);
+    card.style.setProperty('--merge-tint', tint);
+    root.style.setProperty('--merge-tint', tint);
+    card.classList.add('nero-merged');
+    root.classList.add('is-merged');
+    showSuggest(card);
+  }
+  function disengage(card) {
+    card.classList.remove('nero-merged');
+    if (!reduce) {
+      card.classList.remove('nero-recoil'); void card.offsetWidth; card.classList.add('nero-recoil');
+      setTimeout(function () { card.classList.remove('nero-recoil'); }, 450);
+    }
+    if (active === card) { active = null; root.classList.remove('is-merged'); }
+    clearTimeout(fadeTimer);
+    fadeTimer = setTimeout(function () { if (!active) { suggest.classList.remove('on'); ripple(); } }, 1200);
+  }
+  if ('IntersectionObserver' in window) {
+    var cards = [].slice.call(document.querySelectorAll('main .card, .shell .card'));
+    var band = function () {
+      var h = Math.ceil(root.getBoundingClientRect().height || 60);
+      return '-' + Math.max(0, innerHeight - h - 24) + 'px 0px 0px 0px';
+    };
+    var io = null;
+    var watch = function () {
+      if (io) io.disconnect();
+      io = new IntersectionObserver(function (entries) {
+        entries.forEach(function (e) {
+          if (e.isIntersecting) engage(e.target);
+          else if (active === e.target) disengage(e.target);
+        });
+      }, { rootMargin: band(), threshold: 0 });
+      cards.forEach(function (c) { io.observe(c); });
+    };
+    watch();
+    addEventListener('resize', watch);
+  }
+  // Minimize while scrolling; rise again only when the person types.
+  addEventListener('scroll', function () {
+    root.classList.add('is-scrolling');
+    clearTimeout(scrollTimer);
+    scrollTimer = setTimeout(function () { root.classList.remove('is-scrolling'); }, 220);
+    if (!root.contains(document.activeElement)) maybeCollapse();
+  }, { passive: true });
   addEventListener('resize', fit);
   fit();
 

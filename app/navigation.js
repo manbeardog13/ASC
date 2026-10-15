@@ -56,25 +56,6 @@ export function renderAppNavigation({warehouseOpen=false, currentPath=location.p
   );
 }
 
-// Thumb bar for phones. Same labels and icons as the sidebar, four hops plus
-// the drawer. Warehouse child pages keep the Skladište target lit.
-export function renderAppDock({currentPath=location.pathname}={}) {
-  const I=navigationIcons;
-  const here=pageFile(currentPath);
-  const entries=[
-    ['dashboard','dashboard.html',I.home,'Ploča'],
-    ['checkin','checkin.html',I.plus,'Zaprimi'],
-    ['scan','scan.html',I.scan,'Skeniraj'],
-    ['warehouse','warehouse-preview/index.html',I.pin,'Skladište'],
-    ['customers','customers.html',I.people,'Kupci'],
-  ];
-  return entries.map(([m,href,icon,label])=>{
-    const path=new URL(href,APP_ROOT).pathname;
-    const on=m==='warehouse' ? WAREHOUSE_FILES.includes(here) : currentPath===path;
-    return '<a class="dock-item'+(on?' on':'')+'" data-m="'+m+'" href="'+path+'"'+(on?' aria-current="page"':'')+'>'+icon+'<span>'+label+'</span></a>';
-  }).join('') + '<button class="dock-item dock-more" type="button" data-open-menu aria-label="Cijeli izbornik">'+I.menu+'<span>Izbornik</span></button>';
-}
-
 // Admin-only rows stay in the DOM (so link counts stay stable) but are hidden
 // until the signed-in role is admin or manager. Unknown role fails closed.
 export function applyNavAccess(root, role) {

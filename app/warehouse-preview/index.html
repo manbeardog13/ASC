@@ -46,10 +46,10 @@
     <div class="spatial-main">
       <nav class="breadcrumb" aria-label="Trenutačni položaj"><button id="back-overview">Pregled kuće</button><span aria-hidden="true">/</span><span id="location-area">Sva skladišta</span><span id="location-stack" hidden></span></nav>
       <div class="search-row"><div class="search-wrap"><span class="search-icon" id="search-icon"></span><input type="search" id="search" placeholder="Ime, registracija ili oznaka" aria-label="Pronađi gume po imenu, registraciji ili oznaci" aria-controls="search-results" aria-expanded="false" autocomplete="off"><kbd>⌘ K</kbd><button id="voice-button" class="icon-button" aria-label="Glasovna pretraga"></button><div id="search-results" class="search-results" hidden></div></div><button id="scan-button" class="scan-button" aria-label="Skeniraj QR oznaku"><span id="scan-icon"></span><span>Skeniraj</span></button></div>
-      <nav id="area-tabs" class="area-tabs pills" aria-label="Brzi odabir skladišta"></nav>
+      <nav id="area-tabs" class="area-tabs" aria-label="Brzi odabir skladišta"></nav>
       <div class="spatial-stage card" id="stage">
-        <div class="stage-header"><div><span class="area-code" id="area-code">2.3</span><h2 id="area-name">Potkrovlje</h2><p id="area-subtitle">Odaberite stupac za detalje</p></div><div class="view-toggle" role="group" aria-label="Način prikaza"><button id="view-3d" class="active" aria-pressed="true">3D</button><button id="view-plan" aria-pressed="false">Tlocrt</button></div></div>
-        <div id="scene" role="img" aria-label="Prostorni prikaz skladišta. Za pristup tipkovnicom otvorite popis stupaca."></div>
+        <div class="stage-header"><div><span class="area-code" id="area-code">2.3</span><h2 id="area-name">Potkrovlje</h2><p id="area-subtitle">Odaberite stupac za detalje</p></div><button id="fs-enter" class="button primary fs-enter" type="button">Otvori 3D</button><div class="view-toggle" role="group" aria-label="Način prikaza"><button id="view-3d" class="active" aria-pressed="true">3D</button><button id="view-plan" aria-pressed="false">Tlocrt</button></div></div>
+        <button id="fs-menu" class="fs-menu" type="button" aria-label="Izbornik"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button><button id="fs-exit" class="fs-exit" type="button" aria-label="Izađi iz 3D prikaza">×</button><aside id="fs-panel" class="fs-panel" hidden aria-label="Odabrani komplet"></aside><div class="fs-rotate" aria-hidden="true"><b>Okrenite mobitel</b><span>3D prikaz radi vodoravno.</span></div><div id="scene" role="img" aria-label="Prostorni prikaz skladišta. Za pristup tipkovnicom otvorite popis stupaca."></div>
         <div id="plan-view" class="plan-view" hidden></div>
         <div id="scene-loading" class="scene-loading"><span class="loader"></span><b>Učitavanje prostora…</b></div>
         <div id="found-location" class="found-location" role="status" hidden><b></b><span id="found-location-text"></span></div>
@@ -71,6 +71,6 @@
 </div>
 <script type="module" src="bootstrap.js"></script>
 <script src="../composer.js"></script>
-<p class="nero-mark">powered by <a href="https://nerosummit.com">nerosummit.com</a></p>
+<p class="nero-mark">Powered by <a href="https://nerosummit.com">Nero Summit</a></p>
 </body>
 </html>
