@@ -87,4 +87,3 @@ async function layout(){
  console.log('PASS layout: 7 widths, light/dark, long drafts, history above composer, synthetic keyboard');
 }
 (async()=>{await interactions();await layout();})().catch(e=>{console.error(e);process.exitCode=1});
-
