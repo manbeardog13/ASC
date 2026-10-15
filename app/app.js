@@ -424,7 +424,6 @@ if (document.readyState !== 'loading') syncDisc(); else addEventListener('DOMCon
         '<div class="md-section-t">Preferencije</div>' +
         row('Tamna tema', 'Prebaci svijetli / tamni izgled', 'theme', isDark()) +
         row('Obavijesti', 'Podsjetnici za preuzimanje', 'notify', profile.notify) +
-        row('Glasovni odgovori', 'ASC Agent odgovara naglas', 'voice', profile.voice) +
         '<button class="md-logout" type="button" data-logout>Odjava</button>' +
         '<div class="md-saved" data-saved aria-live="polite">Spremljeno ✓</div>' +
       '</section>' +
