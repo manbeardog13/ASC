@@ -17,7 +17,7 @@
 // ============================================================================
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const OWNER_EMAIL = "cryptonii13@gmail.com";           // permanent owner; also DB-enforced
+const OWNER_EMAIL = "toni@nerosummit.com";             // permanent owner; also DB-enforced
 const ADMIN_ROLES = ["admin", "manager"];
 const ASSIGNABLE = ["admin", "manager", "employee", "reception"];
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

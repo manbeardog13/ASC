@@ -99,7 +99,7 @@ export async function loadMyProfile() {
 }
 
 // ---- Access management (admins) ------------------------------------------------
-export const OWNER_EMAIL = "cryptonii13@gmail.com";
+export const OWNER_EMAIL = "toni@nerosummit.com";
 export const ADMIN_ROLES = ["admin", "manager"];
 export function isAdminRole(role) { return ADMIN_ROLES.includes(role); }
 export function isOwnerEmail(email) { return (email || "").trim().toLowerCase() === OWNER_EMAIL; }

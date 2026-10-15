@@ -382,7 +382,7 @@ end $$;
 
 -- The permanent owner. This account can never be removed or demoted, by anyone.
 create or replace function asc_owner_email() returns text as $$
-  select 'cryptonii13@gmail.com'::text;
+  select 'toni@nerosummit.com'::text;
 $$ language sql immutable;
 
 -- ADMIN tier. 'manager' is kept admin-equivalent so the original owner backfill
