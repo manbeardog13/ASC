@@ -1129,3 +1129,4 @@ html.dark input:-webkit-autofill{-webkit-box-shadow:0 0 0 1000px var(--panel-2) 
 
 /* Less noise: no grain texture, no ambient blobs, no preview ribbons. */
 .grain,.canvas{display:none!important}
+.sb-burger,.top .mode{font-family:Inter,system-ui,sans-serif}
