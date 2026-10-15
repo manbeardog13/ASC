@@ -483,15 +483,15 @@ if(sat>=59){d.classList.add('island');d.style.setProperty('--isl-y',(sat-48)+'px
          Resting: just the rotating hook. On hover the chat bubble blur-fades in,
          then the three suggestion chips fade-rise one by one. Notch = real mask cut. -->
     <div class="agent-shell reveal" id="agentShell" style="animation-delay:230ms">
-      <span class="notch-tab" id="agentTab">agent</span>
-      <section class="agent-card" id="agentCard" role="group" aria-label="ASC pomoćnik — AI za skladište guma">
+      <span class="notch-tab" id="agentTab">Nero</span>
+      <section class="agent-card" id="agentCard" role="group" aria-label="Nero">
         <div class="agent-body">
           <span class="agent-hook l1" id="agentHook">…</span>
           <span class="agent-hook l2" id="agentHook2" aria-hidden="true">…</span>
           <span class="agent-hook l3" id="agentHook3" aria-hidden="true">…</span>
           <div class="agent-reveal">
             <div class="text-bubble">
-              <input class="tb-input" id="tbInput" type="text" autocomplete="off" placeholder="Pitaj bilo što…" aria-label="Pitaj ASC pomoćnika">
+              <input class="tb-input" id="tbInput" type="text" autocomplete="off" placeholder="Pitaj Nero…" aria-label="Pitaj Nero">
               <button class="tb-send" type="button" aria-label="Pošalji"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M13 6l6 6-6 6"/></svg></button>
             </div>
             <div class="chips" role="list">
@@ -853,5 +853,6 @@ document.addEventListener('click', function(e){
 <!-- LIVE: override the mock numbers/stream/reminders with real Supabase data. -->
 <script src="layout-edit.js" defer></script>
 <script type="module" src="live-dashboard.js"></script>
+<p class="nero-mark">powered by <a href="https://nerosummit.com">nerosummit.com</a></p>
 </body>
 </html>

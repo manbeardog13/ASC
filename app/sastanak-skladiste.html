@@ -28,6 +28,10 @@
   .rack { margin-top: 8px; }
   .rack span { color: var(--slate); font-size: 12px; }
   .slots { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+  .nero-mark{position:fixed;left:0;right:0;bottom:0;margin:0;padding:0 16px 10px;text-align:center;
+    font:600 10px/1 Inter,system-ui,sans-serif;letter-spacing:.22em;text-transform:lowercase;pointer-events:none;
+    color:rgba(46,42,38,.42);text-shadow:0 1px 0 rgba(255,255,255,.72),0 -1px 1px rgba(28,22,16,.35)}
+  .nero-mark a{color:inherit;text-decoration:none;pointer-events:auto}
   .slot { width: 54px; height: 54px; border-radius: 12px; background: #f3f4f6; color: var(--ink); }
   .slot.filled { background: var(--lava); color: #fff; }
   .slot.reserved { background: #ffe4d6; color: #9a3412; }
@@ -109,5 +113,6 @@
       card.innerHTML = `<b>${s.dataset.name}</b><p>${s.dataset.plate || "Nema kompleta"}</p><p>${s.dataset.loc}</p><p>${s.dataset.set}</p>`;
     });
   </script>
+<p class="nero-mark">powered by <a href="https://nerosummit.com">nerosummit.com</a></p>
 </body>
 </html>
