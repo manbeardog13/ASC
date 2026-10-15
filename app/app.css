@@ -20,6 +20,11 @@
   --shadow-card:0 1px 2px -1px rgba(20,18,15,.10),0 6px 16px -8px rgba(20,18,15,.15),0 20px 40px -22px rgba(20,18,15,.22);
   --gap:14px; --pad:20px; --radius:22px;
   --tap:44px;
+  --type-nav:500 13.5px/1.25 Inter,system-ui,sans-serif;
+  --type-sub:500 11px/1.35 Inter,system-ui,sans-serif;
+  --type-kicker:600 10.5px/1.2 Inter,system-ui,sans-serif;
+  --type-card:600 15px/1.3 Sora,Inter,system-ui,sans-serif;
+  --type-page:600 clamp(21px,3vw,26px)/1.15 Sora,Inter,system-ui,sans-serif;
 }
 html.dark{
   --bg:#0a0c11; --shell:rgba(30,32,38,.55); --shell-solid:rgba(30,32,38,.88);
@@ -178,7 +183,10 @@ html.dark .mode i{background:transparent;box-shadow:inset 0 0 0 2.5px #f4f5f7}
 /* ============================== Card surface ============================ */
 .card{position:relative;background:var(--panel);border-radius:var(--radius);padding:32px var(--pad) 18px;display:flex;flex-direction:column;transition:background 380ms var(--smooth),transform 160ms var(--snap),box-shadow 200ms var(--snap)}
 /* .tab-tl (incl. its notch) is defined in the corner-tab block above */
-.card h3{font-family:Sora;font-weight:600;font-size:15px;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.card h3{font:var(--type-card);margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.card.tight{padding:28px 14px 14px}
+.card.tight h3{margin-bottom:8px}
+.page-title{font:var(--type-page);letter-spacing:-.02em;margin:0}
 .count-badge{margin-left:auto;font:800 12px Inter;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:linear-gradient(158deg,var(--lava-2),var(--lava) 52%,var(--lava-ink));color:#fff;display:inline-flex;align-items:center;justify-content:center;box-shadow:0 2px 7px -2px rgba(255,78,27,.5),inset 0 1px 0 rgba(255,255,255,.28)}
 .card.dark{background:radial-gradient(120% 100% at 90% -20%,rgba(255,78,27,.20),transparent 55%),linear-gradient(175deg,var(--stage-1),var(--stage-2));color:var(--on-stage)}
 html.dark .card.dark{background:radial-gradient(120% 100% at 90% -20%,rgba(255,78,27,.16),transparent 55%),linear-gradient(175deg,#24252a,#1a1b1f)}
@@ -261,7 +269,7 @@ html.dark .side{box-shadow:0 12px 32px -18px rgba(0,0,0,.6),
 .sb-head{flex:none;display:flex;align-items:center;justify-content:space-between;
   padding:4px 12px 12px;min-height:40px}
 html[data-side="rail"] .sb-head{justify-content:center;padding:4px 0 12px}
-.sb-eyebrow{font:600 10.5px Inter;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);white-space:nowrap;overflow:hidden}
+.sb-eyebrow{font:var(--type-kicker);letter-spacing:.07em;text-transform:uppercase;color:var(--muted);white-space:nowrap;overflow:hidden}
 .sb-collapse{flex:none;width:28px;height:28px;border:0;border-radius:9px;cursor:pointer;
   background:transparent;color:var(--muted);display:grid;place-items:center;
   transition:background 160ms var(--snap),transform 260ms var(--smooth)}
@@ -274,13 +282,21 @@ html[data-side="rail"] .sb-collapse{transform:rotate(180deg)}
 .sb-nav::-webkit-scrollbar{display:none}
 .sb-item{position:relative;display:flex;align-items:center;gap:10px;min-height:40px;
   padding:0 12px;border-radius:12px;text-decoration:none;cursor:pointer;border:0;background:transparent;
-  font:500 13.5px Inter;color:var(--ink-2);text-align:left;width:100%;
+  font:var(--type-nav);color:var(--ink-2);text-align:left;width:100%;
   transition:background 180ms var(--snap),color 180ms var(--snap),
     transform 180ms var(--snap),box-shadow 220ms var(--snap)}
 /* one optical axis: every icon lives in a fixed 22px column, labels align exactly */
 .sb-item svg{flex:none;width:20px;height:20px;margin:0 1px;color:var(--muted);
   transition:color 180ms var(--snap),transform 180ms var(--snap)}
-.sb-item .t{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sb-item .t{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font:var(--type-nav);color:inherit}
+.sb-item:has(.sub) .t{display:flex;flex-direction:column;align-items:flex-start;white-space:normal}
+.sb-item:has(.sub) .t > span:first-child{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sb-item .sub{display:block;max-width:100%;margin-top:1px;font:var(--type-sub);color:var(--muted);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sb-item.on .sub{color:var(--muted)}
+.sb-code{flex:none;width:22px;margin:0 1px;text-align:center;font:var(--type-sub);font-weight:600;color:var(--muted)}
+.sb-item.on .sb-code{color:var(--acc-ink)}
+.sb-item:has(.sub){min-height:48px;padding-top:6px;padding-bottom:6px}
 @media(any-hover:hover){
   .sb-item:hover{background:rgba(2,3,5,.045);transform:translateY(-1px);
     box-shadow:0 2px 6px -3px rgba(20,18,15,.18)}
@@ -321,13 +337,14 @@ html.dark .sb-item[data-m="users"]{--acc-ink:#c9ccd2}
 .sb-group-kids{display:grid;grid-template-rows:0fr;transition:grid-template-rows 240ms var(--snap)}
 .sb-group.open .sb-group-kids{grid-template-rows:1fr}
 .sb-group-kids>div{overflow:hidden;display:flex;flex-direction:column;gap:2px;min-height:0}
-.sb-kid{padding-left:44px;font-size:13px;min-height:36px;opacity:0;transform:translateY(-4px);
+.sb-kid{padding-left:44px;min-height:36px;opacity:0;transform:translateY(-4px);
   transition:opacity 200ms var(--snap) 60ms,transform 200ms var(--snap) 60ms,background 160ms var(--snap),color 160ms var(--snap)}
 .sb-group.open .sb-kid{opacity:1;transform:none}
 .sb-chev{flex:none;transition:transform 240ms var(--snap);color:var(--muted)}
 .sb-group.open .sb-chev{transform:rotate(180deg)}
 .sb-div{flex:none;height:1px;background:var(--line);margin:12px 10px}
-.sb-eyebrow2{flex:none;font:600 10px Inter;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:2px 12px 6px}
+.sb-eyebrow2{flex:none;font:var(--type-kicker);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:14px 12px 6px}
+.sb-note{font:var(--type-sub);color:var(--muted);padding:10px 12px 2px;line-height:1.35}
 /* rail: icons only */
 html[data-side="rail"] .sb-item{justify-content:center;padding:0}
 html[data-side="rail"] .sb-item .t,html[data-side="rail"] .sb-chev,
@@ -357,8 +374,8 @@ html[data-side="rail"] .sb-item.on::before{top:auto;bottom:4px;left:50%;transfor
 .sb-ava .dot{position:absolute;right:0;bottom:0;width:10px;height:10px;border-radius:50%;
   background:var(--green);border:2px solid var(--side)}
 .sb-uid{flex:1;min-width:0}
-.sb-uid b{display:block;font:600 13.5px Inter;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.sb-uid span{display:block;font:500 11px Inter;color:var(--muted);margin-top:1px}
+.sb-uid b{display:block;font:var(--type-nav);font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sb-uid span{display:block;font:var(--type-sub);color:var(--muted);margin-top:1px}
 .sb-logout{flex:none;width:30px;height:30px;border:0;border-radius:9px;cursor:pointer;
   background:transparent;color:var(--muted);display:grid;place-items:center;opacity:0;
   transition:opacity 160ms linear,background 160ms var(--snap),color 160ms var(--snap)}
@@ -394,10 +411,66 @@ html[data-side="rail"] .sb-user{justify-content:center;padding:8px 0}
   .side{padding-left:max(10px,env(safe-area-inset-left,0px))}
   html.side-open .side-scrim{opacity:1;visibility:visible}
   .sb-collapse{display:none}
-  .sb-burger{display:grid;place-items:center;width:38px;height:38px;border:0;border-radius:12px;cursor:pointer;
+  .sb-burger{display:grid;place-items:center;width:48px;height:48px;border:0;border-radius:14px;cursor:pointer;
     background:var(--panel);color:var(--ink);flex:none;transition:transform 140ms var(--snap)}
   .sb-burger:active{transform:scale(.92)}
+  .sb-item{min-height:48px}
+  .sb-kid{min-height:44px}
+  .app-dock{position:fixed;left:0;right:0;bottom:0;z-index:40;display:flex;
+    padding:4px 6px calc(4px + env(safe-area-inset-bottom,0px));
+    background:var(--shell-solid);border-top:1px solid var(--line);
+    box-shadow:0 -8px 24px -18px rgba(2,3,5,.45)}
+  html.has-composer .app-dock{bottom:calc(70px + env(safe-area-inset-bottom,0px))}
+  body:has(.app-dock){padding-bottom:calc(78px + env(safe-area-inset-bottom,0px))}
+  html.has-composer body:has(.app-dock){padding-bottom:calc(148px + env(safe-area-inset-bottom,0px))}
 }
+.app-dock{display:none}
+@media(max-width:1020px){.app-dock{display:flex}}
+.dock-item{flex:1;min-width:0;min-height:var(--tap);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+  border:0;background:transparent;color:var(--muted);text-decoration:none;font:var(--type-kicker);letter-spacing:0;text-transform:none;
+  border-radius:14px;padding:4px 2px;cursor:pointer}
+.dock-item svg{width:22px;height:22px}
+.dock-item span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:var(--type-sub)}
+.dock-item.on{color:var(--acc-ink);background:var(--panel)}
+.dock-item.on svg{color:var(--acc-ink)}
+.dock-item[data-m="dashboard"]{--acc:#ff4e1b;--acc-ink:#c0360d}
+.dock-item[data-m="checkin"]{--acc:#2fbf5b;--acc-ink:#177a41}
+.dock-item[data-m="scan"]{--acc:#547898;--acc-ink:#43617c}
+.dock-item[data-m="warehouse"]{--acc:#f0c052;--acc-ink:#8a6a14}
+.dock-item[data-m="customers"]{--acc:#5A63E8;--acc-ink:#4a52c9}
+html.dark .dock-item[data-m="dashboard"]{--acc-ink:#ff8a5c}
+html.dark .dock-item[data-m="checkin"]{--acc-ink:#57d484}
+html.dark .dock-item[data-m="scan"]{--acc-ink:#8fb0cc}
+html.dark .dock-item[data-m="warehouse"]{--acc-ink:#f0c052}
+html.dark .dock-item[data-m="customers"]{--acc-ink:#97a0f5}
+.dock-more{color:var(--ink-2)}
+
+/* Shared pill controls — same kicker type as the sidebar eyebrows. */
+.pills{display:flex;flex-wrap:wrap;gap:8px}
+.pills button{min-height:var(--tap);padding:8px 14px;border-radius:999px;border:1px solid var(--line);
+  background:var(--panel-2);color:var(--muted);font:var(--type-kicker);letter-spacing:.04em;text-transform:uppercase;cursor:pointer}
+.pills button.active,.pills button.on{background:var(--lava-tint);border-color:transparent;color:var(--ink)}
+
+/* At-a-glance status grid. Uses the same card surface as the rest of the app. */
+.glance{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:var(--gap)}
+.glance .span2{grid-column:span 2}
+.glance .num{font-family:Sora;font-weight:600;font-size:clamp(28px,3vw,36px);letter-spacing:-.03em;line-height:1;color:var(--ink)}
+.glance .lbl,.glance .line{font:var(--type-sub);color:var(--muted)}
+.glance .line{margin:2px 0 0;font:var(--type-nav);color:var(--ink-2)}
+.glance .line b{font-family:Sora;font-weight:600;font-size:22px;color:var(--ink);margin-right:6px}
+.glance .zones{display:flex;flex-wrap:wrap;gap:6px}
+.glance .zone{display:inline-flex;align-items:baseline;gap:4px;padding:4px 10px;border-radius:999px;background:var(--panel-2);font:var(--type-sub);color:var(--ink-2)}
+html.dark .glance .zone{background:rgba(244,245,247,.06)}
+.glance .zone b{font-family:Sora;font-weight:600;font-size:14px;color:var(--ink)}
+.glance .moves{list-style:none;display:flex;flex-direction:column;gap:6px;margin:0}
+.glance .moves li{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;align-items:baseline;font:var(--type-sub);color:var(--muted)}
+.glance .moves b{font:var(--type-nav);font-weight:600;color:var(--ink)}
+.glance .moves .muted{grid-column:1/-1}
+@media(max-width:900px){
+  .glance{grid-template-columns:1fr 1fr}
+  .glance .span2{grid-column:1/-1}
+}
+
 @media(prefers-reduced-motion:reduce){
   .side,.sb-group-kids,.sb-kid,.sb-chev,.acct-pop{transition:none;animation:none}
 }
@@ -685,7 +758,8 @@ html.sticker-lock, html.sticker-lock body{ overflow:hidden }
 .sm-back:active,.sm-print:active{transform:scale(.95)}
 .sm-scroll{flex:1;min-height:0;overflow:auto;-webkit-overflow-scrolling:touch;display:flex;align-items:center;justify-content:center;padding:8px 16px calc(env(safe-area-inset-bottom,0px) + 28px)}
 .sm-label{width:264px;background:#fff;color:#000;border:3px solid #000;border-radius:18px;
-  padding:16px 16px 13px;text-align:center;box-shadow:0 30px 70px -22px rgba(0,0,0,.75);animation:rise .4s var(--smooth) both}
+  padding:16px 16px 13px;text-align:center;box-shadow:0 30px 70px -22px rgba(0,0,0,.75);animation:rise .4s var(--smooth) both;color-scheme:light}
+.report-doc,.code-label{color-scheme:light}
 .sm-shape-rounded{border-radius:18px}
 .sm-shape-soft{border-radius:30px}
 .sm-shape-sharp{border-radius:2px}
@@ -1026,26 +1100,22 @@ html.dark .sb-search{background:rgba(244,245,247,.05)}
 .sb-search:focus-within{border-color:var(--sel,#5C7C9D);box-shadow:0 0 0 3px var(--sel-tint)}
 .sb-search svg{flex:none;color:var(--muted);margin:0 1px}
 .sb-search input{flex:1;min-width:0;border:0;background:none;outline:none;
-  font:500 13.5px Inter;color:var(--ink);padding:9px 0}
+  font:var(--type-nav);color:var(--ink);padding:9px 0}
 .sb-search input::placeholder{color:var(--muted);opacity:.8}
 html[data-side="rail"] .sb-search{justify-content:center;padding:0;cursor:pointer}
 html[data-side="rail"] .sb-search input{display:none}
 
 /* Nero's name, carved into the floor of every page. Not a banner: the letters
    sit in the surface, highlight on the lower lip, shadow in the cut. */
-.nero-mark{position:fixed;z-index:45;left:0;right:0;bottom:0;margin:0;
-  padding:0 16px calc(8px + env(safe-area-inset-bottom,0px));
+.nero-mark{position:static;display:block;z-index:auto;margin:18px 0 0;
+  padding:12px 16px calc(8px + env(safe-area-inset-bottom,0px));
   text-align:center;pointer-events:none;user-select:none;
-  font:600 10px/1 Inter,system-ui,sans-serif;letter-spacing:.22em;text-transform:lowercase}
+  font:var(--type-kicker);letter-spacing:.22em;text-transform:lowercase}
 .nero-mark,.nero-mark a{color:rgba(32,28,24,.55);text-decoration:none;
   text-shadow:0 1px 0 rgba(255,255,255,.75),0 -1px 1px rgba(20,16,12,.45)}
 .nero-mark a{pointer-events:auto}
 html.dark .nero-mark,html.dark .nero-mark a{color:rgba(210,206,200,.28);
   text-shadow:0 -1px 0 rgba(0,0,0,.8),0 1px 0 rgba(255,255,255,.06)}
-body:has(.nero-mark){padding-bottom:calc(34px + env(safe-area-inset-bottom,0px))}
-@media(min-width:1021px){
-  html.has-side .nero-mark{left:calc(30px + var(--sbw))}
-}
 
 /* Collapsed Nero — the same violet glass as the board card, one row tall.
    She only appears where the card is not. */
