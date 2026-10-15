@@ -350,94 +350,14 @@ document.addEventListener('click', (e) => {
 });
 if (document.readyState !== 'loading') syncDisc(); else addEventListener('DOMContentLoaded', syncDisc);
 
-// ============================================================================
-// One ASC assistant surface for every signed-in app page. The same surface
-// handles the header, dashboard prompts and the check-in voice fallback.
-// It stays in document flow so it never covers the task the user is working on.
-// ============================================================================
+// The purple card on the dashboard is Nero. Load its brain here so that card
+// can ask. Task pages keep their own copy of the same form. No second launcher.
 (() => {
-  // Sticker printing and scanning still share ASCQR independently of chat.
-  const ensureQR = () => {
-    if ([...document.scripts].some(sc => sc.src && new URL(sc.src).pathname.endsWith('/qr.js'))) return;
+  ['agent-config.js', 'qr.js', 'agent-gemini.js'].forEach((src) => {
+    if ([...document.scripts].some(sc => sc.src && new URL(sc.src).pathname.endsWith('/' + src))) return;
     const script = document.createElement('script');
-    script.src = 'qr.js'; script.async = false; document.head.appendChild(script);
-  };
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', ensureQR, {once: true});
-  else ensureQR();
-  const shell = document.querySelector('.shell');
-  const header = shell?.querySelector('header.top');
-  if (!shell || !header || window.ASCChatReady) return;
-
-  let mount = document.getElementById('asc-agent');
-  if (!mount) {
-    mount = document.createElement('section');
-    mount.id = 'asc-agent';
-    mount.setAttribute('aria-label', 'ASC pomoćnik');
-    header.after(mount);
-  }
-  const launcher = document.createElement('button');
-  launcher.type = 'button';
-  launcher.className = 'asc-chat-launcher';
-  launcher.textContent = 'Pitaj ASC';
-  launcher.setAttribute('aria-controls', mount.id);
-  launcher.disabled = true;
-  // The legacy navigation pill is hidden when the sidebar is active.
-  // Keep the assistant reachable as a direct header control at every width.
-  header.appendChild(launcher);
-
-  const context = () => {
-    const params = new URLSearchParams(location.search);
-    return {
-      page: location.pathname.split('/').pop() || 'dashboard.html',
-      customerId: params.get('id') || null,
-      setCode: params.get('code') || null
-    };
-  };
-  let pendingTranscript = null;
-  let pageActive = true;
-  const consumeTranscript = (text) => {
-    if (typeof text !== 'string' || !text.trim()) return;
-    try { sessionStorage.removeItem('asc.sluh_transcript'); } catch (_) {}
-    if (window.ASCChat) window.ASCChat.open(text.trim(), true);
-    else pendingTranscript = text.trim(); // retain only the latest intent while loading
-  };
-  document.addEventListener('asc:sluh-fallback', event => {
-    if (pageActive) consumeTranscript(event.detail?.transcript);
+    script.src = src; script.async = false; document.head.appendChild(script);
   });
-  // live-checkin sets the key before dispatching its event. Consuming it here
-  // also handles a transcript produced before this module's listener existed.
-  if (location.pathname.endsWith('/checkin.html')) {
-    try { consumeTranscript(sessionStorage.getItem('asc.sluh_transcript')); } catch (_) {}
-  }
-
-  window.ASCChatReady = import('./assistant-surface.js')
-    .then(({mountAssistant}) => {
-      const chat = mountAssistant(mount, {context, isActive: () => pageActive});
-      window.ASCChat = chat;
-      launcher.disabled = false;
-      launcher.addEventListener('click', () => chat.open());
-      document.dispatchEvent(new CustomEvent('asc:chat-ready'));
-      if (pendingTranscript && pageActive) {
-        const text = pendingTranscript; pendingTranscript = null;
-        chat.open(text, true);
-      }
-      return chat;
-    })
-    .catch(() => {
-      pendingTranscript = null;
-      launcher.textContent = 'Pomoćnik nedostupan';
-      launcher.title = 'Pomoćnik se nije učitao. Ponovno učitaj stranicu.';
-      const status = document.createElement('p');
-      status.setAttribute('role', 'status');
-      status.textContent = 'Pomoćnik se nije učitao. Ponovno učitaj stranicu.';
-      mount.appendChild(status);
-      return null;
-    });
-  addEventListener('pagehide', () => {
-    pageActive = false; pendingTranscript = null;
-    window.ASCChat?.suspend();
-  });
-  addEventListener('pageshow', () => { pageActive = true; });
 })();
 
 // ============================================================================

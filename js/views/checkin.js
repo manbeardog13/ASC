@@ -1,14 +1,14 @@
 // ============================================================================
 // views/checkin.js — "Store a tire set." One primary action. Reduces typing
-// with a season segmented control, recent-location chips, common-size hints and
-// sidewall OCR. Warns (never blocks) on likely duplicates and location clashes.
+// with a season segmented control, recent-location chips and common-size hints.
+// Warns (never blocks) on likely duplicates and location clashes.
 // ============================================================================
 import * as db from "../db.js";
 import { getState } from "../store.js";
 import { SEASON_ORDER, SEASONS, seasonLabel, defaultIncomingSeason, locationLine } from "../domain.js";
 import { icon, esc, toast, busy, go } from "../ui.js";
 import { t } from "../i18n.js";
-import { tireRowsHtml, collectTires, fillNextTireRow } from "./shared.js";
+import { tireRowsHtml, collectTires } from "./shared.js";
 import { voiceSupported, voiceFillForm } from "../voice.js";
 
 let season = defaultIncomingSeason();
@@ -90,10 +90,7 @@ export async function render(main) {
           <legend>${t("ci.tires")}</legend>
           <div class="row-between" style="margin-bottom:10px">
             <span class="muted" style="font-size:13px">${t("ci.tiresHint")}</span>
-            <button type="button" id="ss_photoBtn" class="btn" style="min-height:38px">${icon("camera", 18)} ${t("ci.scanSidewall")}</button>
-            <input id="ss_photo" type="file" accept="image/*" capture="environment" hidden>
           </div>
-          <p id="ocrStatus" class="banner banner-info hidden"></p>
           <div id="tires">${tireRowsHtml(4)}</div>
         </fieldset>
       </div>
@@ -135,12 +132,6 @@ function wire(main) {
   }));
   ["s_zone", "s_rack", "s_shelf", "s_slot"].forEach((id) => $(id).addEventListener("change", () => checkLocation(main)));
 
-  $("ss_photoBtn").onclick = () => $("ss_photo").click();   // real button = keyboard-reachable
-  $("ss_photo").onchange = (e) => {
-    const file = e.target.files?.[0];
-    e.target.value = "";   // so re-picking the SAME photo still fires change (retry path)
-    runOcr(main, file);
-  };
   main.querySelector("#ci").onsubmit = (e) => { e.preventDefault(); submit(main); };
 
   // Guided voice fill (hr-HR/en-US): listens per field, fills, auto-advances.
@@ -194,25 +185,6 @@ async function checkLocation(main) {
 function readLocation(main) {
   const $ = (id) => main.querySelector("#" + id).value.trim();
   return { zone: $("s_zone"), rack: $("s_rack"), shelf: $("s_shelf"), slot: $("s_slot") };
-}
-
-async function runOcr(main, file) {
-  if (!file) return;
-  const status = main.querySelector("#ocrStatus");
-  status.classList.remove("hidden");
-  status.textContent = t("ci.reading");
-  try {
-    const { scanSidewall } = await import("../ocr.js");
-    const res = await scanSidewall(file, (m) => {
-      if (m.status === "recognizing text") status.textContent = t("ci.readingPct", { pct: Math.round((m.progress || 0) * 100) });
-    });
-    if (!res.size && !res.dot) { status.textContent = t("ci.ocrFail"); return; }
-    const rowN = fillNextTireRow(main.querySelector("#tires"), res.size, res.dot);
-    const parts = [res.size && t("part.size", { v: res.size }), res.dot && t("part.dot", { v: res.dot })].filter(Boolean).join(", ");
-    status.textContent = t("ci.ocrFilled", { n: rowN, parts });
-  } catch (err) {
-    status.textContent = err.message || t("ci.ocrFail");
-  }
 }
 
 async function submit(main) {

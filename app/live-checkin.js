@@ -20,6 +20,8 @@ import { t } from '../js/i18n.js';
 // localStorage 'asc.recentLocations'. Loading here (same module instance as
 // db.js uses) hydrates the in-memory list so saving doesn't clobber history.
 import { loadRecentLocations } from '../js/store.js';
+import { installPlanMark } from './plan-mark.js';
+import { mergeNotes, decodePlan, isoDate } from '../js/seasonPlan.js';
 
 const $ = (id) => document.getElementById(id);
 const q = (s, r = document) => r.querySelector(s);
@@ -196,6 +198,7 @@ function readForm() {
   if (year != null && (year < 1950 || year > 2100)) year = null;
   let fee = num('s_fee');
   if (fee != null && fee < 0) fee = null;
+  const plan = decodePlan(val('plan_marker'));
   return {
     customer: {
       id: val('c_id') || null,
@@ -213,10 +216,12 @@ function readForm() {
       quantity: Math.max(1, Math.min(8, Number(val('s_qty')) || 4)),
       zone: val('s_zone'), rack: val('s_rack'), shelf: val('s_shelf'), slot: val('s_slot'),
       check_in_date: new Date().toISOString().slice(0, 10),
-      expected_out_date: val('s_out'),
+      expected_out_date: plan?.at ? isoDate(plan.at) : val('s_out'),
       fee,
       paid: Boolean($('s_paid') && $('s_paid').checked),
-      notes: val('s_notes'),
+      notes: mergeNotes(val('s_notes'), val('plan_marker')),
+      keep_plan: plan?.kind || null,
+      swap_at: plan?.at ? plan.at.toISOString() : null,
       bolts_location: val('s_bolts') || null,
       hubcaps_location: val('s_hubcaps') || null,
       hubcaps_stored: val('s_hubcaps') === 'stored',
@@ -336,43 +341,6 @@ function installWhoSearch() {
   });
 }
 
-function installSidewall() {
-  const tires = $('tires');
-  if (!tires || $('sidewallBtn')) return;
-  const btn = document.createElement('button');
-  btn.type = 'button';
-  btn.id = 'sidewallBtn';
-  btn.className = 'btn ghost';
-  btn.textContent = t('flow.sidewall');
-  const file = document.createElement('input');
-  file.type = 'file';
-  file.accept = 'image/*';
-  file.capture = 'environment';
-  file.hidden = true;
-  btn.addEventListener('click', () => file.click());
-  file.addEventListener('change', async () => {
-    const picked = file.files && file.files[0];
-    file.value = '';
-    if (!picked) return;
-    btn.disabled = true;
-    showToast(t('flow.reading'));
-    try {
-      const [{ scanSidewall }, { fillNextTireRow }] = await Promise.all([
-        import('../js/ocr.js'),
-        import('../js/views/shared.js'),
-      ]);
-      const found = await scanSidewall(picked);
-      fillNextTireRow(tires, found?.size || '', found?.dot || '');
-      showToast(t('flow.sidewallOk'));
-    } catch (error) {
-      showToast(error?.message || t('flow.camera'));
-    } finally {
-      btn.disabled = false;
-    }
-  });
-  tires.before(btn, file);
-}
-
 function showPlaceStep(code, formData) {
   showWizard(3);
   qa('#ci > section').forEach((section) => { section.hidden = true; });
@@ -444,10 +412,10 @@ function installWizard() {
   }
   form.before(steps);
   installWhoSearch();
-  installSidewall();
   showWizard(1);
 }
 installWizard();
+installPlanMark();
 
 if (form) form.addEventListener('submit', async (e) => {
   e.preventDefault();

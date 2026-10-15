@@ -6,6 +6,4 @@
 html[data-preview-state="locked"] .side-scrim{display:none}
 #preview-root[hidden],#preview-gate[hidden]{display:none!important}
 @media(max-width:640px){.preview-return a{padding-inline:8px}}
-#warehouse-assistant{min-width:0;scroll-margin-block:20px}
-#warehouse-assistant:empty{display:none}
 #warehouse-help,#inspector{scroll-margin-block:20px}
