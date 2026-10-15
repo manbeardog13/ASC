@@ -24,7 +24,7 @@ test('Nero is the card on the board and a carved line on every page', () => {
   assert.match(dash, /id="agentTab">Nero</);
   assert.match(dash, /aria-label="Nero"/);
   assert.match(dash, /placeholder="Pitaj Nero…"/);
-  assert.match(dash, /powered by <a href="https:\/\/nerosummit.com">nerosummit.com<\/a>/);
+  assert.match(dash, /Powered by <a href="https:\/\/nerosummit.com">Nero Summit<\/a>/);
   assert.doesNotMatch(dash, /composer\.js/);
   const composer = readFileSync(new URL('../app/composer.js', import.meta.url), 'utf8');
   assert.match(composer, /getElementById\('agentCard'\)/);
@@ -38,7 +38,7 @@ test('Nero is the card on the board and a carved line on every page', () => {
   ];
   for (const file of pages) {
     const html = readFileSync(new URL('../' + file, import.meta.url), 'utf8');
-    assert.match(html, /powered by <a href="https:\/\/nerosummit.com">nerosummit.com<\/a>/, file);
+    assert.match(html, /Powered by <a href="https:\/\/nerosummit.com">Nero Summit<\/a>/, file);
   }
   const app = readFileSync(new URL('../app/app.js', import.meta.url), 'utf8');
   assert.match(app, /agentCard/);

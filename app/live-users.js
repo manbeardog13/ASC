@@ -151,7 +151,7 @@ function renderError() {
 
 function render(users, pending) {
   const meId = state.me && state.me.id;
-  const withOwner = users.map((u) => ({ ...u, is_owner: isOwnerRow(u) }));
+  const withOwner = (users || []).map((u) => ({ ...u, is_owner: isOwnerRow(u) }));
   const approvals = withOwner.filter((u) => u.role === 'readonly' && !u.is_owner);
   const members = withOwner.filter((u) => !(u.role === 'readonly' && !u.is_owner));
 

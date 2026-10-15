@@ -199,7 +199,7 @@ function animate(){
 (async () => {
   if (/\/login\.html$/.test(location.pathname)) return;
   const doc = document, root = doc.documentElement;
-  const {navigationIcons:I,renderAppNavigation,renderAppDock,applyNavAccess,syncThemeButton,installWarehouseMenuReturn}=await import('./navigation.js');
+  const {navigationIcons:I,renderAppNavigation,applyNavAccess,syncThemeButton,installWarehouseMenuReturn}=await import('./navigation.js');
   const here = location.pathname.split('/').pop() || 'dashboard.html';
   const whPages = ['recycle.html', 'locate.html', 'locations.html', 'place.html', 'checkout.html'];
   const whOpen = whPages.includes(here) ||
@@ -286,12 +286,6 @@ function animate(){
   scrim.addEventListener('click', () => setMenuOpen(false));
   doc.addEventListener('keydown', (e) => { if (e.key === 'Escape') setMenuOpen(false); });
   aside.addEventListener('click', (e) => { if (e.target.closest('a.sb-item')) setMenuOpen(false); });
-  const dock = doc.createElement('nav');
-  dock.className = 'app-dock';
-  dock.setAttribute('aria-label', 'Brza navigacija');
-  dock.innerHTML = renderAppDock();
-  doc.body.appendChild(dock);
-  dock.querySelector('[data-open-menu]')?.addEventListener('click', () => setMenuOpen(true));
   const themeBtn = aside.querySelector('#sbTheme');
   const syncTheme = () => syncThemeButton(themeBtn);
   syncTheme();

@@ -33,10 +33,10 @@
 /* Spatial layout only. Type, color, cards, pills and sidebar items come from app.css. */
 .spatial-app{min-width:320px;font-synthesis:none}
 .spatial-app [hidden]{display:none!important}
-/* Local controls only. Shared .sb-item, .pills, .button, .dock-item and .card
+/* Local controls only. Shared .sb-item and .card
    keep their type, color and surface from app.css. */
-.spatial-app :is(button,input,textarea):not(.sb-item):not(.button):not(.dock-item):not(.sb-burger):not(.sb-user):not(.sb-logout):not(.icon-button){font-family:Inter,system-ui,sans-serif}
-.spatial-app button:not(.sb-item):not(.button):not(.dock-item):not(.sb-burger):not(.sb-collapse):not(.sb-user):not(.sb-logout):not(.icon-button):not(.pills *){cursor:pointer;color:inherit;border:0;background:none;touch-action:manipulation}
+.spatial-app :is(button,input,textarea){font-family:Inter,system-ui,sans-serif}
+.spatial-app button{cursor:pointer;color:inherit;border:0;background:none;touch-action:manipulation}
 .spatial-app button:disabled{opacity:.45;cursor:not-allowed}
 .spatial-app :is(button,a,input,textarea,summary):focus-visible{outline:3px solid var(--sel-ink);outline-offset:3px}
 .spatial-app .skip-link{position:fixed;left:20px;top:-80px;background:var(--panel-2);color:var(--ink);padding:15px;z-index:200;border-radius:12px}
@@ -46,7 +46,7 @@
 .spatial-app .top-actions{margin-left:auto;display:flex;align-items:center;gap:6px}
 .spatial-app .icon-button{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;width:44px;height:44px;border-radius:12px;font-size:22px;color:var(--ink-2)}
 .spatial-app .icon-button:hover{background:var(--sel-tint)}
-.spatial-app .button{min-height:var(--tap);display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:999px;padding:0 16px;font:var(--type-nav);font-weight:600;line-height:1.2;text-align:center}
+.spatial-app .button{min-height:44px;display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:14px;padding:0 16px;font-size:13px;font-weight:600;line-height:1.35;text-align:center}
 .spatial-app .button svg{width:17px;height:17px;flex:none}
 .spatial-app .button.primary{background:var(--lava);color:#0a0c11;box-shadow:0 4px 12px -7px rgba(255,78,27,.5)}
 .spatial-app .button.primary:hover{background:var(--lava-2)}
@@ -89,16 +89,17 @@
 .spatial-app .result-location{font-size:11px;color:var(--sel-ink);text-align:right;flex-shrink:0}
 .spatial-app .no-results,.spatial-app .result-count{padding:12px;font-size:12px;color:var(--muted);line-height:1.6}
 .spatial-app .no-results button{color:var(--sel-ink);text-decoration:underline;padding:8px 0}
-.spatial-app .area-tabs{margin-bottom:12px}
-.spatial-app .area-tabs button{flex:1}
+.spatial-app .area-tabs{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:12px}
+.spatial-app .area-tabs button{flex:1;white-space:nowrap;min-height:44px;padding:10px 12px;border-radius:12px;background:var(--panel-2);border:1px solid var(--line);color:var(--muted);font-size:12px}
+.spatial-app .area-tabs button.active{background:var(--sel-tint);border-color:var(--sel-ring);color:var(--sel-ink);font-weight:600}
 .spatial-app .spatial-stage{padding:0;height:58vh;min-height:450px;max-height:780px;overflow:hidden;background:var(--panel);isolation:isolate}
 .spatial-app .stage-header{position:absolute;top:22px;left:22px;right:22px;display:flex;justify-content:space-between;gap:12px;z-index:4;pointer-events:none}
 .spatial-app .stage-header h2{font:var(--type-page);letter-spacing:-.02em;margin:5px 0}
 .spatial-app .area-code{font:var(--type-kicker);letter-spacing:.06em;text-transform:uppercase;color:var(--lava-ink)}
 .spatial-app #area-subtitle{font:var(--type-sub);color:var(--muted);line-height:1.35}
-.spatial-app .view-toggle{display:flex;align-self:flex-start;border:1px solid var(--line);border-radius:999px;background:var(--panel-2);padding:3px;pointer-events:auto}
-.spatial-app .view-toggle button{min-height:var(--tap);min-width:var(--tap);padding:0 12px;border-radius:999px;font:var(--type-kicker);letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
-.spatial-app .view-toggle button.active{background:var(--lava-tint);color:var(--ink)}
+.spatial-app .view-toggle{display:flex;align-self:flex-start;border:1px solid var(--line);border-radius:13px;background:var(--panel-2);padding:3px;pointer-events:auto}
+.spatial-app .view-toggle button{min-height:44px;min-width:44px;padding:0 12px;font-size:12px;border-radius:10px;color:var(--muted)}
+.spatial-app .view-toggle button.active{background:var(--sel-tint);color:var(--sel-ink);font-weight:600}
 .spatial-app #scene{position:absolute;inset:0;z-index:1}
 .spatial-app .scene-loading{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:var(--panel);z-index:3}
 .spatial-app .scene-loading b{font-size:13px}.spatial-app .scene-loading small{font-size:12px;color:var(--muted)}
@@ -176,7 +177,8 @@
 .spatial-app .side-scrim{background:rgba(6,7,10,.45)}
 .spatial-app .sb-burger{background:var(--panel)}
 
-.spatial-app .area-tabs button[data-area="all"]{position:sticky;left:0;z-index:1}
+.spatial-app .area-tabs button[data-area="all"]{position:sticky;left:0;z-index:1;background:var(--panel-2);box-shadow:4px 0 8px -6px var(--ink)}
+.spatial-app .area-tabs button[data-area="all"].active{background:var(--panel-2);color:var(--sel-ink);border-color:var(--sel-ring)}
 .spatial-app .tyre-details{padding:14px;margin:8px 0 14px;border:1px solid var(--line);border-radius:14px;background:var(--panel-2)}
 .spatial-app .tyre-details h4{margin:0;font-size:14px}
 
@@ -217,3 +219,48 @@
  .spatial-app .top-actions .button{padding-inline:11px}
  .spatial-app .inspector{padding:16px}
 }
+
+/* Fullscreen 3D. Firm full-viewport stage; slim translucent set panel on the left. */
+.spatial-app .fs-exit,.spatial-app .fs-rotate{display:none}
+.spatial-app .fs-panel[hidden]{display:none}
+html.stage-fs,html.stage-fs body{overflow:hidden}
+.spatial-app .spatial-stage.is-fs{position:fixed;inset:0;z-index:200;width:100vw;height:100dvh;max-height:none;min-height:0;margin:0;border-radius:0}
+.spatial-app .spatial-stage.is-fs:fullscreen{width:100%;height:100%}
+.spatial-app .is-fs .fs-enter,.spatial-app .is-fs .scene-notes{display:none}
+.spatial-app .is-fs .fs-exit{display:grid;place-items:center;position:absolute;z-index:6;top:calc(64px + env(safe-area-inset-top,0px));left:calc(12px + env(safe-area-inset-left,0px));
+  width:44px;height:44px;border-radius:14px;border:1px solid var(--line)!important;background:var(--panel)!important;color:var(--ink);font:500 24px/1 Inter,system-ui,sans-serif;cursor:pointer;box-shadow:var(--shadow-card)}
+.spatial-app .is-fs .fs-menu{display:grid;place-items:center;position:absolute;z-index:6;top:calc(12px + env(safe-area-inset-top,0px));left:calc(12px + env(safe-area-inset-left,0px));
+  width:44px;height:44px;border-radius:14px;border:1px solid var(--line)!important;background:var(--panel)!important;color:var(--ink);cursor:pointer;box-shadow:var(--shadow-card)}
+.spatial-app .fs-menu{display:none}
+.spatial-app .is-fs .stage-header{left:68px}
+html.stage-fs.side-open .spatial-app .spatial-stage.is-fs{z-index:40}
+.spatial-app .fs-panel{position:absolute;z-index:5;left:calc(12px + env(safe-area-inset-left,0px));top:calc(118px + env(safe-area-inset-top,0px));bottom:12px;
+  width:min(280px,34vw);overflow:auto;padding:10px 12px 12px;border-radius:16px;
+  background:color-mix(in srgb,var(--panel) 72%,transparent);border:1px solid var(--line);
+  -webkit-backdrop-filter:blur(14px) saturate(150%);backdrop-filter:blur(14px) saturate(150%);
+  font:var(--type-nav);color:var(--ink);box-shadow:var(--shadow-card)}
+.spatial-app .fs-panel.collapsed{width:auto;bottom:auto}
+.spatial-app .fs-panel.collapsed .fs-body{display:none}
+.spatial-app .fs-head{display:flex;align-items:center;gap:6px;margin-bottom:6px}
+.spatial-app .fs-head b{flex:1;font:var(--type-card)}
+.spatial-app .fs-head button{width:32px;height:32px;border-radius:10px;border:1px solid var(--line)!important;background:var(--panel-2)!important;color:var(--ink);cursor:pointer}
+.spatial-app .fs-panel h3{font:var(--type-card);margin:2px 0}
+.spatial-app .fs-panel .eyebrow{font:var(--type-kicker);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:10px 0 4px}
+.spatial-app .fs-panel .sub,.spatial-app .fs-where,.spatial-app .fs-empty{font:var(--type-sub);color:var(--muted);margin:0}
+.spatial-app .fs-others{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px}
+.spatial-app .fs-others button{width:100%;display:flex;justify-content:space-between;gap:8px;padding:8px 10px;border-radius:10px;border:1px solid var(--line)!important;background:var(--panel-2)!important;color:var(--ink);text-align:left;cursor:pointer}
+.spatial-app .fs-others span{font:var(--type-sub);color:var(--muted)}
+.spatial-app .fs-more{margin-top:10px;border-top:1px solid var(--line);padding-top:8px}
+.spatial-app .fs-more summary{cursor:pointer;font-weight:600}
+.spatial-app .fs-more dl{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;margin:8px 0 0;font:var(--type-sub)}
+.spatial-app .fs-more dt{color:var(--muted)}.spatial-app .fs-more dd{margin:0;overflow-wrap:anywhere}
+html.stage-fs .spatial-app .inspector{display:none}
+@media(orientation:portrait) and (max-width:820px){
+  html.fs-need-rotate .spatial-app .is-fs .fs-rotate{display:flex;position:absolute;inset:0;z-index:7;flex-direction:column;align-items:center;justify-content:center;gap:6px;
+    background:color-mix(in srgb,var(--panel) 88%,transparent);color:var(--ink);font:var(--type-card);text-align:center;pointer-events:none}
+  html.fs-need-rotate .spatial-app .is-fs .fs-rotate span{font:var(--type-sub);color:var(--muted)}
+}
+
+.spatial-app .fs-enter{white-space:nowrap;min-height:40px;padding:0 14px;align-self:flex-start;pointer-events:auto}
+@media(max-width:640px){.spatial-app .fs-enter{position:absolute;right:0;top:56px}}
+.spatial-app .spatial-stage,.spatial-app .card{touch-action:pan-x pan-y}

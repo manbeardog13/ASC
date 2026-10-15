@@ -1,16 +1,69 @@
 /* Nero composer — dark violet glass, ASC colors (#8b5cf6 / #e040d0).
    Compact while browsing. Expanded only while typing. */
-.nero-composer{position:fixed;z-index:72;left:50%;
-  bottom:calc(var(--nero-foot, 46px) + 8px + env(safe-area-inset-bottom, 0px));
-  transform:translateX(-50%);width:min(640px, calc(100vw - 24px));
-  display:flex;flex-direction:column;gap:8px;pointer-events:none;
+.nero-composer{position:fixed;z-index:90;left:50%;
+  bottom:calc(8px + var(--kb, 0px) + env(safe-area-inset-bottom, 0px));
+  top:auto;max-height:calc(100dvh - 24px - var(--kb, 0px));
+  width:min(680px, calc(100vw - 16px));
+  display:flex;flex-direction:column;gap:8px;
+  transform:translate(-50%,0);
+  transition:transform 520ms cubic-bezier(.34,1.56,.64,1);
   font-family:Inter,system-ui,sans-serif;color:#f3efff}
-.nero-composer .nero-log,.nero-composer .nero-queue,.nero-composer .nero-sheet,
-.nero-composer .nero-pills,.nero-composer .nero-history{pointer-events:auto}
 @media(min-width:1021px){
-  html.has-side .nero-composer{left:calc((100% + var(--sbw) + 22px) / 2)}
+  html.has-side .nero-composer{left:calc((100% + var(--sbw, 260px) + 22px) / 2)}
 }
-body:has(.nero-plan:not([hidden])) .nero-composer{visibility:hidden}
+.nero-composer.is-open{transform:translate(-50%,-6px)}
+.nero-composer.is-scrolling{transform:translate(-50%,2px) scale(.985)}
+body:has(.nero-plan:not([hidden])) .nero-composer{display:none}
+/* the page reserves the composer's height so nothing hides beneath it */
+html.has-composer body{padding-bottom:calc(var(--nero-stack, 84px) + env(safe-area-inset-bottom, 0px))}
+
+/* Liquid-coloured glass: a tinted, saturated sheet — not see-through. */
+.nero-composer .nero-sheet{
+  background:
+    radial-gradient(120% 140% at 0% 0%, color-mix(in srgb, var(--merge-tint, #8b5cf6) 38%, transparent), transparent 60%),
+    radial-gradient(120% 140% at 100% 100%, rgba(224,64,208,.30), transparent 60%),
+    linear-gradient(160deg, rgba(34,24,64,.94), rgba(16,12,30,.96)) !important;
+  border:1px solid color-mix(in srgb, var(--merge-tint, #8b5cf6) 45%, rgba(255,255,255,.18)) !important;
+  transition:border-color 300ms ease, box-shadow 300ms ease, border-radius 200ms ease}
+.nero-composer.is-merged .nero-sheet{
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.22),
+    0 0 0 1px color-mix(in srgb, var(--merge-tint) 55%, transparent),
+    0 -10px 30px -12px color-mix(in srgb, var(--merge-tint) 60%, transparent) !important}
+
+/* Card side of the merge: melting edge along the whole border + quiet ring. */
+.card.nero-merged{box-shadow:var(--shadow-card), 0 0 0 1.5px color-mix(in srgb, var(--merge-tint) 55%, transparent)}
+.card.nero-merged::after,.card.nero-recoil::after{content:"";position:absolute;inset:-1px;border-radius:inherit;pointer-events:none;
+  background:linear-gradient(0deg, color-mix(in srgb, var(--merge-tint) 30%, transparent), transparent 40%);
+  -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor;mask-composite:exclude;padding:3px;
+  filter:blur(1.5px);opacity:1;transition:opacity 300ms ease}
+.card.nero-recoil::after{animation:neroRecoil 450ms cubic-bezier(.22,1.4,.36,1) both}
+@keyframes neroRecoil{
+  0%{opacity:1;transform:translateY(0) scaleY(1)}
+  40%{opacity:.8;transform:translateY(-3px) scaleY(1.012)}
+  70%{opacity:.35;transform:translateY(1px) scaleY(.997)}
+  100%{opacity:0;transform:none}}
+
+/* Workflow suggestion bubbles, tinted from the active card. */
+.nero-suggest{display:flex;gap:4px;padding:0 18px;margin-bottom:-9px;position:relative;z-index:0;pointer-events:none}
+.nero-composer .nero-sheet{position:relative;z-index:1}
+.nero-suggest.on{pointer-events:auto}
+/* Bubbles sprout up out of the composer: no bottom edge, slightly arched tops. */
+.nero-bubble{position:relative;overflow:hidden;border:1px solid color-mix(in srgb, var(--merge-tint, #8b5cf6) 45%, rgba(255,255,255,.18));border-bottom:0;
+  border-radius:16px 16px 0 0 / 9px 9px 0 0;
+  background:linear-gradient(180deg, color-mix(in srgb, var(--merge-tint, #8b5cf6) 34%, rgba(34,24,64,.95)), rgba(34,24,64,.94));
+  color:#fff;min-height:40px;padding:0 14px 9px;cursor:pointer;font:600 13px Inter,system-ui,sans-serif;
+  transform-origin:50% 100%;opacity:0;transform:translateY(10px) scaleY(.6);
+  transition:opacity 1.2s ease, transform 1.2s ease}
+.nero-suggest.on .nero-bubble{opacity:1;transform:none;
+  transition:opacity 260ms ease calc(var(--i,0) * 70ms), transform 420ms cubic-bezier(.34,1.56,.64,1) calc(var(--i,0) * 70ms)}
+.nero-suggest .nero-bubble{overflow:visible}
+.nero-bubble::before{content:"";position:absolute;left:12%;right:12%;bottom:-6px;height:14px;z-index:-1;pointer-events:none;border-radius:50%;
+  background:color-mix(in srgb, var(--merge-tint, #8b5cf6) 70%, transparent);filter:blur(10px);opacity:.28}
+.nero-bubble::after{content:"";position:absolute;inset:0;border-radius:inherit;overflow:hidden;pointer-events:none;opacity:0;
+  background:linear-gradient(100deg, transparent 30%, rgba(255,255,255,.16) 50%, transparent 70%);background-size:220% 100%}
+.nero-suggest.nero-ripple .nero-bubble::after{animation:neroShim 250ms ease-out calc(var(--i,0) * 70ms) both}
+@keyframes neroShim{0%{opacity:.9;background-position:120% 0;transform:scaleY(1)}50%{transform:scaleY(1.03)}100%{opacity:0;background-position:-20% 0;transform:none}}
 
 .nero-log{display:flex;flex-direction:column;gap:8px;max-height:min(46vh, 420px);
   overflow:auto;padding:2px;scroll-behavior:smooth}
@@ -23,16 +76,16 @@ body:has(.nero-plan:not([hidden])) .nero-composer{visibility:hidden}
 .nero-log[hidden],.nero-queue[hidden],.nero-history[hidden],.nero-files[hidden],.nero-rec[hidden]{display:none}
 
 .nero-sheet{display:flex;flex-direction:column;gap:8px;
-  border-radius:28px;padding:14px 12px 10px;min-height:112px;
-  background:rgba(14,11,28,.38);
+  border-radius:var(--radius,22px);padding:14px 12px 10px;min-height:112px;
+  background:rgba(20,15,38,.94);
   border:1px solid rgba(255,255,255,.16);
   -webkit-backdrop-filter:blur(22px) saturate(180%);
   backdrop-filter:blur(22px) saturate(180%);
   box-shadow:inset 0 1px 0 rgba(255,255,255,.22), 0 18px 40px -24px rgba(76,42,168,.65);
   transition:border-radius 200ms ease, background 200ms ease, padding 200ms ease, min-height 200ms ease, box-shadow 200ms ease}
 .nero-composer.is-compact .nero-sheet{flex-direction:row;align-items:center;gap:8px;
-  border-radius:999px;min-height:46px;padding:4px 6px 4px 16px;
-  background:rgba(14,11,28,.22)}
+  border-radius:16px;min-height:52px;padding:6px 8px 6px 16px;
+  background:rgba(20,15,38,.92)}
 .nero-composer.is-recording .nero-sheet{box-shadow:inset 0 1px 0 rgba(255,255,255,.22), 0 0 0 2px rgba(224,64,208,.72)}
 
 .nero-files{display:flex;flex-wrap:wrap;gap:6px}
@@ -59,7 +112,7 @@ body:has(.nero-plan:not([hidden])) .nero-composer{visibility:hidden}
   box-shadow:0 0 0 4px rgba(224,64,208,.28)}
 .nero-mic{width:34px;height:34px;border-radius:50%;background:rgba(244,245,247,.08);touch-action:none}
 .nero-mic[aria-pressed="true"]{background:rgba(224,64,208,.55);box-shadow:0 0 0 3px rgba(224,64,208,.35)}
-.nero-send{width:36px;height:36px;border-radius:50%;color:#fff;
+.nero-send{width:38px;height:38px;border-radius:11px;color:#fff;
   background:linear-gradient(135deg,#8b5cf6,#e040d0);
   box-shadow:0 6px 16px -6px rgba(139,92,246,.7)}
 .nero-send .nero-stop{display:none}
@@ -67,8 +120,8 @@ body:has(.nero-plan:not([hidden])) .nero-composer{visibility:hidden}
 .nero-composer.is-busy .nero-send .nero-stop{display:block}
 
 .nero-pills{display:flex;flex-wrap:wrap;gap:8px}
-.nero-pill{border:1px solid rgba(255,255,255,.16);background:rgba(14,11,28,.28);
-  color:#f3efff;border-radius:999px;min-height:34px;padding:0 14px;cursor:pointer;
+.nero-pill{border:1px solid rgba(150,110,255,.28);background:rgba(20,15,38,.86);
+  color:#f3efff;border-radius:12px;min-height:36px;padding:0 14px;cursor:pointer;
   font:500 12.5px Inter;
   -webkit-backdrop-filter:blur(16px) saturate(160%);backdrop-filter:blur(16px) saturate(160%)}
 .nero-pill[aria-pressed="true"]{background:rgba(139,92,246,.4);border-color:rgba(224,64,208,.55)}
@@ -123,6 +176,82 @@ body:has(.nero-plan:not([hidden])) .nero-composer{visibility:hidden}
   .nero-sheet,.nero-card,.nero-pill,.nero-q,.nero-history{background:rgba(14,11,28,.92)}
 }
 @media(prefers-reduced-motion:reduce){
+  .nero-composer,.nero-bubble,.nero-suggest.on .nero-bubble{transition:opacity 150ms linear!important;transform:translate(-50%,0)}
+  .nero-bubble{transform:none!important}
+  .nero-suggest.nero-ripple .nero-bubble::after{animation:none}
+  .card.nero-recoil::after{animation:none}
   .nero-sheet,.nero-card,.nero-log{transition:none;animation:none}
   .nero-card.is-stream .nero-body,.nero-caret{animation:none}
 }
+
+/* Night-lamp caret (see composer.js). Text is plain white; the lamp adds light. */
+.nero-field{position:relative;flex:1;min-width:0;display:block}
+.nero-field .nero-input{position:relative;z-index:0;color:#fff;caret-color:#fff}
+.nero-mirror{position:absolute;inset:0;visibility:hidden;pointer-events:none;overflow:hidden;
+  white-space:pre-wrap;overflow-wrap:break-word;word-break:break-word;font:500 15px/1.4 Inter;padding:4px 6px}
+.nero-composer.is-compact .nero-mirror{padding:0;white-space:pre}
+/* Lamp: 2.5 glyphs wide, ending at the caret. Horizontal falloff is a
+   smoothstep-shaped ramp to exactly zero across the 3rd letter; the vertical
+   mask is dark at the caret top and light toward the baseline. */
+.nero-lamp{position:absolute;z-index:1;pointer-events:none;opacity:0;
+  left:calc(var(--cx,0px) - 2.5ch + 1px);top:var(--cy,0px);width:2.5ch;height:var(--ch,20px);
+  font:500 15px/1.4 Inter;mix-blend-mode:screen;
+  background:linear-gradient(to left,
+    rgba(255,255,255,.34) 0%, rgba(255,255,255,.28) 20%, rgba(255,255,255,.19) 40%,
+    rgba(255,255,255,.11) 60%, rgba(255,255,255,.05) 80%, rgba(255,255,255,.028) 86%,
+    rgba(255,255,255,.01) 93%, rgba(255,255,255,.002) 97%, rgba(255,255,255,0) 100%);
+  -webkit-mask:linear-gradient(to bottom, transparent 0%, rgba(0,0,0,.35) 35%, #000 80%, rgba(0,0,0,.6) 100%);
+          mask:linear-gradient(to bottom, transparent 0%, rgba(0,0,0,.35) 35%, #000 80%, rgba(0,0,0,.6) 100%);
+  filter:blur(1.2px)}
+.nero-field.lamp-on .nero-lamp{opacity:1}
+
+/* ---- Behaviour pass (transforms/opacity only) ---- */
+.nero-composer{transform-origin:50% 100%}
+.nero-composer.is-compact.is-scrolling{transform:translate(-50%,3px) scale(.97)}
+.nero-composer.is-open .nero-sheet{animation:neroSprout 560ms cubic-bezier(.34,1.56,.64,1) both;transform-origin:50% 100%}
+@keyframes neroSprout{from{transform:scaleY(.72) translateY(10px);opacity:.6}to{transform:none;opacity:1}}
+.nero-composer.is-open .nero-field,.nero-composer.is-open .nero-plus,.nero-composer.is-open .nero-mic,.nero-composer.is-open .nero-send{animation:neroItem 420ms cubic-bezier(.34,1.56,.64,1) both}
+.nero-composer.is-open .nero-field{animation-delay:60ms}
+.nero-composer.is-open .nero-plus{animation-delay:120ms}
+.nero-composer.is-open .nero-mic{animation-delay:180ms}
+.nero-composer.is-open .nero-send{animation-delay:240ms}
+@keyframes neroItem{from{opacity:0;transform:translateY(8px) scale(.9)}to{opacity:1;transform:none}}
+/* Glass with a purple tint throughout. */
+.nero-composer .nero-log{border-radius:22px 22px 0 0;background:linear-gradient(180deg, rgba(40,26,78,.9), rgba(24,16,46,.94));
+  border:1px solid rgba(150,110,255,.3);border-bottom:0;padding:22px 10px 10px;margin-bottom:-8px;will-change:transform;transition:transform 260ms cubic-bezier(.34,1.56,.64,1)}
+.nero-grab{display:none;align-self:center;width:44px;height:18px;margin-bottom:-26px;position:relative;z-index:2;cursor:grab;touch-action:none}
+.nero-grab::before{content:"";position:absolute;left:6px;right:6px;top:7px;height:4px;border-radius:2px;background:rgba(243,239,255,.5)}
+.nero-composer.has-convo:not(.is-compact) .nero-grab{display:block}
+/* Bubbles: anchored right, stacking leftwards. */
+.nero-suggest{flex-direction:row-reverse;justify-content:flex-start}
+.nero-bubble{touch-action:pan-y}
+.nero-bubble.is-linked{background:linear-gradient(90deg, color-mix(in srgb, var(--merge-tint) 34%, rgba(34,24,64,.95)) 0 55%, color-mix(in srgb, var(--join-tint) 34%, rgba(34,24,64,.95)));
+  animation:neroNudge 1.8s cubic-bezier(.36,0,.2,1) 600ms 2}
+.nero-bubble.is-drag{animation:none;transition:none!important;z-index:3}
+@keyframes neroNudge{0%,70%,100%{transform:none}78%{transform:translate3d(4px,0,0)}86%{transform:translate3d(-1px,0,0)}}
+/* Heartbeat underglow (opacity only). */
+.nero-suggest.on .nero-bubble::before{animation:neroBeat 2.6s cubic-bezier(.4,0,.2,1) infinite}
+@keyframes neroBeat{0%{opacity:.18}12%{opacity:.34}22%{opacity:.22}32%{opacity:.3}60%,100%{opacity:.18}}
+/* The card just left keeps a faint glow recommending its next step. */
+.card.nero-next::before{content:"";position:absolute;left:10%;right:10%;bottom:-10px;height:20px;border-radius:50%;pointer-events:none;z-index:-1;
+  background:color-mix(in srgb, var(--merge-tint, #8b5cf6) 70%, transparent);filter:blur(14px);animation:neroBeat 2.6s cubic-bezier(.4,0,.2,1) infinite}
+/* Combined workflow pop-up. */
+.nero-flow{position:fixed;inset:0;z-index:95;display:grid;place-items:center;background:rgba(10,8,20,.35);animation:neroItem 300ms ease both}
+.nero-flow-card{position:relative;width:min(380px,calc(100vw - 32px));padding:18px;border-radius:22px;color:#f3efff;
+  background:linear-gradient(160deg, rgba(40,26,78,.96), rgba(20,14,40,.97));border:1px solid rgba(150,110,255,.35)}
+.nero-flow-card ol{margin:12px 0 0;padding-left:20px;display:flex;flex-direction:column;gap:8px}
+.nero-flow-card ol button{width:100%;text-align:left;min-height:40px;padding:0 12px;border-radius:12px;border:1px solid rgba(150,110,255,.35);background:rgba(255,255,255,.06);color:#fff;font:600 13px Inter;cursor:pointer}
+.nero-flow-close{position:absolute;top:10px;right:10px;width:32px;height:32px;border:0;border-radius:10px;background:rgba(255,255,255,.08);color:#fff;cursor:pointer}
+@media(prefers-reduced-motion:reduce){
+  .nero-composer.is-open .nero-sheet,.nero-composer.is-open .nero-field,.nero-composer.is-open .nero-plus,.nero-composer.is-open .nero-mic,.nero-composer.is-open .nero-send,
+  .nero-bubble.is-linked,.nero-suggest.on .nero-bubble::before,.card.nero-next::before,.nero-flow{animation:none}
+  .nero-composer .nero-log{transition:none}
+}
+
+/* Bottom-docked: grows upward with the text, never mid-screen. */
+.nero-composer{justify-content:flex-end}
+.nero-composer .nero-log{max-height:min(46dvh,420px)}
+.nero-composer .nero-pills{display:flex;flex-wrap:nowrap;gap:4px;margin-right:auto}
+.nero-composer .nero-pill{min-height:32px;padding:0 10px;font-size:12px;background:transparent;border-color:rgba(150,110,255,.28)}
+.nero-composer.is-compact .nero-pills{display:none}
+.nero-composer .nero-plus{margin-right:0}

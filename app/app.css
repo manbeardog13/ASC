@@ -416,41 +416,7 @@ html[data-side="rail"] .sb-user{justify-content:center;padding:8px 0}
   .sb-burger:active{transform:scale(.92)}
   .sb-item{min-height:48px}
   .sb-kid{min-height:44px}
-  .app-dock{position:fixed;left:0;right:0;bottom:0;z-index:40;display:flex;
-    padding:4px 6px calc(4px + env(safe-area-inset-bottom,0px));
-    background:var(--shell-solid);border-top:1px solid var(--line);
-    box-shadow:0 -8px 24px -18px rgba(2,3,5,.45)}
-  html.has-composer .app-dock{bottom:calc(70px + env(safe-area-inset-bottom,0px))}
-  body:has(.app-dock){padding-bottom:calc(78px + env(safe-area-inset-bottom,0px))}
-  html.has-composer body:has(.app-dock){padding-bottom:calc(148px + env(safe-area-inset-bottom,0px))}
 }
-.app-dock{display:none}
-@media(max-width:1020px){.app-dock{display:flex}}
-.dock-item{flex:1;min-width:0;min-height:var(--tap);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
-  border:0;background:transparent;color:var(--muted);text-decoration:none;font:var(--type-kicker);letter-spacing:0;text-transform:none;
-  border-radius:14px;padding:4px 2px;cursor:pointer}
-.dock-item svg{width:22px;height:22px}
-.dock-item span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:var(--type-sub)}
-.dock-item.on{color:var(--acc-ink);background:var(--panel)}
-.dock-item.on svg{color:var(--acc-ink)}
-.dock-item[data-m="dashboard"]{--acc:#ff4e1b;--acc-ink:#c0360d}
-.dock-item[data-m="checkin"]{--acc:#2fbf5b;--acc-ink:#177a41}
-.dock-item[data-m="scan"]{--acc:#547898;--acc-ink:#43617c}
-.dock-item[data-m="warehouse"]{--acc:#f0c052;--acc-ink:#8a6a14}
-.dock-item[data-m="customers"]{--acc:#5A63E8;--acc-ink:#4a52c9}
-html.dark .dock-item[data-m="dashboard"]{--acc-ink:#ff8a5c}
-html.dark .dock-item[data-m="checkin"]{--acc-ink:#57d484}
-html.dark .dock-item[data-m="scan"]{--acc-ink:#8fb0cc}
-html.dark .dock-item[data-m="warehouse"]{--acc-ink:#f0c052}
-html.dark .dock-item[data-m="customers"]{--acc-ink:#97a0f5}
-.dock-more{color:var(--ink-2)}
-
-/* Shared pill controls — same kicker type as the sidebar eyebrows. */
-.pills{display:flex;flex-wrap:wrap;gap:8px}
-.pills button{min-height:var(--tap);padding:8px 14px;border-radius:999px;border:1px solid var(--line);
-  background:var(--panel-2);color:var(--muted);font:var(--type-kicker);letter-spacing:.04em;text-transform:uppercase;cursor:pointer}
-.pills button.active,.pills button.on{background:var(--lava-tint);border-color:transparent;color:var(--ink)}
-
 /* At-a-glance status grid. Uses the same card surface as the rest of the app. */
 .glance{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:var(--gap)}
 .glance .span2{grid-column:span 2}
@@ -1110,7 +1076,8 @@ html[data-side="rail"] .sb-search input{display:none}
 .nero-mark{position:static;display:block;z-index:auto;margin:18px 0 0;
   padding:12px 16px calc(8px + env(safe-area-inset-bottom,0px));
   text-align:center;pointer-events:none;user-select:none;
-  font:var(--type-kicker);letter-spacing:.22em;text-transform:lowercase}
+  font:600 11px/1.4 Inter,system-ui,sans-serif;letter-spacing:.18em;text-transform:uppercase}
+.nero-mark a{font-weight:600}
 .nero-mark,.nero-mark a{color:rgba(32,28,24,.55);text-decoration:none;
   text-shadow:0 1px 0 rgba(255,255,255,.75),0 -1px 1px rgba(20,16,12,.45)}
 .nero-mark a{pointer-events:auto}
@@ -1119,4 +1086,47 @@ html.dark .nero-mark,html.dark .nero-mark a{color:rgba(210,206,200,.28);
 
 /* Composer glass, states, and chat cards live in composer.css.
    Clearance follows the live stack height that script measures. */
-html.has-composer body{padding-bottom:calc(var(--nero-stack, 120px) + env(safe-area-inset-bottom, 0px))}
+/* Firm app: no visible scrollbars, no sideways wobble, header stays put. */
+html,body{overflow-x:clip;overscroll-behavior:none;scrollbar-width:none;-ms-overflow-style:none}
+html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{width:0;height:0;display:none}
+*{scrollbar-width:none}
+.shell>.top{position:sticky;top:0;z-index:35;background:var(--shell-solid);margin-left:calc(-1 * var(--gap));margin-right:calc(-1 * var(--gap));padding:0 calc(4px + var(--gap));height:56px;border-radius:24px 24px 0 0}
+@media(min-width:1021px){.shell>.top{margin-left:-18px;margin-right:-18px;padding:0 22px}}
+/* Edge-to-edge without touching: tight gutters, bigger content. */
+@media(max-width:1020px){
+  body{padding-left:6px!important;padding-right:6px!important}
+  .shell{padding:8px;border-radius:24px}
+  .shell>.top{margin-left:-8px;margin-right:-8px;padding:0 12px}
+  :root{--gap:10px;--pad:16px}
+  html{font-size:17px}
+  .card h3{font-size:17px}
+}
+
+/* One weight for labels and menu items (app buttons keep their original style). */
+label,.sb-item .t,.sb-eyebrow2,.sb-eyebrow{font-weight:600}
+/* Interactive cards stay firm: no pinch zoom inside them (page zoom elsewhere is untouched). */
+.card,.shell>.top{touch-action:pan-x pan-y}
+
+/* Decluttered cards: secondary actions/hints moved into Nero's suggestion bubbles. */
+html.has-composer [data-nero-move]{display:none!important}
+/* Menu: tighter, one weight, one icon size. */
+.sb-nav{gap:1px}
+.sb-item{min-height:38px;font-weight:600}
+.sb-item svg{width:19px;height:19px;stroke-width:1.8}
+.sb-kid{min-height:34px}
+.sb-div{margin:8px 10px}
+.sb-eyebrow2{padding:10px 12px 4px}
+@media(max-width:1020px){.sb-item{min-height:44px}.sb-kid{min-height:40px}}
+
+/* Inputs: one ASC field style everywhere (from .md-field), never white, autofill included. */
+:where(input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]):not([type=color]),select,textarea):not(.nero-input){
+  background-color:var(--panel)!important;color:var(--ink)!important;border:1px solid var(--line)!important;border-radius:12px;font-family:Inter,system-ui,sans-serif}
+html.dark :where(input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]),select,textarea):not(.nero-input){background-color:var(--panel-2)!important}
+input:-webkit-autofill,input:-webkit-autofill:hover,input:-webkit-autofill:focus,textarea:-webkit-autofill,select:-webkit-autofill{
+  -webkit-text-fill-color:var(--ink)!important;-webkit-box-shadow:0 0 0 1000px var(--panel) inset!important;box-shadow:0 0 0 1000px var(--panel) inset!important;transition:background-color 9999s}
+html.dark input:-webkit-autofill{-webkit-box-shadow:0 0 0 1000px var(--panel-2) inset!important;box-shadow:0 0 0 1000px var(--panel-2) inset!important}
+.sb-search input,.spatial-app .search-wrap input{background-color:transparent!important;border:0!important}
+
+/* Less noise: no grain texture, no ambient blobs, no preview ribbons. */
+.grain,.canvas{display:none!important}
+.sb-burger,.top .mode{font-family:Inter,system-ui,sans-serif}
