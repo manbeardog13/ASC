@@ -415,8 +415,8 @@ create trigger trg_offers_after
   after insert on public.offers
   for each row execute function public.offer_after_insert();
 
-revoke all on function public.offer_before_write() from public, anon;
-revoke all on function public.offer_after_insert() from public, anon;
+revoke all on function public.offer_before_write() from public, anon, authenticated;
+revoke all on function public.offer_after_insert() from public, anon, authenticated;
 
 -- ----------------------------------------------------------------------------
 -- Status RPC. DEFINER so the draft-only UPDATE policy cannot block a legal

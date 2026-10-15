@@ -2,9 +2,9 @@
 \set ON_ERROR_STOP on
 
 insert into public.profiles (id, email, full_name, role) values
-  ('00000000-0000-0000-0000-0000000000aa', 'admin@example.com', 'Admin', 'admin'),
-  ('00000000-0000-0000-0000-0000000000bb', 'grant@example.com', 'Grant', 'employee'),
-  ('00000000-0000-0000-0000-0000000000cc', 'plain@example.com', 'Plain', 'employee')
+  ('00000000-0000-0000-0000-0000000000d1', 'admin@example.com', 'Admin', 'admin'),
+  ('00000000-0000-0000-0000-0000000000d2', 'grant@example.com', 'Grant', 'employee'),
+  ('00000000-0000-0000-0000-0000000000d3', 'plain@example.com', 'Plain', 'employee')
 on conflict (id) do nothing;
 
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000001', false);
@@ -86,7 +86,7 @@ begin
 end $$;
 
 reset role;
-select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000aa', false);
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000d1', false);
 select set_config('request.jwt.claim.email', 'admin@example.com', false);
 set role authenticated;
 
@@ -110,7 +110,7 @@ set role anon;
 do $$
 begin
   begin
-    perform public.set_offer_status('00000000-0000-0000-0000-0000000000aa', 'approved');
+    perform public.set_offer_status('00000000-0000-0000-0000-0000000000d1', 'approved');
     raise exception 'anon called set_offer_status';
   exception when insufficient_privilege then null;
   end;
@@ -139,24 +139,24 @@ end $$;
 
 -- Grants: admin grants a colleague. That colleague still cannot hand out can_grant.
 reset role;
-select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000aa', false);
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000d1', false);
 set role authenticated;
 do $$ begin
-  perform public.grant_offer_internal_access('00000000-0000-0000-0000-0000000000bb'::uuid, true);
-  perform public.grant_offer_internal_access('00000000-0000-0000-0000-0000000000cc'::uuid, false);
+  perform public.grant_offer_internal_access('00000000-0000-0000-0000-0000000000d2'::uuid, true);
+  perform public.grant_offer_internal_access('00000000-0000-0000-0000-0000000000d3'::uuid, false);
 end $$;
 
 do $$
 begin
   begin
-    perform public.revoke_offer_internal_access('00000000-0000-0000-0000-0000000000aa'::uuid);
+    perform public.revoke_offer_internal_access('00000000-0000-0000-0000-0000000000d1'::uuid);
     raise exception 'admin was revoked';
   exception when insufficient_privilege then null;
   end;
 end $$;
 
 reset role;
-select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000bb', false);
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000d2', false);
 set role authenticated;
 
 do $$
@@ -181,7 +181,7 @@ end $$;
 
 -- A second draft still cannot skip approval.
 reset role;
-select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000cc', false);
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000d3', false);
 set role authenticated;
 insert into public.offers (customer_name, lines) values ('Nitko', '[]'::jsonb);
 do $$

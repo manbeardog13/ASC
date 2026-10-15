@@ -4,7 +4,7 @@
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
-import { spawn } from 'node:child_process';
+import { spawn, execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -28,7 +28,17 @@ const session=${session};
 export const supabase={auth:{getSession:async()=>({data:{session},error:null}),onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}}),signInWithPassword:async()=>({}),signOut:async()=>{},updateUser:async()=>({})}};`;
 const dbOverrides = {
   getSession: 'export const getSession=async()=>session;',
-  loadMyProfile: 'export const loadMyProfile=async()=>({full_name:"Smoke",role:"employee",email:"smoke@example.com"});',
+  loadMyProfile: 'export const loadMyProfile=async()=>({full_name:"Smoke",role:"employee",email:"smoke@example.com",onboarded_at:null});',
+  createStorageSet: 'export const createStorageSet=async()=>"ASC-2026-0099";',
+  countLocations: 'export const countLocations=async()=>location.pathname.endsWith("/place.html")?1:0;',
+  listLocationSeats: `export const listLocationSeats=async()=>{
+    const tour=new URLSearchParams(location.search).get("tour");
+    if (tour==="zone") return [{warehouse:"main",zone:"1",rack:"A",shelf:"",slot:"01",status:"free"},{warehouse:"main",zone:"2.1",rack:"A",shelf:"",slot:"03",status:"free"}];
+    if (tour==="next") return [{warehouse:"main",zone:"1",rack:"A",shelf:"",slot:"01",status:"free"},{warehouse:"main",zone:"2.1",rack:"A",shelf:"",slot:"01",status:"occupied"},{warehouse:"main",zone:"2.2",rack:"A",shelf:"",slot:"01",status:"free"}];
+    return [];
+  };`,
+  findLocationByQr: 'export const findLocationByQr=async()=>null;',
+  loadStorageSet: 'export const loadStorageSet=async()=>({id:"1",public_code:"ASC-2026-0003",status:"in_storage",vehicle:{plate:"DU100AA",customer:{name:"Ana"}}});',
   signOut: 'export const signOut=async()=>{};',
   onAuthChange: 'export const onAuthChange=()=>({data:{subscription:{unsubscribe(){}}}});',
   healthStats: 'export const healthStats=async()=>({inventory:0,todayCheckIns:0,todayPickups:0,lastBackup:null});',
@@ -45,19 +55,90 @@ const db = `const session=${session};\n` + [...exportNames(path.join(root, 'js/d
 
 const pages = [
   ['/app/login.html', ['Dobrodošli natrag', 'Ploča']],
-  ['/app/dashboard.html', 'Ploča'],
-  ['/app/checkin.html', 'Spremi gume', '() => { const loc=document.getElementById("locField"); const steps=document.getElementById("flowSteps"); return Boolean(loc && loc.hidden && steps && steps.children.length===3); }'],
+  ['/app/dashboard.html', 'Ploča', '() => { const root=document.getElementById("asc-onboard"); return Boolean(root && root.querySelector("[data-next]") && !root.querySelector("[data-skip]") && root.innerText.includes("Najprije stvori mjesto")); }'],
+  ['/app/dashboard.html?tour=zone', 'Ploča', '() => { const root=document.getElementById("asc-onboard"); const text=root?root.innerText:""; return Boolean(root && text.includes("Zona 2.1") && !text.includes("Najprije stvori mjesto")); }'],
+  ['/app/dashboard.html?tour=next', 'Ploča', '() => { const root=document.getElementById("asc-onboard"); const text=root?root.innerText:""; return Boolean(root && text.includes("Zona 2.2") && !text.includes("Zona 1") && !text.includes("Najprije stvori mjesto")); }'],
+  ['/app/checkin.html', 'Spremi gume', `async () => {
+    const loc=document.getElementById("locField");
+    const steps=document.getElementById("flowSteps");
+    if (!(loc && loc.hidden && steps && steps.children.length===3)) return false;
+    if (window.__ascSmoke && window.__ascSmoke.done) return true;
+    if (window.__ascSmoke && window.__ascSmoke.started) return false;
+    window.__ascSmoke = { started: true, done: false };
+    const name=document.getElementById("c_name");
+    const plate=document.getElementById("v_plate");
+    if (!name || !plate) return false;
+    name.value = "Ana Horvat";
+    plate.value = "DU100AA";
+    document.getElementById("ci").requestSubmit();
+    document.getElementById("ci").requestSubmit();
+    for (let i = 0; i < 40; i++) {
+      const link = document.getElementById("slot-block-go");
+      const href = link ? (link.getAttribute("href") || "") : "";
+      let back = "";
+      try { back = decodeURIComponent(href.split("return=")[1] || ""); } catch (e) { back = ""; }
+      if (href.startsWith("locations.html?return=") && back === "checkin.html?place=ASC-2026-0099") {
+        window.__ascSmoke.done = true;
+        return true;
+      }
+      await new Promise((r) => setTimeout(r, 50));
+    }
+    return false;
+  }`],
   ['/app/scan.html', 'Skeniraj naljepnicu'],
   ['/app/place.html', 'Smjesti komplet', '() => Boolean(document.getElementById("flow-reader"))'],
+  ['/app/place.html?set=ASC-2026-0003#/slot/LOC-DEADBEEF0001', 'Smjesti komplet', `async () => {
+    for (let i = 0; i < 40; i++) {
+      const link = document.getElementById("slot-block-go");
+      const href = link ? (link.getAttribute("href") || "") : "";
+      let back = "";
+      try { back = decodeURIComponent(href.split("return=")[1] || ""); } catch (e) { back = ""; }
+      const title = document.getElementById("slotBlock");
+      if (title && title.innerText.includes("Nepoznata naljepnica") && back === "place.html?set=ASC-2026-0003") return true;
+      await new Promise((r) => setTimeout(r, 50));
+    }
+    return false;
+  }`],
   ['/app/checkout.html', 'Preuzmi komplet', '() => Boolean(document.getElementById("flow-reader"))'],
   ['/app/locate.html', 'Pronađi komplet', '() => Boolean(document.querySelector("#flow-root input"))'],
   ['/app/locations.html', 'Naljepnice mjesta', '() => Boolean(document.getElementById("loc-zone"))'],
+  ['/app/locations.html?return=' + encodeURIComponent('checkin.html?place=ASC-2026-0099'), 'Natrag na zaprimanje', '() => { const a=document.getElementById("back-to-intake"); return Boolean(a && a.getAttribute("href")==="checkin.html?place=ASC-2026-0099"); }'],
   ['/app/warehouse-preview/index.html', 'Prostorni pregled', '() => document.querySelectorAll("#asc-navigation a").length===12'],
 ];
 
+function which(name) {
+  try { return execFileSync('which', [name], { encoding: 'utf8' }).trim(); }
+  catch { return ''; }
+}
+
+function isSnapShim(file) {
+  try {
+    const fd = fs.openSync(file, 'r');
+    const buf = Buffer.alloc(180);
+    const n = fs.readSync(fd, buf, 0, 180, 0);
+    fs.closeSync(fd);
+    const head = buf.subarray(0, n).toString('utf8');
+    if (head.includes('\0')) return false;
+    return head.includes('snap');
+  } catch {
+    return false;
+  }
+}
+
 function chromeBin() {
-  const candidates = [process.env.CHROMIUM_PATH, process.env.CHROME_PATH, '/usr/local/bin/google-chrome', '/usr/bin/google-chrome', '/usr/bin/chromium', '/usr/bin/chromium-browser'].filter(Boolean);
-  return candidates.find((file) => fs.existsSync(file));
+  const candidates = [
+    process.env.CHROME_PATH,
+    process.env.CHROMIUM_PATH,
+    '/usr/bin/google-chrome-stable',
+    '/usr/bin/google-chrome',
+    '/usr/local/bin/google-chrome',
+    which('google-chrome-stable'),
+    which('google-chrome'),
+    which('chrome'),
+    which('chromium'),
+    which('chromium-browser'),
+  ].filter(Boolean);
+  return candidates.find((file) => fs.existsSync(file) && !isSnapShim(file));
 }
 
 function redact(text) {
@@ -111,18 +192,27 @@ async function cdp(wsUrl, expression) {
 }
 
 const bin = chromeBin();
-if (!bin) { console.error('smoke-pages: no Chrome/Chromium binary'); process.exit(1); }
+if (!bin) { console.error('smoke-pages: no Chrome/Chromium binary (snap shims are ignored)'); process.exit(1); }
 
 await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
 const origin = 'http://127.0.0.1:' + server.address().port;
-const chrome = spawn(bin, ['--headless=new', '--disable-gpu', '--no-sandbox', '--remote-debugging-port=9333', '--user-data-dir=/tmp/asc-smoke-chrome', 'about:blank'], { stdio: 'ignore' });
+fs.rmSync('/tmp/asc-smoke-chrome', { recursive: true, force: true });
+const chrome = spawn(bin, [
+  '--headless=new', '--disable-gpu', '--no-sandbox', '--disable-dev-shm-usage',
+  '--remote-debugging-address=127.0.0.1', '--remote-debugging-port=9333',
+  '--remote-allow-origins=*', '--user-data-dir=/tmp/asc-smoke-chrome', 'about:blank',
+], { stdio: ['ignore', 'ignore', 'pipe'] });
+let chromeLog = '';
+chrome.stderr.on('data', (chunk) => { chromeLog = (chromeLog + chunk.toString()).slice(-1500); });
 try {
   let version;
-  for (let i = 0; i < 40; i++) {
+  for (let i = 0; i < 50; i++) {
     try { version = await (await fetch('http://127.0.0.1:9333/json/version')).json(); break; }
-    catch { await new Promise((resolve) => setTimeout(resolve, 150)); }
+    catch { await new Promise((resolve) => setTimeout(resolve, 200)); }
   }
-  if (!version?.webSocketDebuggerUrl) throw new Error('Chrome DevTools did not start');
+  if (!version?.webSocketDebuggerUrl) {
+    throw new Error('Chrome DevTools did not start (' + bin + '): ' + chromeLog.replace(/\s+/g, ' ').slice(0, 400));
+  }
   const failures = [];
   for (const [page, expected, check] of pages) {
     const tab = await (await fetch('http://127.0.0.1:9333/json/new?' + encodeURIComponent(origin + page), { method: 'PUT' })).json();
@@ -131,11 +221,29 @@ try {
     if (check) {
       const ws = new WebSocket(tab.webSocketDebuggerUrl);
       await new Promise((resolve, reject) => { ws.addEventListener('open', resolve, { once: true }); ws.addEventListener('error', reject, { once: true }); });
-      const evaluated = await new Promise((resolve) => {
-        ws.addEventListener('message', (event) => { const message = JSON.parse(event.data); if (message.id === 1) resolve(message); });
-        ws.send(JSON.stringify({ id: 1, method: 'Runtime.evaluate', params: { expression: `(${check})()`, returnByValue: true } }));
+      let id = 0;
+      const pending = new Map();
+      ws.addEventListener('message', (event) => {
+        const message = JSON.parse(event.data);
+        if (message.id && pending.has(message.id)) pending.get(message.id)(message);
       });
-      behavior = evaluated.result?.result?.value === true;
+      const send = (method, params = {}) => new Promise((resolve) => {
+        const next = ++id;
+        pending.set(next, resolve);
+        ws.send(JSON.stringify({ id: next, method, params }));
+      });
+      const started = Date.now();
+      behavior = false;
+      while (Date.now() - started < 8000) {
+        const evaluated = await send('Runtime.evaluate', {
+          expression: `(${check})()`,
+          returnByValue: true,
+          awaitPromise: true,
+        });
+        if (evaluated.result?.result?.value === true) { behavior = true; break; }
+        if (evaluated.result?.exceptionDetails) break;
+        await new Promise((resolve) => setTimeout(resolve, 200));
+      }
       ws.close();
     }
     await fetch('http://127.0.0.1:9333/json/close/' + tab.id).catch(() => {});
