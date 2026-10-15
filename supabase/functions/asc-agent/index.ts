@@ -12,6 +12,11 @@
 //   • verifies the caller's JWT and that they have an active role (not readonly),
 //   • attaches the server-held system prompt + tool declarations,
 //   • calls Gemini generateContent and returns {content, stop_reason}.
+//     Clients that ask for a stream (Accept: text/event-stream, ?stream=1, or
+//     body.stream) get streamGenerateContent?alt=sse instead: text deltas, then
+//     one done payload in the same shape. Tool calls still run on the client
+//     between those segments. Retry and model fallback finish before any SSE
+//     byte is written.
 // TOOLS EXECUTE ON THE CLIENT against db.js with the user's own session, so RLS
 // applies to every read/write — this function never touches business data.
 //
@@ -213,7 +218,82 @@ const FUNCTION_DECLARATIONS = [
 // {functionResponse}]}]. Gemini function calls carry NO ids, so we synthesize
 // ids on the way out and resolve tool_use_id → function name on the way in
 // (the full history is present each call, so this stays stateless).
-function toGeminiContents(messages: any[]): unknown[] {
+const FILE_PATH = /^[0-9a-f-]{36}\/[A-Za-z0-9._-]{1,180}$/i;
+const FILE_MIME = new Set(["image/jpeg", "image/png", "image/webp", "image/gif", "application/pdf"]);
+const AUDIO_MIME = new Set(["audio/webm", "audio/mp4", "audio/mpeg", "audio/wav", "audio/ogg", "audio/aac"]);
+const MAX_INLINE = 7_000_000;
+
+function toBase64(bytes: Uint8Array): string {
+  let bin = "";
+  const size = 0x8000;
+  for (let i = 0; i < bytes.length; i += size) {
+    bin += String.fromCharCode(...bytes.subarray(i, i + size));
+  }
+  return btoa(bin);
+}
+
+// Attachment refs only. The file must live in the caller's own folder of the
+// private nero-attachments bucket. The bytes never travel in the client POST.
+async function inlineFile(asCaller: any, userId: string, block: any) {
+  const path = typeof block?.path === "string" ? block.path : "";
+  const mime = typeof block?.mime === "string" ? block.mime : "";
+  if (!FILE_PATH.test(path) || path.split("/")[0] !== userId || !FILE_MIME.has(mime)) return null;
+  const downloaded = await asCaller.storage.from("nero-attachments").download(path);
+  if (downloaded.error || !downloaded.data) return null;
+  const bytes = new Uint8Array(await downloaded.data.arrayBuffer());
+  if (!bytes.byteLength || bytes.byteLength > MAX_INLINE) return null;
+  return { inlineData: { mimeType: mime, data: toBase64(bytes) } };
+}
+
+// Browser speech is missing. The clip already sits in the caller's private
+// folder; Gemini transcribes it on the free tier and the text goes back for review.
+async function transcribeSpeech(asCaller: any, userId: string, audio: any, lang: unknown, apiKey: string) {
+  const path = typeof audio?.path === "string" ? audio.path : "";
+  const mime = typeof audio?.mime === "string" ? audio.mime.split(";")[0].trim() : "";
+  if (!FILE_PATH.test(path) || path.split("/")[0] !== userId || !AUDIO_MIME.has(mime)) {
+    return json({ error: "Bad request." }, 400);
+  }
+  const downloaded = await asCaller.storage.from("nero-attachments").download(path);
+  if (downloaded.error || !downloaded.data) return json({ error: "agent_failed" }, 502);
+  const bytes = new Uint8Array(await downloaded.data.arrayBuffer());
+  if (!bytes.byteLength || bytes.byteLength > MAX_INLINE) return json({ error: "Bad request." }, 413);
+  const hint = lang === "en-US" ? "English" : "Croatian";
+  const body = JSON.stringify({
+    contents: [{
+      role: "user",
+      parts: [
+        { text: `Transcribe this speech. The speaker is using ${hint}. Return only the transcript, with no commentary.` },
+        { inlineData: { mimeType: mime, data: toBase64(bytes) } },
+      ],
+    }],
+    generationConfig: { maxOutputTokens: 2048 },
+  });
+  const busy = (s: number) => s === 429 || s === 503 || s === 500;
+  const call = (model: string) => fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+    { method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey }, body },
+  );
+  let res = await call(MODEL);
+  if (busy(res.status)) {
+    await res.body?.cancel();
+    await new Promise((r) => setTimeout(r, 1600));
+    res = await call(MODEL);
+  }
+  if (busy(res.status) && FALLBACK_MODEL !== MODEL) {
+    await res.body?.cancel();
+    res = await call(FALLBACK_MODEL);
+  }
+  if (!res.ok) return json({ error: "agent_failed" }, 502);
+  const data = await res.json();
+  const text = (data?.candidates?.[0]?.content?.parts || [])
+    .map((p: any) => (typeof p?.text === "string" ? p.text : ""))
+    .join(" ")
+    .trim();
+  if (!text) return json({ error: "empty" }, 502);
+  return json({ text });
+}
+
+async function toGeminiContents(messages: any[], asCaller: any, userId: string): Promise<unknown[]> {
   const nameById = new Map<string, string>();
   for (const m of messages) {
     if (m?.role === "assistant" && Array.isArray(m.content)) {
@@ -222,20 +302,27 @@ function toGeminiContents(messages: any[]): unknown[] {
   }
   const contents: unknown[] = [];
   for (const m of messages) {
-    if (m?.role === "user") {
-      if (typeof m.content === "string") {
-        contents.push({ role: "user", parts: [{ text: m.content }] });
-      } else if (Array.isArray(m.content)) {
-        const parts = m.content
-          .filter((b: any) => b?.type === "tool_result")
-          .map((b: any) => ({
+    if (m?.role === "user" && typeof m.content === "string") {
+      contents.push({ role: "user", parts: [{ text: m.content }] });
+    } else if (m?.role === "user" && Array.isArray(m.content)) {
+      const parts: unknown[] = [];
+      for (const b of m.content) {
+        if (b?.type === "text" && typeof b.text === "string" && b.text) parts.push({ text: b.text });
+        else if (b?.type === "tool_result") {
+          parts.push({
             functionResponse: {
               name: nameById.get(b.tool_use_id) || "unknown_tool",
               response: { result: typeof b.content === "string" ? b.content : JSON.stringify(b.content) },
             },
-          }));
-        if (parts.length) contents.push({ role: "user", parts });
+          });
+        } else if (b?.type === "file") {
+          const inline = await inlineFile(asCaller, userId, b);
+          if (inline) parts.push(inline);
+        }
       }
+      if (parts.length) contents.push({ role: "user", parts });
+    } else if (m?.role === "assistant" && typeof m.content === "string" && m.content) {
+      contents.push({ role: "model", parts: [{ text: m.content }] });
     } else if (m?.role === "assistant" && Array.isArray(m.content)) {
       const parts = m.content.map((b: any) =>
         b?.type === "text" ? (b._sig ? { text: b.text, thoughtSignature: b._sig } : { text: b.text })
@@ -248,6 +335,153 @@ function toGeminiContents(messages: any[]): unknown[] {
     }
   }
   return contents;
+}
+
+type WireBlock = {
+  type: "text" | "tool_use";
+  text?: string;
+  id?: string;
+  name?: string;
+  input?: Record<string, unknown>;
+  _sig?: string;
+};
+
+// Gemini chunks are sometimes a suffix and sometimes the text so far.
+// A function call resets the text segment so the next sentence is a new block.
+function createAssembler() {
+  const blocks: WireBlock[] = [];
+  let segment = "";
+  function last(): WireBlock | undefined { return blocks[blocks.length - 1]; }
+  return {
+    blocks,
+    pushText(piece: string, sig?: string): string {
+      if (sig && typeof sig === "string" && !piece) {
+        const prev = last();
+        if (prev && !prev._sig) prev._sig = sig;
+        return "";
+      }
+      if (typeof piece !== "string" || !piece) return "";
+      let delta = piece;
+      if (segment && piece.startsWith(segment)) {
+        delta = piece.slice(segment.length);
+        segment = piece;
+      } else if (last()?.type === "text") {
+        segment += piece;
+        delta = piece;
+      } else {
+        segment = piece;
+        delta = piece;
+      }
+      const prev = last();
+      if (!prev || prev.type !== "text") {
+        const block: WireBlock = { type: "text", text: segment };
+        if (sig) block._sig = sig;
+        blocks.push(block);
+      } else {
+        prev.text = segment;
+        if (sig) prev._sig = sig;
+      }
+      return delta;
+    },
+    pushCall(name: string, args: unknown, sig?: string): boolean {
+      segment = "";
+      let existing: WireBlock | undefined;
+      for (let i = blocks.length - 1; i >= 0; i--) {
+        if (blocks[i].type === "tool_use" && blocks[i].name === name) { existing = blocks[i]; break; }
+        if (blocks[i].type === "text") break;
+      }
+      const input = args && typeof args === "object" ? args as Record<string, unknown> : {};
+      if (!existing) {
+        blocks.push({
+          type: "tool_use",
+          id: `fc_${Date.now()}_${blocks.length}`,
+          name,
+          input,
+          ...(sig ? { _sig: sig } : {}),
+        });
+        return true;
+      }
+      if (Object.keys(input).length) existing.input = input;
+      if (sig) existing._sig = sig;
+      return false;
+    },
+  };
+}
+
+function geminiBody(contents: unknown[], system: string) {
+  return JSON.stringify({
+    systemInstruction: { parts: [{ text: system }] },
+    tools: [{ functionDeclarations: FUNCTION_DECLARATIONS }],
+    toolConfig: { functionCallingConfig: { mode: "AUTO" } },
+    contents,
+    generationConfig: { maxOutputTokens: 2048 },
+  });
+}
+
+function consumeGeminiChunk(asm: ReturnType<typeof createAssembler>, data: any, onDelta: (t: string) => void, onTool: (name: string) => void) {
+  const parts = data?.candidates?.[0]?.content?.parts || [];
+  for (const p of parts) {
+    if (typeof p?.text === "string") {
+      const delta = asm.pushText(p.text, typeof p.thoughtSignature === "string" ? p.thoughtSignature : undefined);
+      if (delta) onDelta(delta);
+    } else if (typeof p?.thoughtSignature === "string") {
+      asm.pushText("", p.thoughtSignature);
+    }
+    if (p?.functionCall?.name) {
+      const first = asm.pushCall(
+        p.functionCall.name,
+        p.functionCall.args,
+        typeof p.thoughtSignature === "string" ? p.thoughtSignature : undefined,
+      );
+      if (first) onTool(p.functionCall.name);
+    }
+  }
+}
+
+// Forward a 200 Gemini SSE body. Caller already did retry/fallback.
+function pipeGemini(res: Response): Response {
+  const encoder = new TextEncoder();
+  const asm = createAssembler();
+  const stream = new ReadableStream({
+    async start(controller) {
+      const send = (event: string, data: unknown) => {
+        controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
+      };
+      try {
+        const reader = res.body!.getReader();
+        const decoder = new TextDecoder();
+        let buf = "";
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buf += decoder.decode(value, { stream: true }).replace(/\r\n/g, "\n");
+          let splitAt = buf.indexOf("\n\n");
+          while (splitAt >= 0) {
+            const raw = buf.slice(0, splitAt);
+            buf = buf.slice(splitAt + 2);
+            const dataLine = raw.split("\n").filter((l) => l.startsWith("data:")).map((l) => l.slice(5).trim()).join("");
+            if (dataLine && dataLine !== "[DONE]") {
+              try {
+                consumeGeminiChunk(asm, JSON.parse(dataLine), (t) => send("delta", { text: t }), (name) => send("tool", { name }));
+              } catch { /* skip a corrupt chunk */ }
+            }
+            splitAt = buf.indexOf("\n\n");
+          }
+        }
+        const content = asm.blocks.filter((b) => b.type !== "text" || b.text);
+        if (!content.length) send("error", { error: "empty" });
+        else send("done", { content, stop_reason: content.some((b) => b.type === "tool_use") ? "tool_use" : "end_turn" });
+        controller.close();
+      } catch (err) {
+        console.error("[asc-agent] stream", err);
+        try { send("error", { error: "agent_failed" }); } catch { /* closed */ }
+        try { controller.close(); } catch { /* closed */ }
+      }
+    },
+  });
+  return new Response(stream, {
+    headers: { ...cors, "Content-Type": "text/event-stream", "Cache-Control": "no-cache" },
+  });
 }
 
 function fromGeminiResponse(data: any) {
@@ -273,7 +507,7 @@ function fromGeminiResponse(data: any) {
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, accept",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 const json = (body: unknown, status = 200) =>
@@ -311,48 +545,48 @@ Deno.serve(async (req) => {
   // -- Request: the conversation so far ---------------------------------------
   const raw = await req.text();
   if (raw.length > MAX_BODY_BYTES) return json({ error: "Conversation too long — start a new chat." }, 413);
-  let body: { messages?: unknown };
+  let body: { messages?: unknown; stream?: boolean; transcribe?: boolean; audio?: unknown; lang?: unknown };
   try { body = JSON.parse(raw); } catch { return json({ error: "Bad request." }, 400); }
+  if (body?.transcribe === true) return await transcribeSpeech(asCaller, user.id, body.audio, body.lang, apiKey);
   const messages = body?.messages;
   if (!Array.isArray(messages) || !messages.length) return json({ error: "Bad request." }, 400);
   if (messages.length > MAX_MESSAGES) return json({ error: "Conversation too long — start a new chat." }, 413);
+  const wantStream = (req.headers.get("accept") || "").includes("text/event-stream")
+    || new URL(req.url).searchParams.get("stream") === "1"
+    || body.stream === true;
 
   // -- Gemini ------------------------------------------------------------------
   try {
-    const callGemini = (model: string) => fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+    const contents = await toGeminiContents(messages, asCaller, user.id);
+    const system = SYSTEM + userLine;
+    const busy = (s: number) => s === 429 || s === 503 || s === 500;
+    const callModel = (model: string, stream: boolean) => fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:${stream ? "streamGenerateContent?alt=sse" : "generateContent"}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: SYSTEM + userLine }] },
-          tools: [{ functionDeclarations: FUNCTION_DECLARATIONS }],
-          toolConfig: { functionCallingConfig: { mode: "AUTO" } },
-          contents: toGeminiContents(messages),
-          generationConfig: { maxOutputTokens: 2048 },
-        }),
+        body: geminiBody(contents, system),
       },
     );
-    // 429 = rate limit; 503/500 = model overloaded ("high demand") — all of
-    // them deserve the retry ladder, not an instant agent_failed.
-    const busy = (s: number) => s === 429 || s === 503 || s === 500;
-    let res = await callGemini(MODEL);
+    // Retry and fallback finish before any client SSE byte. A busy stream is
+    // discarded; the client only hears a model that already accepted the call.
+    let res = await callModel(MODEL, wantStream);
     if (busy(res.status)) {
-      // RPM burst / transient overload — one polite retry usually clears it.
+      await res.body?.cancel();
       await new Promise((r) => setTimeout(r, 1600));
-      res = await callGemini(MODEL);
+      res = await callModel(MODEL, wantStream);
     }
     if (busy(res.status) && FALLBACK_MODEL !== MODEL) {
-      // Persistent = quota spent or model drowning. The log line keeps the
-      // reason findable; the fallback keeps us alive.
-      console.error("[asc-agent]", res.status, "on", MODEL, (await res.text()).slice(0, 300), "→ trying", FALLBACK_MODEL);
-      res = await callGemini(FALLBACK_MODEL);
+      const detail = await res.text();
+      console.error("[asc-agent]", res.status, "on", MODEL, detail.slice(0, 300), "→ trying", FALLBACK_MODEL);
+      res = await callModel(FALLBACK_MODEL, wantStream);
     }
     if (busy(res.status)) return json({ error: "busy" }, 429);
     if (!res.ok) {
       console.error("[asc-agent] Gemini error", res.status, (await res.text()).slice(0, 500));
       return json({ error: "agent_failed" }, 502);
     }
+    if (wantStream) return pipeGemini(res);
     const data = await res.json();
     return json(fromGeminiResponse(data));
   } catch (err) {
