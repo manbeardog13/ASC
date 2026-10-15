@@ -1,8 +1,18 @@
 import { createLocations } from "../js/db.js";
 import { expandLocations } from "../js/locationGrid.js";
+import { safeAppReturn } from "../js/firstRun.js";
 import { t, toast, el, button, field, input } from "./flow-ui.js";
+import { bootOnboarding } from "./onboarding.js";
 
 const root = document.getElementById("flow-root");
+const backHref = safeAppReturn(new URLSearchParams(location.search).get("return"));
+
+bootOnboarding();
+
+function returnLink() {
+  if (!backHref) return null;
+  return el("a", { class: "btn btn-primary", id: "back-to-intake", href: backHref }, t("flow.backToIntake"));
+}
 
 function labeled(key, id, value, placeholder) {
   const box = input({ id, value: value || "", placeholder: placeholder || "", autocomplete: "off" });
@@ -28,11 +38,15 @@ async function create() {
     const saved = await createLocations(rows);
     toast(t("flow.created", { n: saved.length }));
     if (window.ASCQR && saved.length) window.ASCQR.printSlotLabels(saved);
+    const back = returnLink();
+    if (back && !document.getElementById("back-to-intake")) actions.append(back);
   } catch (error) {
     toast(error.message || t("flow.migration"));
   }
 }
 
+const back = returnLink();
+if (back) root.append(back);
 root.append(el("p", { class: "lead" }, t("flow.rangeHint")));
 root.append(labeled("flow.warehouse", "loc-wh", "main", "main"));
 root.append(labeled("flow.zone", "loc-zone", "", "A"));

@@ -1,5 +1,8 @@
 import { loadStorageSet, checkoutSet, locationLabel } from "../js/db.js";
 import { t, toast, el, button, field, input, queryParam, scanText, photoFallback, whereText } from "./flow-ui.js";
+import { bootOnboarding } from "./onboarding.js";
+
+bootOnboarding();
 
 const root = document.getElementById("flow-root");
 let setRow = null;

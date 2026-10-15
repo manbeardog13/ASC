@@ -2,7 +2,7 @@
    Makes the app installable and loads the shell instantly. Network-first for
    same-origin files (so deploys show up right away), cache fallback when
    offline. Live data always comes from Supabase online. */
-const CACHE = "asc-tirehotel-v93-warehouse-flow";
+const CACHE = "asc-tirehotel-v106-composer-controls";
 // Cross-origin dependencies the app cannot boot (or scan) without. Same-origin
 // files are precached below; these are runtime-cached network-first so an
 // offline cold boot doesn't die on the supabase-js ESM import.
@@ -31,19 +31,22 @@ const SHELL = [
   "./app/recycle.html",
   "./app/users.html",
   "./app/app.css",
+  "./app/theme-boot.js",
   "./app/app.js",
   "./app/navigation.js",
   "./app/qr.js",
   "./app/layout-edit.js",
+  "./app/concierge.js",
+  "./app/composer.js",
+  "./app/composer.css",
+  "./app/builder-queue.js",
   "./app/agent-config.js",
   "./app/agent-gemini.js",
   "./app/agent-search.js",
-  "./app/assistant-surface.js",
-  "./app/assistant-local.js",
-  "./app/assistant-surface.css",
+  "./app/plan-mark.js",
+  "./js/seasonPlan.js",
   "./app/live-dashboard.js",
   "./app/live-checkin.js",
-  "./app/sluh.js",
   "./app/live-set-detail.js",
   "./app/live-scan.js",
   "./app/live-customers.js",
@@ -57,6 +60,9 @@ const SHELL = [
   "./app/locations.html",
   "./app/flow.css",
   "./app/flow-ui.js",
+  "./app/onboarding.js",
+  "./app/slot-block.js",
+  "./js/firstRun.js",
   "./app/live-place.js",
   "./app/live-checkout.js",
   "./app/live-locate.js",
@@ -84,7 +90,6 @@ const SHELL = [
   "./js/qr.js",
   "./js/qrlabel.js",
   "./js/scanner.js",
-  "./js/ocr.js",
   "./js/views/dashboard.js",
   "./js/views/checkin.js",
   "./js/views/set-detail.js",
@@ -95,7 +100,6 @@ const SHELL = [
   "./js/views/recycle.js",
   "./js/views/reminders.js",
   "./js/views/workshop.js",
-  "./js/views/assistant.js",
   "./js/views/shared.js",
   "./js/views/export.js",
   "./js/voice.js",

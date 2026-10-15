@@ -4,7 +4,9 @@
 // session before this runs. Every write is guarded: if a fetch fails, the page
 // keeps its existing markup instead of blanking.
 // ============================================================================
-import { getSession, loadMyProfile, healthStats, countsByStatus, listStorageSets } from '../js/db.js';
+import { getSession, loadMyProfile, healthStats, countsByStatus, listStorageSets, freeSlotsByZone, recentMovements, subscribeToChanges, unsubscribe } from '../js/db.js';
+import { decodePlan, daysUntil } from '../js/seasonPlan.js';
+import { bootOnboarding } from './onboarding.js';
 
 const SEASON_LABEL = { winter: 'Zimske', summer: 'Ljetne', all_season: 'Cjelogodišnje' };
 const SEASON_CLASS = { winter: 'win', summer: '', all_season: 'all' };
@@ -48,6 +50,8 @@ function setNum(el, val) {
 let liveFirstDone;
 window.ascLiveFirst = new Promise((r) => { liveFirstDone = r; });
 
+bootOnboarding();
+
 (async () => {
   const session = await getSession().catch(() => null);
   if (!session) { liveFirstDone(); return; }  // the gate in app.js handles the redirect
@@ -74,9 +78,15 @@ window.ascLiveFirst = new Promise((r) => { liveFirstDone = r; });
     sub.textContent = d.charAt(0).toUpperCase() + d.slice(1).replace(/,?\s*$/, '');
   }
 
-  let health, counts, sets;
+  let health, counts, sets, zones, moves;
   try {
-    [health, counts, sets] = await Promise.all([healthStats(), countsByStatus(), listStorageSets()]);
+    [health, counts, sets, zones, moves] = await Promise.all([
+      healthStats(),
+      countsByStatus(),
+      listStorageSets(),
+      freeSlotsByZone().catch(() => null),
+      recentMovements(5).catch(() => null),
+    ]);
   } catch (e) {
     console.warn('[live] dashboard data failed — keeping placeholder markup:', e);
     liveFirstDone();
@@ -179,4 +189,64 @@ window.ascLiveFirst = new Promise((r) => { liveFirstDone = r; });
   }
 
   liveFirstDone();   // real data is in the DOM — the splash may lift into live numbers
+  paintGlance(health, counts, sets, zones, moves);
+  const glance = q('#glance');
+  if (glance) glance.dataset.live = '1';
+  let refreshTimer;
+  const channel = subscribeToChanges((payload) => {
+    const table = payload?.table;
+    if (table && !['storage_sets', 'locations', 'set_movements'].includes(table)) return;
+    clearTimeout(refreshTimer);
+    refreshTimer = setTimeout(() => refreshGlance().catch(() => {}), 500);
+  });
+  window.addEventListener('pagehide', () => unsubscribe(channel), { once: true });
 })();
+
+function swapsSoon(rows) {
+  const today = new Date();
+  return (rows || []).filter((set) => {
+    if (set.status === 'checked_out') return false;
+    const plan = decodePlan(set.notes);
+    if (!plan?.at) return false;
+    const days = daysUntil(plan.at, today);
+    return days >= 0 && days <= 14;
+  }).length;
+}
+
+function paintGlance(health, counts, sets, zones, moves) {
+  const now = new Date();
+  const in7 = new Date(now.getTime() + 7 * 864e5);
+  const due = (sets || []).filter((s) => s.status === 'in_storage' && s.expected_out_date && new Date(s.expected_out_date) <= in7).length;
+  setNum(q('[data-glance="stored"]'), counts?.in_storage ?? 0);
+  setNum(q('[data-glance="in"]'), health?.todayCheckIns ?? 0);
+  setNum(q('[data-glance="out"]'), health?.todayPickups ?? 0);
+  setNum(q('[data-glance="due"]'), due);
+  setNum(q('[data-glance="swaps"]'), swapsSoon(sets));
+  const zoneHost = q('#gZones');
+  if (zoneHost) {
+    if (zones == null) zoneHost.textContent = 'Mjesta još nisu uvedena.';
+    else if (!zones.length) zoneHost.textContent = 'Nema unesenih mjesta.';
+    else zoneHost.innerHTML = zones.map((z) => '<span class="zone"><b>' + esc(z.free) + '</b> ' + esc(z.zone || '—') + '</span>').join('');
+  }
+  const list = q('#gMovesList');
+  if (!list) return;
+  const action = { in: 'Ulaz', move: 'Premještaj', out: 'Izlaz' };
+  if (moves == null) list.innerHTML = '<li class="muted">Evidencija kretanja još nije uključena.</li>';
+  else if (!moves.length) list.innerHTML = '<li class="muted">Nema zabilježenih kretanja.</li>';
+  else list.innerHTML = moves.map((row) => {
+    const code = row.storage_sets?.public_code || 'Komplet';
+    const when = row.created_at ? new Date(row.created_at).toLocaleString('hr-HR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
+    return '<li><b>' + esc(code) + '</b><span>' + esc(action[row.action] || row.action || '') + '</span><time>' + esc(when) + '</time></li>';
+  }).join('');
+}
+
+async function refreshGlance() {
+  const [health, counts, sets, zones, moves] = await Promise.all([
+    healthStats(),
+    countsByStatus(),
+    listStorageSets(),
+    freeSlotsByZone().catch(() => null),
+    recentMovements(5).catch(() => null),
+  ]);
+  paintGlance(health, counts, sets, zones, moves);
+}

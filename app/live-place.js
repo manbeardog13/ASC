@@ -1,9 +1,17 @@
-import { loadStorageSet, placeSet, moveSet, suggestFreeSlot, locationLabel } from "../js/db.js";
+import { loadStorageSet, placeSet, moveSet, suggestFreeSlot, locationLabel, findLocationByQr, countLocations } from "../js/db.js";
 import { t, toast, el, button, field, input, queryParam, slotFromHash, whereText, scanText, photoFallback } from "./flow-ui.js";
+import { placeReturn, placementNeedsSlots, unknownSlotScan, suggestionNote } from "../js/firstRun.js";
+import { slotBlock } from "./slot-block.js";
+import { bootOnboarding } from "./onboarding.js";
 
 const root = document.getElementById("flow-root");
 let setRow = null;
 let slotQr = slotFromHash();
+let unknown = false;
+let noSlots = false;
+let nearLabel = "";
+
+bootOnboarding();
 
 function setCodeFromText(text) {
   return window.ASCQR ? window.ASCQR.extractCode(text) : null;
@@ -31,8 +39,21 @@ async function loadSet(code) {
   }
 }
 
+async function acceptSlot(qr) {
+  const known = await findLocationByQr(qr);
+  if (unknownSlotScan(qr, known)) {
+    unknown = true;
+    slotQr = "";
+    return;
+  }
+  unknown = false;
+  slotQr = known.qr_code || qr;
+}
+
 async function confirmPlace() {
   if (!setRow || !slotQr) return;
+  await acceptSlot(slotQr);
+  if (unknown || !slotQr) { render(); return; }
   const moving = Boolean(setRow.location_id);
   const args = { setId: setRow.id, publicCode: setRow.public_code, qrCode: slotQr };
   try {
@@ -45,25 +66,41 @@ async function confirmPlace() {
   }
 }
 
+function customerOf(row) {
+  const customer = row?.vehicle?.customer || {};
+  return {
+    customerId: customer.id || "",
+    phone: customer.phone || "",
+    plate: row?.vehicle?.plate || "",
+  };
+}
+
 async function suggest() {
   try {
-    const slot = await suggestFreeSlot("main");
+    const slot = await suggestFreeSlot("main", customerOf(setRow));
     if (!slot) { toast(t("flow.noSlot")); return; }
+    unknown = false;
     slotQr = slot.qr_code || "";
-    toast(t("flow.suggested", { where: locationLabel(slot) }));
+    nearLabel = slot.near_label || "";
+    const copy = suggestionNote(slot, locationLabel(slot));
+    toast(t(copy.key, copy.vars));
     render();
   } catch (error) {
     toast(error.message || t("flow.migration"));
   }
 }
 
-function onScan(text) {
-  const slot = slotFromText(text);
-  const code = setCodeFromText(text);
-  if (!setRow && code) { loadSet(code); return; }
-  if (slot) { slotQr = slot; render(); return; }
-  if (code) { loadSet(code); return; }
-  toast(t("flow.notFound"));
+async function onScan(text) {
+  try {
+    const slot = slotFromText(text);
+    const code = setCodeFromText(text);
+    if (!setRow && code) { loadSet(code); return; }
+    if (slot) { await acceptSlot(slot); render(); return; }
+    if (code) { loadSet(code); return; }
+    toast(t("flow.notFound"));
+  } catch (error) {
+    toast(error.message || t("flow.migration"));
+  }
 }
 
 function render() {
@@ -78,8 +115,14 @@ function render() {
   actions.append(photoFallback(onScan));
   if (!setRow) actions.append(button(t("flow.suggest"), "btn ghost", suggest));
   root.append(actions);
+  if (setRow && (noSlots || unknown)) {
+    root.append(slotBlock(unknown && !noSlots ? "unknown" : "empty", placeReturn(setRow.public_code)));
+    return;
+  }
   if (setRow) {
-    const note = el("p", { class: "flow-note" }, slotQr ? `${t("flow.where")}: ${slotQr}` : t("flow.scanSlot"));
+    const note = el("p", { class: "flow-note", id: "place-suggest" }, slotQr
+      ? (nearLabel ? t("flow.suggestedNear", { where: nearLabel }) : `${t("flow.where")}: ${slotQr}`)
+      : t("flow.scanSlot"));
     root.append(note);
     const placeActions = el("div", { class: "flow-actions" });
     placeActions.append(button(t("flow.suggest"), "btn ghost", suggest));
@@ -92,6 +135,20 @@ function render() {
   scanText("flow-reader", onScan);
 }
 
+async function boot() {
+  try {
+    noSlots = placementNeedsSlots(await countLocations());
+  } catch (error) {
+    noSlots = false;
+    toast(error.message || t("flow.migration"));
+  }
+  if (slotQr && !noSlots) {
+    try { await acceptSlot(slotQr); }
+    catch (error) { toast(error.message || t("flow.migration")); }
+  }
+  if (initial) await loadSet(initial);
+  else render();
+}
+
 const initial = queryParam("set");
-if (initial) loadSet(initial);
-else render();
+boot();

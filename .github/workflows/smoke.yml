@@ -1,7 +1,7 @@
 name: smoke
 
-# Throwaway Postgres applies the location migrations, then a headless browser
-# loads the main pages. No production Supabase access and no secrets.
+# Throwaway Postgres loads schema.sql and every migration, then a headless
+# browser loads the main pages. No production Supabase access and no secrets.
 on:
   push:
     branches: ["main"]
@@ -19,17 +19,22 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - name: Install Postgres and Chromium
+      - name: Install Postgres
         run: |
           sudo apt-get update
           sudo apt-get install -y postgresql postgresql-client
-          sudo apt-get install -y chromium-browser || sudo apt-get install -y chromium || true
-          if ! command -v chromium && ! command -v google-chrome && ! command -v chromium-browser; then
-            sudo apt-get install -y wget gnupg
-            wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo gpg --dearmor -o /usr/share/keyrings/google-chrome.gpg
-            echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-chrome.gpg] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google-chrome.list
-            sudo apt-get update
-            sudo apt-get install -y google-chrome-stable
-          fi
-      - name: Lint migrations and load pages
+      - uses: browser-actions/setup-chrome@v1
+        id: chrome
+        with:
+          chrome-version: stable
+          install-dependencies: true
+      - name: Apply schema and migrations, then load pages
+        env:
+          CHROME_PATH: ${{ steps.chrome.outputs.chrome-path }}
         run: bash scripts/smoke.sh
+      - name: Composer controls and cancellation regression
+        env:
+          CHROMIUM_PATH: ${{ steps.chrome.outputs.chrome-path }}
+        run: |
+          npm install --prefix "$RUNNER_TEMP/asc-browser-tests" --no-save --package-lock=false playwright@1.62.1
+          NODE_PATH="$RUNNER_TEMP/asc-browser-tests/node_modules" node tests/composer.browser.cjs

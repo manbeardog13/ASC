@@ -1,4 +1,4 @@
-# Assistant and warehouse checks
+# Agent surface and warehouse checks
 
 All fixtures are synthetic. These tests never call a model, access a live session,
 read production inventory, or write to Supabase.
@@ -16,32 +16,23 @@ ignored `out/assistant-tests`, or `ASC_TEST_OUTPUT` if supplied.
 
 ```sh
 node tests/warehouse.browser.cjs
-node tests/assistant.browser.cjs
-node tests/assistant-surface.browser.cjs
-node tests/assistant-local.browser.cjs
+node tests/composer.browser.cjs
 ```
 
-The assistant browser suite uses mocked session/data/model responses; check-in
-and dashboard data modules are explicitly stubbed for form/shell-only checks.
-It checks 390, 768 and 1440px layouts, local navigation, contextual tool replies,
-compact disclosures, cancellation, denied access, and check-in prefilling.
-The small surface suite checks speech events, keyboard focus, failed asset
-loading/manual retry, and a context change during initial script loading.
-These checks do not certify real microphone recognition, a physical device,
-model reasoning quality, live latency, backend deployment, or provider cost.
+The purple AI window is the original ASC card, copied as-is in `nero-design-studio/`.
+`tests/agent-surface.mjs` locks that card and the free Gemini flag. `tests/season-plan.mjs`
+locks the corner-number questions: a seasonal answer takes the first free bay about
+six months out, and the reminder window is five to seven days before that visit.
+Neither test calls Gemini.
+The warehouse browser check covers the spatial preview shell. These checks do not
+certify model reasoning, live latency, or a deployed function.
 
-The default assistant uses `assistant-local.js`, a bounded Croatian/English intent
-matcher and authorized inventory reads. It is not a general language model.
-`assistant-local.browser.cjs` runs unchanged default-off model configuration at
-390/768/1440px and verifies zero model requests for search, ambiguity, unsupported
-questions, cancel, and preview isolation. It also checks direct remote-client
-refusal. The local-loader tests use a synthetic shared client to verify session
-checks and SELECT-only access without importing the offline write queue.
-
-The older remote protocol/browser cases explicitly replace configuration with
-synthetic opt-in **inside the intercepted fixture only** and use the dedicated
-remote submit. These tests do not enable the application's remote setting.
-Both client entry points require that setting and an explicit remote turn.
+The composer check covers reachable controls at 320–1440px, light/dark themes,
+long drafts, history above the sheet, synthetic keyboard resizing, stopped and
+superseded replies, concierge failure, IME input, and conversation restoration.
+It does not replace a real iOS/Android keyboard and gesture pass.
+`tests/sql/nero-chats.sql` runs in smoke's disposable database and checks owner
+isolation, private attachments, and the absence of anonymous/table-wide grants.
 
 Required repository checks for changes under js/:
 

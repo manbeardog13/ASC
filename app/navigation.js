@@ -12,15 +12,26 @@ export const navigationIcons = {
     map: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4.5L4 6.5v13l5-2 6 2 5-2v-13l-5 2-6-2z"/><path d="M9 4.5v13M15 6.5v13"/></svg>',
     chev: '<svg class="sb-chev" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9.5l6 6 6-6"/></svg>',
     out: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4H6a2 2 0 00-2 2v12a2 2 0 002 2h3M15 8l4 4-4 4M19 12H9"/></svg>',
+    theme: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5 5l1.4 1.4M17.6 17.6L19 19M19 5l-1.4 1.4M6.4 17.6L5 19"/></svg>',
+    menu: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>',
   };
 
 const APP_ROOT = new URL('./', import.meta.url);
+const WAREHOUSE_FILES = ['warehouse-preview/index.html', 'locate.html', 'locations.html', 'recycle.html', 'place.html', 'checkout.html', 'set-detail.html'];
+
+function pageFile(pathname) {
+  const parts = String(pathname || '').split('/').filter(Boolean);
+  if (parts[parts.length - 1] === 'warehouse-preview') return 'warehouse-preview/index.html';
+  if (parts.slice(-2).join('/') === 'warehouse-preview/index.html') return 'warehouse-preview/index.html';
+  return parts[parts.length - 1] || 'dashboard.html';
+}
+
 export function renderAppNavigation({warehouseOpen=false, currentPath=location.pathname}={}) {
   const I=navigationIcons, whOpen=warehouseOpen;
-  const item=(m,href,icon,label,kid)=>{
+  const item=(m,href,icon,label,kid,admin)=>{
     const path=new URL(href,APP_ROOT).pathname;
     const active=currentPath===path || (href==='warehouse-preview/index.html' && currentPath===new URL('warehouse-preview/',APP_ROOT).pathname);
-    return '<a class="sb-item'+(kid?' sb-kid':'')+(active?' on':'')+'" data-m="'+m+'" href="'+path+'"'+(active?' aria-current="page"':'')+' title="'+label+'">'+icon+'<span class="t">'+label+'</span></a>';
+    return '<a class="sb-item'+(kid?' sb-kid':'')+(active?' on':'')+'" data-m="'+m+'"'+(admin?' data-admin="1"':'')+' href="'+path+'"'+(active?' aria-current="page"':'')+' title="'+label+'">'+icon+'<span class="t">'+label+'</span></a>';
   };
   return (
       item('dashboard', 'dashboard.html', I.home, 'Ploča') +
@@ -35,11 +46,31 @@ export function renderAppNavigation({warehouseOpen=false, currentPath=location.p
           item('warehouse', 'recycle.html', I.bin, 'Košarica', true) +
         '</div></div></div>' +
       item('customers', 'customers.html', I.people, 'Kupci') +
+      // Offers slot — the offers page inserts its item here. Not a link.
+      '<div class="sb-slot" data-nav-slot="offers" hidden></div>' +
       item('reminders', 'reminders.html', I.bell, 'Podsjetnici') +
       item('workshop', 'workshop.html', I.wrench, 'Radionica') +
-      '<div class="sb-div"></div><div class="sb-eyebrow2">Upravljanje</div>' +
-      item('users', 'users.html', I.users, 'Korisnici')
+      '<div class="sb-div" data-admin="1"></div><div class="sb-eyebrow2" data-admin="1">Upravljanje</div>' +
+      item('users', 'users.html', I.users, 'Korisnici', false, true) +
+      '<button class="sb-item sb-theme" type="button" id="sbTheme" aria-pressed="false">' + I.theme + '<span class="t">Tamna tema</span></button>'
   );
+}
+
+// Admin-only rows stay in the DOM (so link counts stay stable) but are hidden
+// until the signed-in role is admin or manager. Unknown role fails closed.
+export function applyNavAccess(root, role) {
+  if (!root) return;
+  const admin = role === 'admin' || role === 'manager';
+  root.querySelectorAll('[data-admin]').forEach((el) => { el.hidden = !admin; });
+}
+
+export function syncThemeButton(button) {
+  if (!button) return;
+  const dark = document.documentElement.classList.contains('dark');
+  button.setAttribute('aria-pressed', String(dark));
+  button.classList.toggle('on', dark);
+  const label = button.querySelector('.t');
+  if (label) label.textContent = dark ? 'Svijetla tema' : 'Tamna tema';
 }
 
 // Preserve the source entry, so native Back/swipe restores its menu without

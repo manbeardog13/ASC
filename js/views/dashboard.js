@@ -61,7 +61,6 @@ export async function render(main) {
           <div class="v6meter"><i id="scMeter"></i></div>
           <div class="v6space"></div>
           <div class="v6spills" id="tiles"></div>
-          <a class="v6cta" href="#/assistant"><span class="v6dot"></span>${esc(t("dash.askAgent"))}</a>
           <span class="v6tab br">${esc(t("dash.estTab"))}</span>
         </section>
         <div class="v6mid">
@@ -89,7 +88,6 @@ export async function render(main) {
           <a class="v6row" href="#/scan">${t("dash.scanQr")}<span class="v">→</span></a>
           ${canWorkshop ? `<a class="v6row" href="#/workshop">${t("ws.enter")}<span class="v">→</span></a>` : ""}
           <a class="v6row" href="#/reminders">${t("dash.reminders")}<span class="v"><span id="remindBadge" class="rem-badge" hidden></span>→</span></a>
-          <a class="v6row hero" href="#/assistant">${t("ag.title")}<span class="v"><span class="v6dot"></span>online</span></a>
         </aside>
       </div>
       <section class="v6list">

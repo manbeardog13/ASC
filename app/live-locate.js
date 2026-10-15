@@ -1,6 +1,9 @@
 import { listStorageSets } from "../js/db.js";
 import { searchSets } from "./agent-search.js";
 import { t, toast, el, button, field, input, queryParam } from "./flow-ui.js";
+import { bootOnboarding } from "./onboarding.js";
+
+bootOnboarding();
 
 const root = document.getElementById("flow-root");
 let rows = [];

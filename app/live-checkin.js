@@ -12,14 +12,19 @@
 // Both navigate to set-detail.html?code=<code> after ~900ms.
 // ============================================================================
 import {
-  getSession, healthStats, createStorageSet, loadStorageSet, listCustomers,
+  getSession, healthStats, createStorageSet, loadStorageSet, listCustomers, countLocations,
   suggestFreeSlot, locationLabel, updateCustomer, updateVehicle, updateStorageSet, replaceTires,
 } from '../js/db.js';
 import { t } from '../js/i18n.js';
+import { intakeReturn, placementNeedsSlots, suggestionNote } from '../js/firstRun.js';
+import { slotBlock } from './slot-block.js';
+import { bootOnboarding } from './onboarding.js';
 // db.js's createStorageSet persists the location via store.rememberLocation →
 // localStorage 'asc.recentLocations'. Loading here (same module instance as
 // db.js uses) hydrates the in-memory list so saving doesn't clobber history.
 import { loadRecentLocations } from '../js/store.js';
+import { installPlanMark } from './plan-mark.js';
+import { mergeNotes, decodePlan, isoDate } from '../js/seasonPlan.js';
 
 const $ = (id) => document.getElementById(id);
 const q = (s, r = document) => r.querySelector(s);
@@ -196,6 +201,7 @@ function readForm() {
   if (year != null && (year < 1950 || year > 2100)) year = null;
   let fee = num('s_fee');
   if (fee != null && fee < 0) fee = null;
+  const plan = decodePlan(val('plan_marker'));
   return {
     customer: {
       id: val('c_id') || null,
@@ -213,10 +219,12 @@ function readForm() {
       quantity: Math.max(1, Math.min(8, Number(val('s_qty')) || 4)),
       zone: val('s_zone'), rack: val('s_rack'), shelf: val('s_shelf'), slot: val('s_slot'),
       check_in_date: new Date().toISOString().slice(0, 10),
-      expected_out_date: val('s_out'),
+      expected_out_date: plan?.at ? isoDate(plan.at) : val('s_out'),
       fee,
       paid: Boolean($('s_paid') && $('s_paid').checked),
-      notes: val('s_notes'),
+      notes: mergeNotes(val('s_notes'), val('plan_marker')),
+      keep_plan: plan?.kind || null,
+      swap_at: plan?.at ? plan.at.toISOString() : null,
       bolts_location: val('s_bolts') || null,
       hubcaps_location: val('s_hubcaps') || null,
       hubcaps_stored: val('s_hubcaps') === 'stored',
@@ -336,44 +344,7 @@ function installWhoSearch() {
   });
 }
 
-function installSidewall() {
-  const tires = $('tires');
-  if (!tires || $('sidewallBtn')) return;
-  const btn = document.createElement('button');
-  btn.type = 'button';
-  btn.id = 'sidewallBtn';
-  btn.className = 'btn ghost';
-  btn.textContent = t('flow.sidewall');
-  const file = document.createElement('input');
-  file.type = 'file';
-  file.accept = 'image/*';
-  file.capture = 'environment';
-  file.hidden = true;
-  btn.addEventListener('click', () => file.click());
-  file.addEventListener('change', async () => {
-    const picked = file.files && file.files[0];
-    file.value = '';
-    if (!picked) return;
-    btn.disabled = true;
-    showToast(t('flow.reading'));
-    try {
-      const [{ scanSidewall }, { fillNextTireRow }] = await Promise.all([
-        import('../js/ocr.js'),
-        import('../js/views/shared.js'),
-      ]);
-      const found = await scanSidewall(picked);
-      fillNextTireRow(tires, found?.size || '', found?.dot || '');
-      showToast(t('flow.sidewallOk'));
-    } catch (error) {
-      showToast(error?.message || t('flow.camera'));
-    } finally {
-      btn.disabled = false;
-    }
-  });
-  tires.before(btn, file);
-}
-
-function showPlaceStep(code, formData) {
+async function showPlaceStep(code, formData) {
   showWizard(3);
   qa('#ci > section').forEach((section) => { section.hidden = true; });
   let panel = $('placeStep');
@@ -403,6 +374,15 @@ function showPlaceStep(code, formData) {
       season: formData.set.season,
     });
   });
+  let slotCount = null;
+  try { slotCount = await countLocations(); }
+  catch (error) { showToast(error.message || t('flow.migration')); }
+  if (placementNeedsSlots(slotCount)) {
+    actions.append(print);
+    panel.append(title, lead, actions, slotBlock('empty', intakeReturn(code)));
+    if (window.ASCQR && window.qrcode) print.click();
+    return;
+  }
   const suggest = document.createElement('button');
   suggest.type = 'button';
   suggest.className = 'btn ghost';
@@ -411,9 +391,14 @@ function showPlaceStep(code, formData) {
   note.className = 'flow-note';
   suggest.addEventListener('click', async () => {
     try {
-      const slot = await suggestFreeSlot('main');
+      const slot = await suggestFreeSlot('main', {
+        customerId: formData.customer && formData.customer.id,
+        phone: formData.customer && formData.customer.phone,
+        plate: formData.vehicle && formData.vehicle.plate,
+      });
       if (!slot) { showToast(t('flow.noSlot')); return; }
-      note.textContent = t('flow.suggested', { where: locationLabel(slot) });
+      const copy = suggestionNote(slot, locationLabel(slot));
+      note.textContent = t(copy.key, copy.vars);
       place.href = 'place.html?set=' + encodeURIComponent(code) + (slot.qr_code ? '&slot=' + encodeURIComponent(slot.qr_code) : '');
     } catch (error) {
       showToast(error.message || t('flow.migration'));
@@ -444,10 +429,11 @@ function installWizard() {
   }
   form.before(steps);
   installWhoSearch();
-  installSidewall();
   showWizard(1);
 }
 installWizard();
+installPlanMark();
+bootOnboarding();
 
 if (form) form.addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -578,6 +564,24 @@ window.ascLiveFirst = new Promise((r) => { liveFirstDone = r; });
   }
   liveFirstDone();
 
+  const resumeCode = !editMode && new URLSearchParams(location.search).get('place');
+  if (resumeCode) {
+    try {
+      const data = await loadStorageSet(resumeCode);
+      await showPlaceStep(data.public_code || resumeCode, {
+        customer: {
+          id: data.vehicle?.customer?.id || '',
+          name: data.vehicle?.customer?.name || '',
+          phone: data.vehicle?.customer?.phone || '',
+        },
+        vehicle: { plate: data.vehicle?.plate || '' },
+        set: { season: data.season || '' },
+      });
+    } catch (e) {
+      showToast(e && e.message ? e.message : t('flow.notFound'));
+    }
+  }
+
   if (editMode) {
     try {
       const data = await loadStorageSet(editCode);
@@ -600,124 +604,3 @@ window.ascLiveFirst = new Promise((r) => { liveFirstDone = r; });
 // either control.
 if ($('s_paid')) $('s_paid').addEventListener('change', () => { paidTouched = true; });
 if ($('s_onrims')) $('s_onrims').addEventListener('change', () => { onRimsTouched = true; });
-
-// ============================================================================
-// Sluh v1.1 — hold-to-talk check-in (Brain-1)
-// Wires #sluhBtn → voice.js listenHold → sluh.js extractSlots → form fill.
-// ============================================================================
-
-// Fill form fields from slotsToPreifll output (overwrites — this is intentional user speech).
-function fillFromSluh(pf) {
-  const fi = (id, v) => { const el = $(id); if (el && v != null && v !== '') el.value = String(v); };
-  fi('c_name',  pf.customer_name);
-  fi('c_phone', pf.phone);
-  fi('c_email', pf.email);
-  fi('v_plate', pf.plate);
-  fi('v_make',  pf.make);
-  fi('v_model', pf.model);
-  if (pf.year)  fi('v_year', pf.year);
-  fi('s_zone',  pf.zone);
-  fi('s_rack',  pf.rack);
-  fi('s_shelf', pf.shelf);
-  fi('s_slot',  pf.slot);
-  if (pf.season) {
-    const sb = document.querySelector('[data-season="' + pf.season + '"]');
-    if (sb) sb.click();
-  }
-  if (pf.quantity != null) {
-    const qtyEl = $('s_qty');
-    if (qtyEl) { qtyEl.value = pf.quantity; qtyEl.dispatchEvent(new Event('change')); }
-  }
-  if (pf.on_rims != null) {
-    const onr = $('s_onrims');
-    if (onr && onr.checked !== pf.on_rims) {
-      onr.checked = pf.on_rims;
-      onr.dispatchEvent(new Event('change'));
-    }
-  }
-  if (pf.bolts_location    && window.setSegOpt) window.setSegOpt('s_bolts',   pf.bolts_location);
-  if (pf.hubcaps_location  && window.setSegOpt) window.setSegOpt('s_hubcaps', pf.hubcaps_location);
-  const rows = qa('#tires .tire-edit-row');
-  rows.forEach((r) => {
-    const setE = (sel, v) => { const el = q(sel, r); if (el && v && !el.value) el.value = v; };
-    if (pf.tire_size) setE('[data-t="size"]',  pf.tire_size);
-    if (pf.brand)     setE('[data-t="brand"]', pf.brand);
-  });
-}
-
-// Sluh init — runs once; skips silently if #sluhBtn absent or voice unsupported.
-(async () => {
-  const btn = document.getElementById('sluhBtn');
-  if (!btn) return;
-
-  // Dynamic imports keep this wiring lazy — no cost if the button is never touched.
-  const { voiceSupported, listenHold, abortListening } = await import('../js/voice.js');
-  const { extractSlots, groundCustomer, confidence, slotsToPreifll } = await import('./sluh.js');
-  const { listCustomers } = await import('../js/db.js');
-
-  if (!voiceSupported()) { btn.hidden = true; return; }
-
-  const label = btn.querySelector('.sluh-label');
-  let holdHandle = null;
-
-  function setListening(on) {
-    btn.classList.toggle('listening', on);
-    if (label) label.textContent = on ? 'Slušam…' : 'Drži i govori';
-  }
-
-  async function onPointerDown(e) {
-    if (e.button !== undefined && e.button !== 0) return;
-    e.preventDefault();
-    // Capture btn before any await — e.currentTarget nulls out after async yields
-    setListening(true);
-
-    // Warm the customer cache in parallel with starting the listen
-    const [customersResult, handle] = await Promise.all([
-      listCustomers().catch(() => []),
-      Promise.resolve(listenHold({ onInterim: () => {} })),
-    ]);
-    holdHandle = handle;
-    const transcript = await holdHandle.done;
-
-    setListening(false);
-    holdHandle = null;
-
-    if (!transcript?.trim()) return;
-
-    const slots    = extractSlots(transcript);
-    const score    = confidence(slots);
-
-    if (score >= 0.6) {
-      const { customer } = groundCustomer(slots, customersResult);
-      fillFromSluh(slotsToPreifll(slots, customer));
-      showToast('Forma ispunjena (' + Math.round(score * 100) + '%)');
-    } else if (navigator.onLine) {
-      // Brain-2 fallback: write transcript for the Gemini agent to pick up
-      sessionStorage.setItem('asc.sluh_transcript', transcript);
-      document.dispatchEvent(new CustomEvent('asc:sluh-fallback', { detail: { transcript, slots } }));
-      // Also do a partial fill so at least the high-conf slots land
-      const { customer } = groundCustomer(slots, customersResult);
-      fillFromSluh(slotsToPreifll(slots, customer));
-      showToast('Šaljem agentu…');
-    } else {
-      // Offline: partial fill with what we have
-      const { customer } = groundCustomer(slots, customersResult);
-      fillFromSluh(slotsToPreifll(slots, customer));
-      showToast('Djelomično ispunjeno (offline)');
-    }
-  }
-
-  function releaseHold() {
-    if (holdHandle) { holdHandle.release(); holdHandle = null; }
-    setListening(false);
-  }
-
-  btn.addEventListener('pointerdown', onPointerDown);
-  btn.addEventListener('pointerup',     releaseHold);
-  btn.addEventListener('pointerleave',  releaseHold);
-  btn.addEventListener('pointercancel', releaseHold);
-
-  // Tear down mic if the page is leaving or the SPA route changes
-  document.addEventListener('asc:teardown', () => { abortListening(); holdHandle = null; setListening(false); });
-  window.addEventListener('hashchange',     () => { abortListening(); holdHandle = null; setListening(false); });
-})();

@@ -41,6 +41,7 @@
   document.addEventListener('click', (e) => {
     if (!e.target.closest('[data-logout],[data-signout]')) return;
     e.preventDefault(); e.stopPropagation();
+    document.dispatchEvent(new CustomEvent('asc:sign-out'));
     dbReady.then((m) => m.signOut()).catch(() => {}).finally(() => S.bloom(() => S.handoff('login.html')));
   }, true);
 })();
@@ -57,13 +58,27 @@ try {
 } catch (e) {}
 const meta = document.querySelector('meta[name="theme-color"]');
 const reduce = matchMedia('(prefers-reduced-motion:reduce)').matches;
-try { if (localStorage.getItem('asc.theme') === 'dark') root.classList.add('dark'); } catch(e){}
-const paintTheme = () => meta.setAttribute('content', root.classList.contains('dark') ? '#0a0c11' : '#edf0f5');
+try {
+  if (!window.ASCTheme) {
+    const stored = localStorage.getItem('asc.theme');
+    const dark = stored === 'dark' || (stored !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches);
+    root.classList.toggle('dark', dark);
+  }
+} catch(e){}
+const paintTheme = () => {
+  if (window.ASCTheme) window.ASCTheme.paint();
+  else if (meta) meta.setAttribute('content', root.classList.contains('dark') ? '#0a0c11' : '#edf0f5');
+};
 paintTheme();
-document.getElementById('mode').addEventListener('click', () => {
-  const dark = root.classList.toggle('dark');
-  try { localStorage.setItem('asc.theme', dark ? 'dark' : 'light'); } catch(e){}
-  paintTheme();
+const modeBtn = document.getElementById('mode');
+if (modeBtn) modeBtn.addEventListener('click', () => {
+  if (window.ASCTheme) window.ASCTheme.toggle();
+  else {
+    const dark = root.classList.toggle('dark');
+    try { localStorage.setItem('asc.theme', dark ? 'dark' : 'light'); } catch(e){}
+    paintTheme();
+  }
+  document.dispatchEvent(new CustomEvent('asc:theme'));
 });
 
 // The logo is always a way home — click (or Enter/Space) → dashboard, from any page.
@@ -184,7 +199,7 @@ function animate(){
 (async () => {
   if (/\/login\.html$/.test(location.pathname)) return;
   const doc = document, root = doc.documentElement;
-  const {navigationIcons:I,renderAppNavigation,installWarehouseMenuReturn}=await import('./navigation.js');
+  const {navigationIcons:I,renderAppNavigation,applyNavAccess,syncThemeButton,installWarehouseMenuReturn}=await import('./navigation.js');
   const here = location.pathname.split('/').pop() || 'dashboard.html';
   const whPages = ['recycle.html', 'locate.html', 'locations.html', 'place.html', 'checkout.html'];
   const whOpen = whPages.includes(here) ||
@@ -271,6 +286,16 @@ function animate(){
   scrim.addEventListener('click', () => setMenuOpen(false));
   doc.addEventListener('keydown', (e) => { if (e.key === 'Escape') setMenuOpen(false); });
   aside.addEventListener('click', (e) => { if (e.target.closest('a.sb-item')) setMenuOpen(false); });
+  const themeBtn = aside.querySelector('#sbTheme');
+  const syncTheme = () => syncThemeButton(themeBtn);
+  syncTheme();
+  themeBtn?.addEventListener('click', () => {
+    const mode = doc.getElementById('mode');
+    if (mode) mode.click();
+    else { window.ASCTheme?.toggle(); syncTheme(); }
+  });
+  doc.addEventListener('asc:theme', syncTheme);
+  applyNavAccess(aside, null);
   installWarehouseMenuReturn(()=>{
     group.classList.add('open');
     group.querySelector('button').setAttribute('aria-expanded','true');
@@ -282,6 +307,7 @@ function animate(){
   // user card: real profile (name, role, avatar) — degrades to initials
   const ROLE = { admin: 'Administrator', manager: 'Voditelj', employee: 'Djelatnik', reception: 'Recepcija', readonly: 'Pregled' };
   import('../js/db.js').then((m) => m.loadMyProfile()).then((p) => {
+    applyNavAccess(aside, p?.role);
     if (!p) return;
     const name = (p.full_name || '').trim() || 'ASC korisnik';
     doc.getElementById('sbName').textContent = name;
@@ -350,102 +376,21 @@ document.addEventListener('click', (e) => {
 });
 if (document.readyState !== 'loading') syncDisc(); else addEventListener('DOMContentLoaded', syncDisc);
 
-// ============================================================================
-// One ASC assistant surface for every signed-in app page. The same surface
-// handles the header, dashboard prompts and the check-in voice fallback.
-// It stays in document flow so it never covers the task the user is working on.
-// ============================================================================
+// The purple card on the dashboard is Nero. Load its brain here so that card
+// can ask. Everywhere else she is the collapsed composer, same violet.
 (() => {
-  // Sticker printing and scanning still share ASCQR independently of chat.
-  const ensureQR = () => {
-    if ([...document.scripts].some(sc => sc.src && new URL(sc.src).pathname.endsWith('/qr.js'))) return;
+  ['concierge.js', 'agent-config.js', 'qr.js', 'agent-gemini.js'].forEach((src) => {
+    if ([...document.scripts].some(sc => sc.src && new URL(sc.src).pathname.endsWith('/' + src))) return;
     const script = document.createElement('script');
-    script.src = 'qr.js'; script.async = false; document.head.appendChild(script);
-  };
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', ensureQR, {once: true});
-  else ensureQR();
-  const shell = document.querySelector('.shell');
-  const header = shell?.querySelector('header.top');
-  if (!shell || !header || window.ASCChatReady) return;
-
-  let mount = document.getElementById('asc-agent');
-  if (!mount) {
-    mount = document.createElement('section');
-    mount.id = 'asc-agent';
-    mount.setAttribute('aria-label', 'ASC pomoćnik');
-    header.after(mount);
-  }
-  const launcher = document.createElement('button');
-  launcher.type = 'button';
-  launcher.className = 'asc-chat-launcher';
-  launcher.textContent = 'Pitaj ASC';
-  launcher.setAttribute('aria-controls', mount.id);
-  launcher.disabled = true;
-  // The legacy navigation pill is hidden when the sidebar is active.
-  // Keep the assistant reachable as a direct header control at every width.
-  header.appendChild(launcher);
-
-  const context = () => {
-    const params = new URLSearchParams(location.search);
-    return {
-      page: location.pathname.split('/').pop() || 'dashboard.html',
-      customerId: params.get('id') || null,
-      setCode: params.get('code') || null
-    };
-  };
-  let pendingTranscript = null;
-  let pageActive = true;
-  const consumeTranscript = (text) => {
-    if (typeof text !== 'string' || !text.trim()) return;
-    try { sessionStorage.removeItem('asc.sluh_transcript'); } catch (_) {}
-    if (window.ASCChat) window.ASCChat.open(text.trim(), true);
-    else pendingTranscript = text.trim(); // retain only the latest intent while loading
-  };
-  document.addEventListener('asc:sluh-fallback', event => {
-    if (pageActive) consumeTranscript(event.detail?.transcript);
+    script.src = src; script.async = false;
+    if (src === 'concierge.js') script.type = 'module';
+    document.head.appendChild(script);
   });
-  // live-checkin sets the key before dispatching its event. Consuming it here
-  // also handles a transcript produced before this module's listener existed.
-  if (location.pathname.endsWith('/checkin.html')) {
-    try { consumeTranscript(sessionStorage.getItem('asc.sluh_transcript')); } catch (_) {}
-  }
-
-  window.ASCChatReady = import('./assistant-surface.js')
-    .then(({mountAssistant}) => {
-      const chat = mountAssistant(mount, {context, isActive: () => pageActive});
-      window.ASCChat = chat;
-      launcher.disabled = false;
-      launcher.addEventListener('click', () => chat.open());
-      document.dispatchEvent(new CustomEvent('asc:chat-ready'));
-      if (pendingTranscript && pageActive) {
-        const text = pendingTranscript; pendingTranscript = null;
-        chat.open(text, true);
-      }
-      return chat;
-    })
-    .catch(() => {
-      pendingTranscript = null;
-      launcher.textContent = 'Pomoćnik nedostupan';
-      launcher.title = 'Pomoćnik se nije učitao. Ponovno učitaj stranicu.';
-      const status = document.createElement('p');
-      status.setAttribute('role', 'status');
-      status.textContent = 'Pomoćnik se nije učitao. Ponovno učitaj stranicu.';
-      mount.appendChild(status);
-      return null;
-    });
-  addEventListener('pagehide', (event) => {
-    // Only a hidden or frozen page drops the session. A pagehide while the
-    // document is still visible (print, share sheet) used to leave pageActive
-    // false with no matching pageshow, so every later question was ignored.
-    if (document.visibilityState === 'hidden' || event.persisted) {
-      pageActive = false; pendingTranscript = null;
-      window.ASCChat?.suspend();
-    }
-  });
-  addEventListener('pageshow', () => { pageActive = true; });
-  addEventListener('visibilitychange', () => {
-    if (document.visibilityState !== 'hidden') pageActive = true;
-  });
+  if (document.getElementById('agentCard') || /\/login\.html$/.test(location.pathname)) return;
+  if ([...document.scripts].some(sc => sc.src && new URL(sc.src).pathname.endsWith('/composer.js'))) return;
+  const composer = document.createElement('script');
+  composer.src = new URL('composer.js', document.currentScript.src).href;
+  document.head.appendChild(composer);
 })();
 
 // ============================================================================
@@ -512,7 +457,6 @@ if (document.readyState !== 'loading') syncDisc(); else addEventListener('DOMCon
         '<div class="md-section-t">Preferencije</div>' +
         row('Tamna tema', 'Prebaci svijetli / tamni izgled', 'theme', isDark()) +
         row('Obavijesti', 'Podsjetnici za preuzimanje', 'notify', profile.notify) +
-        row('Glasovni odgovori', 'ASC Agent odgovara naglas', 'voice', profile.voice) +
         '<button class="md-logout" type="button" data-logout>Odjava</button>' +
         '<div class="md-saved" data-saved aria-live="polite">Spremljeno ✓</div>' +
       '</section>' +

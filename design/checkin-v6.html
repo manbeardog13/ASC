@@ -397,9 +397,6 @@ html.dark .note { background:rgba(244,245,247,.07); }
       <span class="tab tl">03 · gume</span>
       <h3 class="lg">Gume</h3>
       <p class="hint">Ispunite što možete — prazna polja se preskaču.</p>
-      <button class="scan" type="button" id="ss_photoBtn">Skeniraj bok gume<span class="v">kamera →</span></button>
-      <input id="ss_photo" type="file" accept="image/*" capture="environment" hidden>
-      <p class="note" id="ocrStatus">Ispunjena guma 1: dimenzija 205/55R16, DOT 3523. Molimo provjerite.</p>
       <datalist id="commonSizes">
         <option value="195/65R15"><option value="205/55R16"><option value="215/60R16">
         <option value="225/45R17"><option value="225/40R18"><option value="235/35R19">
@@ -488,7 +485,6 @@ html.dark .note { background:rgba(244,245,247,.07); }
   });
   const onrims = document.getElementById('s_onrims'), rimWrap = document.getElementById('rimWrap');
   onrims.addEventListener('change', () => { rimWrap.hidden = !onrims.checked; });
-  document.getElementById('ss_photoBtn').addEventListener('click', () => document.getElementById('ss_photo').click());
   document.getElementById('ci').addEventListener('submit', (e) => e.preventDefault());
 </script>
 </body>
