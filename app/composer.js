@@ -80,6 +80,7 @@
   var suggest = document.createElement('div');
   suggest.className = 'nero-suggest';
   suggest.setAttribute('aria-label', 'Prijedlozi');
+  suggest.inert = true;
   root.insertBefore(suggest, root.querySelector('.nero-sheet'));
   var shellEl = document.querySelector('main.shell') || document.querySelector('.shell');
   if (shellEl && !document.querySelector('.nero-mark')) {
@@ -91,11 +92,13 @@
 
   // Conversation controls live inside the sheet's tool row — nothing below the composer.
   root.querySelector('.nero-tools').insertBefore(root.querySelector('.nero-pills'), root.querySelector('.nero-mic'));
+  root.insertBefore(root.querySelector('.nero-history'), suggest);
   // Docked to the bottom edge; on phones it rides the on-screen keyboard.
   function dock() {
     var vv = window.visualViewport;
     var lift = vv ? Math.max(0, innerHeight - vv.height - vv.offsetTop) : 0;
     root.style.setProperty('--kb', lift + 'px');
+    root.style.setProperty('--nero-viewport', (vv ? vv.height : innerHeight) + 'px');
   }
   if (window.visualViewport) { visualViewport.addEventListener('resize', dock); visualViewport.addEventListener('scroll', dock); }
   dock();
@@ -113,6 +116,9 @@
   var relayPill = root.querySelector('[data-act="relay"]');
   var plus = root.querySelector('.nero-plus');
   var busy = false;
+  var requestGeneration = 0;
+  var chatGeneration = 0;
+  var saveQueue = Promise.resolve();
   var chatId = null;
   var pending = [];
   var stick = true;
@@ -266,18 +272,31 @@
     root.classList.toggle('is-busy', on);
     send.setAttribute('aria-label', on ? 'Stani' : 'Pošalji');
   }
+  function stopRequest() {
+    requestGeneration += 1;
+    if (window.ASCAgent && ASCAgent.cancel) ASCAgent.cancel();
+    log.querySelectorAll('.is-stream').forEach(function (el) {
+      paint(el, el.dataset.raw || '', false);
+    });
+    setBusy(false);
+  }
 
   function saveMessage(role, body, attachments) {
     if (!body) return;
-    libs().then(function (lib) {
+    var conversation = chatGeneration;
+    saveQueue = saveQueue.then(function () { return libs(); }).then(function (lib) {
+      if (conversation !== chatGeneration) return;
       return lib.db.getSession().then(function (session) {
-        if (!session) return;
+        if (!session || conversation !== chatGeneration) return;
         var write = chatId
           ? Promise.resolve(chatId)
           : lib.supabase.from('nero_chats').insert({ title: body.slice(0, 80) }).select('id').single()
-            .then(function (res) { if (res.error || !res.data) return null; chatId = res.data.id; return chatId; });
+            .then(function (res) {
+              if (res.error || !res.data || conversation !== chatGeneration) return null;
+              chatId = res.data.id; return chatId;
+            });
         return write.then(function (id) {
-          if (!id) return;
+          if (!id || conversation !== chatGeneration) return;
           return lib.supabase.from('nero_messages').insert({
             chat_id: id, role: role, body: body, attachments: attachments || []
           }).then(function () {
@@ -288,8 +307,10 @@
     }).catch(function () {});
   }
 
-  function askGemini(text, attachments) {
+  function askGemini(text, attachments, request) {
+    if (request !== requestGeneration) return;
     if (!(window.ASCAgent && ASCAgent.configured && ASCAgent.configured())) {
+      setBusy(false);
       location.href = href('workshop.html?q=' + encodeURIComponent(text));
       return;
     }
@@ -300,7 +321,10 @@
       if (!bubble) bubble = card('assistant', '');
       return bubble;
     }
-    ASCAgent.ask(text, function (ev) {
+    Promise.resolve().then(function () {
+      if (request !== requestGeneration) return;
+      return ASCAgent.ask(text, function (ev) {
+      if (request !== requestGeneration) return;
       if (ev.type === 'delta') {
         acc += ev.text;
         paint(bubbleFor(), acc, true);
@@ -318,9 +342,12 @@
         paint(bubbleFor(), ev.message || 'Greška.', false);
         bubble = null;
       }
-    }, { remote: true, stream: true, attachments: attachments }).then(function () {
+      }, { remote: true, stream: true, attachments: attachments });
+    }).then(function () {
+      if (request !== requestGeneration) return;
       setBusy(false);
     }).catch(function (err) {
+      if (request !== requestGeneration) return;
       setBusy(false);
       if (err && err.code === 'cancelled') return;
       paint(bubbleFor(), 'Veza je pukla — pokušaj ponovno.', false);
@@ -443,7 +470,7 @@
       return chain;
     }).then(function () { flushing = false; refreshQueue(); }).catch(function () { flushing = false; });
   }
-  function sendRelay(text, refs) {
+  function sendRelay(text, refs, request) {
     var q = queueApi();
     var item = {
       id: makeId(),
@@ -462,6 +489,7 @@
     }
     setBusy(true);
     postBuilder(item).then(function (outcome) {
+      if (request !== requestGeneration) return;
       setBusy(false);
       if (outcome === 'ok') { showConnect(false); mark('sent to Toni & Nero'); return; }
       if (outcome === 'http') { mark('Toni & Nero nisu primili poruku.'); return; }
@@ -470,12 +498,13 @@
       mark(relayUrl() ? 'queued, sends when Tailscale reconnects' : 'Poruka čeka vezu.');
       if (!q) return;
       return q.enqueue(item).then(function () { refreshQueue(); arm(0); });
-    }).catch(function () { setBusy(false); });
+    }).catch(function () { if (request === requestGeneration) setBusy(false); });
   }
 
   function ask(text) {
     text = (text || '').trim();
     if (!text || busy) return;
+    var request = ++requestGeneration;
     if (voiceMode !== 'idle') stopVoice();
     var refs = pending.map(function (f) { return { path: f.path, mime: f.mime, name: f.name }; });
     input.value = '';
@@ -483,21 +512,25 @@
     pending = [];
     renderFiles();
     if (relayMode) {
-      sendRelay(text, refs);
+      sendRelay(text, refs, request);
       return;
     }
     card('user', text);
     saveMessage('user', text, refs);
-    var ready = window.ASCConcierge
-      ? Promise.resolve(window.ASCConcierge.answer(text))
-      : import(new URL('concierge.js', base).href).then(function (mod) { return mod.answer(text); }).catch(function () { return null; });
     setBusy(true);
+    var ready = Promise.resolve().then(function () {
+      if (request !== requestGeneration) return null;
+      return window.ASCConcierge
+        ? window.ASCConcierge.answer(text)
+        : import(new URL('concierge.js', base).href).then(function (mod) { return mod.answer(text); });
+    }).catch(function () { return null; });
     ready.then(function (fast) {
+      if (request !== requestGeneration) return;
       if (fast && !refs.length) {
         card('assistant', fast);
         saveMessage('assistant', fast, []);
         setBusy(false);
-      } else askGemini(text, refs);
+      } else askGemini(text, refs, request);
     });
   }
 
@@ -524,7 +557,7 @@
     var file = fileInput.files && fileInput.files[0];
     fileInput.value = '';
     if (!file) return;
-    if (file.size > 8 * 1024 * 1024) { card('assistant', 'Datoteka je prevelika (najviše 8 MB).'); return; }
+    if (file.size > 7_000_000) { card('assistant', 'Datoteka je prevelika (najviše 7 MB).'); return; }
     var mime = file.type || (/\.pdf$/i.test(file.name) ? 'application/pdf' : '');
     if (!/^(image\/(jpeg|png|webp|gif)|application\/pdf)$/.test(mime)) {
       card('assistant', 'Mogu priložiti sliku ili PDF.');
@@ -552,14 +585,13 @@
   root.addEventListener('submit', function (e) {
     e.preventDefault();
     if (busy) {
-      if (window.ASCAgent && ASCAgent.cancel) ASCAgent.cancel();
-      setBusy(false);
+      stopRequest();
       return;
     }
     ask(input.value);
   });
   input.addEventListener('keydown', function (e) {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); ask(input.value); }
+    if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); ask(input.value); }
     else if (e.key === 'Escape' && !input.value.trim() && !pending.length && voiceMode === 'idle') {
       input.blur();
       maybeCollapse();
@@ -573,9 +605,16 @@
     fit();
   }
   root.addEventListener('pointerdown', function (e) {
-    if (root.classList.contains('is-compact') && !e.target.closest('.nero-mic')) openComposer(true);
+    if (root.classList.contains('is-compact') && !e.target.closest('button, a, [role="button"]')) openComposer(true);
   });
-  root.addEventListener('focusin', function () { openComposer(false); });
+  root.addEventListener('focusin', function (e) {
+    if (e.target === input || !root.classList.contains('is-compact')) openComposer(false);
+    if (e.target === input && log.children.length) {
+      log.hidden = false;
+      root.classList.add('has-convo');
+      fit();
+    }
+  });
   root.addEventListener('focusout', function () {
     setTimeout(function () { if (!root.contains(document.activeElement)) maybeCollapse(); }, 0);
   });
@@ -601,9 +640,13 @@
     var q = pill.getAttribute('data-q');
     if (q) { openComposer(true); input.value = q; ask(q); return; }
     if (act === 'new') {
+      stopRequest();
+      if (voiceMode !== 'idle') stopVoice();
+      chatGeneration += 1;
       chatId = null;
       log.innerHTML = '';
       log.hidden = true;
+      root.classList.remove('has-convo');
       historyBox.hidden = true;
       if (window.ASCAgent && ASCAgent.reset) ASCAgent.reset();
       openComposer(true);
@@ -640,9 +683,12 @@
     });
   }
   function reopen(id) {
+    stopRequest();
+    var conversation = ++chatGeneration;
     libs().then(function (lib) {
       return lib.supabase.from('nero_messages').select('role, body, created_at').eq('chat_id', id).order('created_at', { ascending: true });
     }).then(function (res) {
+      if (conversation !== chatGeneration) return;
       if (!res || res.error || !res.data) return;
       chatId = id;
       log.innerHTML = '';
@@ -650,6 +696,8 @@
       if (window.ASCAgent && ASCAgent.recall) ASCAgent.recall(res.data);
       historyBox.hidden = true;
       log.hidden = !res.data.length;
+      root.classList.toggle('has-convo', !!res.data.length);
+      fit();
     }).catch(function () {});
   }
 
@@ -948,6 +996,7 @@
       }
     }
     suggest.classList.toggle('on', acts.length > 0);
+    suggest.inert = acts.length === 0;
     ripple();
   }
   // Swipe the linked (left) bubble into its right neighbour → combined workflow.
@@ -1008,7 +1057,7 @@
     }
     if (active === card) { active = null; root.classList.remove('is-merged'); }
     clearTimeout(fadeTimer);
-    fadeTimer = setTimeout(function () { if (!active) { suggest.classList.remove('on'); ripple(); } }, 1200);
+    fadeTimer = setTimeout(function () { if (!active) { suggest.classList.remove('on'); suggest.inert = true; ripple(); } }, 1200);
   }
   if ('IntersectionObserver' in window) {
     var cards = [].slice.call(document.querySelectorAll('main .card, .shell .card'));
@@ -1038,6 +1087,7 @@
     if (!root.contains(document.activeElement)) maybeCollapse();
   }, { passive: true });
   addEventListener('resize', fit);
+  if ('ResizeObserver' in window) new ResizeObserver(fit).observe(root);
   fit();
 
   libs().then(function (lib) {
