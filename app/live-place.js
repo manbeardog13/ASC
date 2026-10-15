@@ -3,6 +3,7 @@ import { t, toast, el, button, field, input, queryParam, slotFromHash, whereText
 import { placeReturn, placementNeedsSlots, unknownSlotScan, suggestionNote } from "../js/firstRun.js";
 import { slotBlock } from "./slot-block.js";
 import { bootOnboarding } from "./onboarding.js";
+import { setWorkflowContext, registerWorkflowAction } from './workflow.js';
 
 const root = document.getElementById("flow-root");
 let setRow = null;
@@ -10,6 +11,11 @@ let slotQr = slotFromHash();
 let unknown = false;
 let noSlots = false;
 let nearLabel = "";
+let saving = false;
+let committed = false;
+registerWorkflowAction('confirm-place', confirmPlace);
+registerWorkflowAction('suggest-place', suggest);
+registerWorkflowAction('type-code', () => document.getElementById('typed-code')?.focus());
 
 bootOnboarding();
 
@@ -51,19 +57,22 @@ async function acceptSlot(qr) {
 }
 
 async function confirmPlace() {
-  if (!setRow || !slotQr) return;
-  await acceptSlot(slotQr);
-  if (unknown || !slotQr) { render(); return; }
+  if (!setRow || !slotQr || saving || setRow.status === 'checked_out') return;
+  saving = true;
   const moving = Boolean(setRow.location_id);
-  const args = { setId: setRow.id, publicCode: setRow.public_code, qrCode: slotQr };
   try {
+    await acceptSlot(slotQr);
+    if (unknown || !slotQr) return;
+    const args = { setId: setRow.id, publicCode: setRow.public_code, qrCode: slotQr };
+    render();
     const data = moving ? await moveSet(args) : await placeSet(args);
+    committed = true;
     const where = locationLabel(data?.location) || slotQr;
     toast(t(moving ? "flow.moved" : "flow.placed", { code: setRow.public_code, where }));
     location.href = "set-detail.html?code=" + encodeURIComponent(setRow.public_code);
   } catch (error) {
     toast(error.message || t("flow.migration"));
-  }
+  } finally { if (!committed) { saving = false; render(); } }
 }
 
 function customerOf(row) {
@@ -76,6 +85,7 @@ function customerOf(row) {
 }
 
 async function suggest() {
+  if (saving) return;
   try {
     const slot = await suggestFreeSlot("main", customerOf(setRow));
     if (!slot) { toast(t("flow.noSlot")); return; }
@@ -91,6 +101,7 @@ async function suggest() {
 }
 
 async function onScan(text) {
+  if (saving) return;
   try {
     const slot = slotFromText(text);
     const code = setCodeFromText(text);
@@ -104,6 +115,7 @@ async function onScan(text) {
 }
 
 function render() {
+  setWorkflowContext({ set:setRow, slotQr, noSlots });
   root.replaceChildren();
   root.append(el("p", { class: "lead" }, setRow ? summary(setRow) : t("flow.scanSet")));
   const reader = el("div", { id: "flow-reader", class: "flow-reader" });
@@ -128,7 +140,7 @@ function render() {
     placeActions.append(button(t("flow.suggest"), "btn ghost", suggest));
     const label = setRow.location_id ? t("flow.confirmMove") : t("flow.confirmPlace");
     const go = button(label, "btn btn-primary", confirmPlace);
-    go.disabled = !slotQr;
+    go.disabled = !slotQr || saving;
     placeActions.append(go);
     root.append(placeActions);
   }

@@ -14,7 +14,7 @@
 // (The mock preview/ demo has no gate.) Hide the page until the check resolves so
 // no mock data flashes before we know who's here; on no session → the login page.
 (() => {
-  if (/\/(login|dashboard|warehouse)\.html$/.test(location.pathname)) return;
+  if (/\/(login|warehouse)\.html$/.test(location.pathname)) return;
   document.documentElement.style.visibility = 'hidden';
   // Prag splash interplay: pages that carry the boot script expose window.ASCSplash;
   // on all other gated pages this stub keeps today's behavior byte-for-byte.
@@ -382,8 +382,7 @@ document.addEventListener('click', (e) => {
 });
 if (document.readyState !== 'loading') syncDisc(); else addEventListener('DOMContentLoaded', syncDisc);
 
-// The purple card on the dashboard is Nero. Load its brain here so that card
-// can ask. Everywhere else she is the collapsed composer, same violet.
+// The same Nero composer and intelligence follow the user through every job.
 (() => {
   ['concierge.js', 'agent-config.js', 'qr.js', 'agent-gemini.js'].forEach((src) => {
     if ([...document.scripts].some(sc => sc.src && new URL(sc.src).pathname.endsWith('/' + src))) return;
@@ -392,7 +391,7 @@ if (document.readyState !== 'loading') syncDisc(); else addEventListener('DOMCon
     if (src === 'concierge.js') script.type = 'module';
     document.head.appendChild(script);
   });
-  if (document.getElementById('agentCard') || /\/login\.html$/.test(location.pathname)) return;
+  if (/\/login\.html$/.test(location.pathname)) return;
   if ([...document.scripts].some(sc => sc.src && new URL(sc.src).pathname.endsWith('/composer.js'))) return;
   const composer = document.createElement('script');
   composer.src = new URL('composer.js', document.currentScript.src).href;

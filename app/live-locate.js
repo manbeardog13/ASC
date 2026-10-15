@@ -2,6 +2,7 @@ import { listStorageSets } from "../js/db.js";
 import { searchSets } from "./agent-search.js";
 import { t, toast, el, button, field, input, queryParam } from "./flow-ui.js";
 import { bootOnboarding } from "./onboarding.js";
+import { setWorkflowContext, registerWorkflowAction } from './workflow.js';
 
 bootOnboarding();
 
@@ -19,7 +20,7 @@ function renderHits(hits, query) {
     return list;
   }
   for (const row of hits.slice(0, 30)) {
-    const link = el("a", { class: "flow-hit", href: "warehouse-preview/index.html?set=" + encodeURIComponent(row.public_code) });
+    const link = el("a", { class: "flow-hit", href: "set-detail.html?code=" + encodeURIComponent(row.public_code) });
     const who = [row.vehicle?.customer?.name, row.vehicle?.plate].filter(Boolean).join(" · ");
     link.append(el("b", null, [row.public_code, who].filter(Boolean).join(" · ")));
     const size = (row.tires || []).map((tire) => tire.size).filter(Boolean)[0] || "";
@@ -35,12 +36,16 @@ function run(query) {
   const q = String(query || "").trim();
   const old = root.querySelector(".flow-list");
   if (old) old.remove();
-  if (!q) return;
-  root.append(renderHits(searchSets(rows, q), q));
+  const waiting = queryParam('filter') === 'unplaced';
+  const source = waiting ? rows.filter(row => row.status !== 'checked_out' && !row.deleted_at && !row.location_id && !row.slot) : rows;
+  const hits = q ? searchSets(source, q) : waiting ? source : [];
+  setWorkflowContext({ query:q || (waiting ? 'Čekaju smještaj' : ''), resultCount:hits.length, resultCode:hits.length === 1 ? hits[0].public_code : null });
+  if (q || waiting) root.append(renderHits(hits, q));
 }
 
 async function boot() {
-  const box = input({ placeholder: t("flow.locatePh"), autocomplete: "off", value: queryParam("q") });
+  const box = input({ id:'workflow-search', placeholder: t("flow.locatePh"), autocomplete: "off", value: queryParam("q") });
+  registerWorkflowAction('search', () => box.focus());
   root.append(el("p", { class: "lead" }, t("flow.locatePh")));
   root.append(field(t("flow.lookup"), box));
   const actions = el("div", { class: "flow-actions" });
@@ -51,7 +56,7 @@ async function boot() {
   });
   try {
     rows = await listStorageSets();
-    if (box.value) run(box.value);
+    run(box.value);
   } catch (error) {
     toast(error.message || t("flow.notFound"));
   }

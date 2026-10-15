@@ -4,6 +4,7 @@ import { parseCroatianIntent, searchLocations, customerLabel } from './journey.j
 import { createTour } from './tour.js';
 import { AREAS, seedState, validateState, canPlace, createStack, moveStack, setCapacity, addTire, removeTire, stats, LAYOUT_VERSION } from './model.js';
 import { pinForSet } from '../../js/mapPin.js';
+import { BUILDING_VIEWS, buildingView, isBuildingView } from './building-layout.js';
 import { loadMyProfile } from '../../js/db.js';
 export function startPreview({isActive=()=>false,registerRuntime=()=>{}}={}){
 if(!isActive())throw new Error('ASC preview inactive');
@@ -41,14 +42,16 @@ function readJSON(key,fallback){try{return JSON.parse(localStorage.getItem(key))
 let state;
 try {const raw=localStorage.getItem(KEY);state=raw===null?seedState():JSON.parse(raw);if(!state||!validateState(state).valid){storageProblem=true;state=seedState();}}catch{state=seedState();storageProblem=true;}
 const storedView=readJSON(VIEW_KEY,{});
-let areaId=AREAS.some(a=>a.id===storedView.areaId)||storedView.areaId==='all'?storedView.areaId:'2.3';
+const requestedRoom=new URLSearchParams(location.search).get('room');
+const validView=id=>id==='all'||AREAS.some(a=>a.id===id)||isBuildingView(id);
+let areaId=validView(requestedRoom)?requestedRoom:validView(storedView.areaId)?storedView.areaId:'ground';
 let selectedId=null, viewer=null, viewMode='3d', placing=null, toastTimer, scannerStream=null, scannerFrame=null, recognition=null, livePin=null;
 let tour=null, scannerStarting=false, scannerGeneration=0;
 let checkState=readJSON(CHECK_KEY,{}), viewReady=false;
 try{localStorage.getItem(KEY);}catch{storageAvailable=false;}
 const tyreById = id => state.tires.find(t=>t.id===id);
 const selectedStack = () => state.stacks.find(s=>s.id===selectedId);
-const area = () => AREAS.find(a=>a.id===areaId);
+const area = () => AREAS.find(a=>a.id===areaId)||buildingView(areaId);
 function toast(message){clearTimeout(toastTimer);$('toast').textContent=message;$('toast').hidden=false;toastTimer=setTimeout(()=>$('toast').hidden=true,4200);}
 function storeView(){try{localStorage.setItem(VIEW_KEY,JSON.stringify({areaId}));}catch{}}
 let saving=false;
@@ -63,26 +66,30 @@ async function commit(operation,message,{recover=false}={}){
   $('save-status').textContent='Promjena nije spremljena';toast(e instanceof LocalSaveError?e.message:'Spremanje nije dostupno. Promjena nije spremljena.');return false;
  }finally{saving=false;}
 }
-function changeArea(id){if(id!=='all'&&!AREAS.some(a=>a.id===id))return;
- const keepMove=placing?.type==='move'&&id!=='all';if(!keepMove)endPlacement();else{placing.point=null;viewer?.setPlacementPreview(null);}
+function changeArea(id){if(!validView(id))return;
+ const keepMove=placing?.type==='move'&&AREAS.some(a=>a.id===id);if(!keepMove)endPlacement();else{placing.point=null;viewer?.setPlacementPreview(null);}
  areaId=id;selectedId=null;hideSearch();storeView();render();if(keepMove)renderPlacement();closeSidebar();tour?.notify('area');
 }
 function renderAreas(){
  const focusHost=document.activeElement?.closest('#areas,#area-tabs')?.id,focusArea=document.activeElement?.dataset.area;
  $('areas').innerHTML=AREAS.map(a=>{const n=stats(state,a.id);const on=areaId===a.id;return `<button class="sb-item ${on?'on':''}" data-m="warehouse" type="button" data-area="${a.id}" aria-pressed="${on}"><span class="sb-code">${a.id}</span><span class="t"><span>${esc(a.name)}</span><span class="sub">${n.occupied} guma · ${n.stacks} stupaca</span></span></button>`;}).join('');
  $('areas').querySelectorAll('button').forEach(b=>b.onclick=()=>changeArea(b.dataset.area));
- $('area-tabs').innerHTML=[{id:'all',name:'Sva skladišta'},...AREAS].map(a=>`<button class="${areaId===a.id?'active':''}" data-area="${a.id}" aria-pressed="${areaId===a.id}">${a.id==='all'?'':a.id+' · '}${esc(a.name)}</button>`).join('');
+ $('area-tabs').innerHTML=[{id:'ground',name:'Prizemlje'},{id:'all',name:'Sve etaže'},...AREAS].map(a=>`<button class="${areaId===a.id?'active':''}" data-area="${a.id}" aria-pressed="${areaId===a.id}">${a.id==='all'||a.id==='ground'?'':a.id+' · '}${esc(a.name)}</button>`).join('');
+ $('building-room').innerHTML=[{id:'all',name:'Cijela zgrada'},...BUILDING_VIEWS,...AREAS.map(a=>({...a,name:a.id+' · '+a.name}))].map(a=>`<option value="${a.id}" ${areaId===a.id?'selected':''}>${esc(a.name)}</option>`).join('');
  $('area-tabs').querySelectorAll('button').forEach(b=>b.onclick=()=>changeArea(b.dataset.area));
  if(focusHost&&focusArea)$(focusHost).querySelector(`[data-area="${focusArea}"]`)?.focus({preventScroll:true});
  $('house-button').classList.toggle('on',areaId==='all');$('house-button').setAttribute('aria-pressed',String(areaId==='all'));
 }
 function render(){
  renderAreas();const current=area();const n=stats(state,areaId==='all'?null:areaId);
- $('area-code').textContent=areaId==='all'?'KUĆA / 02':areaId;$('area-name').textContent=current?.name||'Pregled kuće';
- $('area-subtitle').textContent=current?`${n.stacks} stupaca · ${n.occupied} guma`:'Tri prostora';
+ $('area-code').textContent=areaId==='all'?'KUĆA / 02':current?.code||areaId;$('area-name').textContent=current?.name||'Cijela zgrada';
+ $('area-subtitle').textContent=isBuildingView(areaId)?'Prostorni model · raspored prema nacrtu':current?`${n.stacks} stupaca · ${n.occupied} guma`:'Povezani prostori · dodirnite prostor za ulazak';
+ $('place-button').disabled=isBuildingView(areaId);$('list-button').disabled=isBuildingView(areaId);$('view-plan').disabled=false;$('actors-visible').hidden=!(areaId==='all'||areaId==='ground'||areaId==='workshop');
+ document.querySelector('.inventory-summary').hidden=isBuildingView(areaId);
+
  $('stat-tyres').textContent=n.occupied;$('stat-vacant').textContent=n.vacant;
- $('geometry-note').textContent=areaId==='all'?'Razdvojene etaže · visine su okvirne':areaId==='2.2'?'Pristup i visina platforme nisu izmjereni':'Okviran tlocrt · visine nisu izmjerene';
- viewer?.setData(state,areaId);viewer?.setSelection(selectedId);renderInspector();renderLocation();if(viewMode==='plan')renderPlan();
+ $('geometry-note').textContent=areaId==='all'||isBuildingView(areaId)?'Povezani model prema nacrtu · mjere i visine su okvirne':areaId==='2.2'?'Pristup i visina platforme nisu izmjereni':'Okviran tlocrt · visine nisu izmjerene';
+ viewer?.setData(state,areaId);viewer?.setSelection(selectedId);renderInspector();renderLocation();if(viewMode==='plan')setView('plan');
 }
 function selectStack(id,focus=false){if(placing)endPlacement();const stack=state.stacks.find(s=>s.id===id);if(!stack)return;
  if(areaId!==stack.areaId){areaId=stack.areaId;storeView();}selectedId=id;render();if(focus)viewer?.focusStack(id);hideSearch();if(focus&&!tour?.active)$('inspector').focus();tour?.notify('found');
@@ -109,6 +116,7 @@ function renderInspector(){
  if(focusId&&canFocus($(focusId)))$(focusId).focus({preventScroll:true});
 }
 function beginPlacement(type='place'){
+ if(isBuildingView(areaId)){toast('Za uređivanje stupaca odaberite skladište 2.1, 2.2 ili 2.3.');return;}
  if(areaId==='all')changeArea('2.3');const stack=selectedStack();if(type==='move'&&!stack)return;
  placing={type,stackId:stack?.id,point:null,capacity:type==='move'?stack.capacity:8};viewer?.setMode(type);viewer?.setPlacementPreview(null);renderInspector();renderLocation();renderPlacement();
  toast(type==='move'?'Odaberite novi položaj. Možete promijeniti skladište prije spremanja.':'Dodirnite slobodno mjesto na podu.');
@@ -128,6 +136,7 @@ $('confirm-placement').onclick=async()=>{if(!placing?.point)return;const draft={
 };
 
 function renderPlan(){
+ if(isBuildingView(areaId)){viewer?.setView('top');return;}
  const mount=$('plan-view');if(areaId==='all'){mount.innerHTML=`<div class="plan-house-message"><p>Odaberite skladište za prikaz tlocrta.</p>${AREAS.map(a=>`<button class="button quiet" data-plan-area="${a.id}">${a.id} · ${esc(a.name)}</button>`).join('')}</div>`;mount.querySelectorAll('[data-plan-area]').forEach(b=>b.onclick=()=>changeArea(b.dataset.planArea));return;}
  const a=area();const rect=r=>`x="${r.x-r.w/2}" y="${r.z-r.d/2}" width="${r.w}" height="${r.d}"`;
  mount.innerHTML=`<svg viewBox="-5.7 -7.7 11.4 15.4" role="group" aria-label="${esc(a.name)} — tlocrt"><defs><pattern id="planks" width=".36" height="2" patternUnits="userSpaceOnUse"><rect width=".36" height="2" fill="#e9dccb"/><path d="M0 0v2" stroke="#d5c4ab" stroke-width=".012"/></pattern></defs><rect x="-5" y="-7" width="10" height="14" fill="none" stroke="#d1d4d6" stroke-width=".025" stroke-dasharray=".12 .14"/>${a.voidRects.map(r=>`<rect ${rect(r)} fill="#dce2e6" fill-opacity=".6"/>`).join('')}${a.floorRects.map(r=>`<rect ${rect(r)} fill="${areaId==='2.1'?'#e3e2dd':'url(#planks)'}" stroke="#bcb6ab" stroke-width=".025"/>`).join('')}${a.stair?`<g><rect ${rect(a.stair)} fill="#aeb6bc" stroke="#7b8791" stroke-width=".02"/>${Array.from({length:12},(_,i)=>`<path d="M${a.stair.x-a.stair.w/2} ${a.stair.z-a.stair.d/2+i*a.stair.d/12}h${a.stair.w}" stroke="#e2e7eb" stroke-width=".03"/>`).join('')}</g>`:''}${state.stacks.filter(s=>s.areaId===areaId).map(s=>`<g class="plan-stack" role="button" tabindex="0" data-plan-stack="${s.id}" aria-label="${s.id}, ${s.tireIds.length} od ${s.capacity} guma"><circle cx="${s.x}" cy="${s.z}" r="${s.radius+.045}" fill="${s.id===selectedId?'#f0c052':'#252e34'}" stroke="${s.id===selectedId?'#f0c052':'#3e474c'}" stroke-width=".025"/><circle cx="${s.x}" cy="${s.z}" r=".13" fill="#dddcd6"/><text x="${s.x}" y="${s.z+.055}" text-anchor="middle" fill="#303c45" font-family="Inter,sans-serif" font-size=".14">${s.tireIds.length}</text></g>`).join('')}<text x="0" y="-7.3" text-anchor="middle" fill="#87919c" font-size=".2" font-family="Inter,sans-serif">SJEVER ↑</text></svg>`;
@@ -141,8 +150,20 @@ function renderPlanPreview(){
  const marker=document.createElementNS('http://www.w3.org/2000/svg','circle');
  for(const [key,value] of Object.entries({id:'plan-preview',cx:p.x,cy:p.z,r:.29,fill:valid.valid?'#328471':'#ff4e1b','fill-opacity':.28,stroke:valid.valid?'#328471':'#ff4e1b','stroke-width':.07,'pointer-events':'none'}))marker.setAttribute(key,String(value));svg.append(marker);
 }
-function setView(mode){viewMode=mode;$('plan-view').hidden=mode!=='plan';$('scene').hidden=mode==='plan';$('view-plan').classList.toggle('active',mode==='plan');$('view-3d').classList.toggle('active',mode==='3d');$('view-plan').setAttribute('aria-pressed',String(mode==='plan'));$('view-3d').setAttribute('aria-pressed',String(mode==='3d'));$('camera-reset').disabled=mode==='plan';$('zoom-in').disabled=mode==='plan';$('zoom-out').disabled=mode==='plan';if(mode==='plan'){renderPlan();$('scene-loading').hidden=true;}else{viewer?.resize();if(!viewReady)$('scene-loading').hidden=false;}}
+function setView(mode){
+ viewMode=mode;const spatialPlan=mode==='plan'&&isBuildingView(areaId),canvasMode=mode==='3d'||spatialPlan;
+ $('plan-view').hidden=canvasMode;$('scene').hidden=!canvasMode;
+ $('view-plan').classList.toggle('active',mode==='plan');$('view-3d').classList.toggle('active',mode==='3d');
+ $('view-plan').setAttribute('aria-pressed',String(mode==='plan'));$('view-3d').setAttribute('aria-pressed',String(mode==='3d'));
+ for(const id of ['camera-reset','zoom-in','zoom-out'])$(id).disabled=!canvasMode;
+ if(canvasMode){viewer?.resize();viewer?.setView(spatialPlan?'top':'perspective');if(!viewReady)$('scene-loading').hidden=false;}
+ else{renderPlan();$('scene-loading').hidden=true;}
+}
+
 $('view-plan').onclick=()=>setView('plan');$('view-3d').onclick=()=>setView('3d');$('zoom-in').onclick=()=>viewer?.zoom(1);$('zoom-out').onclick=()=>viewer?.zoom(-1);$('camera-reset').onclick=()=>viewer?.reset();$('house-button').onclick=()=>changeArea('all');
+ $('actors-visible').onclick=()=>{const visible=$('actors-visible').getAttribute('aria-pressed')!=='true';$('actors-visible').setAttribute('aria-pressed',String(visible));viewer?.setActorsVisible(visible);};
+ $('building-room').onchange=e=>changeArea(e.target.value);
+ $('model-export').onclick=async()=>{if(!viewer)return;const button=$('model-export');button.disabled=true;button.textContent='Priprema modela…';try{const bytes=await viewer.exportModel({scope:areaId==='all'?'all':'ground',includeActors:$('actors-visible').getAttribute('aria-pressed')==='true'});download('ASC_Povezana_Zgrada.glb',bytes,'model/gltf-binary');toast('3D model je preuzet.');}catch(error){console.warn('Model export:',error);toast('Model nije izvezen. Pokušajte ponovno.');}finally{button.disabled=false;button.textContent='Preuzmi 3D';}};
 
 function hideSearch(){ $('search-results').hidden=true; $('search').setAttribute('aria-expanded','false'); }
 function search(query){
@@ -279,9 +300,9 @@ async function ensureScene(){
  try{
  const {createScene}=await import('./scene.js');
  if(!isActive()||disposed)return;
- viewer=createScene($('scene'),{onSelect:id=>selectStack(id),onLongPress:id=>{selectStack(id);beginPlacement('move');},onFloorPick:floorPick,onReady:()=>{viewReady=true;$('scene-loading').hidden=true;},onError:error=>{console.warn('Spatial renderer:',error);viewReady=false;$('scene-loading').hidden=true;setView('plan');$('view-3d').disabled=true;toast('3D nije dostupan. Tlocrt i popis i dalje rade.');}});
+ viewer=createScene($('scene'),{onSelect:id=>selectStack(id),onRoomSelect:changeArea,onActorSelect:id=>{viewer?.focusActor(id);toast(viewer?.getActors().find(a=>a.id===id)?.name||'Vozilo');},onLongPress:id=>{selectStack(id);beginPlacement('move');},onFloorPick:floorPick,onReady:()=>{viewReady=true;$('scene-loading').hidden=true;},onError:error=>{console.warn('Spatial renderer:',error);viewReady=false;$('scene-loading').hidden=true;if(isBuildingView(areaId))changeArea('2.1');setView('plan');$('view-3d').disabled=true;toast('3D nije dostupan. Tlocrt i popis i dalje rade.');}});
  if(viewer){viewer.setData(state,areaId);viewer.resize();viewReady=true;$('scene-loading').hidden=true;}
-}catch(error){if(disposed||!isActive())return;console.warn('Spatial renderer could not load:',error);$('scene-loading').hidden=true;$('view-3d').disabled=true;setView('plan');toast('Prikazan je tlocrt jer 3D nije dostupan.');}
+}catch(error){if(disposed||!isActive())return;console.warn('Spatial renderer could not load:',error);$('scene-loading').hidden=true;if(isBuildingView(areaId))changeArea('2.1');$('view-3d').disabled=true;setView('plan');toast('Prikazan je tlocrt jer 3D nije dostupan.');}
  }finally{scenePending=false;}
 }
 function stopVoice(){

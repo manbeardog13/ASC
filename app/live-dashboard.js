@@ -1,252 +1,84 @@
-// ============================================================================
-// live-dashboard.js — fills the redesigned dashboard with REAL shop data from
-// Supabase (via ../js/db.js). The auth gate in app.js already guarantees a
-// session before this runs. Every write is guarded: if a fetch fails, the page
-// keeps its existing markup instead of blanking.
-// ============================================================================
 import { getSession, loadMyProfile, healthStats, countsByStatus, listStorageSets, freeSlotsByZone, recentMovements, subscribeToChanges, unsubscribe } from '../js/db.js';
 import { decodePlan, daysUntil } from '../js/seasonPlan.js';
 import { bootOnboarding } from './onboarding.js';
+import { setWorkflowContext } from './workflow.js';
 
-const SEASON_LABEL = { winter: 'Zimske', summer: 'Ljetne', all_season: 'Cjelogodišnje' };
-const SEASON_CLASS = { winter: 'win', summer: '', all_season: 'all' };
-const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-const q = (s, r = document) => r.querySelector(s);
-const qa = (s, r = document) => [...r.querySelectorAll(s)];
+const $ = id => document.getElementById(id);
+const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+let resolved, loading = false, refreshed = false, channel, refreshTimer;
+window.ascLiveFirst = new Promise(resolve => { resolved = resolve; });
+const number = (key, value) => { const node = document.querySelector('[data-glance="' + key + '"]'); if (node) node.textContent = String(value); };
+const active = set => set.status !== 'checked_out' && !set.deleted_at;
+const unplaced = set => active(set) && !set.location_id && !set.slot;
+const recordHref = code => 'set-detail.html?code=' + encodeURIComponent(code);
 
-function greeting() {
-  const h = new Date().getHours();
-  return h < 6 ? 'Dobra noć' : h < 12 ? 'Dobro jutro' : h < 18 ? 'Dobar dan' : 'Dobra večer';
+function dateLabel(value) {
+  const days = daysUntil(new Date(value), new Date());
+  if (days < 0) return 'Kasni';
+  if (days === 0) return 'Danas';
+  if (days === 1) return 'Sutra';
+  return new Date(value).toLocaleDateString('hr-HR', { day:'numeric', month:'short' });
 }
-function initials(name) {
-  return (String(name || '').trim().split(/\s+/).map((w) => w[0]).filter(Boolean).slice(0, 2).join('') || 'ASC').toUpperCase();
+function row(set, due = false) {
+  const name = set.vehicle?.customer?.name || set.public_code;
+  const detail = [set.vehicle?.plate, set.public_code].filter(Boolean).join(' · ');
+  const label = due ? dateLabel(set.expected_out_date) : unplaced(set) ? 'Smjesti' : set.status === 'checked_out' ? 'Preuzeto' : 'Otvori';
+  return '<a class="board-row" href="' + esc(recordHref(set.public_code)) + '"><span class="board-row-copy"><b>' + esc(name) + '</b><small>' + esc(detail) + '</small></span><span class="board-row-end"><em>' + esc(label) + '</em><span aria-hidden="true">↗</span></span></a>';
 }
-function code4(code) { const m = String(code || '').match(/(\d{3,4})\s*$/); return m ? m[1] : (code || ''); }
-function daysBadge(dateStr) {
-  const d = new Date(dateStr); d.setHours(0, 0, 0, 0);
-  const today = new Date(); today.setHours(0, 0, 0, 0);
-  const diff = Math.round((d - today) / 864e5);
-  if (diff < 0) return 'Kasni';
-  if (diff === 0) return 'Danas';
-  if (diff === 1) return 'Sutra';
-  return d.toLocaleDateString('hr-HR', { day: 'numeric', month: 'short' });
+function render(health, counts, sets, zones, moves) {
+  const in7 = new Date(); in7.setDate(in7.getDate() + 7); in7.setHours(23,59,59,999);
+  const due = sets.filter(s => active(s) && s.expected_out_date && new Date(s.expected_out_date) <= in7).sort((a,b) => new Date(a.expected_out_date) - new Date(b.expected_out_date));
+  const waiting = sets.filter(unplaced);
+  number('stored', counts.in_storage ?? 0); number('due', due.length); number('unplaced', waiting.length);
+  number('in', health.todayCheckIns ?? 0); number('out', health.todayPickups ?? 0);
+  number('swaps', sets.filter(s => { const plan = decodePlan(s.notes); const days = plan?.at ? daysUntil(plan.at, new Date()) : -1; return active(s) && days >= 0 && days <= 14; }).length);
+  $('board-pickups').innerHTML = due.length ? due.slice(0,4).map(s => row(s,true)).join('') : '<p class="board-empty">Nema najavljenih preuzimanja u sljedećih 7 dana.<br><a href="checkout.html">Kupac je stigao? Pripremi preuzimanje ↗</a></p>';
+  const recent = sets.filter(s => !s.deleted_at).sort((a,b) => new Date(b.updated_at || b.created_at) - new Date(a.updated_at || a.created_at)).slice(0,4);
+  $('board-recent').innerHTML = recent.length ? recent.map(s => row(s)).join('') : '<p class="board-empty">Još nema kompleta.<br><a href="checkin.html">Zaprimi prvi komplet ↗</a></p>';
+  $('gZones').innerHTML = zones == null ? 'Podaci o mjestima nisu dostupni.' : !zones.length ? '<a href="locations.html">Uvedi mjesta ↗</a>' : zones.map(z => '<a href="locations.html"><b>' + esc(z.free) + '</b> slobodno · ' + esc(z.zone || '—') + ' ↗</a>').join('');
+  $('board-seasons').innerHTML = [['winter','Zimske'],['summer','Ljetne'],['all_season','Cjelogodišnje']].map(([key,label]) => '<p class="board-shift">' + label + ' · <b>' + sets.filter(s => active(s) && s.season === key).length + '</b></p>').join('');
+  const action = { in:'Ulaz', move:'Premještaj', out:'Izlaz' };
+  $('gMovesList').innerHTML = moves == null ? '<li class="board-empty">Evidencija kretanja nije dostupna.</li>' : !moves.length ? '<li class="board-empty">Nema zabilježenih kretanja.</li>' : moves.map(m => {
+    const code = m.storage_sets?.public_code;
+    const when = m.created_at ? new Date(m.created_at).toLocaleString('hr-HR', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' }) : '';
+    const body = '<b>' + esc(code || 'Komplet') + '</b><span>' + esc(action[m.action] || m.action) + '</span><time>' + esc(when) + '</time>';
+    return '<li>' + (code ? '<a href="' + esc(recordHref(code)) + '">' + body + '</a>' : body) + '</li>';
+  }).join('');
+  $('glance').dataset.live = '1';
+  const partial = zones == null || moves == null;
+  $('board-status').textContent = 'Osvježeno u ' + new Date().toLocaleTimeString('hr-HR', { hour:'2-digit', minute:'2-digit' }) + (partial ? ' · Dio podataka o skladištu nije dostupan.' : '');
+  $('board-retry').hidden = !partial;
+  setWorkflowContext({ due:due.length, unplacedCode:waiting[0]?.public_code || null, dataState:partial ? 'partial' : 'ready' });
 }
-
-// Set a number. Normally cancels the count-up so it doesn't fight our real
-// value — but while the Prag splash still holds the reveal (html.splashing),
-// the count-ups haven't run yet, so we feed the REAL value into data-count and
-// let the held animation count up to it the moment the surface lifts.
-function setNum(el, val) {
-  if (!el) return;
-  if (document.documentElement.classList.contains('splashing') && Number.isFinite(+val)) {
-    el.dataset.count = String(+val);
-    return;
-  }
-  el.removeAttribute('data-count'); el.textContent = String(val);
+async function refresh() {
+  if (loading) return;
+  loading = true; $('board-retry').disabled = true;
+  try {
+    const data = await Promise.all([healthStats(), countsByStatus(), listStorageSets(), freeSlotsByZone().catch(() => null), recentMovements(5).catch(() => null)]);
+    render(...data); refreshed = true;
+  } catch (error) {
+    console.warn('[live] dashboard refresh failed:', error);
+    $('board-status').textContent = refreshed ? 'Osvježavanje nije uspjelo. Prikazani su prethodno učitani podaci.' : 'Podaci nisu učitani. Pokušajte ponovno.';
+    if (!refreshed) for (const id of ['board-pickups','board-recent']) $(id).innerHTML = '<p class="board-empty">Podaci trenutačno nisu dostupni.</p>';
+    $('board-retry').hidden = false;
+    setWorkflowContext({ dataState:'error', due:null, unplacedCode:null });
+  } finally { loading = false; $('board-retry').disabled = false; resolved(); }
 }
-
-// The gate in app.js races this against a 1200ms cap before lifting the splash,
-// so the dashboard usually reveals with live numbers already in place.
-let liveFirstDone;
-window.ascLiveFirst = new Promise((r) => { liveFirstDone = r; });
-
-bootOnboarding();
-
+$('board-retry').addEventListener('click', refresh);
+addEventListener('offline', () => { $('board-status').textContent = 'Bez veze. Podaci se trenutačno ne osvježavaju.'; setWorkflowContext({ dataState:'error', due:null, unplacedCode:null }); });
+addEventListener('online', refresh);
 (async () => {
   const session = await getSession().catch(() => null);
-  if (!session) { liveFirstDone(); return; }  // the gate in app.js handles the redirect
-
-  // ---- Hero greeting (the dashboard anchor) + profile card --------------------
-  // Time-based Croatian greeting in the stage hero; the SMJENA card carries the
-  // plain name (one greeting on screen — visual silence).
-  const gw = q('#greetWord'), gn = q('#greetName'), gd = q('#greetDate'), gc = q('#greetClock');
-  if (gw) gw.textContent = greeting();
-  if (gd) { const d = new Date().toLocaleDateString('hr-HR', { weekday: 'long', day: 'numeric', month: 'long' }); gd.textContent = d.charAt(0).toUpperCase() + d.slice(1); }
-  if (gc) { const tick = () => { gc.textContent = new Date().toLocaleTimeString('hr-HR', { hour: '2-digit', minute: '2-digit' }); }; tick(); setInterval(tick, 15000); }
-  loadMyProfile().then((p) => {
-    const name = p && p.full_name ? String(p.full_name).trim() : '';
-    const first = name.split(/\s+/)[0] || '';
-    if (gn) gn.textContent = first || 'dobrodošli';
-    const h1 = q('.profile .row1 h1');
-    if (h1) h1.textContent = name || 'Smjena';
-    const av = q('.profile .pavatar');
-    if (av && name) av.textContent = initials(name);
-  }).catch(() => { if (gn) gn.textContent = 'dobrodošli'; });
-  const sub = q('.profile .row1 .sub');
-  if (sub) {
-    const d = new Date().toLocaleDateString('hr-HR', { weekday: 'long', day: 'numeric', month: 'long' });
-    sub.textContent = d.charAt(0).toUpperCase() + d.slice(1).replace(/,?\s*$/, '');
-  }
-
-  let health, counts, sets, zones, moves;
-  try {
-    [health, counts, sets, zones, moves] = await Promise.all([
-      healthStats(),
-      countsByStatus(),
-      listStorageSets(),
-      freeSlotsByZone().catch(() => null),
-      recentMovements(5).catch(() => null),
-    ]);
-  } catch (e) {
-    console.warn('[live] dashboard data failed — keeping placeholder markup:', e);
-    liveFirstDone();
-    return;
-  }
-
-  // ---- Hero: real inventory + caption + activity spills ----
-  setNum(q('.hero-num [data-count]'), health.inventory);
-  const cap = q('.stage .cap');
-  if (cap) cap.textContent = 'na čuvanju · ' + counts.reserved + ' rezervirano · ' + counts.checked_out + ' preuzeto';
-
-  const now = new Date();
-  const in7 = new Date(now.getTime() + 7 * 864e5);
-  const upcoming = sets.filter((s) => s.status === 'in_storage' && s.expected_out_date && new Date(s.expected_out_date) <= in7);
-  const spills = qa('.spills .spill b');
-  setNum(spills[0], health.todayCheckIns);
-  setNum(spills[1], health.todayPickups);
-  setNum(spills[2], upcoming.length);
-
-  // ---- Recent stream: newest sets fill the real slides (keep the tire photos as decoration) ----
-  const recent = [...sets].sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at)).slice(0, 6);
-  const realSlides = qa('.stream-track .slide:not([aria-hidden])');
-  realSlides.forEach((slide, i) => {
-    const s = recent[i];
-    if (!s) { slide.style.display = 'none'; return; }
-    slide.setAttribute('href', 'set-detail.html?code=' + encodeURIComponent(s.public_code));
-    const tab = q('.tab-tl', slide); if (tab) tab.textContent = code4(s.public_code);
-    const who = q('.meta .who', slide); if (who) who.textContent = s.vehicle?.customer?.name || 'Kupac';
-    const chip = q('.meta .chip', slide);
-    if (chip) { chip.textContent = SEASON_LABEL[s.season] || s.season || ''; chip.className = 'chip ' + (SEASON_CLASS[s.season] || ''); }
+  if (!session) { resolved(); return; }
+  const hour = new Date().getHours();
+  $('greetWord').textContent = hour < 6 ? 'Dobra noć' : hour < 12 ? 'Dobro jutro' : hour < 18 ? 'Dobar dan' : 'Dobra večer';
+  $('greetDate').textContent = new Date().toLocaleDateString('hr-HR', { weekday:'long', day:'numeric', month:'long' });
+  loadMyProfile().then(profile => { const first = profile?.full_name?.trim().split(/\s+/)[0]; $('greetName').textContent = first ? ', ' + first : ''; }).catch(() => {});
+  bootOnboarding();
+  await refresh();
+  channel = subscribeToChanges(payload => {
+    if (payload?.table && !['storage_sets','locations','set_movements','customers','vehicles'].includes(payload.table)) return;
+    clearTimeout(refreshTimer); refreshTimer = setTimeout(refresh, 500);
   });
-  // Mirror the real slides into the duplicate track (marquee needs 2 identical halves).
-  const dupSlides = qa('.stream-track .slide[aria-hidden]');
-  dupSlides.forEach((slide, i) => {
-    const src = realSlides[i];
-    if (!src || src.style.display === 'none') { slide.style.display = 'none'; return; }
-    slide.setAttribute('href', src.getAttribute('href'));
-    const tab = q('.tab-tl', slide), stab = q('.tab-tl', src); if (tab && stab) tab.textContent = stab.textContent;
-    const who = q('.meta .who', slide), swho = q('.meta .who', src); if (who && swho) who.textContent = swho.textContent;
-    const chip = q('.meta .chip', slide), schip = q('.meta .chip', src); if (chip && schip) { chip.textContent = schip.textContent; chip.className = schip.className; }
-  });
-  // Empty warehouse: the marquee has nothing to show — one calm line instead.
-  if (!recent.length) {
-    const track = q('.stream-track');
-    if (track && track.parentElement) {
-      track.style.display = 'none';
-      const empty = document.createElement('p');
-      empty.textContent = 'Još nema kompleta — zaprimi prvi.';
-      empty.style.cssText = 'margin:18px 4px;font:500 13px Inter;color:var(--muted)';
-      track.parentElement.appendChild(empty);
-    }
-  }
-
-  // ---- "Po sezoni" occupancy: real season split of everything in the house ----
-  const active = sets.filter((s) => s.status !== 'checked_out');
-  const bySeason = { winter: 0, summer: 0, all_season: 0 };
-  active.forEach((s) => { if (s.season in bySeason) bySeason[s.season] += 1; });
-  const seasonMax = Math.max(1, bySeason.winter, bySeason.summer, bySeason.all_season);
-  qa('.obar').forEach((bar, i) => {
-    const key = ['winter', 'summer', 'all_season'][i];
-    if (!(key in bySeason)) return;
-    setNum(q('.t b', bar), bySeason[key]);
-    const fill = q('.bar i', bar);
-    if (fill) {
-      const w = String(Math.round(bySeason[key] / seasonMax * 100));
-      fill.dataset.w = w;
-      // Warm visits: animate() already applied the old mock width before we
-      // got here — overwrite it directly (under the splash, data-w is enough).
-      if (!document.documentElement.classList.contains('splashing')) fill.style.width = w + '%';
-    }
-  });
-
-  // ---- Reminders: soonest upcoming pickups (overdue first) ----
-  const dueSoon = sets
-    .filter((s) => s.status !== 'checked_out' && s.expected_out_date)
-    .sort((a, b) => new Date(a.expected_out_date) - new Date(b.expected_out_date))
-    .slice(0, 3);
-  const remCard = q('.card.dark');
-  if (remCard) {
-    const badge = q('.count-badge', remCard);
-    if (badge) badge.textContent = String(upcoming.length || dueSoon.length);
-    const minis = qa('.mini', remCard);
-    minis.forEach((mini, i) => {
-      const s = dueSoon[i];
-      if (!s) { mini.style.display = 'none'; return; }
-      const overdue = new Date(s.expected_out_date) < new Date(new Date().toDateString());
-      mini.className = 'mini' + (overdue ? ' overdue' : '');
-      mini.setAttribute('href', 'set-detail.html?code=' + encodeURIComponent(s.public_code));
-      const t = q('time', mini); if (t) t.textContent = daysBadge(s.expected_out_date);
-      const b = q('b', mini); if (b) b.textContent = s.vehicle?.customer?.name || 'Kupac';
-      const pl = q('.pl', mini); if (pl) pl.textContent = s.vehicle?.plate || s.public_code;
-    });
-    // Nothing due: one calm line where the rows were.
-    if (!dueSoon.length && minis.length) {
-      const empty = document.createElement('p');
-      empty.textContent = 'Nema podsjetnika.';
-      empty.style.cssText = 'margin:10px 2px 2px;font:500 13px Inter;color:var(--muted)';
-      minis[0].parentElement.appendChild(empty);
-    }
-  }
-
-  liveFirstDone();   // real data is in the DOM — the splash may lift into live numbers
-  paintGlance(health, counts, sets, zones, moves);
-  const glance = q('#glance');
-  if (glance) glance.dataset.live = '1';
-  let refreshTimer;
-  const channel = subscribeToChanges((payload) => {
-    const table = payload?.table;
-    if (table && !['storage_sets', 'locations', 'set_movements'].includes(table)) return;
-    clearTimeout(refreshTimer);
-    refreshTimer = setTimeout(() => refreshGlance().catch(() => {}), 500);
-  });
-  window.addEventListener('pagehide', () => unsubscribe(channel), { once: true });
+  addEventListener('pagehide', () => { clearTimeout(refreshTimer); unsubscribe(channel); }, {once:true});
 })();
-
-function swapsSoon(rows) {
-  const today = new Date();
-  return (rows || []).filter((set) => {
-    if (set.status === 'checked_out') return false;
-    const plan = decodePlan(set.notes);
-    if (!plan?.at) return false;
-    const days = daysUntil(plan.at, today);
-    return days >= 0 && days <= 14;
-  }).length;
-}
-
-function paintGlance(health, counts, sets, zones, moves) {
-  const now = new Date();
-  const in7 = new Date(now.getTime() + 7 * 864e5);
-  const due = (sets || []).filter((s) => s.status === 'in_storage' && s.expected_out_date && new Date(s.expected_out_date) <= in7).length;
-  setNum(q('[data-glance="stored"]'), counts?.in_storage ?? 0);
-  setNum(q('[data-glance="in"]'), health?.todayCheckIns ?? 0);
-  setNum(q('[data-glance="out"]'), health?.todayPickups ?? 0);
-  setNum(q('[data-glance="due"]'), due);
-  setNum(q('[data-glance="swaps"]'), swapsSoon(sets));
-  const zoneHost = q('#gZones');
-  if (zoneHost) {
-    if (zones == null) zoneHost.textContent = 'Mjesta još nisu uvedena.';
-    else if (!zones.length) zoneHost.textContent = 'Nema unesenih mjesta.';
-    else zoneHost.innerHTML = zones.map((z) => '<span class="zone"><b>' + esc(z.free) + '</b> ' + esc(z.zone || '—') + '</span>').join('');
-  }
-  const list = q('#gMovesList');
-  if (!list) return;
-  const action = { in: 'Ulaz', move: 'Premještaj', out: 'Izlaz' };
-  if (moves == null) list.innerHTML = '<li class="muted">Evidencija kretanja još nije uključena.</li>';
-  else if (!moves.length) list.innerHTML = '<li class="muted">Nema zabilježenih kretanja.</li>';
-  else list.innerHTML = moves.map((row) => {
-    const code = row.storage_sets?.public_code || 'Komplet';
-    const when = row.created_at ? new Date(row.created_at).toLocaleString('hr-HR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
-    return '<li><b>' + esc(code) + '</b><span>' + esc(action[row.action] || row.action || '') + '</span><time>' + esc(when) + '</time></li>';
-  }).join('');
-}
-
-async function refreshGlance() {
-  const [health, counts, sets, zones, moves] = await Promise.all([
-    healthStats(),
-    countsByStatus(),
-    listStorageSets(),
-    freeSlotsByZone().catch(() => null),
-    recentMovements(5).catch(() => null),
-  ]);
-  paintGlance(health, counts, sets, zones, moves);
-}
