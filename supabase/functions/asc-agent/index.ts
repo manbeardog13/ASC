@@ -25,6 +25,7 @@
 //          (optional) GEMINI_MODEL=gemini-flash-latest
 // ============================================================================
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { backoffMs, INJECTION_GUARD, isBusy, isQuotaExhausted, safeName, validateMessages } from "./guards.js";
 
 // Primary: pinned current GA flash (the "-latest" alias is what the whole
 // world hammers — persistent 503 "high demand"). Old pinned versions get
@@ -36,6 +37,15 @@ const FALLBACK_MODEL = Deno.env.get("GEMINI_FALLBACK_MODEL") || "gemini-flash-li
 const BLOCKED_ROLES = ["readonly"];
 const MAX_MESSAGES = 40;          // conversation window the client may send
 const MAX_BODY_BYTES = 200_000;   // hard cap on request size
+// Upstream timeouts so a hung Gemini call can never pin the function.
+const TIMEOUT_MS = Number(Deno.env.get("GEMINI_TIMEOUT_MS")) || 25_000;
+const STREAM_TIMEOUT_MS = Number(Deno.env.get("GEMINI_STREAM_TIMEOUT_MS")) || 90_000;
+// Speed: Gemini 3 "thinks" at high effort by default, which is where most of
+// Nero's 3–29 s per call went. Default to "low"; set GEMINI_THINKING_LEVEL=off
+// to restore the old behaviour (or high/medium/minimal to tune). Only sent to
+// gemini-3* models — older/lite models reject thinkingLevel.
+const THINKING_RAW = (Deno.env.get("GEMINI_THINKING_LEVEL") || "low").toLowerCase();
+const THINKING_LEVEL = THINKING_RAW === "off" ? "" : THINKING_RAW;
 
 const SYSTEM = `You are Nero. You are a woman, and you are the in-app assistant of ASC
 (Auto Servisni Centar d.o.o.), a Croatian tire-storage ("tire hotel") shop. You
@@ -117,7 +127,7 @@ SALUTE GUARD: If a message contains the WWII salute "za dom" / "za dom spremni"
 and if there is none, deflect with ONE short, loud tire-shop joke in Croatian
 (ALL CAPS, ending in two exclamation marks) that redirects to work — e.g.
 "KRIVO SKLADIŠTE! OVDJE ČUVAMO GUME, NE PROŠLOST!!". Humor defuses; never
-lecture at length, never get angry, never affirm the salute.`;
+lecture at length, never get angry, never affirm the salute.` + INJECTION_GUARD;
 
 // Tool declarations in Gemini's functionDeclarations format (OpenAPI-subset
 // schemas — same shapes the client executor in js/agent.js implements).
@@ -271,7 +281,7 @@ async function transcribeSpeech(asCaller: any, userId: string, audio: any, lang:
   const busy = (s: number) => s === 429 || s === 503 || s === 500;
   const call = (model: string) => fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
-    { method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey }, body },
+    { method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey }, body, signal: AbortSignal.timeout(TIMEOUT_MS) },
   );
   let res = await call(MODEL);
   if (busy(res.status)) {
@@ -408,14 +418,13 @@ function createAssembler() {
   };
 }
 
-function geminiBody(contents: unknown[], system: string) {
-  return JSON.stringify({
-    systemInstruction: { parts: [{ text: system }] },
-    tools: [{ functionDeclarations: FUNCTION_DECLARATIONS }],
-    toolConfig: { functionCallingConfig: { mode: "AUTO" } },
-    contents,
-    generationConfig: { maxOutputTokens: 2048 },
-  });
+// Static parts are serialised once per isolate, not on every request.
+const TOOLS_JSON = JSON.stringify([{ functionDeclarations: FUNCTION_DECLARATIONS }]);
+const GEN_JSON = JSON.stringify({ maxOutputTokens: 2048 });
+const GEN_JSON_THINK = JSON.stringify({ maxOutputTokens: 2048, ...(THINKING_LEVEL ? { thinkingConfig: { thinkingLevel: THINKING_LEVEL } } : {}) });
+export function genConfigFor(model: string) { return /^gemini-3/.test(model) ? GEN_JSON_THINK : GEN_JSON; }
+function geminiBody(contents: unknown[], system: string, model: string) {
+  return `{"systemInstruction":${JSON.stringify({ parts: [{ text: system }] })},"tools":${TOOLS_JSON},"toolConfig":{"functionCallingConfig":{"mode":"AUTO"}},"contents":${JSON.stringify(contents)},"generationConfig":${genConfigFor(model)}}`;
 }
 
 function consumeGeminiChunk(asm: ReturnType<typeof createAssembler>, data: any, onDelta: (t: string) => void, onTool: (name: string) => void) {
@@ -538,8 +547,9 @@ Deno.serve(async (req) => {
   const myName = String(
     me.full_name || user.user_metadata?.full_name || user.user_metadata?.name || "",
   ).trim();
-  const userLine = myName
-    ? `\n\nCURRENT USER: You are talking to ${myName} (${me.role}). Their first name is ${myName.split(/\s+/)[0]}.`
+  const shown = safeName(myName);
+  const userLine = shown
+    ? `\n\nCURRENT USER: You are talking to ${shown} (${safeName(me.role)}). Their first name is ${shown.split(" ")[0]}.`
     : "";
 
   // -- Request: the conversation so far ---------------------------------------
@@ -548,9 +558,12 @@ Deno.serve(async (req) => {
   let body: { messages?: unknown; stream?: boolean; transcribe?: boolean; audio?: unknown; lang?: unknown };
   try { body = JSON.parse(raw); } catch { return json({ error: "Bad request." }, 400); }
   if (body?.transcribe === true) return await transcribeSpeech(asCaller, user.id, body.audio, body.lang, apiKey);
-  const messages = body?.messages;
-  if (!Array.isArray(messages) || !messages.length) return json({ error: "Bad request." }, 400);
-  if (messages.length > MAX_MESSAGES) return json({ error: "Conversation too long — start a new chat." }, 413);
+  if (Array.isArray(body?.messages) && body.messages.length > MAX_MESSAGES) {
+    return json({ error: "Conversation too long — start a new chat." }, 413);
+  }
+  const checked = validateMessages(body?.messages);
+  if (!checked.ok) return json({ error: "Bad request." }, 400);
+  const messages = checked.messages;
   const wantStream = (req.headers.get("accept") || "").includes("text/event-stream")
     || new URL(req.url).searchParams.get("stream") === "1"
     || body.stream === true;
@@ -559,25 +572,32 @@ Deno.serve(async (req) => {
   try {
     const contents = await toGeminiContents(messages, asCaller, user.id);
     const system = SYSTEM + userLine;
-    const busy = (s: number) => s === 429 || s === 503 || s === 500;
+    const busy = isBusy;
     const callModel = (model: string, stream: boolean) => fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${model}:${stream ? "streamGenerateContent?alt=sse" : "generateContent"}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
-        body: geminiBody(contents, system),
+        body: geminiBody(contents, system, model),
+        signal: AbortSignal.timeout(stream ? STREAM_TIMEOUT_MS : TIMEOUT_MS),
       },
     );
     // Retry and fallback finish before any client SSE byte. A busy stream is
     // discarded; the client only hears a model that already accepted the call.
     let res = await callModel(MODEL, wantStream);
+    let detail = "";
     if (busy(res.status)) {
-      await res.body?.cancel();
-      await new Promise((r) => setTimeout(r, 1600));
-      res = await callModel(MODEL, wantStream);
+      detail = await res.text();
+      // A spent free-tier quota won't recover in 1.6 s: skip the retry and go
+      // straight to the fallback model (its own quota bucket).
+      if (!isQuotaExhausted(res.status, detail)) {
+        const wait = backoffMs(0, res.headers.get("retry-after"));
+        await new Promise((r) => setTimeout(r, wait));
+        res = await callModel(MODEL, wantStream);
+        detail = busy(res.status) ? await res.text() : "";
+      }
     }
     if (busy(res.status) && FALLBACK_MODEL !== MODEL) {
-      const detail = await res.text();
       console.error("[asc-agent]", res.status, "on", MODEL, detail.slice(0, 300), "→ trying", FALLBACK_MODEL);
       res = await callModel(FALLBACK_MODEL, wantStream);
     }
@@ -590,6 +610,10 @@ Deno.serve(async (req) => {
     const data = await res.json();
     return json(fromGeminiResponse(data));
   } catch (err) {
+    if ((err as Error)?.name === "TimeoutError") {
+      console.error("[asc-agent] Gemini timeout");
+      return json({ error: "busy" }, 504);
+    }
     console.error("[asc-agent]", err);
     return json({ error: "agent_failed" }, 502);
   }
