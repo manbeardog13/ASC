@@ -138,15 +138,49 @@ try {
   if (qp) { input.value = qp; setTimeout(() => input.scrollIntoView({ behavior: 'smooth', block: 'center' }), 200); }
 } catch (e) { /* no-op */ }
 
-// Mic press feedback (no real speech yet).
+// Search only reports listening after the browser has started recognition.
 const mic = document.getElementById('wsMic');
 const sub = document.getElementById('wsMicSub');
+const Speech = window.SpeechRecognition || window.webkitSpeechRecognition;
 const IDLE = 'Dodirnite pa recite registraciju, ime ili kôd';
-if (mic) mic.addEventListener('click', () => {
-  const on = mic.classList.toggle('is-listening');
-  mic.setAttribute('aria-pressed', on ? 'true' : 'false');
-  if (sub) sub.textContent = on ? 'Slušam…' : IDLE;
-});
+if (mic && !Speech) {
+  mic.disabled = true;
+  if (sub) sub.textContent = 'Glasovno traženje nije podržano. Upiši registraciju, ime ili kôd ispod.';
+} else if (mic) {
+  const recognition = new Speech();
+  let listening = false, starting = false;
+  recognition.interimResults = false;
+  recognition.continuous = false;
+  function idle() {
+    listening = false; starting = false;
+    mic.classList.remove('is-listening');
+    mic.setAttribute('aria-pressed', 'false');
+  }
+  recognition.onstart = () => {
+    starting = false; listening = true;
+    mic.classList.add('is-listening');
+    mic.setAttribute('aria-pressed', 'true');
+    if (sub) sub.textContent = 'Slušam…';
+  };
+  recognition.onresult = (ev) => {
+    const text = Array.from(ev.results || []).map((r) => r[0]?.transcript || '').join(' ').trim();
+    if (text) { input.value = text; paint(); }
+  };
+  recognition.onerror = () => {
+    idle();
+    if (sub) sub.textContent = 'Glasovno traženje nije uspjelo. Upiši registraciju, ime ili kôd ispod.';
+  };
+  recognition.onend = () => { idle(); if (sub && sub.textContent === 'Slušam…') sub.textContent = IDLE; };
+  mic.addEventListener('click', () => {
+    if (starting) return;
+    if (listening) { recognition.stop(); return; }
+    recognition.lang = document.documentElement.lang === 'en' ? 'en-US' : 'hr-HR';
+    starting = true;
+    try { recognition.start(); }
+    catch (_) { idle(); if (sub) sub.textContent = 'Glasovno traženje nije uspjelo. Upiši pojam ispod.'; }
+  });
+  addEventListener('pagehide', () => recognition.abort());
+}
 
 // ---- Real data --------------------------------------------------------------
 (async () => {

@@ -118,13 +118,19 @@
   var busy = false;
   var requestGeneration = 0;
   var chatGeneration = 0;
+  var historyLoading = false;
   var saveQueue = Promise.resolve();
   var chatId = null;
   var pending = [];
+  var pendingUploads = 0;
   var stick = true;
   var relayMode = false;
   var relayReady = false;
   var voiceMode = 'idle';
+  var voiceGeneration = 0;
+  var voiceDraft = '';
+  var voiceLastDraft = '';
+  var transcriptionController = null;
   var voiceSource = '';
   var voiceStarted = 0;
   var voiceRestart = 0;
@@ -132,7 +138,6 @@
   var voiceStop = false;
   var voiceStream = null;
   var recorder = null;
-  var audioChunks = [];
   var flushTimer = 0;
   var flushing = false;
   var offlineNote = false;
@@ -460,8 +465,11 @@
               showConnect(true);
               return q.bump(item.id).then(function (row) { arm(row ? row.attempts : 1); return true; });
             }
+            // Keep rejected/unconfigured deliveries for explicit retry. Only
+            // a confirmed successful forward may remove a queued message.
+            if (outcome !== 'ok') return true;
             return q.remove(item.id).then(function () {
-              if (outcome === 'ok') showConnect(false);
+              showConnect(false);
               return false;
             });
           });
@@ -503,19 +511,23 @@
 
   function ask(text) {
     text = (text || '').trim();
-    if (!text || busy) return;
+    if (!text || busy || historyLoading) return;
+    if (pendingUploads) { card('assistant', 'Prilog se još sprema. Pričekaj pa pošalji poruku.'); return; }
+    invalidateVoice();
     var request = ++requestGeneration;
     if (voiceMode !== 'idle') stopVoice();
     var refs = pending.map(function (f) { return { path: f.path, mime: f.mime, name: f.name }; });
     input.value = '';
     grow();
+    pending.forEach(function (f) { if (f.preview) URL.revokeObjectURL(f.preview); });
     pending = [];
     renderFiles();
     if (relayMode) {
       sendRelay(text, refs, request);
       return;
     }
-    card('user', text);
+    var userCard = card('user', text);
+    showAttachments(userCard, refs, chatGeneration);
     saveMessage('user', text, refs);
     setBusy(true);
     var ready = Promise.resolve().then(function () {
@@ -549,7 +561,8 @@
   filesBox.addEventListener('click', function (e) {
     var btn = e.target.closest('[data-drop]');
     if (!btn) return;
-    pending.splice(Number(btn.getAttribute('data-drop')), 1);
+    var removed = pending.splice(Number(btn.getAttribute('data-drop')), 1);
+    removed.forEach(function (f) { if (f.preview) URL.revokeObjectURL(f.preview); });
     renderFiles();
   });
   plus.addEventListener('click', function () { fileInput.click(); });
@@ -557,6 +570,8 @@
     var file = fileInput.files && fileInput.files[0];
     fileInput.value = '';
     if (!file) return;
+    if (pending.length + pendingUploads >= 4) { card('assistant', 'Možeš priložiti najviše četiri datoteke.'); return; }
+    var conversation = chatGeneration;
     if (file.size > 7_000_000) { card('assistant', 'Datoteka je prevelika (najviše 7 MB).'); return; }
     var mime = file.type || (/\.pdf$/i.test(file.name) ? 'application/pdf' : '');
     if (!/^(image\/(jpeg|png|webp|gif)|application\/pdf)$/.test(mime)) {
@@ -564,13 +579,16 @@
       return;
     }
     openComposer(true);
+    pendingUploads += 1;
     libs().then(function (lib) {
       return lib.db.getSession().then(function (session) {
+        if (conversation !== chatGeneration) return;
         if (!session) throw new Error('auth');
         var safe = String(file.name || 'file').replace(/[^A-Za-z0-9._-]/g, '_').slice(0, 80);
         var path = session.user.id + '/' + makeId() + '-' + safe;
         return lib.supabase.storage.from('nero-attachments').upload(path, file, { contentType: mime, upsert: false })
           .then(function (res) {
+            if (conversation !== chatGeneration) return;
             if (res.error) throw res.error;
             pending.push({
               path: path, mime: mime, name: file.name || safe,
@@ -579,7 +597,9 @@
             renderFiles();
           });
       });
-    }).catch(function () { card('assistant', 'Prilog nije spremljen. Prijavi se i pokušaj ponovno.'); });
+    }).catch(function () {
+      if (conversation === chatGeneration) card('assistant', 'Prilog nije spremljen. Prijavi se i pokušaj ponovno.');
+    }).finally(function () { if (conversation === chatGeneration) pendingUploads -= 1; });
   });
 
   root.addEventListener('submit', function (e) {
@@ -597,7 +617,7 @@
       maybeCollapse();
     }
   });
-  input.addEventListener('input', function () { grow(); if (input.value.trim()) openComposer(false); });
+  input.addEventListener('input', function () { invalidateVoice(); grow(); if (input.value.trim()) openComposer(false); });
   function grow() {
     if (root.classList.contains('is-compact')) { input.style.height = ''; return; }
     input.style.height = 'auto';
@@ -641,8 +661,9 @@
     if (q) { openComposer(true); input.value = q; ask(q); return; }
     if (act === 'new') {
       stopRequest();
-      if (voiceMode !== 'idle') stopVoice();
+      discardDraft();
       chatGeneration += 1;
+      setHistoryLoading(false);
       chatId = null;
       log.innerHTML = '';
       log.hidden = true;
@@ -682,23 +703,79 @@
       historyBox.innerHTML = '<p class="nero-empty">Povijest još nije spremna.</p>';
     });
   }
+  function setHistoryLoading(on) {
+    historyLoading = on;
+    send.disabled = on;
+  }
+  function showAttachments(article, attachments, conversation) {
+    if (!Array.isArray(attachments)) return;
+    var refs = attachments.filter(function (file) {
+      return file && /^[0-9a-f-]{36}\/[A-Za-z0-9._-]{1,180}$/i.test(file.path || '')
+        && /^(image\/(jpeg|png|webp|gif)|application\/pdf)$/.test(file.mime || '');
+    }).slice(0, 4);
+    if (!refs.length) return;
+    var list = document.createElement('div');
+    list.className = 'nero-saved-files';
+    article.querySelector('.nero-body').appendChild(list);
+    libs().then(function (lib) {
+      return lib.db.getSession().then(function (session) {
+        if (!session || conversation !== chatGeneration) return;
+        refs.forEach(function (file) {
+          if (file.path.split('/')[0] !== session.user.id) return;
+          var label = document.createElement('span');
+          label.className = 'nero-filechip';
+          label.textContent = String(file.name || 'Prilog').slice(0, 180);
+          list.appendChild(label);
+          lib.supabase.storage.from('nero-attachments').createSignedUrl(file.path, 300).then(function (res) {
+            if (conversation !== chatGeneration || !article.isConnected || !res.data || !res.data.signedUrl) return;
+            var url;
+            try {
+              url = new URL(res.data.signedUrl);
+              if (url.protocol !== 'https:' || url.origin !== new URL(lib.config.SUPABASE_URL).origin) return;
+            } catch (_) { return; }
+            var link = document.createElement('a');
+            link.className = 'nero-filechip';
+            link.href = url.href;
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+            link.textContent = label.textContent;
+            label.replaceWith(link);
+          }).catch(function () {});
+        });
+      });
+    }).catch(function () {});
+  }
   function reopen(id) {
     stopRequest();
+    discardDraft();
     var conversation = ++chatGeneration;
-    libs().then(function (lib) {
-      return lib.supabase.from('nero_messages').select('role, body, created_at').eq('chat_id', id).order('created_at', { ascending: true });
-    }).then(function (res) {
+    setHistoryLoading(true);
+    var timeout;
+    var load = libs().then(function (lib) {
+      return lib.supabase.from('nero_messages').select('role, body, attachments, created_at').eq('chat_id', id).order('created_at', { ascending: true });
+    });
+    Promise.race([load, new Promise(function (_, reject) {
+      timeout = setTimeout(function () { reject(new Error('history_timeout')); }, 15000);
+    })]).then(function (res) {
       if (conversation !== chatGeneration) return;
-      if (!res || res.error || !res.data) return;
+      if (!res || res.error || !res.data) throw new Error('history');
+      if (window.ASCAgent && ASCAgent.recall) ASCAgent.recall(res.data);
       chatId = id;
       log.innerHTML = '';
-      res.data.forEach(function (row) { card(row.role === 'user' ? 'user' : 'assistant', row.body || ''); });
-      if (window.ASCAgent && ASCAgent.recall) ASCAgent.recall(res.data);
+      res.data.forEach(function (row) {
+        var article = card(row.role === 'user' ? 'user' : 'assistant', row.body || '');
+        showAttachments(article, row.attachments, conversation);
+      });
       historyBox.hidden = true;
       log.hidden = !res.data.length;
       root.classList.toggle('has-convo', !!res.data.length);
       fit();
-    }).catch(function () {});
+    }).catch(function () {
+      if (conversation === chatGeneration) card('assistant', 'Razgovor nije učitan. Pokušaj ponovno.');
+    }).finally(function () {
+      clearTimeout(timeout);
+      if (conversation === chatGeneration) setHistoryLoading(false);
+    });
   }
 
   function speechLang() {
@@ -731,17 +808,34 @@
     if (recorderWasLive) { try { recorder.stop(); } catch (e) { stopTracks(); } }
     else stopTracks();
   }
-  function applyTranscript(ev) {
-    var finals = '';
-    var interim = '';
+  function invalidateVoice() {
+    voiceGeneration += 1;
+    if (transcriptionController) transcriptionController.abort();
+    transcriptionController = null;
+    if (voiceMode !== 'idle') stopVoice();
+    recognition = null;
+    recLabel.hidden = true;
+  }
+  function discardDraft() {
+    invalidateVoice();
+    pendingUploads = 0;
+    pending.forEach(function (f) { if (f.preview) URL.revokeObjectURL(f.preview); });
+    pending = [];
+    renderFiles();
+    input.value = '';
+    grow();
+  }
+  function applyTranscript(ev, voice) {
+    if (voice !== voiceGeneration || input.value !== voiceLastDraft) return;
+    var finals = '', interim = '';
     for (var i = 0; i < ev.results.length; i++) {
       var bit = ev.results[i][0].transcript;
       if (ev.results[i].isFinal) finals += bit + ' ';
       else interim += bit;
     }
-    input.value = (finals + interim).replace(/\s+/g, ' ').trim();
-    if (interim) recLabel.textContent = interim;
-    else recLabel.textContent = voiceMode === 'locked' ? 'Slušam… zaključano' : 'Slušam…';
+    input.value = [voiceDraft, (finals + interim).trim()].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
+    voiceLastDraft = input.value;
+    recLabel.textContent = interim || (voiceMode === 'locked' ? 'Slušam… zaključano' : 'Slušam…');
     grow();
     openComposer(false);
   }
@@ -750,65 +844,80 @@
     if (!SR && !(navigator.mediaDevices && window.MediaRecorder)) return;
     if (voiceMode === 'locked') { stopVoice(); return; }
     if (voiceMode === 'holding') return;
+    invalidateVoice();
+    var voice = ++voiceGeneration;
+    voiceDraft = input.value;
+    voiceLastDraft = input.value;
     voiceStop = false;
     voiceSource = source || 'pointer';
-    if (!SR) { setVoice(mode); startRecording(); return; }
-    if (!recognition) {
-      recognition = new SR();
-      recognition.continuous = true;
-      recognition.interimResults = true;
-      recognition.onresult = applyTranscript;
-      recognition.onerror = function () { if (voiceMode !== 'idle') stopVoice(); };
-      recognition.onend = function () {
-        if (voiceStop || voiceMode === 'idle') { recognition = null; setVoice('idle'); return; }
-        if (Date.now() - voiceRestart < 400) { stopVoice(); return; }
-        voiceRestart = Date.now();
-        try { recognition.lang = speechLang(); recognition.start(); } catch (e) { setVoice('idle'); }
-      };
-    }
-    recognition.lang = speechLang();
+    if (!SR) { setVoice(mode); startRecording(voice); return; }
+    var activeRecognition = new SR();
+    recognition = activeRecognition;
+    activeRecognition.continuous = true;
+    activeRecognition.interimResults = true;
+    activeRecognition.onresult = function (ev) { applyTranscript(ev, voice); };
+    activeRecognition.onerror = function () { if (voice === voiceGeneration && voiceMode !== 'idle') stopVoice(); };
+    activeRecognition.onend = function () {
+      if (voice !== voiceGeneration) return;
+      if (voiceStop || voiceMode === 'idle') { recognition = null; setVoice('idle'); return; }
+      if (Date.now() - voiceRestart < 400) { stopVoice(); return; }
+      voiceRestart = Date.now();
+      voiceDraft = voiceLastDraft;
+      try { activeRecognition.lang = speechLang(); activeRecognition.start(); } catch (e) { setVoice('idle'); }
+    };
+    activeRecognition.lang = speechLang();
     setVoice(mode);
-    try { recognition.start(); } catch (e) { setVoice('idle'); }
+    try { activeRecognition.start(); } catch (e) { setVoice('idle'); }
   }
-  function startRecording() {
+  function startRecording(voice) {
     navigator.mediaDevices.getUserMedia({ audio: true }).then(function (stream) {
-      if (voiceStop || voiceMode === 'idle') {
+      if (voice !== voiceGeneration || voiceStop || voiceMode === 'idle') {
         stream.getTracks().forEach(function (track) { try { track.stop(); } catch (e) {} });
         return;
       }
       voiceStream = stream;
       var mime = window.MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : '';
-      recorder = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
-      audioChunks = [];
-      recorder.ondataavailable = function (ev) { if (ev.data && ev.data.size) audioChunks.push(ev.data); };
-      recorder.onstop = function () {
-        var type = (recorder && recorder.mimeType) || mime || 'audio/webm';
-        var blob = new Blob(audioChunks, { type: type });
-        recorder = null;
-        stopTracks();
-        if (blob.size) transcribeAudio(blob);
+      var activeRecorder = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
+      recorder = activeRecorder;
+      var chunks = [];
+      activeRecorder.ondataavailable = function (ev) { if (ev.data && ev.data.size) chunks.push(ev.data); };
+      activeRecorder.onstop = function () {
+        var blob = new Blob(chunks, { type: activeRecorder.mimeType || mime || 'audio/webm' });
+        stream.getTracks().forEach(function (track) { try { track.stop(); } catch (e) {} });
+        if (recorder === activeRecorder) recorder = null;
+        if (voiceStream === stream) voiceStream = null;
+        if (blob.size && voice === voiceGeneration) transcribeAudio(blob, voice);
       };
-      recorder.start();
+      activeRecorder.start();
     }).catch(function () {
+      if (voice !== voiceGeneration) return;
       setVoice('idle');
       card('assistant', 'Mikrofon nije dopušten.');
     });
   }
-  function transcribeAudio(blob) {
+  function transcribeAudio(blob, voice) {
+    if (voice !== voiceGeneration) return;
+    if (blob.size > 7_000_000) { card('assistant', 'Snimka je prevelika. Snimi kraću poruku.'); return; }
     var mime = String(blob.type || 'audio/webm').split(';')[0];
+    var controller = new AbortController();
+    transcriptionController = controller;
+    var timeout = setTimeout(function () { controller.abort(); }, 45000);
     recLabel.hidden = false;
     recLabel.textContent = 'Prepisujem…';
+    function current() { return voice === voiceGeneration && !controller.signal.aborted; }
     libs().then(function (lib) {
       return lib.db.getSession().then(function (session) {
+        if (!current()) return;
         if (!session) throw new Error('auth');
         var url = projectFunction(lib, 'asc-agent');
         if (!url) throw new Error('url');
         var path = session.user.id + '/' + makeId() + '.webm';
         return lib.supabase.storage.from('nero-attachments').upload(path, blob, { contentType: mime, upsert: false })
           .then(function (res) {
+            if (!current()) return;
             if (res.error) throw res.error;
             return fetch(url, {
-              method: 'POST',
+              method: 'POST', signal: controller.signal,
               headers: {
                 'Content-Type': 'application/json',
                 Authorization: 'Bearer ' + session.access_token,
@@ -818,16 +927,25 @@
             });
           });
       });
-    }).then(function (res) { return res && res.json ? res.json() : null; }).then(function (data) {
-      recLabel.hidden = true;
+    }).then(function (res) {
+      if (!current()) return null;
+      if (!res || !res.ok) throw new Error('transcription');
+      return res.json();
+    }).then(function (data) {
+      if (!current() || input.value !== voiceLastDraft) return;
       var text = data && data.text ? String(data.text).trim() : '';
       if (!text) { card('assistant', 'Nisam čula govor. Pokušaj ponovno.'); return; }
-      input.value = text;
+      input.value = [voiceDraft, text].filter(Boolean).join(' ');
+      voiceLastDraft = input.value;
       grow();
       openComposer(true);
     }).catch(function () {
+      if (voice === voiceGeneration) card('assistant', 'Prijepis nije uspio. Možeš upisati poruku.');
+    }).finally(function () {
+      clearTimeout(timeout);
+      if (voice !== voiceGeneration) return;
+      transcriptionController = null;
       recLabel.hidden = true;
-      card('assistant', 'Prijepis nije uspio. Možeš upisati poruku.');
     });
   }
   var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -871,6 +989,12 @@
   });
 
   document.addEventListener('asc:sign-out', function () {
+    stopRequest();
+    discardDraft();
+    chatGeneration += 1;
+    setHistoryLoading(false);
+    chatId = null;
+    if (window.ASCAgent && ASCAgent.reset) ASCAgent.reset();
     var q = queueApi();
     relayMode = false;
     relayPill.setAttribute('aria-pressed', 'false');

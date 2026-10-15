@@ -1,13 +1,13 @@
 // First sign-in walkthrough. The flag is profiles.onboarded_at, never localStorage.
 import { loadMyProfile, markOnboarded, listLocationSeats } from "../js/db.js";
 import { t } from "./flow-ui.js";
-import { tourSteps, tourTarget } from "../js/firstRun.js";
+import { tourSteps, tourTarget, locationsHref } from "../js/firstRun.js";
 
 const STYLE = `
 .asc-onboard{position:fixed;inset:0;z-index:10050;display:flex;align-items:flex-end;justify-content:center;
   padding:18px 16px calc(18px + env(safe-area-inset-bottom,0px));
   background:rgba(14,11,28,.72);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
-.asc-onboard-card{width:min(440px,100%);border-radius:22px;padding:22px 20px 18px;color:#f4f0ff;
+.asc-onboard-card{width:min(440px,100%);max-height:calc(100dvh - 36px - env(safe-area-inset-bottom,0px));overflow:auto;border-radius:22px;padding:22px 20px 18px;color:#f4f0ff;
   background:linear-gradient(165deg,#1a1433,#120e22 58%,#0e0b1c);
   border:1px solid rgba(183,163,255,.38);
   box-shadow:0 24px 60px -20px rgba(139,92,246,.75)}
@@ -44,14 +44,32 @@ function mount(steps) {
   root.className = "asc-onboard";
   root.setAttribute("role", "dialog");
   root.setAttribute("aria-modal", "true");
+  const previousFocus = document.activeElement;
   document.body.appendChild(root);
+  const background = new Map();
+  const holdBackground = () => [...document.body.children].forEach((element) => {
+    if (element === root || background.has(element)) return;
+    background.set(element, element.inert);
+    element.inert = true;
+  });
+  holdBackground();
+  const observer = new MutationObserver(holdBackground);
+  observer.observe(document.body, { childList: true });
+  const dismiss = () => {
+    observer.disconnect();
+    background.forEach((inert, element) => { if (element.isConnected) element.inert = inert; });
+    document.removeEventListener("keydown", onKeydown);
+    root.remove();
+    if (previousFocus?.isConnected) previousFocus.focus({ preventScroll: true });
+    document.dispatchEvent(new CustomEvent("asc:onboarding-closed"));
+  };
   let step = 0;
 
   const finish = async () => {
     const note = root.querySelector(".asc-onboard-note");
     try {
       await markOnboarded();
-      root.remove();
+      dismiss();
     } catch (error) {
       if (note) note.textContent = (error && error.message) || t("common.actionFailed");
     }
@@ -85,6 +103,22 @@ function mount(steps) {
     const actions = document.createElement("div");
     actions.className = "asc-onboard-actions";
     const last = step === steps.length - 1;
+    const createSlot = step === 0 && item.title === "tour.s1.title";
+    if (createSlot) {
+      const go = document.createElement("button");
+      go.type = "button";
+      go.className = "asc-onboard-next";
+      go.dataset.createSlot = "1";
+      go.textContent = t("flow.createSlot");
+      go.addEventListener("click", () => {
+        dismiss();
+        const returnTo = location.pathname.split("/").pop() + location.search + location.hash;
+        const destination = new URL(locationsHref(returnTo), location.href);
+        destination.searchParams.set("intro", "slot");
+        location.href = destination.href;
+      });
+      actions.append(go);
+    }
     if (step > 0) {
       const back = document.createElement("button");
       back.type = "button";
@@ -105,7 +139,7 @@ function mount(steps) {
     const next = document.createElement("button");
     next.type = "button";
     next.dataset.next = "1";
-    next.className = "asc-onboard-next";
+    next.className = createSlot ? "asc-onboard-back" : "asc-onboard-next";
     next.textContent = last ? t("tour.done") : t("tour.next");
     next.addEventListener("click", () => {
       if (last) finish();
@@ -115,18 +149,32 @@ function mount(steps) {
     card.append(kicker, progress, dots, title, body, note, actions);
     root.append(card);
     root.setAttribute("aria-labelledby", "asc-onboard-title");
-    next.focus();
+    (actions.querySelector("[data-create-slot]") || next).focus();
   };
 
-  document.addEventListener("keydown", (event) => {
-    if (event.key !== "Escape" || !document.getElementById("asc-onboard")) return;
-    event.preventDefault();
-    if (step === steps.length - 1) finish();
-  });
+  function onKeydown(event) {
+    if (!root.isConnected) return;
+    if (event.key === "Escape") { event.preventDefault(); dismiss(); return; }
+    if (event.key !== "Tab") return;
+    const controls = [...root.querySelectorAll("button, a[href], input, select, textarea, [tabindex]")]
+      .filter((element) => !element.disabled && element.tabIndex >= 0 && element.getClientRects().length);
+    const first = controls[0], last = controls[controls.length - 1];
+    if (!first) { event.preventDefault(); return; }
+    if (event.shiftKey && (!controls.includes(document.activeElement) || document.activeElement === first)) {
+      event.preventDefault(); last.focus();
+    } else if (!event.shiftKey && (!controls.includes(document.activeElement) || document.activeElement === last)) {
+      event.preventDefault(); first.focus();
+    }
+  }
+  document.addEventListener("keydown", onKeydown);
   render();
 }
 
 export async function bootOnboarding() {
+  if (location.pathname.endsWith("/locations.html") && new URLSearchParams(location.search).get("intro") === "slot") {
+    setTimeout(() => document.getElementById("loc-zone")?.focus(), 0);
+    return;
+  }
   if (document.getElementById("asc-onboard")) return;
   let profile = null;
   try { profile = await loadMyProfile(); }

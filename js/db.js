@@ -450,10 +450,16 @@ function readUnwinds() {
 function writeUnwinds(list) {
   try { localStorage.setItem(UNWIND_KEY, JSON.stringify(list)); } catch { /* ignore */ }
 }
-async function unwindCreate({ setId, customerId }) {
+async function unwindCreate({ setId, customerId, vehicleId, ownerId }) {
+  const stillOwner = async () => {
+    const current = await getSession().catch(() => null);
+    return Boolean(ownerId && current?.user?.id === ownerId);
+  };
+  if (!(await stillOwner())) return false;
   if (setId) {
     const soft = await supabase.from("storage_sets")
       .update({ deleted_at: new Date().toISOString() }).eq("id", setId).select("id");
+    if (!(await stillOwner())) return false;
     const hard = await supabase.from("storage_sets").delete().eq("id", setId).select("id");
     const gone = (!hard.error && (hard.data?.length || 0) > 0) || (!soft.error && (soft.data?.length || 0) > 0);
     if (!gone) {
@@ -462,9 +468,15 @@ async function unwindCreate({ setId, customerId }) {
       if (check.error || check.data) return false;
     }
   }
-  if (customerId) {
-    const del = await supabase.from("customers").delete().eq("id", customerId).select("id");
+  for (const [table, id] of [["vehicles", vehicleId], ["customers", customerId]]) {
+    if (!id) continue;
+    if (!(await stillOwner())) return false;
+    const del = await supabase.from(table).delete().eq("id", id).select("id");
     if (del.error) return false;
+    if (!del.data?.length) {
+      const check = await supabase.from(table).select("id").eq("id", id).maybeSingle();
+      if (check.error || check.data) return false;
+    }
   }
   return true;
 }
@@ -476,7 +488,9 @@ async function replayPendingUnwinds() {
   // Only run when there is a real session — otherwise leave the jobs parked.
   const session = await getSession().catch(() => null);
   if (!session) return;
-  const pending = readUnwinds();
+  // Legacy jobs without an owner stay parked; a different account must never
+  // apply another employee's pending cleanup on a shared warehouse device.
+  const pending = readUnwinds().filter((entry) => entry.ownerId === session.user.id);
   if (!pending.length) return;
   unwinding = true;
   try {
@@ -486,12 +500,17 @@ async function replayPendingUnwinds() {
       if (!done) survivors.push(entry);
     }
     // Merge with anything a concurrent create parked while we were awaiting.
-    const added = readUnwinds().filter((e) => !pending.includes(e));
+    const key = (entry) => JSON.stringify([entry.ownerId, entry.setId, entry.customerId, entry.vehicleId, entry.at]);
+    const attempted = new Set(pending.map(key));
+    const added = readUnwinds().filter((entry) => !attempted.has(key(entry)));
     writeUnwinds([...survivors, ...added]);
   } finally { unwinding = false; }
 }
 
 export async function createStorageSet(form) {
+  const session = await getSession();
+  if (!session?.user?.id) throw new Error("Nije prijavljen — prijavite se prije spremanja.");
+  const ownerId = session.user.id;
   const customerPatch = {
     name: form.customer.name, phone: form.customer.phone || null, email: form.customer.email || null,
     address: form.customer.address || null,
@@ -537,16 +556,15 @@ export async function createStorageSet(form) {
         (p) => supabase.from("tires").insert(p));
     }
   } catch (e) {
-    if (freshVehicleId && reusedCustomer) {
-      await supabase.from("vehicles").delete().eq("id", freshVehicleId);
-    }
     const job = {
+      ownerId,
+      vehicleId: freshVehicleId,
       setId: set?.id ?? null,
       customerId: reusedCustomer ? null : customer.id,
       at: new Date().toISOString(),
     };
     const done = await unwindCreate(job).catch(() => false);
-    if (!done && job.customerId) writeUnwinds([...readUnwinds(), job]);  // replayed on next boot / reconnect
+    if (!done && (job.setId || job.vehicleId || job.customerId)) writeUnwinds([...readUnwinds(), job]);  // replayed on next boot / reconnect
     throw e;
   }
 
@@ -556,7 +574,7 @@ export async function createStorageSet(form) {
 
 function toTireRows(setId, tires) {
   return (tires ?? [])
-    .filter((t) => t.size || t.brand || t.tread_mm || t.dot_code)
+    .filter((t) => t.size || t.brand || t.model || t.tread_mm != null || t.dot_code || t.studded || t.condition_notes)
     .map((t) => ({
       set_id: setId, position: t.position || null, size: t.size || null,
       brand: t.brand || null, model: t.model || null, tread_mm: t.tread_mm ?? null,
@@ -576,7 +594,8 @@ async function applySetPatch(setId, patch) {
 
 export async function updateStorageSet(setId, patch) {
   if (!isOnline()) {
-    enqueue({ kind: "updateSet", setId, patch });
+    const session = await getSession().catch(() => null);
+    enqueue({ kind: "updateSet", setId, patch }, session?.user?.id);
     return { queued: true };
   }
   await applySetPatch(setId, patch);
@@ -590,7 +609,9 @@ export async function updateStorageSet(setId, patch) {
 // is the second guard for the same failure.
 export async function executeQueuedMutation(mutation) {
   const session = await getSession().catch(() => null);
-  if (!session) throw new Error("Nije prijavljen — odgađam spremanje reda.");
+  if (!session?.user?.id || !mutation.ownerId || mutation.ownerId !== session.user.id) {
+    throw new Error("Promjena pripada drugoj prijavi — ostaje spremljena na uređaju.");
+  }
   if (mutation.kind === "updateSet") return applySetPatch(mutation.setId, mutation.patch);
   console.warn("Unknown queued mutation skipped:", mutation.kind);
 }
@@ -763,23 +784,33 @@ export function locationLabel(loc) {
 }
 
 export async function moveStorageSet(set, newLocation) {
-  const occupant = await findSetAtLocation(newLocation, set.id).catch(() => null);
-  if (occupant) throw new Error(`${occupant.public_code} is already at that location.`);
-  const result = await updateStorageSet(set.id, {
-    zone: newLocation.zone || null, rack: newLocation.rack || null,
-    shelf: newLocation.shelf || null, slot: newLocation.slot || null,
-  });
-  rememberLocation(newLocation);
+  // The registered slot is authoritative. The RPC locks both slots and changes
+  // the location ID, occupancy, text fields and movement log together.
+  if (!isOnline()) throw new Error("Za premještanje je potrebna internetska veza.");
+  let query = supabase.from("locations").select("id, warehouse, zone, rack, shelf, slot, qr_code, status");
+  for (const column of ["zone", "rack", "shelf", "slot"]) {
+    query = query.eq(column, String(newLocation[column] || "").trim());
+  }
+  if (newLocation.warehouse) query = query.eq("warehouse", newLocation.warehouse);
+  const { data, error } = await query.limit(2);
+  if (error) throw rpcFail(error, "find the destination slot");
+  if (!data?.length) throw new Error("Mjesto nije registrirano. Najprije ga izradite u Mjestima pa skenirajte QR oznaku.");
+  if (data.length !== 1) throw new Error("Više skladišta ima tu oznaku. Skenirajte QR željenog mjesta.");
+  const args = { setId: set.id, publicCode: set.public_code, locationId: data[0].id };
+  const result = set.location_id ? await moveSet(args) : await placeSet(args);
+  rememberLocation(result?.location || data[0]);
   return result;
 }
 
 export async function updateCustomer(customerId, patch) {
-  const { error } = await supabase.from("customers").update(patch).eq("id", customerId);
+  const { data, error } = await supabase.from("customers").update(patch).eq("id", customerId).select("id");
   if (error) throw fail(error, "save the customer");
+  if (!data?.length) throw new Error("Kupac nije ažuriran — nema pristupa ili je zapis uklonjen.");
 }
 export async function updateVehicle(vehicleId, patch) {
-  const { error } = await supabase.from("vehicles").update(patch).eq("id", vehicleId);
+  const { data, error } = await supabase.from("vehicles").update(patch).eq("id", vehicleId).select("id");
   if (error) throw fail(error, "save the vehicle");
+  if (!data?.length) throw new Error("Vozilo nije ažurirano — nema pristupa ili je zapis uklonjen.");
 }
 export async function replaceTires(setId, tires) {
   // Insert the new rows FIRST, then delete only the old ids. A failure between
@@ -802,6 +833,16 @@ export async function softDeleteSet(setId) {
 }
 export async function restoreSet(setId) {
   await applySetPatch(setId, { deleted_at: null });
+}
+// Explicit human-selected recovery when the old slot can no longer be used.
+// One guarded write restores and unlinks the set atomically; a stale recycle tab
+// cannot clear the placement of a set another employee has already restored.
+export async function restoreSetUnplaced(setId) {
+  const { data, error } = await supabase.from("storage_sets").update({
+    deleted_at: null, location_id: null, zone: null, rack: null, shelf: null, slot: null,
+  }).eq("id", setId).not("deleted_at", "is", null).select("id");
+  if (error) throw fail(error, "restore the set without a location");
+  if (!data?.length) throw new Error("Komplet nije vraćen — već je izvan koša ili nemate pristup. Osvježite popis.");
 }
 export async function listRecycleBin() {
   const { data, error } = await querySetList((cols) => supabase.from("storage_sets")
@@ -903,7 +944,7 @@ export function unsubscribe(channel) {
 // + unwind replays. Both replays run through session-guarded paths, so it is safe
 // that this module also loads on login.html (no session there) — nothing drains
 // until the user is actually signed in.
-initOffline(executeQueuedMutation);
+initOffline(executeQueuedMutation, async () => (await getSession().catch(() => null))?.user?.id ?? null);
 function flushQueues() {
   replay(executeQueuedMutation).catch(() => {});   // executor is session-gated
   replayPendingUnwinds().catch(() => {});           // session-gated inside

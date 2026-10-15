@@ -7,11 +7,11 @@ const stacks = [
   { id: '2.3-S025', areaId: '2.3' },
 ];
 
-test('a known floor and rack selects that stack', () => {
+test('a matching label selects a demo stack but remains approximate', () => {
   const pin = pinForSet({ public_code: 'ASC-1', zone: '2.3', rack: 'S025', shelf: '1', slot: '2' }, stacks);
   assert.equal(pin.stackId, '2.3-S025');
   assert.equal(pin.areaId, '2.3');
-  assert.equal(pin.approx, false);
+  assert.equal(pin.approx, true);
 });
 
 test('an unknown zone is pinned approximately on the ground floor', () => {

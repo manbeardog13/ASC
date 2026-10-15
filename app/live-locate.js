@@ -19,7 +19,7 @@ function renderHits(hits, query) {
     return list;
   }
   for (const row of hits.slice(0, 30)) {
-    const link = el("a", { class: "flow-hit", href: "warehouse-preview/index.html?set=" + encodeURIComponent(row.public_code) });
+    const link = el("a", { class: "flow-hit", href: "set-detail.html?code=" + encodeURIComponent(row.public_code) });
     const who = [row.vehicle?.customer?.name, row.vehicle?.plate].filter(Boolean).join(" · ");
     link.append(el("b", null, [row.public_code, who].filter(Boolean).join(" · ")));
     const size = (row.tires || []).map((tire) => tire.size).filter(Boolean)[0] || "";

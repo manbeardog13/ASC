@@ -9,11 +9,14 @@ import { getState, setState, emit, refreshActiveView } from "./store.js";
 const OUTBOX_KEY = "asc.outbox";
 
 function readOutbox() {
-  try { return JSON.parse(localStorage.getItem(OUTBOX_KEY)) ?? []; }
-  catch { return []; }
+  try {
+    const entries = JSON.parse(localStorage.getItem(OUTBOX_KEY)) ?? [];
+    return Array.isArray(entries) ? entries : [];
+  } catch { return []; }
 }
 function writeOutbox(entries) {
-  try { localStorage.setItem(OUTBOX_KEY, JSON.stringify(entries)); } catch { /* ignore */ }
+  // A quota/private-storage error must fail the save, never claim it was queued.
+  localStorage.setItem(OUTBOX_KEY, JSON.stringify(entries));
   setState({ syncPending: entries.length });
 }
 
@@ -21,32 +24,40 @@ export function pendingCount() {
   return readOutbox().length;
 }
 
-// Queue a mutation: { kind: "updateSet", setId, patch, queuedAt }.
-export function enqueue(mutation) {
+// Legacy unowned entries stay parked. Ownership cannot safely be inferred from
+// whoever next logs in on a shared warehouse device.
+export function enqueue(mutation, ownerId) {
+  if (!ownerId) throw new Error("Prijavite se prije spremanja promjene bez veze.");
   const entries = readOutbox();
-  entries.push({ ...mutation, queuedAt: new Date().toISOString() });
+  const queueId = globalThis.crypto?.randomUUID?.()
+    || Date.now().toString(36) + '-' + Math.random().toString(36).slice(2);
+  entries.push({ ...mutation, ownerId, queueId, queuedAt: new Date().toISOString() });
   writeOutbox(entries);
 }
 
-// Replay everything through the executor (db.js supplies it) in FIFO order.
-// Stops at the first failure so ordering is preserved for the next attempt.
+// Re-read after each await: an edit queued while a write is in flight must not
+// disappear when that earlier entry is acknowledged. Only this account's owned
+// entries are eligible; another account's and legacy entries remain untouched.
 let replaying = false;
+let resolveOwner = async () => null;
 export async function replay(executor) {
   if (replaying) return { flushed: false, remaining: pendingCount() };
   replaying = true;
   try {
-  let entries = readOutbox();
-  while (entries.length) {
-    try {
-      await executor(entries[0]);
-      entries = entries.slice(1);
-      writeOutbox(entries);
-    } catch (err) {
-      console.warn("outbox replay paused:", err.message);
-      return { flushed: false, remaining: entries.length };
+    const ownerId = await resolveOwner();
+    if (!ownerId) return { flushed: false, remaining: pendingCount() };
+    while (true) {
+      if (await resolveOwner() !== ownerId) return { flushed: false, remaining: pendingCount() };
+      const entry = readOutbox().find((item) => item.ownerId === ownerId && item.queueId);
+      if (!entry) return { flushed: true, remaining: pendingCount() };
+      try {
+        await executor(entry);
+        writeOutbox(readOutbox().filter((item) => item.queueId !== entry.queueId || item.ownerId !== ownerId));
+      } catch (err) {
+        console.warn("outbox replay paused:", err.message);
+        return { flushed: false, remaining: pendingCount() };
+      }
     }
-  }
-  return { flushed: true, remaining: 0 };
   } finally { replaying = false; }
 }
 
@@ -54,8 +65,9 @@ export async function replay(executor) {
 let replayExecutor = null;
 let inited = false;
 
-export function initOffline(executor) {
+export function initOffline(executor, getOwnerId) {
   replayExecutor = executor;
+  if (getOwnerId) resolveOwner = getOwnerId;
   if (inited) return;   // db.js wires this at boot; a second call must not stack listeners
   inited = true;
   setState({ syncPending: pendingCount(), online: navigator.onLine });
