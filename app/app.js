@@ -433,11 +433,19 @@ if (document.readyState !== 'loading') syncDisc(); else addEventListener('DOMCon
       mount.appendChild(status);
       return null;
     });
-  addEventListener('pagehide', () => {
-    pageActive = false; pendingTranscript = null;
-    window.ASCChat?.suspend();
+  addEventListener('pagehide', (event) => {
+    // Only a hidden or frozen page drops the session. A pagehide while the
+    // document is still visible (print, share sheet) used to leave pageActive
+    // false with no matching pageshow, so every later question was ignored.
+    if (document.visibilityState === 'hidden' || event.persisted) {
+      pageActive = false; pendingTranscript = null;
+      window.ASCChat?.suspend();
+    }
   });
   addEventListener('pageshow', () => { pageActive = true; });
+  addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'hidden') pageActive = true;
+  });
 })();
 
 // ============================================================================

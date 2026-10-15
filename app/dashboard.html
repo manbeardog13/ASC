@@ -190,30 +190,34 @@ html.splashing .greet{animation-play-state:paused}
    shared expandable surface above the page content. */
 .agent-shell{position:relative}
 .hero .agent-shell{grid-column:1;grid-row:3}
-.agent-card{position:relative;overflow:hidden;border-radius:var(--radius);background:linear-gradient(150deg,#181522,#211c2e);
-  border:1px solid rgba(190,165,230,.2);box-shadow:var(--shadow-card)}
-.notch-tab{position:absolute;top:0;left:0;z-index:6;font:600 10.5px Inter;letter-spacing:.07em;
-  text-transform:uppercase;color:var(--ink-2);padding:7px 13px 8px;white-space:nowrap;pointer-events:none}
-.agent-shell>.notch-tab{color:#d5c6eb;padding:10px 20px}
-.agent-body{position:relative;display:flex;flex-direction:column;gap:18px;padding:38px 22px 22px;color:#f4f5f7}
-.agent-hook{font:500 18px/1.4 "Sora",Inter;letter-spacing:-.012em;color:#f4effc}
+/* Same edge as the other cards: 22px radius, soft card shadow, no stroke.
+   The fill is the shell's translucent glass so the canvas shows through.
+   A border here sticks out of the corner mask; cards don't use one. */
+.agent-card{position:relative;overflow:hidden;border-radius:var(--radius);color:var(--ink);
+  background:var(--shell-solid);border:0;box-shadow:var(--shadow-card)}
+@supports ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  .agent-card{background:var(--shell);-webkit-backdrop-filter:blur(30px) saturate(150%) brightness(108%);backdrop-filter:blur(30px) saturate(150%) brightness(108%)}
+}
+@media(prefers-reduced-transparency:reduce){.agent-card{background:var(--panel-2);backdrop-filter:none;-webkit-backdrop-filter:none}}
+.agent-body{position:relative;z-index:1;display:flex;flex-direction:column;gap:18px;padding:38px 22px 22px;color:var(--ink)}
+.agent-hook{font:500 18px/1.4 "Sora",Inter;letter-spacing:-.012em;color:var(--ink)}
 .agent-reveal{display:flex;flex-direction:column;gap:12px}
-.text-bubble{display:flex;align-items:center;gap:8px;min-height:50px;padding:4px 4px 4px 15px;border-radius:19px;
-  background:rgba(255,255,255,.06);box-shadow:inset 0 0 0 1px rgba(221,203,245,.14);
-  transition:box-shadow 180ms cubic-bezier(.22,1,.36,1)}
-.text-bubble:focus-within{box-shadow:inset 0 0 0 2px #cbb5ef}
-.tb-input{flex:1;min-width:0;background:transparent;border:0;outline:0;color:#f3efff;font:500 16px/1.4 Inter}
-.tb-input::placeholder{color:#b8accb}
-.tb-send{flex:none;width:44px;height:44px;border-radius:15px;border:0;cursor:pointer;display:grid;place-items:center;color:#241830;
-  background:#d7bfef;transition:transform 150ms cubic-bezier(.22,1,.36,1)}
+.text-bubble{display:flex;align-items:center;gap:8px;min-height:50px;padding:4px 4px 4px 15px;border-radius:16px;
+  background:var(--panel-2);border:1px solid var(--line);
+  transition:border-color 180ms var(--snap),box-shadow 180ms var(--snap)}
+.text-bubble:focus-within{border-color:var(--sel,#5C7C9D);box-shadow:0 0 0 3px var(--sel-tint)}
+.tb-input{flex:1;min-width:0;background:transparent;border:0;outline:0;color:var(--ink);font:500 16px/1.4 Inter}
+.tb-input::placeholder{color:var(--muted)}
+.tb-send{flex:none;width:42px;height:42px;border-radius:12px;border:0;cursor:pointer;display:grid;place-items:center;color:#fff;
+  background:var(--lava);transition:transform 150ms var(--snap)}
 .tb-send:active:not(:disabled){transform:scale(.96)}
 .chips{display:flex;flex-wrap:wrap;gap:8px}
 .qchip{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 13px;border-radius:999px;cursor:pointer;
-  background:rgba(221,203,245,.08);border:1px solid rgba(221,203,245,.18);color:#e9e2ff;font:500 12.5px/1.4 Inter;
-  transition:background 180ms cubic-bezier(.22,1,.36,1)}
+  background:var(--panel-2);border:1px solid var(--line);color:var(--ink-2);font:500 12.5px/1.4 Inter;
+  transition:background 180ms var(--snap)}
 .tb-send:disabled,.qchip:disabled{opacity:.5;cursor:wait}
-.tb-send:focus-visible,.qchip:focus-visible{outline:2px solid #ead7ff;outline-offset:3px}
-@media(any-hover:hover){.qchip:hover:not(:disabled){background:rgba(221,203,245,.18)}}
+.tb-send:focus-visible,.qchip:focus-visible{outline:2px solid var(--sel-ink,#46617f);outline-offset:3px}
+@media(any-hover:hover){.qchip:hover:not(:disabled){background:var(--panel)}}
 @media(max-width:900px){.hero .agent-shell{grid-column:auto;grid-row:auto}}
 @media(max-width:640px){.agent-body{padding:36px 18px 18px;gap:14px}.agent-hook{font-size:16px}}
 @media(prefers-reduced-motion:reduce){.text-bubble,.tb-send,.qchip{transition:none}}
@@ -350,8 +354,8 @@ if(sat>=59){d.classList.add('island');d.style.setProperty('--isl-y',(sat-48)+'px
 
     <!-- Dashboard entry into the same assistant used by the page header. -->
     <div class="agent-shell reveal" id="agentShell" style="animation-delay:230ms">
-      <span class="notch-tab" id="agentTab">agent</span>
       <section class="agent-card agent-live" id="agentCard" role="group" aria-label="ASC pomoćnik — AI za skladište guma">
+        <span class="tab-tl" id="agentTab">agent</span>
         <div class="agent-body">
           <span class="agent-hook l1" id="agentHook">Što trebaš u ASC-u?</span>
           <div class="agent-reveal">
@@ -499,8 +503,8 @@ document.addEventListener('click', function(e){
     function ask(text) {
       text = (text || '').trim();
       if (!text || !chat) return;
+      if (chat.open(text, true) === false) return;
       input.value = '';
-      chat.open(text, true);
     }
     chips.forEach(button => button.addEventListener('click', () => ask(button.dataset.q)));
     send?.addEventListener('click', () => ask(input.value));
@@ -511,16 +515,16 @@ document.addEventListener('click', function(e){
   })();
 </script>
 <script>
-  /* Corner CUT — apply the SAME real mask subtraction as the agent card to the
-     other cards' notches, so each corner reveals the true background instead of a
-     painted --tab-surf patch (kills the "leakage"). Each top-left tab moves to an
-     overlay in its (relative) container; the card is masked; positions re-sync on
-     resize / font load. Skips the agent card (already cut) and the animated stream. */
+  /* Corner CUT — one mask subtraction for every top-left tab, including the
+     agent card, so the notch reveals the true background instead of a painted
+     patch. Each tab moves to an overlay in its (relative) container; the card
+     is masked; positions re-sync on resize / font load. The animated stream
+     keeps its painted notch. */
   (() => {
     const items = [];
     document.querySelectorAll('.tab-tl').forEach((tab) => {
       const card = tab.parentElement;
-      if (!card || card.id === 'agentCard' || card.closest('.stream-track')) return;
+      if (!card || card.closest('.stream-track')) return;
       const container = card.parentElement;
       if (getComputedStyle(container).position === 'static') container.style.position = 'relative';
       tab.classList.add('notch-cut-tab');

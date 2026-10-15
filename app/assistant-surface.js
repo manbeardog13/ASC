@@ -95,10 +95,11 @@ export function mountAssistant(mount,{context=()=>({}),tools,isActive=()=>true,l
     }finally{clearTimeout(timer);if(ticket===generation&&alive){working(false);if(localController===turnController)localController=null;}}
   }
   function open(prompt='',run=false) {
-    if(!active())return;panel.open=true;showActions();
+    if(!active())return false;panel.open=true;showActions();
     if(prompt)input.value=String(prompt).slice(0,2000);
     mount.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'auto':'smooth',block:'nearest'});
     input.focus({preventScroll:true});if(run&&prompt)void submit(prompt);
+    return true;
   }
   form.onsubmit=event=>{event.preventDefault();void submit(input.value,event.submitter===remote);};
   input.onkeydown=event=>{if(event.key==='Enter'&&!event.shiftKey&&!event.isComposing){event.preventDefault();form.requestSubmit();}};
@@ -116,7 +117,11 @@ export function mountAssistant(mount,{context=()=>({}),tools,isActive=()=>true,l
     r.onend=()=>{if(token!==voiceGeneration)return;recognition=null;mic.setAttribute('aria-pressed','false');mic.textContent='Govori';if(active()&&!voiceError){status.textContent=heard&&input.value.trim()?'Provjeri poruku pa pošalji.':'Nisam prepoznao govor. Pokušaj ponovno ili upiši poruku.';if(heard)input.focus({preventScroll:true});}};
     try{r.start();mic.setAttribute('aria-pressed','true');mic.textContent='Završi';status.textContent='Slušam…';}catch{stopVoice();status.textContent='Mikrofon nije dostupan. Upiši poruku.';}
   };
-  const visibility=()=>{if(document.hidden)suspend();},hide=()=>suspend();
+  const visibility=()=>{if(document.hidden)suspend();};
+  // pagehide also fires for print and other overlays that never leave the page.
+  // Cancelling then leaves the composer dead because pageshow does not follow.
+  // A real leave is hidden or frozen into the back-forward cache.
+  const hide=(event)=>{if(document.visibilityState==='hidden'||event.persisted)suspend();};
   document.addEventListener('visibilitychange',visibility);window.addEventListener('pagehide',hide);
   showActions();
   return {open,suspend,dispose(){suspend();alive=false;document.removeEventListener('visibilitychange',visibility);window.removeEventListener('pagehide',hide);mount.replaceChildren();}};
