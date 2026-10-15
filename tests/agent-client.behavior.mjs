@@ -380,3 +380,20 @@ test('revoking remote allowance stops a tool-loop continuation', async () => {
   await assert.rejects(c.ask('count',{tools:{inventory_overview:()=>{c.window.ASC_AGENT_REMOTE_ALLOWED=false;return {result:'0'};}}}),{code:'remote_disabled'});
   assert.equal(c.requests.length,1);
 });
+
+
+test('recalled user attachments remain available, with unsafe file references discarded', async () => {
+  const valid = {path:'12345678-1234-1234-1234-123456789abc/tire.pdf', mime:'application/pdf', name:'tire.pdf'};
+  const c = client({ replies: [final('Vidim prilog.')] });
+  c.agent.recall([
+    {role:'user',body:'Pregledaj dokument',attachments:[valid,
+      {...valid,path:'https://evil.example/secret'}, {...valid,mime:'text/html'}]},
+    {role:'assistant',body:'Prilog je tu',attachments:[valid]}
+  ]);
+  await c.ask('Koja je dimenzija?');
+  const recalled = c.requests[0].payload.messages;
+  assert.deepEqual(JSON.parse(JSON.stringify(recalled[0].content)),[
+    {type:'text',text:'Pregledaj dokument'}, {type:'file',...valid}
+  ]);
+  assert.equal(recalled[1].content.some(block=>block.type==='file'),false);
+});

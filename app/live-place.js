@@ -10,6 +10,14 @@ let slotQr = slotFromHash();
 let unknown = false;
 let noSlots = false;
 let nearLabel = "";
+let confirming = false;
+let setRequest = 0, slotRequest = 0, selectionRevision = 0;
+let setLoading = false, slotLoading = false;
+
+function syncConfirm() {
+  const control = document.getElementById("place-confirm");
+  if (control) control.disabled = confirming || setLoading || slotLoading || !setRow || !slotQr;
+}
 
 bootOnboarding();
 
@@ -30,39 +38,80 @@ function summary(row) {
 async function loadSet(code) {
   const normalized = window.ASCQR ? window.ASCQR.normalize(code, true) || window.ASCQR.extractCode(code) : code;
   if (!normalized) { toast(t("flow.notFound")); return; }
+  const request = ++setRequest;
+  selectionRevision += 1;
+  slotRequest += 1;
+  slotLoading = false;
+  setLoading = true;
+  syncConfirm();
   try {
-    setRow = await loadStorageSet(normalized);
+    const loaded = await loadStorageSet(normalized);
+    if (request !== setRequest) return;
+    if (setRow && setRow.id !== loaded.id) { slotQr = ""; nearLabel = ""; unknown = false; }
+    setRow = loaded;
     render();
   } catch (error) {
+    if (request !== setRequest) return;
     toast(error.message || t("flow.notFound"));
     if (!root.childElementCount) render();
+  } finally {
+    if (request === setRequest) { setLoading = false; syncConfirm(); }
   }
 }
 
 async function acceptSlot(qr) {
-  const known = await findLocationByQr(qr);
-  if (unknownSlotScan(qr, known)) {
-    unknown = true;
-    slotQr = "";
-    return;
+  const request = ++slotRequest, setVersion = setRequest;
+  selectionRevision += 1;
+  slotLoading = true;
+  syncConfirm();
+  try {
+    const known = await findLocationByQr(qr);
+    if (request !== slotRequest || setVersion !== setRequest) return false;
+    nearLabel = "";
+    if (unknownSlotScan(qr, known)) {
+      unknown = true;
+      slotQr = "";
+      return true;
+    }
+    unknown = false;
+    slotQr = known.qr_code || qr;
+    return true;
+  } catch (error) {
+    if (request === slotRequest && setVersion === setRequest) throw error;
+    return false;
+  } finally {
+    if (request === slotRequest) { slotLoading = false; syncConfirm(); }
   }
-  unknown = false;
-  slotQr = known.qr_code || qr;
 }
 
 async function confirmPlace() {
-  if (!setRow || !slotQr) return;
-  await acceptSlot(slotQr);
-  if (unknown || !slotQr) { render(); return; }
-  const moving = Boolean(setRow.location_id);
-  const args = { setId: setRow.id, publicCode: setRow.public_code, qrCode: slotQr };
+  if (!setRow || !slotQr || confirming || setLoading || slotLoading) return;
+  const selectedSet = setRow, selectedQr = slotQr, revision = selectionRevision;
+  confirming = true;
+  syncConfirm();
   try {
+    const known = await findLocationByQr(selectedQr);
+    // A newer scan owns the form, including scans whose lookup is still pending.
+    if (selectionRevision !== revision || setRow !== selectedSet || slotQr !== selectedQr) return;
+    if (unknownSlotScan(selectedQr, known)) {
+      unknown = true;
+      slotQr = "";
+      nearLabel = "";
+      render();
+      return;
+    }
+    const moving = Boolean(selectedSet.location_id);
+    const args = { setId: selectedSet.id, publicCode: selectedSet.public_code, qrCode: known.qr_code || selectedQr };
     const data = moving ? await moveSet(args) : await placeSet(args);
-    const where = locationLabel(data?.location) || slotQr;
-    toast(t(moving ? "flow.moved" : "flow.placed", { code: setRow.public_code, where }));
-    location.href = "set-detail.html?code=" + encodeURIComponent(setRow.public_code);
+    const where = locationLabel(data?.location) || args.qrCode;
+    toast(t(moving ? "flow.moved" : "flow.placed", { code: selectedSet.public_code, where }));
+    // A submitted RPC belongs to its captured set; do not interrupt a newer scan.
+    if (selectionRevision === revision) location.href = "set-detail.html?code=" + encodeURIComponent(selectedSet.public_code);
   } catch (error) {
-    toast(error.message || t("flow.migration"));
+    if (selectionRevision === revision) toast(error.message || t("flow.migration"));
+  } finally {
+    confirming = false;
+    syncConfirm();
   }
 }
 
@@ -76,8 +125,13 @@ function customerOf(row) {
 }
 
 async function suggest() {
+  const request = ++slotRequest, setVersion = setRequest;
+  selectionRevision += 1;
+  slotLoading = true;
+  syncConfirm();
   try {
     const slot = await suggestFreeSlot("main", customerOf(setRow));
+    if (request !== slotRequest || setVersion !== setRequest) return;
     if (!slot) { toast(t("flow.noSlot")); return; }
     unknown = false;
     slotQr = slot.qr_code || "";
@@ -86,7 +140,9 @@ async function suggest() {
     toast(t(copy.key, copy.vars));
     render();
   } catch (error) {
-    toast(error.message || t("flow.migration"));
+    if (request === slotRequest && setVersion === setRequest) toast(error.message || t("flow.migration"));
+  } finally {
+    if (request === slotRequest) { slotLoading = false; syncConfirm(); }
   }
 }
 
@@ -95,7 +151,7 @@ async function onScan(text) {
     const slot = slotFromText(text);
     const code = setCodeFromText(text);
     if (!setRow && code) { loadSet(code); return; }
-    if (slot) { await acceptSlot(slot); render(); return; }
+    if (slot) { if (await acceptSlot(slot)) render(); return; }
     if (code) { loadSet(code); return; }
     toast(t("flow.notFound"));
   } catch (error) {
@@ -115,6 +171,7 @@ function render() {
   actions.append(photoFallback(onScan));
   if (!setRow) actions.append(button(t("flow.suggest"), "btn ghost", suggest));
   root.append(actions);
+  if (!noSlots) scanText("flow-reader", onScan);
   if (setRow && (noSlots || unknown)) {
     root.append(slotBlock(unknown && !noSlots ? "unknown" : "empty", placeReturn(setRow.public_code)));
     return;
@@ -128,11 +185,11 @@ function render() {
     placeActions.append(button(t("flow.suggest"), "btn ghost", suggest));
     const label = setRow.location_id ? t("flow.confirmMove") : t("flow.confirmPlace");
     const go = button(label, "btn btn-primary", confirmPlace);
-    go.disabled = !slotQr;
+    go.id = "place-confirm";
+    go.disabled = confirming || setLoading || slotLoading || !slotQr;
     placeActions.append(go);
     root.append(placeActions);
   }
-  scanText("flow-reader", onScan);
 }
 
 async function boot() {

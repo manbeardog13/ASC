@@ -338,18 +338,21 @@ function stopVoice(){
 const runtime={
  pause(){stopScanner();const status=$('scan-status');if(status)status.textContent='Skeniranje je zaustavljeno. Otvorite kameru ili odaberite fotografiju.';stopVoice();tour?.pause();viewer?.pause();if($('dialog').open){pausedDialog=true;$('dialog').close();}},
  resume(){if(disposed||!isActive())return;tour?.resume();if(pausedDialog){pausedDialog=false;$('dialog').showModal();}if(viewer)viewer.resume();else void ensureScene();},
- dispose(){if(disposed)return;disposed=true;pausedDialog=false;if($('dialog').open)$('dialog').close();stopScanner();stopVoice();clearTimeout(toastTimer);tour?.dispose();for(const remove of listeners)remove();listeners.length=0;viewer?.dispose();viewer=null;}
+ dispose(){if(disposed)return;exitFs();disposed=true;pausedDialog=false;if($('dialog').open)$('dialog').close();stopScanner();stopVoice();clearTimeout(toastTimer);tour?.dispose();for(const remove of listeners)remove();listeners.length=0;viewer?.dispose();viewer=null;}
 };
 registerRuntime(runtime);render();
 async function highlightLiveQuery(){
+ if(disposed||!isActive())return;
  const params=new URLSearchParams(location.search);
  const setCode=params.get('set'), slot=params.get('slot');
  if(!setCode&&!slot)return;
  try{
   const db=await import('../../js/db.js');
+  if(disposed||!isActive())return;
   let row=null;
   if(setCode&&db.loadStorageSet)row=await db.loadStorageSet(setCode);
   else if(slot&&db.findLocationByQr)row=await db.findLocationByQr(slot);
+  if(disposed||!isActive())return;
   if(!row){toast('Živi komplet nije pronađen. Karta je i dalje probni prikaz.');return;}
   const pin=pinForSet(row,state.stacks);
   livePin={...pin,text:`${row.public_code||setCode||slot}${pin.where?' · '+pin.where:''}${pin.approx?' · približno na karti':''}`};
@@ -357,7 +360,7 @@ async function highlightLiveQuery(){
   if(pin.stackId&&state.stacks.some(s=>s.id===pin.stackId))selectedId=pin.stackId;
   render();
   if(selectedId)viewer?.focusStack(selectedId);
- }catch{toast('Živi položaj nije učitan. Karta je i dalje probni prikaz.');}
+ }catch{if(!disposed&&isActive())toast('Živi položaj nije učitan. Karta je i dalje probni prikaz.');}
 }
 void ensureScene().then(()=>highlightLiveQuery());
 const deepCode=new URLSearchParams(location.hash.slice(1)).get('tyre');if(deepCode)resolveCode(deepCode);

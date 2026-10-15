@@ -14,16 +14,51 @@
 // (The mock preview/ demo has no gate.) Hide the page until the check resolves so
 // no mock data flashes before we know who's here; on no session → the login page.
 (() => {
-  if (/\/(login|dashboard|warehouse)\.html$/.test(location.pathname)) return;
+  if (/\/(login|warehouse)\.html$/.test(location.pathname)) return;
   document.documentElement.style.visibility = 'hidden';
   // Prag splash interplay: pages that carry the boot script expose window.ASCSplash;
   // on all other gated pages this stub keeps today's behavior byte-for-byte.
   const S = window.ASCSplash || { mode: null, done(){}, bloom(cb){ cb && cb(); }, handoff(u){ location.replace(u); } };
   const dbReady = import('../js/db.js');
+  let activeUserId = null;
+  let observedUserId;
+  let authEpoch = 0;
+  let sessionEnding = false;
+  const leaveSession = () => {
+    sessionEnding = true; authEpoch++;
+    document.documentElement.style.visibility = 'hidden';
+    document.dispatchEvent(new CustomEvent('asc:sign-out'));
+    S.bloom(() => S.handoff('login.html'));
+  };
+  dbReady.then((m) => {
+    m.onAuthChange((event, session) => {
+      if (event === 'SIGNED_OUT') { leaveSession(); return; }
+      const nextId = session && session.user && session.user.id;
+      if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') observedUserId = nextId || null;
+      if (event === 'SIGNED_IN' && activeUserId && nextId && nextId !== activeUserId) {
+        sessionEnding = true; authEpoch++;
+        document.documentElement.style.visibility = 'hidden';
+        document.dispatchEvent(new CustomEvent('asc:sign-out'));
+        location.reload();
+      }
+    });
+  }).catch(() => {});
   dbReady
     .then((m) => m.getSession())
     .then((session) => {
+      // An auth event can arrive while getSession() is pending. Never let its
+      // stale result reveal the previous account after signout or a switch.
+      if (sessionEnding) return;
+      const resolvedId = session?.user?.id || null;
+      if (observedUserId !== undefined && observedUserId !== resolvedId) {
+        sessionEnding = true; authEpoch++;
+        document.dispatchEvent(new CustomEvent('asc:sign-out'));
+        location.reload();
+        return;
+      }
+      const revealEpoch = authEpoch;
       if (session) {
+        activeUserId = session.user.id;
         // Mark the tab warm on EVERY gated page (not just splashed ones) so a
         // deep-link → dock-nav never plays a cold splash mid-session.
         try { sessionStorage.setItem('asc.splash.warm', '1'); } catch (e) {}
@@ -32,15 +67,17 @@
         // reveal choreography plays (capped so a slow fetch never stalls it).
         document.documentElement.style.visibility = '';
         Promise.race([window.ascLiveFirst || Promise.resolve(), new Promise((r) => setTimeout(r, 1200))])
-          .then(() => S.done());
+          .then(() => { if (!sessionEnding && authEpoch === revealEpoch) S.done(); });
       } else S.bloom(() => S.handoff('login.html'));   // re-cover first: even a watchdog-spent splash bounces under the surface
     })
-    .catch(() => { document.documentElement.style.visibility = ''; S.done(); });  // never hard-lock on a load error
+    .catch(leaveSession);  // A failed session check must never reveal a previous user's page.
   // Sign-out: the menu drawer's "Odjava" ends the REAL Supabase session, then → login
   // through the same covered doorway (the MPA white-flash exists in both directions).
   document.addEventListener('click', (e) => {
     if (!e.target.closest('[data-logout],[data-signout]')) return;
     e.preventDefault(); e.stopPropagation();
+    sessionEnding = true; authEpoch++;
+    document.documentElement.style.visibility = 'hidden';
     document.dispatchEvent(new CustomEvent('asc:sign-out'));
     dbReady.then((m) => m.signOut()).catch(() => {}).finally(() => S.bloom(() => S.handoff('login.html')));
   }, true);
@@ -274,7 +311,34 @@ function animate(){
   // mobile: hamburger in the header + scrim close
   const top = doc.querySelector('.top');
   let burger=null;
-  const setMenuOpen=(open)=>{root.classList.toggle('side-open',open);burger?.setAttribute('aria-expanded',String(open));};
+  const mobileMenu=matchMedia('(max-width:1020px)');
+  let menuOverlayOpen=false;
+  const menuBackground=new Map();
+  const menuFocusable=()=>[...aside.querySelectorAll('a[href],button,input,select,textarea,[tabindex]'),
+    ...doc.querySelectorAll('.acct-pop button')].filter(el=>!el.disabled && el.tabIndex>=0 &&
+      !el.closest('[hidden],[inert]') && el.getClientRects().length && getComputedStyle(el).visibility!=='hidden');
+  const setMenuOpen=(open,{restoreFocus=true}={})=>{
+    const wasOverlayOpen=menuOverlayOpen;
+    root.classList.toggle('side-open',open);
+    burger?.setAttribute('aria-expanded',String(open));
+    menuOverlayOpen=mobileMenu.matches && open;
+    aside.inert=mobileMenu.matches && !open;
+    if(menuOverlayOpen){
+      aside.setAttribute('role','dialog');aside.setAttribute('aria-modal','true');
+      if(!wasOverlayOpen){
+        [...doc.body.children].filter(el=>el!==aside && el!==scrim && !el.matches('.acct-pop'))
+          .forEach(el=>{menuBackground.set(el,el.inert);el.inert=true;});
+        menuFocusable()[0]?.focus({preventScroll:true});
+      }
+    }else{
+      menuBackground.forEach((inert,el)=>{if(el.isConnected)el.inert=inert;});menuBackground.clear();
+      aside.removeAttribute('role');aside.removeAttribute('aria-modal');
+      if(wasOverlayOpen && restoreFocus)burger?.focus({preventScroll:true});
+    }
+  };
+  mobileMenu.addEventListener('change',()=>{if(!doc.getElementById('asc-onboard'))setMenuOpen(false);});
+  doc.addEventListener('asc:onboarding-closed',()=>setMenuOpen(false));
+  setMenuOpen(false);
   if (top) {
     burger = doc.createElement('button');
     burger.className = 'sb-burger'; burger.type = 'button'; burger.setAttribute('aria-label', 'Izbornik');
@@ -284,7 +348,23 @@ function animate(){
     burger.addEventListener('click', () => setMenuOpen(true));
   }
   scrim.addEventListener('click', () => setMenuOpen(false));
-  doc.addEventListener('keydown', (e) => { if (e.key === 'Escape') setMenuOpen(false); });
+  doc.addEventListener('keydown', (e) => {
+    if(doc.getElementById('asc-onboard'))return;
+    if(e.key==='Escape' && root.classList.contains('side-open')){
+      e.preventDefault();
+      if(pop){closePop();aside.querySelector('.sb-user')?.focus({preventScroll:true});}
+      else setMenuOpen(false);
+      return;
+    }
+    if(e.key!=='Tab' || !menuOverlayOpen)return;
+    const items=menuFocusable(),first=items[0],last=items[items.length-1];
+    if(!first){e.preventDefault();return;}
+    if(e.shiftKey && (!items.includes(doc.activeElement)||doc.activeElement===first)){
+      e.preventDefault();last.focus();
+    }else if(!e.shiftKey && (!items.includes(doc.activeElement)||doc.activeElement===last)){
+      e.preventDefault();first.focus();
+    }
+  });
   aside.addEventListener('click', (e) => { if (e.target.closest('a.sb-item')) setMenuOpen(false); });
   const themeBtn = aside.querySelector('#sbTheme');
   const syncTheme = () => syncThemeButton(themeBtn);
@@ -343,7 +423,10 @@ function animate(){
       const a = act.getAttribute('data-act');
       if (a === 'theme') { const mode = doc.getElementById('mode'); if (mode) mode.click(); }
       else if (a === 'layout') document.dispatchEvent(new CustomEvent('asc:edit-layout'));
-      else document.dispatchEvent(new CustomEvent('asc:open-menu', { detail: a === 'profile' ? 'profile' : 'menu' }));
+      else {
+        setMenuOpen(false,{restoreFocus:false});
+        document.dispatchEvent(new CustomEvent('asc:open-menu', { detail: a === 'profile' ? 'profile' : 'menu' }));
+      }
       closePop();
     });
     setTimeout(() => doc.addEventListener('click', function away(ev) {

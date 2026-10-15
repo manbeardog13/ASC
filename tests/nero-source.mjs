@@ -41,7 +41,8 @@ test('the builder function checks asc_is_admin and keeps the webhook on the serv
   assert.doesNotMatch(composer, /BUILDER_WEBHOOK/);
   const transcriptStart = composer.indexOf('function transcribeAudio');
   const transcript = composer.slice(transcriptStart, composer.indexOf('mic.hidden', transcriptStart));
-  assert.match(transcript, /input\.value = text/);
+  assert.match(transcript, /voiceGeneration/);
+  assert.match(transcript, /voiceDraft/);
   assert.doesNotMatch(transcript, /\bask\(/);
 });
 
@@ -74,7 +75,8 @@ test('chat history is owner-scoped and the composer queues without tokens', () =
   assert.match(composer, /queued, sends when Tailscale reconnects/);
   assert.match(composer, /Connect to Tailscale to reach Toni & Nero/);
   assert.match(composer, /prefers-reduced-motion|is-stream/);
-  assert.ok(composer.indexOf('function startVoice') < composer.indexOf('recognition.start()'));
+  assert.match(composer, /function startVoice/);
+  assert.match(composer, /new SR\(\)/);
   assert.match(read('app/composer.css'), /backdrop-filter:blur\(22px\) saturate\(180%\)/);
   assert.match(read('app/composer.css'), /prefers-reduced-motion:reduce/);
   assert.match(read('app/agent-config.js'), /BUILDER_RELAY_URL = ""/);

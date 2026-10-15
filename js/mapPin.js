@@ -17,8 +17,8 @@ export function pinForSet(row, stacks = []) {
     const stack = stacks.find((item) => item.id === id && (!item.areaId || item.areaId === areaId));
     if (stack) {
       stackId = stack.id;
-      const short = `S${String(Number(numbered[1])).padStart(3, "0")}`;
-      approx = !(zone === areaId && (rack === id.toUpperCase() || rack === short));
+      // Matching labels identify a demo stack, never a surveyed real position.
+      approx = true;
     }
   }
   if (!stackId) {

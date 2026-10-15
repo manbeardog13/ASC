@@ -789,9 +789,12 @@ document.addEventListener('click', function(e){
         show(me + '<span class="tb-ans">' + esc(fast) + '</span>');
         return true;
       };
-      const ready = window.ASCConcierge
-        ? Promise.resolve(window.ASCConcierge.answer(text))
-        : import('./concierge.js').then((mod) => mod.answer(text)).catch(() => null);
+      // A failed local answer must still reach the live assistant. Defer the
+      // call so synchronous concierge failures follow the same recovery path.
+      const ready = Promise.resolve().then(() => window.ASCConcierge
+        ? window.ASCConcierge.answer(text)
+        : import('./concierge.js').then((mod) => mod.answer(text)))
+        .catch(() => null);
       busy = true;
       ready.then((fast) => { if (!showFact(fast)) askGemini(text, me); else busy = false; });
     }

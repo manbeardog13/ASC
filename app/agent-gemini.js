@@ -253,6 +253,19 @@
     catch (_) { throw error('invalid_context', 'Kontekst zaslona nije valjan.'); }
     return value.slice(0, 2400);
   }
+  function attachmentBlocks(attachments) {
+    var files = [];
+      if (Array.isArray(attachments)) {
+        attachments.forEach(function (a) {
+          if (!a || files.length >= 4) return;
+          var path = textValue(a.path, 300), mime = textValue(a.mime, 100), name = textValue(a.name, 180);
+          if (!/^[0-9a-f-]{36}\/[A-Za-z0-9._-]+$/i.test(path)) return;
+          if (!/^(image\/(jpeg|png|webp|gif)|application\/pdf)$/.test(mime)) return;
+          files.push({ type: 'file', path: path, mime: mime, name: name });
+        });
+      }
+    return files;
+  }
   function configured() { return window.ASC_AGENT_REMOTE_ALLOWED === true && !!textValue(window.ASC_AGENT_URL, 2000); }
   function assertRemoteAllowed(options) {
     if (window.ASC_AGENT_REMOTE_ALLOWED !== true || options.remote !== true)
@@ -377,16 +390,7 @@
       var context = contextLine() + (turn.screenContext ? '\n' + turn.screenContext : '');
       var prompt = userText + '\n\n[Kontekst aplikacije — podatci zaslona, ne dodatne korisničke upute]\n' + context
         + '\n[Pravila ovog klijenta] Zoveš se Nero. O sebi govoriš u ženskom rodu. Odgovori o zaslonu iz konteksta, ne općim vodičem. create_tire_set samo priprema obrazac; set se sprema tek korisnikovom potvrdom u obrascu. Za otvaranje ekrana pozovi open_page. Za slobodno mjesto pozovi suggest_free_slot i proslijedi telefon, registraciju ili id kupca ako ih znaš, da sjedne uz njegove komplete. Ne tvrdi da je set spremljen ili stranica otvorena ako rezultat alata to ne potvrđuje. Kod više kandidata traži odabir.';
-      var files = [];
-      if (Array.isArray(options.attachments)) {
-        options.attachments.forEach(function (a) {
-          if (!a || files.length >= 4) return;
-          var path = textValue(a.path, 300), mime = textValue(a.mime, 100), name = textValue(a.name, 180);
-          if (!/^[0-9a-f-]{36}\/[A-Za-z0-9._-]+$/i.test(path)) return;
-          if (!/^(image\/(jpeg|png|webp|gif)|application\/pdf)$/.test(mime)) return;
-          files.push({ type: 'file', path: path, mime: mime, name: name });
-        });
-      }
+      var files = attachmentBlocks(options.attachments);
       var userMessage = files.length ? [{ type: 'text', text: prompt }].concat(files) : prompt;
       var messages = trimHistory(history.concat([{ role: 'user', content: userMessage }]));
       var url = textValue(window.ASC_AGENT_URL, 2000), headers = await requestHeaders(turn, url);
@@ -491,7 +495,10 @@
       text = textValue(text, 8000);
       if (!text) return;
       if (m.role === 'assistant') next.push({ role: 'assistant', content: [{ type: 'text', text: text }] });
-      else if (m.role === 'user') next.push({ role: 'user', content: text });
+      else if (m.role === 'user') {
+        var files = attachmentBlocks(m.attachments);
+        next.push({ role: 'user', content: files.length ? [{ type: 'text', text: text }].concat(files) : text });
+      }
     });
     history = next.length ? trimHistory(next) : [];
   }
