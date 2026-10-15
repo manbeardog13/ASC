@@ -78,3 +78,14 @@ test('server keeps timeouts, fallback, injection guard and the Nero persona', ()
   assert.match(INJECTION_GUARD, /entry prices/);
   assert.match(src, /You are Nero\. You are a woman/);
 });
+
+// perf: quota-exhausted 429 skips the same-model retry
+{
+  const { isQuotaExhausted } = await import('../supabase/functions/asc-agent/guards.js');
+  const assert = (await import('node:assert/strict')).default;
+  assert.equal(isQuotaExhausted(429, '{"error":{"code":429,"message":"You exceeded your current quota"}}'), true);
+  assert.equal(isQuotaExhausted(429, '{"status":"RESOURCE_EXHAUSTED"}'), true);
+  assert.equal(isQuotaExhausted(503, 'high demand quota'), false);
+  assert.equal(isQuotaExhausted(429, 'rate'), false);
+  console.log('ok quota fast-failover');
+}

@@ -25,7 +25,7 @@
 //          (optional) GEMINI_MODEL=gemini-flash-latest
 // ============================================================================
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { backoffMs, INJECTION_GUARD, isBusy, safeName, validateMessages } from "./guards.js";
+import { backoffMs, INJECTION_GUARD, isBusy, isQuotaExhausted, safeName, validateMessages } from "./guards.js";
 
 // Primary: pinned current GA flash (the "-latest" alias is what the whole
 // world hammers — persistent 503 "high demand"). Old pinned versions get
@@ -40,8 +40,12 @@ const MAX_BODY_BYTES = 200_000;   // hard cap on request size
 // Upstream timeouts so a hung Gemini call can never pin the function.
 const TIMEOUT_MS = Number(Deno.env.get("GEMINI_TIMEOUT_MS")) || 25_000;
 const STREAM_TIMEOUT_MS = Number(Deno.env.get("GEMINI_STREAM_TIMEOUT_MS")) || 90_000;
-// Opt-in speedup: lower Gemini 3 thinking effort. Unset = current behaviour.
-const THINKING_LEVEL = Deno.env.get("GEMINI_THINKING_LEVEL") || "";
+// Speed: Gemini 3 "thinks" at high effort by default, which is where most of
+// Nero's 3–29 s per call went. Default to "low"; set GEMINI_THINKING_LEVEL=off
+// to restore the old behaviour (or high/medium/minimal to tune). Only sent to
+// gemini-3* models — older/lite models reject thinkingLevel.
+const THINKING_RAW = (Deno.env.get("GEMINI_THINKING_LEVEL") || "low").toLowerCase();
+const THINKING_LEVEL = THINKING_RAW === "off" ? "" : THINKING_RAW;
 
 const SYSTEM = `You are Nero. You are a woman, and you are the in-app assistant of ASC
 (Auto Servisni Centar d.o.o.), a Croatian tire-storage ("tire hotel") shop. You
@@ -416,9 +420,11 @@ function createAssembler() {
 
 // Static parts are serialised once per isolate, not on every request.
 const TOOLS_JSON = JSON.stringify([{ functionDeclarations: FUNCTION_DECLARATIONS }]);
-const GEN_JSON = JSON.stringify({ maxOutputTokens: 2048, ...(THINKING_LEVEL ? { thinkingConfig: { thinkingLevel: THINKING_LEVEL } } : {}) });
-function geminiBody(contents: unknown[], system: string) {
-  return `{"systemInstruction":${JSON.stringify({ parts: [{ text: system }] })},"tools":${TOOLS_JSON},"toolConfig":{"functionCallingConfig":{"mode":"AUTO"}},"contents":${JSON.stringify(contents)},"generationConfig":${GEN_JSON}}`;
+const GEN_JSON = JSON.stringify({ maxOutputTokens: 2048 });
+const GEN_JSON_THINK = JSON.stringify({ maxOutputTokens: 2048, ...(THINKING_LEVEL ? { thinkingConfig: { thinkingLevel: THINKING_LEVEL } } : {}) });
+export function genConfigFor(model: string) { return /^gemini-3/.test(model) ? GEN_JSON_THINK : GEN_JSON; }
+function geminiBody(contents: unknown[], system: string, model: string) {
+  return `{"systemInstruction":${JSON.stringify({ parts: [{ text: system }] })},"tools":${TOOLS_JSON},"toolConfig":{"functionCallingConfig":{"mode":"AUTO"}},"contents":${JSON.stringify(contents)},"generationConfig":${genConfigFor(model)}}`;
 }
 
 function consumeGeminiChunk(asm: ReturnType<typeof createAssembler>, data: any, onDelta: (t: string) => void, onTool: (name: string) => void) {
@@ -567,27 +573,31 @@ Deno.serve(async (req) => {
     const contents = await toGeminiContents(messages, asCaller, user.id);
     const system = SYSTEM + userLine;
     const busy = isBusy;
-    const payload = geminiBody(contents, system);
     const callModel = (model: string, stream: boolean) => fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${model}:${stream ? "streamGenerateContent?alt=sse" : "generateContent"}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
-        body: payload,
+        body: geminiBody(contents, system, model),
         signal: AbortSignal.timeout(stream ? STREAM_TIMEOUT_MS : TIMEOUT_MS),
       },
     );
     // Retry and fallback finish before any client SSE byte. A busy stream is
     // discarded; the client only hears a model that already accepted the call.
     let res = await callModel(MODEL, wantStream);
+    let detail = "";
     if (busy(res.status)) {
-      const wait = backoffMs(0, res.headers.get("retry-after"));
-      await res.body?.cancel();
-      await new Promise((r) => setTimeout(r, wait));
-      res = await callModel(MODEL, wantStream);
+      detail = await res.text();
+      // A spent free-tier quota won't recover in 1.6 s: skip the retry and go
+      // straight to the fallback model (its own quota bucket).
+      if (!isQuotaExhausted(res.status, detail)) {
+        const wait = backoffMs(0, res.headers.get("retry-after"));
+        await new Promise((r) => setTimeout(r, wait));
+        res = await callModel(MODEL, wantStream);
+        detail = busy(res.status) ? await res.text() : "";
+      }
     }
     if (busy(res.status) && FALLBACK_MODEL !== MODEL) {
-      const detail = await res.text();
       console.error("[asc-agent]", res.status, "on", MODEL, detail.slice(0, 300), "→ trying", FALLBACK_MODEL);
       res = await callModel(FALLBACK_MODEL, wantStream);
     }

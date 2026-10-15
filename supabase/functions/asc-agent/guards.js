@@ -96,6 +96,8 @@ export function trimContext(messages) {
 // Retry policy for 429/500/503: exponential backoff with jitter, honouring a
 // short Retry-After. Capped so the user never waits long before the fallback.
 export const isBusy = (s) => s === 429 || s === 503 || s === 500;
+// 429 "exceeded your current quota" = daily/minute free-tier bucket spent.
+export const isQuotaExhausted = (s, body) => s === 429 && /quota|RESOURCE_EXHAUSTED/i.test(String(body || ""));
 export function backoffMs(attempt, retryAfterHeader, rand = Math.random) {
   const ra = Number(retryAfterHeader);
   if (Number.isFinite(ra) && ra > 0 && ra <= 4) return ra * 1000;
