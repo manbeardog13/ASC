@@ -395,25 +395,16 @@ function createAssembler() {
     },
     pushCall(name: string, args: unknown, sig?: string): boolean {
       segment = "";
-      let existing: WireBlock | undefined;
-      for (let i = blocks.length - 1; i >= 0; i--) {
-        if (blocks[i].type === "tool_use" && blocks[i].name === name) { existing = blocks[i]; break; }
-        if (blocks[i].type === "text") break;
-      }
-      const input = args && typeof args === "object" ? args as Record<string, unknown> : {};
-      if (!existing) {
-        blocks.push({
-          type: "tool_use",
-          id: `fc_${Date.now()}_${blocks.length}`,
-          name,
-          input,
-          ...(sig ? { _sig: sig } : {}),
-        });
-        return true;
-      }
-      if (Object.keys(input).length) existing.input = input;
-      if (sig) existing._sig = sig;
-      return false;
+      // generateContent streams complete calls; two calls can share a name.
+      // The client deduplicates effects by name + normalized arguments.
+      blocks.push({
+        type: "tool_use",
+        id: `fc_${Date.now()}_${blocks.length}`,
+        name,
+        input: args && typeof args === "object" ? args as Record<string, unknown> : {},
+        ...(sig ? { _sig: sig } : {}),
+      });
+      return true;
     },
   };
 }

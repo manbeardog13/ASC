@@ -3,7 +3,7 @@
 All fixtures are synthetic. These tests never call a model, access a live session,
 read production inventory, or write to Supabase.
 
-Pure Node checks (Node 20+; the VM flag is required for mocked dynamic imports):
+Pure Node checks (Node 22.13+; the VM flag is required for mocked dynamic imports):
 
 ```sh
 node --experimental-vm-modules --test tests/*.mjs
@@ -40,3 +40,6 @@ Required repository checks for changes under js/:
 node scripts/i18n-guard.test.mjs
 node scripts/i18n-guard.mjs
 ```
+
+`tests/agent-stream.behavior.mjs` isolates the pure Gemini assembler with Node's TypeScript stripping API. It verifies that distinct same-name calls preserve
+arguments, IDs, signatures and text ordering without initializing an edge runtime.
