@@ -1126,3 +1126,6 @@ input:-webkit-autofill,input:-webkit-autofill:hover,input:-webkit-autofill:focus
   -webkit-text-fill-color:var(--ink)!important;-webkit-box-shadow:0 0 0 1000px var(--panel) inset!important;box-shadow:0 0 0 1000px var(--panel) inset!important;transition:background-color 9999s}
 html.dark input:-webkit-autofill{-webkit-box-shadow:0 0 0 1000px var(--panel-2) inset!important;box-shadow:0 0 0 1000px var(--panel-2) inset!important}
 .sb-search input,.spatial-app .search-wrap input{background-color:transparent!important;border:0!important}
+
+/* Less noise: no grain texture, no ambient blobs, no preview ribbons. */
+.grain,.canvas{display:none!important}

@@ -1,7 +1,8 @@
 /* Nero composer — dark violet glass, ASC colors (#8b5cf6 / #e040d0).
    Compact while browsing. Expanded only while typing. */
 .nero-composer{position:fixed;z-index:90;left:50%;
-  bottom:calc(10px + env(safe-area-inset-bottom, 0px));
+  bottom:calc(8px + var(--kb, 0px) + env(safe-area-inset-bottom, 0px));
+  top:auto;max-height:calc(100dvh - 24px - var(--kb, 0px));
   width:min(680px, calc(100vw - 16px));
   display:flex;flex-direction:column;gap:8px;
   transform:translate(-50%,0);
@@ -225,7 +226,7 @@ html.has-composer body{padding-bottom:calc(var(--nero-stack, 84px) + env(safe-ar
 .nero-suggest{flex-direction:row-reverse;justify-content:flex-start}
 .nero-bubble{touch-action:pan-y}
 .nero-bubble.is-linked{background:linear-gradient(90deg, color-mix(in srgb, var(--merge-tint) 34%, rgba(34,24,64,.95)) 0 55%, color-mix(in srgb, var(--join-tint) 34%, rgba(34,24,64,.95)));
-  animation:neroNudge 1.8s cubic-bezier(.36,0,.2,1) 600ms infinite}
+  animation:neroNudge 1.8s cubic-bezier(.36,0,.2,1) 600ms 2}
 .nero-bubble.is-drag{animation:none;transition:none!important;z-index:3}
 @keyframes neroNudge{0%,70%,100%{transform:none}78%{transform:translate3d(4px,0,0)}86%{transform:translate3d(-1px,0,0)}}
 /* Heartbeat underglow (opacity only). */
@@ -246,3 +247,11 @@ html.has-composer body{padding-bottom:calc(var(--nero-stack, 84px) + env(safe-ar
   .nero-bubble.is-linked,.nero-suggest.on .nero-bubble::before,.card.nero-next::before,.nero-flow{animation:none}
   .nero-composer .nero-log{transition:none}
 }
+
+/* Bottom-docked: grows upward with the text, never mid-screen. */
+.nero-composer{justify-content:flex-end}
+.nero-composer .nero-log{max-height:min(46dvh,420px)}
+.nero-composer .nero-pills{display:flex;flex-wrap:nowrap;gap:4px;margin-right:auto}
+.nero-composer .nero-pill{min-height:32px;padding:0 10px;font-size:12px;background:transparent;border-color:rgba(150,110,255,.28)}
+.nero-composer.is-compact .nero-pills{display:none}
+.nero-composer .nero-plus{margin-right:0}

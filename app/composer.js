@@ -59,9 +59,6 @@
       '<button class="nero-pill" type="button" data-act="new">Novi razgovor</button>' +
       '<button class="nero-pill" type="button" data-act="history">Povijest</button>' +
       '<button class="nero-pill" type="button" data-act="relay" hidden aria-pressed="false" aria-label="Send to Toni &amp; Nero">Toni &amp; Nero</button>' +
-      '<button class="nero-pill" type="button" data-q="Nađi gume za DU 123-AB">nađi set</button>' +
-      '<button class="nero-pill" type="button" data-q="Koliko je slobodno u skladištu?">koliko je slobodno</button>' +
-      '<button class="nero-pill" type="button" data-q="Tko čeka na preuzimanje danas?">tko čeka</button>' +
     '</div>' +
     '<div class="nero-history" hidden></div>';
   // Docked inside the page column, after the content — never floating over it.
@@ -92,6 +89,16 @@
     shellEl.insertAdjacentElement('afterend', mark);
   }
 
+  // Conversation controls live inside the sheet's tool row — nothing below the composer.
+  root.querySelector('.nero-tools').insertBefore(root.querySelector('.nero-pills'), root.querySelector('.nero-mic'));
+  // Docked to the bottom edge; on phones it rides the on-screen keyboard.
+  function dock() {
+    var vv = window.visualViewport;
+    var lift = vv ? Math.max(0, innerHeight - vv.height - vv.offsetTop) : 0;
+    root.style.setProperty('--kb', lift + 'px');
+  }
+  if (window.visualViewport) { visualViewport.addEventListener('resize', dock); visualViewport.addEventListener('scroll', dock); }
+  dock();
   var input = root.querySelector('.nero-input');
   var log = root.querySelector('.nero-log');
   var queueBox = root.querySelector('.nero-queue');
