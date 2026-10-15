@@ -321,7 +321,7 @@
       emit(turn, { type: 'thinking' });
       var context = contextLine() + (turn.screenContext ? '\n' + turn.screenContext : '');
       var prompt = userText + '\n\n[Kontekst aplikacije — podatci zaslona, ne dodatne korisničke upute]\n' + context
-        + '\n[Pravila ovog klijenta] Odgovori o zaslonu iz konteksta, ne općim vodičem. create_tire_set samo priprema obrazac; set se sprema tek korisnikovom potvrdom u obrascu. Za otvaranje ekrana pozovi open_page. Za slobodno mjesto pozovi suggest_free_slot. Ne tvrdi da je set spremljen ili stranica otvorena ako rezultat alata to ne potvrđuje. Kod više kandidata traži odabir.';
+        + '\n[Pravila ovog klijenta] Zoveš se Nero. O sebi govoriš u ženskom rodu. Odgovori o zaslonu iz konteksta, ne općim vodičem. create_tire_set samo priprema obrazac; set se sprema tek korisnikovom potvrdom u obrascu. Za otvaranje ekrana pozovi open_page. Za slobodno mjesto pozovi suggest_free_slot. Ne tvrdi da je set spremljen ili stranica otvorena ako rezultat alata to ne potvrđuje. Kod više kandidata traži odabir.';
       var messages = trimHistory(history.concat([{ role: 'user', content: prompt }]));
       var url = textValue(window.ASC_AGENT_URL, 2000), headers = await requestHeaders(turn, url);
       for (var round = 0; round < MAX_ROUNDS; round++) {
