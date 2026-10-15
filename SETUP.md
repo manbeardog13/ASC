@@ -142,7 +142,7 @@ re-run and won't touch your data).
   shop (check-in, moves, permanent delete, etc.).
 - **User** — runs the shop but can't manage accounts.
 
-**The owner.** `cryptonii13@gmail.com` is the permanent **owner**: always an admin,
+**The owner.** `toni@nerosummit.com` is the permanent **owner**: always an admin,
 and it can **never be removed or demoted** — that's enforced in the database, so no
 other admin (or a stray API call) can lock the owner out. Sign in with that email to
 get full control from day one.
@@ -191,7 +191,7 @@ above still works.
 With that done: adding a user emails them an invite; they click it and land on a
 **"Set your password"** screen, then they're in with the role you gave them.
 Removing a user deletes their login for good. The owner is refused by the function
-too, so a delete can never take out `cryptonii13@gmail.com`.
+too, so a delete can never take out `toni@nerosummit.com`.
 
 ---
 
