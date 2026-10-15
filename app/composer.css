@@ -56,7 +56,10 @@ html.has-composer body{padding-bottom:calc(var(--nero-stack, 84px) + env(safe-ar
   transition:opacity 1.2s ease, transform 1.2s ease}
 .nero-suggest.on .nero-bubble{opacity:1;transform:none;
   transition:opacity 260ms ease calc(var(--i,0) * 70ms), transform 420ms cubic-bezier(.34,1.56,.64,1) calc(var(--i,0) * 70ms)}
-.nero-bubble::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:0;
+.nero-suggest .nero-bubble{overflow:visible}
+.nero-bubble::before{content:"";position:absolute;left:12%;right:12%;bottom:-6px;height:14px;z-index:-1;pointer-events:none;border-radius:50%;
+  background:color-mix(in srgb, var(--merge-tint, #8b5cf6) 70%, transparent);filter:blur(10px);opacity:.28}
+.nero-bubble::after{content:"";position:absolute;inset:0;border-radius:inherit;overflow:hidden;pointer-events:none;opacity:0;
   background:linear-gradient(100deg, transparent 30%, rgba(255,255,255,.16) 50%, transparent 70%);background-size:220% 100%}
 .nero-suggest.nero-ripple .nero-bubble::after{animation:neroShim 250ms ease-out calc(var(--i,0) * 70ms) both}
 @keyframes neroShim{0%{opacity:.9;background-position:120% 0;transform:scaleY(1)}50%{transform:scaleY(1.03)}100%{opacity:0;background-position:-20% 0;transform:none}}
@@ -200,3 +203,46 @@ html.has-composer body{padding-bottom:calc(var(--nero-stack, 84px) + env(safe-ar
           mask:linear-gradient(to bottom, transparent 0%, rgba(0,0,0,.35) 35%, #000 80%, rgba(0,0,0,.6) 100%);
   filter:blur(1.2px)}
 .nero-field.lamp-on .nero-lamp{opacity:1}
+
+/* ---- Behaviour pass (transforms/opacity only) ---- */
+.nero-composer{transform-origin:50% 100%}
+.nero-composer.is-compact.is-scrolling{transform:translate(-50%,3px) scale(.97)}
+.nero-composer.is-open .nero-sheet{animation:neroSprout 560ms cubic-bezier(.34,1.56,.64,1) both;transform-origin:50% 100%}
+@keyframes neroSprout{from{transform:scaleY(.72) translateY(10px);opacity:.6}to{transform:none;opacity:1}}
+.nero-composer.is-open .nero-field,.nero-composer.is-open .nero-plus,.nero-composer.is-open .nero-mic,.nero-composer.is-open .nero-send{animation:neroItem 420ms cubic-bezier(.34,1.56,.64,1) both}
+.nero-composer.is-open .nero-field{animation-delay:60ms}
+.nero-composer.is-open .nero-plus{animation-delay:120ms}
+.nero-composer.is-open .nero-mic{animation-delay:180ms}
+.nero-composer.is-open .nero-send{animation-delay:240ms}
+@keyframes neroItem{from{opacity:0;transform:translateY(8px) scale(.9)}to{opacity:1;transform:none}}
+/* Glass with a purple tint throughout. */
+.nero-composer .nero-log{border-radius:22px 22px 0 0;background:linear-gradient(180deg, rgba(40,26,78,.9), rgba(24,16,46,.94));
+  border:1px solid rgba(150,110,255,.3);border-bottom:0;padding:22px 10px 10px;margin-bottom:-8px;will-change:transform;transition:transform 260ms cubic-bezier(.34,1.56,.64,1)}
+.nero-grab{display:none;align-self:center;width:44px;height:18px;margin-bottom:-26px;position:relative;z-index:2;cursor:grab;touch-action:none}
+.nero-grab::before{content:"";position:absolute;left:6px;right:6px;top:7px;height:4px;border-radius:2px;background:rgba(243,239,255,.5)}
+.nero-composer.has-convo:not(.is-compact) .nero-grab{display:block}
+/* Bubbles: anchored right, stacking leftwards. */
+.nero-suggest{flex-direction:row-reverse;justify-content:flex-start}
+.nero-bubble{touch-action:pan-y}
+.nero-bubble.is-linked{background:linear-gradient(90deg, color-mix(in srgb, var(--merge-tint) 34%, rgba(34,24,64,.95)) 0 55%, color-mix(in srgb, var(--join-tint) 34%, rgba(34,24,64,.95)));
+  animation:neroNudge 1.8s cubic-bezier(.36,0,.2,1) 600ms infinite}
+.nero-bubble.is-drag{animation:none;transition:none!important;z-index:3}
+@keyframes neroNudge{0%,70%,100%{transform:none}78%{transform:translate3d(4px,0,0)}86%{transform:translate3d(-1px,0,0)}}
+/* Heartbeat underglow (opacity only). */
+.nero-suggest.on .nero-bubble::before{animation:neroBeat 2.6s cubic-bezier(.4,0,.2,1) infinite}
+@keyframes neroBeat{0%{opacity:.18}12%{opacity:.34}22%{opacity:.22}32%{opacity:.3}60%,100%{opacity:.18}}
+/* The card just left keeps a faint glow recommending its next step. */
+.card.nero-next::before{content:"";position:absolute;left:10%;right:10%;bottom:-10px;height:20px;border-radius:50%;pointer-events:none;z-index:-1;
+  background:color-mix(in srgb, var(--merge-tint, #8b5cf6) 70%, transparent);filter:blur(14px);animation:neroBeat 2.6s cubic-bezier(.4,0,.2,1) infinite}
+/* Combined workflow pop-up. */
+.nero-flow{position:fixed;inset:0;z-index:95;display:grid;place-items:center;background:rgba(10,8,20,.35);animation:neroItem 300ms ease both}
+.nero-flow-card{position:relative;width:min(380px,calc(100vw - 32px));padding:18px;border-radius:22px;color:#f3efff;
+  background:linear-gradient(160deg, rgba(40,26,78,.96), rgba(20,14,40,.97));border:1px solid rgba(150,110,255,.35)}
+.nero-flow-card ol{margin:12px 0 0;padding-left:20px;display:flex;flex-direction:column;gap:8px}
+.nero-flow-card ol button{width:100%;text-align:left;min-height:40px;padding:0 12px;border-radius:12px;border:1px solid rgba(150,110,255,.35);background:rgba(255,255,255,.06);color:#fff;font:600 13px Inter;cursor:pointer}
+.nero-flow-close{position:absolute;top:10px;right:10px;width:32px;height:32px;border:0;border-radius:10px;background:rgba(255,255,255,.08);color:#fff;cursor:pointer}
+@media(prefers-reduced-motion:reduce){
+  .nero-composer.is-open .nero-sheet,.nero-composer.is-open .nero-field,.nero-composer.is-open .nero-plus,.nero-composer.is-open .nero-mic,.nero-composer.is-open .nero-send,
+  .nero-bubble.is-linked,.nero-suggest.on .nero-bubble::before,.card.nero-next::before,.nero-flow{animation:none}
+  .nero-composer .nero-log{transition:none}
+}

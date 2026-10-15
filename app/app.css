@@ -1102,7 +1102,27 @@ html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{width:0;hei
   .card h3{font-size:17px}
 }
 
-/* One weight for every label and button. */
-button,.button,label,.sb-item .t,.chip,.pill a,.nero-pill,.nero-bubble{font-weight:600}
+/* One weight for labels and menu items (app buttons keep their original style). */
+label,.sb-item .t,.sb-eyebrow2,.sb-eyebrow{font-weight:600}
 /* Interactive cards stay firm: no pinch zoom inside them (page zoom elsewhere is untouched). */
 .card,.shell>.top{touch-action:pan-x pan-y}
+
+/* Decluttered cards: secondary actions/hints moved into Nero's suggestion bubbles. */
+html.has-composer [data-nero-move]{display:none!important}
+/* Menu: tighter, one weight, one icon size. */
+.sb-nav{gap:1px}
+.sb-item{min-height:38px;font-weight:600}
+.sb-item svg{width:19px;height:19px;stroke-width:1.8}
+.sb-kid{min-height:34px}
+.sb-div{margin:8px 10px}
+.sb-eyebrow2{padding:10px 12px 4px}
+@media(max-width:1020px){.sb-item{min-height:44px}.sb-kid{min-height:40px}}
+
+/* Inputs: one ASC field style everywhere (from .md-field), never white, autofill included. */
+:where(input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]):not([type=color]),select,textarea):not(.nero-input){
+  background-color:var(--panel)!important;color:var(--ink)!important;border:1px solid var(--line)!important;border-radius:12px;font-family:Inter,system-ui,sans-serif}
+html.dark :where(input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]),select,textarea):not(.nero-input){background-color:var(--panel-2)!important}
+input:-webkit-autofill,input:-webkit-autofill:hover,input:-webkit-autofill:focus,textarea:-webkit-autofill,select:-webkit-autofill{
+  -webkit-text-fill-color:var(--ink)!important;-webkit-box-shadow:0 0 0 1000px var(--panel) inset!important;box-shadow:0 0 0 1000px var(--panel) inset!important;transition:background-color 9999s}
+html.dark input:-webkit-autofill{-webkit-box-shadow:0 0 0 1000px var(--panel-2) inset!important;box-shadow:0 0 0 1000px var(--panel-2) inset!important}
+.sb-search input,.spatial-app .search-wrap input{background-color:transparent!important;border:0!important}

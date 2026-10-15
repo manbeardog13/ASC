@@ -35,8 +35,8 @@
 .spatial-app [hidden]{display:none!important}
 /* Local controls only. Shared .sb-item and .card
    keep their type, color and surface from app.css. */
-.spatial-app :is(button,input,textarea):not(.sb-item):not(.sb-burger):not(.sb-user):not(.sb-logout){font-family:Inter,system-ui,sans-serif}
-.spatial-app button:not(.sb-item):not(.sb-burger):not(.sb-collapse):not(.sb-user):not(.sb-logout){cursor:pointer;color:inherit;border:0;background:none;touch-action:manipulation}
+.spatial-app :is(button,input,textarea){font-family:Inter,system-ui,sans-serif}
+.spatial-app button{cursor:pointer;color:inherit;border:0;background:none;touch-action:manipulation}
 .spatial-app button:disabled{opacity:.45;cursor:not-allowed}
 .spatial-app :is(button,a,input,textarea,summary):focus-visible{outline:3px solid var(--sel-ink);outline-offset:3px}
 .spatial-app .skip-link{position:fixed;left:20px;top:-80px;background:var(--panel-2);color:var(--ink);padding:15px;z-index:200;border-radius:12px}

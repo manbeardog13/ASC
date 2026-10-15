@@ -68,6 +68,18 @@
   // One layer above everything; the page reserves its height at the end so
   // nothing is ever hidden beneath it.
   document.body.appendChild(root);
+  var grab = document.createElement('div');
+  grab.className = 'nero-grab'; grab.setAttribute('role', 'button'); grab.setAttribute('aria-label', 'Spusti razgovor'); grab.tabIndex = 0;
+  root.insertBefore(grab, root.firstChild);
+  (function () {
+    var y0 = 0, dy = 0, pid = null;
+    function collapse() { log.hidden = true; root.classList.remove('has-convo'); openComposer(false); }
+    grab.addEventListener('pointerdown', function (e) { pid = e.pointerId; y0 = e.clientY; dy = 0; grab.setPointerCapture(pid); });
+    grab.addEventListener('pointermove', function (e) { if (e.pointerId !== pid) return; dy = Math.max(0, e.clientY - y0); log.style.transform = 'translate3d(0,' + dy + 'px,0)'; });
+    function end(e) { if (e.pointerId !== pid) return; pid = null; log.style.transform = ''; if (dy > 48) collapse(); }
+    grab.addEventListener('pointerup', end); grab.addEventListener('pointercancel', end);
+    grab.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown') { e.preventDefault(); collapse(); } });
+  })();
   var suggest = document.createElement('div');
   suggest.className = 'nero-suggest';
   suggest.setAttribute('aria-label', 'Prijedlozi');
@@ -226,6 +238,7 @@
     paint(el, text, false);
     if (extra) el.querySelector('.nero-body').insertAdjacentHTML('beforeend', extra);
     log.hidden = false;
+    root.classList.add('has-convo');
     log.appendChild(el);
     openComposer(false);
     scrollLog();
@@ -872,6 +885,13 @@
   }
   function actionsOf(card) {
     var seen = {}, out = [];
+    // Secondary actions that left the cards (data-nero-move) come first.
+    var moved = [].slice.call(card.querySelectorAll('a[href][data-nero-move], button[data-nero-move]:not([disabled])'))
+      .concat([].filter.call(document.querySelectorAll('a[href][data-nero-move], button[data-nero-move]:not([disabled])'), function (el) { return !el.closest('.card'); }));
+    moved.forEach(function (el) {
+      var t = labelOf(el); if (out.length >= 3 || !t || seen[t]) return;
+      seen[t] = 1; out.push({ el: el, text: t });
+    });
     [].forEach.call(card.querySelectorAll('a[href], button:not([disabled])'), function (el) {
       if (out.length >= 3 || el.closest('.nero-composer') || el.offsetParent === null) return;
       var t = labelOf(el); if (!t || t.length < 2 || seen[t]) return;
@@ -887,20 +907,72 @@
     });
     return out;
   }
+  var lastCard = null;
+  function runAction(a) {
+    if (/^(INPUT|SELECT|TEXTAREA)$/.test(a.el.tagName)) { a.el.scrollIntoView({ block: 'center', behavior: reduce ? 'auto' : 'smooth' }); a.el.focus({ preventScroll: true }); }
+    else { a.el.focus({ preventScroll: true }); a.el.click(); }
+  }
+  function makeBubble(a, i, tint) {
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'nero-bubble'; b.textContent = a.text;
+    b.style.setProperty('--i', i);
+    if (tint) b.style.setProperty('--merge-tint', tint);
+    b.addEventListener('click', function () { if (!b.dataset.dragged) runAction(a); delete b.dataset.dragged; });
+    b._act = a;
+    return b;
+  }
+  // Bubbles anchor on the right; each next one stacks to the left. The step
+  // from the card just left (if any) sits leftmost, half its own colour and
+  // half the merge colour, and nudges to say it can be combined.
   function showSuggest(card) {
     clearTimeout(fadeTimer);
-    var acts = actionsOf(card);
-    suggest.style.setProperty('--merge-tint', accentOf(card));
+    var acts = actionsOf(card), tint = accentOf(card);
+    suggest.style.setProperty('--merge-tint', tint);
     suggest.innerHTML = '';
-    acts.forEach(function (a, i) {
-      var b = document.createElement('button');
-      b.type = 'button'; b.className = 'nero-bubble'; b.textContent = a.text;
-      b.style.setProperty('--i', i);
-      b.addEventListener('click', function () { if (/^(INPUT|SELECT|TEXTAREA)$/.test(a.el.tagName)) { a.el.scrollIntoView({ block: 'center', behavior: reduce ? 'auto' : 'smooth' }); a.el.focus({ preventScroll: true }); } else { a.el.focus({ preventScroll: true }); a.el.click(); } });
-      suggest.appendChild(b);
-    });
+    acts.forEach(function (a, i) { suggest.appendChild(makeBubble(a, i)); });
+    if (lastCard && lastCard !== card && document.contains(lastCard)) {
+      var prev = actionsOf(lastCard)[0];
+      if (prev && acts.length) {
+        var link = makeBubble(prev, acts.length, accentOf(lastCard));
+        link.classList.add('is-linked');
+        link.style.setProperty('--join-tint', tint);
+        suggest.appendChild(link);
+        armMerge(link);
+      }
+    }
     suggest.classList.toggle('on', acts.length > 0);
     ripple();
+  }
+  // Swipe the linked (left) bubble into its right neighbour → combined workflow.
+  function armMerge(link) {
+    var x0 = 0, dx = 0, id = null;
+    link.addEventListener('pointerdown', function (e) { id = e.pointerId; x0 = e.clientX; dx = 0; link.setPointerCapture(id); link.classList.add('is-drag'); });
+    link.addEventListener('pointermove', function (e) {
+      if (e.pointerId !== id) return; dx = Math.max(0, e.clientX - x0);
+      link.style.transform = 'translate3d(' + dx + 'px,0,0)';
+    });
+    function end(e) {
+      if (e.pointerId !== id) return; id = null; link.classList.remove('is-drag'); link.style.transform = '';
+      var target = link.previousElementSibling;
+      if (dx > 6) link.dataset.dragged = '1';
+      if (target && dx > Math.min(90, target.offsetWidth * 0.6)) openCombined(link._act, target._act);
+    }
+    link.addEventListener('pointerup', end); link.addEventListener('pointercancel', end);
+  }
+  function openCombined(first, second) {
+    var old = document.querySelector('.nero-flow'); if (old) old.remove();
+    var pop = document.createElement('div');
+    pop.className = 'nero-flow'; pop.setAttribute('role', 'dialog'); pop.setAttribute('aria-label', 'Spojeni tijek');
+    pop.innerHTML = '<div class="nero-flow-card"><b>Spojeni tijek</b><ol>' +
+      '<li><button type="button" data-step="0">' + esc(first.text) + '</button></li>' +
+      '<li><button type="button" data-step="1">' + esc(second.text) + '</button></li></ol>' +
+      '<button type="button" class="nero-flow-close" aria-label="Zatvori">×</button></div>';
+    document.body.appendChild(pop);
+    var steps = [first, second];
+    pop.querySelectorAll('[data-step]').forEach(function (b) { b.addEventListener('click', function () { pop.remove(); runAction(steps[+b.dataset.step]); }); });
+    pop.querySelector('.nero-flow-close').addEventListener('click', function () { pop.remove(); });
+    openComposer(false);
+    if (log.hidden && log.children.length) { log.hidden = false; root.classList.add('has-convo'); }
   }
   function ripple() {
     if (reduce) return;
@@ -914,12 +986,15 @@
     var tint = accentOf(card);
     card.style.setProperty('--merge-tint', tint);
     root.style.setProperty('--merge-tint', tint);
+    card.classList.remove('nero-next');
     card.classList.add('nero-merged');
     root.classList.add('is-merged');
     showSuggest(card);
   }
   function disengage(card) {
     card.classList.remove('nero-merged');
+    if (lastCard && lastCard !== card) lastCard.classList.remove('nero-next');
+    lastCard = card; card.classList.add('nero-next');
     if (!reduce) {
       card.classList.remove('nero-recoil'); void card.offsetWidth; card.classList.add('nero-recoil');
       setTimeout(function () { card.classList.remove('nero-recoil'); }, 450);
