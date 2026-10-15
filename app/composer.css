@@ -2,7 +2,7 @@
    Compact while browsing. Expanded only while typing. */
 .nero-composer{position:fixed;z-index:90;left:50%;
   bottom:calc(8px + var(--kb, 0px) + env(safe-area-inset-bottom, 0px));
-  top:auto;max-height:calc(100dvh - 24px - var(--kb, 0px));
+  top:auto;max-height:calc(var(--nero-viewport, 100dvh) - 24px - env(safe-area-inset-bottom, 0px));
   width:min(680px, calc(100vw - 16px));
   display:flex;flex-direction:column;gap:8px;
   transform:translate(-50%,0);
@@ -73,9 +73,9 @@ html.has-composer body{padding-bottom:calc(var(--nero-stack, 84px) + env(safe-ar
 .nero-composer.is-compact .nero-history,
 .nero-composer.is-compact .nero-files,
 .nero-composer.is-compact .nero-plus{display:none}
-.nero-log[hidden],.nero-queue[hidden],.nero-history[hidden],.nero-files[hidden],.nero-rec[hidden]{display:none}
+.nero-composer [hidden]{display:none!important}
 
-.nero-sheet{display:flex;flex-direction:column;gap:8px;
+.nero-sheet{display:flex;flex:none;flex-direction:column;gap:8px;min-width:0;
   border-radius:var(--radius,22px);padding:14px 12px 10px;min-height:112px;
   background:rgba(20,15,38,.94);
   border:1px solid rgba(255,255,255,.16);
@@ -96,23 +96,23 @@ html.has-composer body{padding-bottom:calc(var(--nero-stack, 84px) + env(safe-ar
 .nero-filechip button{border:0;background:transparent;color:#f3efff;cursor:pointer}
 
 .nero-input{width:100%;min-height:52px;max-height:160px;resize:none;border:0;outline:0;
-  background:transparent;color:#f3efff;font:500 15px/1.4 Inter;padding:4px 6px}
+  background:transparent;color:#f3efff;font:500 16px/1.4 Inter;padding:4px 6px}
 .nero-composer.is-compact .nero-input{min-height:0;max-height:22px;padding:0;overflow:hidden}
 .nero-input::placeholder{color:rgba(233,224,255,.46)}
 
 .nero-tools{display:flex;align-items:center;gap:8px}
 .nero-composer.is-compact .nero-tools{flex:none}
 .nero-plus,.nero-mic,.nero-send{flex:none;border:0;cursor:pointer;display:grid;place-items:center;color:#f3efff}
-.nero-plus{width:34px;height:34px;margin-right:auto;border-radius:50%;
+.nero-plus{width:44px;height:44px;margin-right:auto;border-radius:50%;
   background:rgba(244,245,247,.08);font:500 22px/1 Inter}
 .nero-rec{display:inline-flex;align-items:center;gap:6px;margin-right:auto;max-width:46%;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
   font:600 12px/1 Inter;letter-spacing:.02em}
 .nero-rec::before{content:"";width:8px;height:8px;border-radius:50%;background:#e040d0;
   box-shadow:0 0 0 4px rgba(224,64,208,.28)}
-.nero-mic{width:34px;height:34px;border-radius:50%;background:rgba(244,245,247,.08);touch-action:none}
+.nero-mic{width:44px;height:44px;border-radius:50%;background:rgba(244,245,247,.08);touch-action:none}
 .nero-mic[aria-pressed="true"]{background:rgba(224,64,208,.55);box-shadow:0 0 0 3px rgba(224,64,208,.35)}
-.nero-send{width:38px;height:38px;border-radius:11px;color:#fff;
+.nero-send{width:44px;height:44px;border-radius:11px;color:#fff;
   background:linear-gradient(135deg,#8b5cf6,#e040d0);
   box-shadow:0 6px 16px -6px rgba(139,92,246,.7)}
 .nero-send .nero-stop{display:none}
@@ -135,7 +135,7 @@ html.has-composer body{padding-bottom:calc(var(--nero-stack, 84px) + env(safe-ar
 .nero-connect{margin:0;padding:8px 12px;border-radius:14px;background:rgba(224,64,208,.16);
   border:1px solid rgba(224,64,208,.4);font:600 12.5px/1.35 Inter}
 
-.nero-history{max-height:220px;overflow:auto;padding:8px;border-radius:16px;
+.nero-history{min-height:0;max-height:220px;overflow:auto;padding:8px;border-radius:16px;
   background:rgba(14,11,28,.45);border:1px solid rgba(255,255,255,.16)}
 .nero-history button{display:block;width:100%;text-align:left;border:0;background:transparent;
   color:#f3efff;padding:8px;border-radius:10px;cursor:pointer;font:500 13px Inter}
@@ -150,7 +150,7 @@ html.has-composer body{padding-bottom:calc(var(--nero-stack, 84px) + env(safe-ar
   background:rgba(139,92,246,.18)}
 .nero-avatar{flex:none;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;
   font:700 13px/1 Inter;color:#fff;background:linear-gradient(135deg,#8b5cf6,#e040d0)}
-.nero-body{min-width:0;font:500 13.5px/1.45 Inter;white-space:normal}
+.nero-body{min-width:0;font:500 13.5px/1.45 Inter;white-space:normal;overflow-wrap:anywhere}
 .nero-meta{display:flex;gap:8px;align-items:center;margin-top:6px;color:rgba(233,224,255,.62);
   font:500 11px Inter}
 .nero-card.is-stream .nero-body{background-image:linear-gradient(100deg, transparent 20%, rgba(255,255,255,.2) 40%, transparent 60%);
@@ -188,14 +188,14 @@ html.has-composer body{padding-bottom:calc(var(--nero-stack, 84px) + env(safe-ar
 .nero-field{position:relative;flex:1;min-width:0;display:block}
 .nero-field .nero-input{position:relative;z-index:0;color:#fff;caret-color:#fff}
 .nero-mirror{position:absolute;inset:0;visibility:hidden;pointer-events:none;overflow:hidden;
-  white-space:pre-wrap;overflow-wrap:break-word;word-break:break-word;font:500 15px/1.4 Inter;padding:4px 6px}
+  white-space:pre-wrap;overflow-wrap:break-word;word-break:break-word;font:500 16px/1.4 Inter;padding:4px 6px}
 .nero-composer.is-compact .nero-mirror{padding:0;white-space:pre}
 /* Lamp: 2.5 glyphs wide, ending at the caret. Horizontal falloff is a
    smoothstep-shaped ramp to exactly zero across the 3rd letter; the vertical
    mask is dark at the caret top and light toward the baseline. */
 .nero-lamp{position:absolute;z-index:1;pointer-events:none;opacity:0;
   left:calc(var(--cx,0px) - 2.5ch + 1px);top:var(--cy,0px);width:2.5ch;height:var(--ch,20px);
-  font:500 15px/1.4 Inter;mix-blend-mode:screen;
+  font:500 16px/1.4 Inter;mix-blend-mode:screen;
   background:linear-gradient(to left,
     rgba(255,255,255,.34) 0%, rgba(255,255,255,.28) 20%, rgba(255,255,255,.19) 40%,
     rgba(255,255,255,.11) 60%, rgba(255,255,255,.05) 80%, rgba(255,255,255,.028) 86%,
@@ -250,8 +250,23 @@ html.has-composer body{padding-bottom:calc(var(--nero-stack, 84px) + env(safe-ar
 
 /* Bottom-docked: grows upward with the text, never mid-screen. */
 .nero-composer{justify-content:flex-end}
-.nero-composer .nero-log{max-height:min(46dvh,420px)}
+.nero-composer .nero-log{min-height:0;max-height:min(46dvh,420px);overscroll-behavior:contain}
 .nero-composer .nero-pills{display:flex;flex-wrap:nowrap;gap:4px;margin-right:auto}
-.nero-composer .nero-pill{min-height:32px;padding:0 10px;font-size:12px;background:transparent;border-color:rgba(150,110,255,.28)}
+.nero-composer .nero-pill{min-height:44px;padding:0 10px;font-size:12px;background:transparent;border-color:rgba(150,110,255,.28)}
 .nero-composer.is-compact .nero-pills{display:none}
 .nero-composer .nero-plus{margin-right:0}
+/* Keep primary controls reachable when the conversation tools need their own row. */
+.nero-composer .nero-tools{flex-wrap:wrap;min-width:0}
+.nero-composer .nero-send{margin-left:auto}
+.nero-composer .nero-mic + .nero-send{margin-left:0}
+.nero-composer .nero-mic[hidden] + .nero-send{margin-left:auto}
+.nero-composer.is-compact .nero-tools{flex-wrap:nowrap}
+.nero-suggest{min-width:0;flex-shrink:0;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:none}
+.nero-bubble{flex-shrink:0;max-width:min(240px,85vw);overflow-wrap:anywhere;min-height:44px}
+.nero-composer button:focus-visible{outline:2px solid #fff;outline-offset:2px}
+@media(max-width:560px){
+  .nero-composer .nero-pills{order:-1;flex:1 0 100%;flex-wrap:wrap}
+  .nero-composer .nero-pill{flex:1;min-width:0;padding:0 7px}
+  .nero-composer .nero-mic{margin-left:auto}
+  .nero-composer.is-compact .nero-mic{margin-left:0}
+}
