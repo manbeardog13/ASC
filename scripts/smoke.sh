@@ -26,10 +26,18 @@ done
 sudo -u postgres psql -d asc_mig -v ON_ERROR_STOP=1 -f tests/sql/exercise.sql >/dev/null
 sudo -u postgres psql -d asc_mig -v ON_ERROR_STOP=1 -f tests/sql/nero-chats.sql >/dev/null
 sudo -u postgres psql -d asc_mig -v ON_ERROR_STOP=1 -f tests/sql/slot-occupancy.sql >/dev/null
-sudo -u postgres psql -d asc_mig -v ON_ERROR_STOP=1 -v grant_migration="$PWD/supabase/migrations/20261015141452_harden_table_privileges.sql" -f tests/sql/table-privileges.sql >/dev/null
+sudo -u postgres psql -d asc_mig -v ON_ERROR_STOP=1 -v grant_migration="supabase/migrations/20261015141452_harden_table_privileges.sql" -f tests/sql/table-privileges.sql >/dev/null
 sudo -u postgres psql -d asc_mig -v ON_ERROR_STOP=1 -f tests/sql/relay-log.sql >/dev/null
 sudo -u postgres bash tests/sql/slot-occupancy-race.sh asc_mig
-sudo -u postgres bash tests/backup-restore.sh
+# The postgres OS user cannot traverse GitHub's private runner home. Copy only
+# public fixture inputs to a disposable readable directory before round-trip.
+backup_fixture="$(mktemp -d /tmp/asc-backup-fixture.XXXXXX)"
+trap 'rm -rf "$backup_fixture"' EXIT
+cp --parents tests/backup-restore.sh tests/sql/prelude.sql supabase/schema.sql \
+  supabase/migrations/20261014223000_locations_and_movements.sql \
+  scripts/backup.sh scripts/restore-drill.sh "$backup_fixture"
+chmod -R a+rX "$backup_fixture"
+sudo -u postgres bash "$backup_fixture/tests/backup-restore.sh"
 echo "smoke: schema and migrations applied on throwaway database asc_mig"
 
 node scripts/smoke-pages.mjs
