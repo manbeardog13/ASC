@@ -5,6 +5,7 @@
 // keeps its existing markup instead of blanking.
 // ============================================================================
 import { getSession, loadMyProfile, healthStats, countsByStatus, listStorageSets } from '../js/db.js';
+import { bootOnboarding } from './onboarding.js';
 
 const SEASON_LABEL = { winter: 'Zimske', summer: 'Ljetne', all_season: 'Cjelogodišnje' };
 const SEASON_CLASS = { winter: 'win', summer: '', all_season: 'all' };
@@ -47,6 +48,8 @@ function setNum(el, val) {
 // so the dashboard usually reveals with live numbers already in place.
 let liveFirstDone;
 window.ascLiveFirst = new Promise((r) => { liveFirstDone = r; });
+
+bootOnboarding();
 
 (async () => {
   const session = await getSession().catch(() => null);

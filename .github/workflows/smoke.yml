@@ -1,7 +1,7 @@
 name: smoke
 
-# Throwaway Postgres applies the location migrations, then a headless browser
-# loads the main pages. No production Supabase access and no secrets.
+# Throwaway Postgres loads schema.sql and every migration, then a headless
+# browser loads the main pages. No production Supabase access and no secrets.
 on:
   push:
     branches: ["main"]
@@ -31,5 +31,5 @@ jobs:
             sudo apt-get update
             sudo apt-get install -y google-chrome-stable
           fi
-      - name: Lint migrations and load pages
+      - name: Apply schema and migrations, then load pages
         run: bash scripts/smoke.sh

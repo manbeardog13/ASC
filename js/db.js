@@ -83,7 +83,14 @@ export async function signUp(email, password, fullName) {
 export async function loadMyProfile() {
   const session = await getSession();
   if (!session) return null;
-  const { data } = await supabase.from("profiles").select("id, email, full_name, role, avatar_url").eq("id", session.user.id).maybeSingle();
+  const base = "id, email, full_name, role, avatar_url";
+  let { data, error } = await supabase.from("profiles").select(`${base}, onboarded_at`).eq("id", session.user.id).maybeSingle();
+  // The tour column ships in its own migration. Until that is applied, skip the
+  // tour instead of failing the profile read that the rest of the app needs.
+  if (error && /onboarded_at/i.test(error.message || "")) {
+    const retry = await supabase.from("profiles").select(base).eq("id", session.user.id).maybeSingle();
+    data = retry.data ? { ...retry.data, onboarding_unavailable: true } : null;
+  }
   // Google sign-ins carry the person's name in auth metadata while the profiles
   // row starts empty — adopt it so greetings and the agent know who this is,
   // and persist it (best-effort; ignored if RLS says no).
@@ -95,7 +102,13 @@ export async function loadMyProfile() {
   }
   // No profile row => least-privilege 'readonly', matching asc_role(). The shop
   // owner is forced to 'admin' by schema.sql.
-  return data ?? { id: session.user.id, email: session.user.email, role: "readonly", full_name: metaName || null };
+  return data ?? { id: session.user.id, email: session.user.email, role: "readonly", full_name: metaName || null, onboarding_unavailable: true };
+}
+
+// Stamp the first-run tour. Profile writes are admin-only, so this is an RPC.
+export async function markOnboarded() {
+  const { error } = await supabase.rpc("mark_onboarded");
+  if (error) throw fail(error, "finish the introduction");
 }
 
 // ---- Access management (admins) ------------------------------------------------
@@ -651,6 +664,13 @@ export async function suggestFreeSlot(warehouse = "main") {
   const { data, error } = await supabase.rpc("suggest_free_slot", { warehouse });
   if (error) throw rpcFail(error, "suggest a free slot");
   return data;
+}
+
+export async function countLocations() {
+  const { count, error } = await supabase.from("locations").select("id", { count: "exact", head: true });
+  if (relationMissing(error)) return 0;
+  if (error) throw fail(error, "count slots");
+  return count ?? 0;
 }
 
 export async function findLocationByQr(qrCode) {
