@@ -722,14 +722,9 @@ document.addEventListener('click', function(e){
     const show = (html) => { reply.innerHTML = html; reply.classList.add('on'); card.classList.add('agent-live'); };
 
     let busy = false;
-    function ask(text) {
-      text = (text || '').trim();
-      if (!text || busy) return;
-      pulse();
-      if (input) input.value = '';                       // the question moves into the thread
+    function askGemini(text, me) {
       if (window.ASCAgent && ASCAgent.configured && ASCAgent.configured()) {
         busy = true;
-        const me = '<span class="tb-me">' + esc(text) + '</span>';
         const ans = (h) => show(me + '<span class="tb-ans">' + h + '</span>');
         ans('Razmišljam…');
         ASCAgent.ask(text, (ev) => {
@@ -741,7 +736,25 @@ document.addEventListener('click', function(e){
       } else {                                   // Gemini not wired → route to search
         show('Tražim…');
         setTimeout(() => { location.href = 'workshop.html?q=' + encodeURIComponent(text); }, 120);
+        busy = false;
       }
+    }
+    function ask(text) {
+      text = (text || '').trim();
+      if (!text || busy) return;
+      pulse();
+      if (input) input.value = '';                       // the question moves into the thread
+      const me = '<span class="tb-me">' + esc(text) + '</span>';
+      const showFact = (fast) => {
+        if (!fast) return false;
+        show(me + '<span class="tb-ans">' + esc(fast) + '</span>');
+        return true;
+      };
+      const ready = window.ASCConcierge
+        ? Promise.resolve(window.ASCConcierge.answer(text))
+        : import('./concierge.js').then((mod) => mod.answer(text)).catch(() => null);
+      busy = true;
+      ready.then((fast) => { if (!showFact(fast)) askGemini(text, me); else busy = false; });
     }
     chips.forEach(c => c.addEventListener('click', () => { const q = c.dataset.q || c.textContent; if (input) input.value = q; ask(q); }));
     if (send) send.addEventListener('click', () => ask(input && input.value));

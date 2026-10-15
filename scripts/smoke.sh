@@ -5,7 +5,7 @@ cd "$(dirname "$0")/.."
 
 node scripts/i18n-guard.test.mjs
 node scripts/i18n-guard.mjs
-node --experimental-vm-modules --test tests/agent-surface.mjs tests/season-plan.mjs tests/location-grid.mjs tests/map-pin.mjs
+node --experimental-vm-modules --test tests/agent-surface.mjs tests/season-plan.mjs tests/concierge.mjs tests/location-grid.mjs tests/map-pin.mjs
 
 if ! command -v psql >/dev/null 2>&1; then
   echo "smoke: psql is required to lint migrations" >&2
