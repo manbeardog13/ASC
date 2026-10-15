@@ -32,4 +32,9 @@ test('free gemini stays on and the local assistant is gone', () => {
   ]) assert.equal(existsSync(new URL('../' + file, import.meta.url)), false);
   const app = readFileSync(new URL('../app/app.js', import.meta.url), 'utf8');
   assert.doesNotMatch(app, /installNineAgent|nine-studio/);
+  const checkin = readFileSync(new URL('../app/checkin.html', import.meta.url), 'utf8');
+  assert.doesNotMatch(checkin, /sluhBtn|asc-agent|Drži i govori/);
+  const spa = readFileSync(new URL('../js/app.js', import.meta.url), 'utf8');
+  assert.doesNotMatch(spa, /\/assistant/);
+  assert.equal(existsSync(new URL('../js/views/assistant.js', import.meta.url)), false);
 });
