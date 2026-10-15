@@ -1,6 +1,8 @@
 // A bare purple number in the corner of registration.
-// Pressing it asks the next plain question, one at a time, in the purple form.
-// The text window types on the left four sevenths. The right three sevenths,
+// Pressing it opens a short conversation in the purple form.
+// Nero asks on the right. The reply sits below, slightly left.
+// After it is sent, that reply rises and Nero's next ask arrives on the right.
+// The left four sevenths of the reply types. The right three sevenths,
 // held past a third of a second, is the walkie-talkie and commits on release.
 // Once there is text, that corner becomes a send arrow and the whole window edits.
 import {
@@ -9,6 +11,8 @@ import {
 } from '../js/seasonPlan.js';
 
 const HOLD_MS = 300;
+const TAIL_MS = 400;
+const NEXT_MS = 900;
 const MIC = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="9" y="3" width="6" height="10" rx="3"/><path d="M6 11a6 6 0 0 0 12 0M12 17v3"/></svg>';
 const ARROW = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M13 6l6 6-6 6"/></svg>';
 
@@ -19,6 +23,7 @@ const STEPS = [
   { key: 'email', ask: 'Koja je e-pošta?', field: 'c_email', norm: 'text', optional: true },
   { key: 'address', ask: 'Gdje stanuje?', field: 'c_address', norm: 'text', optional: true },
   { key: 'plan', ask: 'Dolaze li opet za šest mjeseci?', plan: true },
+  { key: 'save', ask: 'Spremi gume', save: true },
 ];
 
 const CHOICES = [
@@ -47,26 +52,45 @@ function injectStyle() {
 .nero-plan-card{position:relative;width:min(420px,100%);overflow:hidden;border-radius:18px;color:#f4f5f7;
   background:linear-gradient(138deg,#171040 0%,#241659 42%,#33207a 100%);
   border:1px solid rgba(150,100,255,.28);
-  box-shadow:0 22px 50px -22px rgba(76,42,168,.65);padding:22px 18px 16px}
+  box-shadow:0 22px 50px -22px rgba(76,42,168,.65);padding:22px 18px 16px;
+  display:flex;flex-direction:column;gap:10px}
 .nero-plan-card::before{content:"";position:absolute;inset:-35%;z-index:0;pointer-events:none;opacity:.5;
   background:radial-gradient(38% 46% at 22% 32%,rgba(130,70,255,.55),transparent 60%),
     radial-gradient(40% 48% at 78% 38%,rgba(232,64,208,.42),transparent 60%);
   filter:blur(34px)}
 .nero-plan-card > *{position:relative;z-index:1}
-.nero-ask{margin:0 0 12px;text-align:right;font:500 20px/1.3 Sora,Inter;color:#f4effc}
-.nero-window{position:relative;margin:0 14% 0 0}
+.nero-said{align-self:flex-start;max-width:78%;margin:0;padding:10px 14px;border:0;cursor:pointer;text-align:left;
+  color:#f7f2ff;font:500 16px/1.35 Inter,system-ui,sans-serif;background:rgba(12,10,24,.38);
+  border-radius:16px 16px 16px 5px}
+.nero-said[hidden]{display:none}
+.nero-redo{display:block;margin-top:3px;color:rgba(233,224,255,.62);font:500 12px/1 Inter,system-ui,sans-serif}
+.nero-ask{align-self:flex-end;max-width:88%;margin:0;padding:0;border:0;background:none;cursor:pointer;
+  text-align:right;font:500 20px/1.3 Sora,Inter,system-ui,sans-serif;color:#f4effc}
+.nero-ask.is-arriving{animation:neroArrive 360ms ease}
+.nero-said.is-rising{animation:neroRise 420ms ease}
+@keyframes neroRise{from{transform:translateY(16px);opacity:0}to{transform:none;opacity:1}}
+@keyframes neroArrive{from{transform:translateY(12px);opacity:0}to{transform:none;opacity:1}}
+.nero-window{position:relative;align-self:stretch;margin:2px 14% 0 0}
+.nero-window.is-settling{animation:neroSettle 280ms ease}
+@keyframes neroSettle{0%{transform:translateY(0)}45%{transform:translateY(7px)}100%{transform:translateY(0)}}
 .nero-window input{width:100%;box-sizing:border-box;min-height:50px;padding:12px 46px 12px 14px;border-radius:15px;border:1px solid rgba(150,110,255,.3);
-  background:rgba(12,10,24,.55);color:#f3efff;font:500 16px Inter;outline:none}
+  background:rgba(12,10,24,.55);color:#f3efff;font:500 16px Inter,system-ui,sans-serif;outline:none}
 .nero-window input::placeholder{color:rgba(233,224,255,.46)}
+.nero-window.listening input{color:rgba(243,239,255,.55)}
 .nero-glyph,.nero-send{position:absolute;right:8px;top:50%;transform:translateY(-50%);width:28px;height:28px;display:grid;place-items:center;color:#f3e9ff}
 .nero-glyph{pointer-events:none}
 .nero-send{border:0;background:none;padding:0;cursor:pointer;color:#fff}
 .nero-window.listening .nero-glyph{color:#e7b6ff}
 .nero-choices{display:flex;flex-direction:column;align-items:flex-end;gap:8px}
-.nero-choice,.nero-slot{border:0;cursor:pointer;text-align:right;color:#f4f5f7;font:600 15px Inter;
+.nero-choice,.nero-slot{border:0;cursor:pointer;text-align:right;color:#f4f5f7;font:600 15px Inter,system-ui,sans-serif;
   background:rgba(12,10,24,.35);border-radius:14px;padding:10px 14px}
-.nero-skip{display:block;margin:12px 0 0 auto;border:0;background:none;color:rgba(233,224,255,.7);font:500 13px Inter;cursor:pointer}
-@media(prefers-reduced-motion:reduce){.plan-mark.is-due{animation:none;color:#6d28d9;-webkit-text-fill-color:#6d28d9;text-shadow:0 0 10px rgba(109,40,217,.9)}}
+.nero-skip{align-self:flex-end;margin:0;border:0;background:none;color:rgba(233,224,255,.7);font:500 13px Inter,system-ui,sans-serif;cursor:pointer}
+.nero-error{align-self:flex-end;margin:0;text-align:right;color:#f3c4ff;font:500 13px/1.3 Inter,system-ui,sans-serif}
+.nero-error[hidden]{display:none}
+@media(prefers-reduced-motion:reduce){
+  .plan-mark.is-due{animation:none;color:#6d28d9;-webkit-text-fill-color:#6d28d9;text-shadow:0 0 10px rgba(109,40,217,.9)}
+  .nero-ask.is-arriving,.nero-said.is-rising,.nero-window.is-settling{animation:none}
+}
 `;
   document.head.appendChild(style);
 }
@@ -81,6 +105,11 @@ function write(id, value) {
   if (!node) return;
   node.value = value;
   node.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
+function pause() {
+  const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  return new Promise((resolve) => { window.setTimeout(resolve, reduce ? 0 : NEXT_MS); });
 }
 
 export function installPlanMark() {
@@ -104,7 +133,8 @@ export function installPlanMark() {
   sheet.className = 'nero-plan';
   sheet.hidden = true;
   sheet.innerHTML = '<div class="nero-plan-card" role="dialog" aria-modal="true" aria-labelledby="neroAsk">'
-    + '<p class="nero-ask" id="neroAsk"></p>'
+    + '<button type="button" class="nero-said" id="neroSaid" hidden></button>'
+    + '<button type="button" class="nero-ask" id="neroAsk"></button>'
     + '<div class="nero-window" id="neroWindow">'
     + '<input id="neroInput" type="text" autocomplete="off" enterkeyhint="done">'
     + '<span class="nero-glyph" aria-hidden="true"></span>'
@@ -112,9 +142,11 @@ export function installPlanMark() {
     + '</div>'
     + '<div class="nero-choices" id="neroChoices" hidden></div>'
     + '<button type="button" class="nero-skip" id="neroSkip" hidden>Nije bitno</button>'
+    + '<p class="nero-error" id="neroError" hidden></p>'
     + '</div>';
   document.body.appendChild(sheet);
 
+  const said = sheet.querySelector('#neroSaid');
   const ask = sheet.querySelector('#neroAsk');
   const windowEl = sheet.querySelector('#neroWindow');
   const input = sheet.querySelector('#neroInput');
@@ -122,6 +154,7 @@ export function installPlanMark() {
   const send = sheet.querySelector('#neroSend');
   const choices = sheet.querySelector('#neroChoices');
   const skip = sheet.querySelector('#neroSkip');
+  const error = sheet.querySelector('#neroError');
 
   const skipped = new Set();
   let index = 0;
@@ -130,15 +163,19 @@ export function installPlanMark() {
   let session = null;
   let stopWanted = false;
   let slots = [];
+  let turn = 0;
+  let lastSaid = null;
+  let offer = null;
 
   function done(step) {
+    if (step.save) return false;
     if (skipped.has(step.key)) return true;
     if (step.plan) return Boolean(decodePlan(marker.value)?.kind);
     return Boolean(val(step.field));
   }
 
   function remaining() {
-    return STEPS.filter((step) => !done(step)).length;
+    return STEPS.filter((step) => !step.save && !done(step)).length;
   }
 
   function paintCount() {
@@ -159,15 +196,39 @@ export function installPlanMark() {
     glyph.hidden = mode === 'send';
   }
 
+  function paintSaid() {
+    if (!lastSaid) { said.hidden = true; said.replaceChildren(); return; }
+    said.hidden = false;
+    said.replaceChildren();
+    const text = document.createElement('span');
+    text.textContent = lastSaid.text;
+    const redo = document.createElement('span');
+    redo.className = 'nero-redo';
+    redo.textContent = 'ponovi';
+    said.append(text, redo);
+    said.classList.remove('is-rising');
+    void said.offsetWidth;
+    said.classList.add('is-rising');
+  }
+
   function showStep(step) {
+    offer = null;
+    error.hidden = true;
+    ask.hidden = false;
     ask.textContent = step.ask;
+    ask.classList.remove('is-arriving');
+    void ask.offsetWidth;
+    ask.classList.add('is-arriving');
     const isPlan = Boolean(step.plan);
-    windowEl.hidden = isPlan;
+    const isSave = Boolean(step.save);
+    windowEl.hidden = isPlan || isSave;
     choices.hidden = !isPlan;
-    skip.hidden = !step.optional && !isPlan;
-    input.value = step.field ? val(step.field) : '';
-    mode = input.value.trim() ? 'send' : 'mic';
-    paintGlyph();
+    skip.hidden = isSave || (!step.optional && !isPlan);
+    if (!isPlan && !isSave) {
+      input.value = step.field ? val(step.field) : '';
+      mode = input.value.trim() ? 'send' : 'mic';
+      paintGlyph();
+    }
     if (isPlan) {
       choices.innerHTML = CHOICES.map(([id, label]) =>
         '<button type="button" class="nero-choice" data-plan="' + id + '">' + label + '</button>'
@@ -180,7 +241,7 @@ export function installPlanMark() {
     if (index < 0) { sheet.hidden = true; paintCount(); return; }
     showStep(STEPS[index]);
     sheet.hidden = false;
-    if (!STEPS[index].plan) input.focus();
+    if (!STEPS[index].plan && !STEPS[index].save) input.focus();
   }
 
   async function norms() {
@@ -194,9 +255,86 @@ export function installPlanMark() {
     write(step.field, fn ? fn(text) : text.trim());
   }
 
+  function settleThen(next) {
+    const ticket = ++turn;
+    windowEl.classList.remove('is-settling');
+    void windowEl.offsetWidth;
+    windowEl.classList.add('is-settling');
+    paintSaid();
+    windowEl.hidden = true;
+    ask.hidden = true;
+    choices.hidden = true;
+    skip.hidden = true;
+    pause().then(() => {
+      if (ticket !== turn || sheet.hidden) return;
+      windowEl.classList.remove('is-settling');
+      next();
+    });
+  }
+
+  async function knownPerson(plate) {
+    let customers = [];
+    try { customers = await (await import('../js/db.js')).listCustomers(); }
+    catch { return null; }
+    const needle = String(plate || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (needle.length < 3) return null;
+    for (const customer of customers) {
+      for (const vehicle of customer.vehicles || []) {
+        const got = String(vehicle.plate || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        if (got && got === needle) return { customer, vehicle };
+      }
+    }
+    return null;
+  }
+
+  function showOffer(person) {
+    offer = person;
+    const name = person.customer.name || 'Poznati kupac';
+    ask.hidden = false;
+    ask.textContent = name;
+    ask.classList.add('is-arriving');
+    windowEl.hidden = true;
+    skip.hidden = true;
+    choices.hidden = false;
+    choices.innerHTML = '<button type="button" class="nero-choice" data-known="yes">Da, to je</button>'
+      + '<button type="button" class="nero-choice" data-known="no">Netko drugi</button>';
+  }
+
+  function acceptOffer() {
+    const person = offer;
+    offer = null;
+    if (!person) { openNext(); return; }
+    const customer = person.customer;
+    const vehicle = person.vehicle;
+    const hidden = (id, value) => {
+      let node = document.getElementById(id);
+      if (!node) {
+        node = document.createElement('input');
+        node.type = 'hidden';
+        node.id = id;
+        form.appendChild(node);
+      }
+      node.value = value || '';
+    };
+    hidden('c_id', customer.id);
+    hidden('v_id', vehicle.id);
+    if (customer.name) write('c_name', customer.name);
+    if (customer.phone) write('c_phone', customer.phone);
+    if (customer.email) write('c_email', customer.email);
+    if (customer.address) write('c_address', customer.address);
+    if (vehicle.make) write('v_make', vehicle.make);
+    if (vehicle.model) write('v_model', vehicle.model);
+    if (vehicle.year) write('v_year', String(vehicle.year));
+    if (vehicle.plate) write('v_plate', vehicle.plate);
+    lastSaid = { key: 'name', text: customer.name || vehicle.plate };
+    paintSaid();
+    openNext();
+    paintCount();
+  }
+
   async function commit() {
     const step = STEPS[index];
-    if (!step || step.plan) return;
+    if (!step || step.plan || step.save) return;
     const text = input.value.trim();
     if (!text) {
       if (!step.optional) return;
@@ -206,31 +344,72 @@ export function installPlanMark() {
       skipped.delete(step.key);
     }
     mode = 'mic';
-    openNext();
-    paintCount();
+    lastSaid = { key: step.key, text: text || 'Nije bitno' };
+    const person = step.key === 'plate' && text ? await knownPerson(val('v_plate')) : null;
+    settleThen(() => {
+      if (person) showOffer(person);
+      else openNext();
+      paintCount();
+    });
   }
 
-  function outside(event) {
-    if (windowEl.hidden || windowEl.contains(event.target)) return;
-    if (!input.value.trim()) {
-      mode = 'mic';
-      paintGlyph();
+  function saveSet() {
+    error.hidden = true;
+    if (!val('c_name') && !val('v_plate')) {
+      error.hidden = false;
+      error.textContent = 'Treba ime ili registracija.';
+      return;
     }
+    const btn = form.querySelector('.btn-primary');
+    const advancing = /Dalje|Next/i.test(btn ? btn.textContent : '');
+    form.requestSubmit();
+    if (!advancing) return;
+    if (/Dalje|Next/i.test(btn ? btn.textContent : '')) {
+      error.hidden = false;
+      error.textContent = 'Treba ime ili registracija.';
+      return;
+    }
+    form.requestSubmit();
   }
 
-  button.addEventListener('click', () => {
-    if (sheet.hidden) openNext();
-    else openNext();
+  button.addEventListener('click', () => { openNext(); });
+
+  ask.addEventListener('click', () => {
+    const step = STEPS[index];
+    if (!step) return;
+    if (step.save) { saveSet(); return; }
+    if (step.plan || offer) return;
+    windowEl.hidden = false;
+    input.focus();
+  });
+
+  said.addEventListener('click', () => {
+    if (!lastSaid) return;
+    turn += 1;
+    const step = STEPS.find((item) => item.key === lastSaid.key);
+    if (!step || step.save) return;
+    skipped.delete(step.key);
+    index = STEPS.indexOf(step);
+    const again = lastSaid.text === 'Nije bitno' ? '' : lastSaid.text;
+    lastSaid = null;
+    paintSaid();
+    showStep(step);
+    if (!step.plan && !step.save) {
+      input.value = again;
+      mode = again ? 'send' : 'mic';
+      paintGlyph();
+      input.focus();
+    }
   });
 
   skip.addEventListener('click', () => {
     const step = STEPS[index];
-    if (!step) return;
+    if (!step || step.save) return;
     skipped.add(step.key);
     input.value = '';
     mode = 'mic';
-    openNext();
-    paintCount();
+    lastSaid = { key: step.key, text: 'Nije bitno' };
+    settleThen(() => { openNext(); paintCount(); });
   });
 
   input.addEventListener('input', paintGlyph);
@@ -283,6 +462,7 @@ export function installPlanMark() {
     const live = session;
     session = null;
     if (!live) return;
+    await new Promise((resolve) => { window.setTimeout(resolve, TAIL_MS); });
     live.release();
     let heard = '';
     try { heard = await live.done; } catch { heard = input.value; }
@@ -292,6 +472,12 @@ export function installPlanMark() {
   }
 
   choices.addEventListener('click', async (event) => {
+    const known = event.target.closest('[data-known]');
+    if (known) {
+      if (known.dataset.known === 'yes') acceptOffer();
+      else { offer = null; openNext(); }
+      return;
+    }
     const choice = event.target.closest('[data-plan]');
     const slotBtn = event.target.closest('[data-slot]');
     if (slotBtn) {
@@ -300,21 +486,23 @@ export function installPlanMark() {
       marker.value = encodePlan(kind, slot);
       const out = document.getElementById('s_out');
       if (out && slot) out.value = isoDate(slot);
-      openNext();
-      paintCount();
+      lastSaid = { key: 'plan', text: formatWhen(slot) };
+      settleThen(() => { openNext(); paintCount(); });
       return;
     }
     if (!choice) return;
     const kind = choice.dataset.plan;
+    const label = choice.textContent;
     if (!needsBooking(kind)) {
       marker.value = encodePlan(kind);
-      openNext();
-      paintCount();
+      lastSaid = { key: 'plan', text: label };
+      settleThen(() => { openNext(); paintCount(); });
       return;
     }
     let sets = [];
     try { sets = await (await import('../js/db.js')).listStorageSets(); } catch { sets = []; }
     slots = freeSlots(busyKeys(sets), new Date(), 3, 6);
+    ask.hidden = false;
     ask.textContent = 'Prvi slobodan termin';
     windowEl.hidden = true;
     skip.hidden = true;
@@ -327,10 +515,11 @@ export function installPlanMark() {
   document.addEventListener('pointerdown', (event) => {
     if (sheet.hidden) return;
     if (event.target.closest('.nero-plan-card') || event.target.closest('#planMark')) return;
-    if (input.value.trim()) return;
+    if (input.value.trim() && !windowEl.hidden) return;
     mode = 'mic';
     paintGlyph();
     sheet.hidden = true;
+    turn += 1;
   });
 
   ['v_plate', 'c_name', 'c_phone', 'c_email', 'c_address'].forEach((id) => {
