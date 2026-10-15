@@ -32,7 +32,7 @@ export function createGate({getAuth, loadApp, present, isVisible, now=Date.now, 
       const session=await bounded(auth.getSession());
       if(ticket!==generation||closed)return;
       if(!session?.user?.id||!Number.isFinite(session.expires_at)||session.expires_at*1000<=now()){
-        lock('Za probni prikaz potrebna je važeća ASC prijava.',true);return;
+        lock('Za prostorni prikaz potrebna je važeća ASC prijava.',true);return;
       }
       if(userId&&userId!==session.user.id){lock('Račun je promijenjen. Ponovno otvorite prikaz.',true);return;}
       userId=session.user.id;authorized=true;
