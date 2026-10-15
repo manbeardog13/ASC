@@ -32,3 +32,9 @@ jobs:
         env:
           CHROME_PATH: ${{ steps.chrome.outputs.chrome-path }}
         run: bash scripts/smoke.sh
+      - name: Composer controls and cancellation regression
+        env:
+          CHROMIUM_PATH: ${{ steps.chrome.outputs.chrome-path }}
+        run: |
+          npm install --prefix "$RUNNER_TEMP/asc-browser-tests" --no-save --package-lock=false playwright@1.62.1
+          NODE_PATH="$RUNNER_TEMP/asc-browser-tests/node_modules" node tests/composer.browser.cjs

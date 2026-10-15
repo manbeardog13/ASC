@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>ASC — Prijava</title>
 <meta name="theme-color" content="#eef0f1">
-<script>try{if(localStorage.getItem('asc.theme')==='dark'){document.documentElement.classList.add('dark');document.querySelector('meta[name="theme-color"]').content='#0a0c11';}}catch(e){}try{if(sessionStorage.getItem('asc.splash.warm')==='1'&&document.referrer&&new URL(document.referrer).origin===location.origin){document.documentElement.classList.add('warm-nav');}}catch(e){}</script>
+<script src="theme-boot.js"></script>
+<script>try{if(sessionStorage.getItem('asc.splash.warm')==='1'&&document.referrer&&new URL(document.referrer).origin===location.origin){document.documentElement.classList.add('warm-nav');}}catch(e){}</script>
 <script>
 /* ASC Prag v1 boot — login. Decides the launch mode BEFORE first paint and owns
    the splash lifecycle (entrance, patience sweep, lift, bloom, watchdog). Modes:
@@ -124,8 +125,7 @@ html:not(.island).splash-cold .sp-topglow{display:block;position:fixed;left:0;ri
 <link rel="stylesheet" href="app.css">
 <style>
 /* Login — iPhone-calm: ambient canvas, a floating glass card, Google-first. */
-body{display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;min-height:100dvh;padding:22px}
-main{flex:1;display:flex;align-items:center;justify-content:center;width:100%}
+body{display:flex;align-items:center;justify-content:center;min-height:100dvh;padding:22px}
 .auth-card{position:relative;z-index:1;width:min(412px,100%);border-radius:30px;padding:30px 26px 24px;
   background:var(--shell-solid);border:1px solid var(--rim);border-top-color:var(--rim-top);
   box-shadow:var(--shadow-card);animation:sheetIn 560ms var(--smooth) both}
@@ -271,9 +271,12 @@ if(sat>=59){d.classList.add('island');d.style.setProperty('--isl-y',(sat-48)+'px
 
   // Theme toggle (login-scoped, persisted; the app reads asc.theme too).
   $('theme').addEventListener('click', () => {
-    const dark = document.documentElement.classList.toggle('dark');
-    document.querySelector('meta[name="theme-color"]').content = dark ? '#0a0c11' : '#eef0f1';
-    try { localStorage.setItem('asc.theme', dark ? 'dark' : 'light'); } catch (e) {}
+    if (window.ASCTheme) window.ASCTheme.toggle();
+    else {
+      const dark = document.documentElement.classList.toggle('dark');
+      document.querySelector('meta[name="theme-color"]').content = dark ? '#0a0c11' : '#eef0f1';
+      try { localStorage.setItem('asc.theme', dark ? 'dark' : 'light'); } catch (e) {}
+    }
     const t = $('theme'); t.classList.add('kick'); setTimeout(() => t.classList.remove('kick'), 340);
   });
   // optical refraction: the sheen follows the pointer across the glass
@@ -388,6 +391,6 @@ if(sat>=59){d.classList.add('island');d.style.setProperty('--isl-y',(sat-48)+'px
     } finally { busy(false); }
   });
 </script>
-<p class="nero-mark">powered by <a href="https://nerosummit.com">nerosummit.com</a></p>
+<p class="nero-mark">Powered by <a href="https://nerosummit.com">Nero Summit</a></p>
 </body>
 </html>

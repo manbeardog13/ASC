@@ -30,24 +30,19 @@
 })();
 </script>
 <style>
-  html,body{min-height:100%;margin:0}
-  body{min-height:100vh;min-height:100dvh;background:#020305;color:#f4f5f7;font-family:"Inter",system-ui,-apple-system,sans-serif;
-    display:flex;flex-direction:column;align-items:center;justify-content:flex-start;text-align:center}
-  .b{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;max-width:340px;padding:24px}
+  html,body{height:100%;margin:0}
+  body{background:#020305;color:#f4f5f7;font-family:"Inter",system-ui,-apple-system,sans-serif;
+    display:flex;align-items:center;justify-content:center;text-align:center}
+  .b{max-width:340px;padding:24px}
   .m{font-weight:800;font-size:26px;letter-spacing:2px;color:#ff4e1b;margin-bottom:14px}
   p{color:#9aa0ac;font-size:14px;line-height:1.5;margin:0 0 20px}
   a{display:inline-block;min-height:46px;line-height:46px;padding:0 22px;border-radius:999px;
     background:#ff4e1b;color:#fff;font-weight:700;font-size:15px;text-decoration:none}
-  .nero-mark{position:static;z-index:auto;flex:none;width:100%;margin-top:auto;padding:16px 16px 12px;text-align:center;
-    font-family:"Sora","Inter",system-ui,sans-serif;font-weight:400;font-size:.78rem;line-height:1.45;letter-spacing:.08em;text-transform:lowercase;
-    color:rgba(244,245,247,.6);pointer-events:none}
-  .nero-mark a{display:inline;min-height:0;line-height:1.45;padding:0;border-radius:0;background:none;
-    color:rgba(244,245,247,.92);opacity:.6;font:inherit;letter-spacing:inherit;font-weight:400;
-    text-decoration-line:underline;text-decoration-thickness:1px;text-underline-offset:3px;text-decoration-color:transparent;
-    pointer-events:auto;transition:color 180ms ease,opacity 180ms ease,text-decoration-color 180ms ease}
-  .nero-mark a:hover,.nero-mark a:focus-visible{opacity:.85;color:#ff4e1b;text-decoration-color:currentColor}
-  .nero-mark a:focus-visible{outline:1px solid #ff4e1b;outline-offset:3px}
-  @media(prefers-reduced-motion:reduce){.nero-mark a{transition:none}}
+  .nero-mark{position:static;left:auto;right:auto;bottom:auto;margin:16px 0 0;padding:0 16px 12px;text-align:center;
+    font:600 10px/1 Inter,system-ui,sans-serif;letter-spacing:.22em;text-transform:lowercase;
+    color:rgba(244,245,247,.34);text-shadow:0 -1px 0 #000,0 1px 0 rgba(255,255,255,.08);pointer-events:none}
+  .nero-mark a{display:inline;min-height:0;line-height:1;padding:0;border-radius:0;background:none;
+    color:inherit;font:inherit;letter-spacing:inherit;font-weight:600;text-decoration:none;pointer-events:auto}
 </style>
 </head>
 <body>
@@ -56,6 +51,6 @@
     <p>Otvaram ploču…</p>
     <a href="app/dashboard.html">Otvori ploču →</a>
   </div>
-<p class="nero-mark">powered by <a href="https://nerosummit.com">nerosummit.com</a></p>
+<p class="nero-mark">Powered by <a href="https://nerosummit.com">Nero Summit</a></p>
 </body>
 </html>

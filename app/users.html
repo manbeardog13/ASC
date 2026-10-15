@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>ASC — Korisnici</title>
 <meta name="theme-color" content="#edf0f5">
-<script>try{if(localStorage.getItem('asc.theme')==='dark'){document.documentElement.classList.add('dark');document.querySelector('meta[name="theme-color"]').content='#0a0c11';}}catch(e){}try{if(sessionStorage.getItem('asc.splash.warm')==='1'&&document.referrer&&new URL(document.referrer).origin===location.origin){document.documentElement.classList.add('warm-nav');}}catch(e){}</script>
+<script src="theme-boot.js"></script>
+<script>try{if(sessionStorage.getItem('asc.splash.warm')==='1'&&document.referrer&&new URL(document.referrer).origin===location.origin){document.documentElement.classList.add('warm-nav');}}catch(e){}</script>
 <link rel="icon" href="assets/favicon-32.png" sizes="32x32">
 <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
@@ -152,7 +153,7 @@ html.dark .toast{background:#26272b;border:1px solid var(--line)}
     </nav>
   </header>
 
-  <a class="btn btn-ghost btn-sm back reveal" href="dashboard.html" style="animation-delay:80ms">
+  <a data-nero-move class="btn btn-ghost btn-sm back reveal" href="dashboard.html" style="animation-delay:80ms">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 5.5 8 12l6.5 6.5"/></svg>
     Početna
   </a>
@@ -195,7 +196,7 @@ html.dark .toast{background:#26272b;border:1px solid var(--line)}
               <button type="button" data-set="employee" aria-pressed="true">Korisnik</button>
               <button type="button" data-set="admin" aria-pressed="false">Administrator</button>
             </div>
-            <p class="hint">Administratori mogu upravljati korisnicima i cijelom aplikacijom. Korisnici vode poslovanje, ali ne mogu upravljati računima.</p>
+            <p class="hint" data-nero-move>Administratori mogu upravljati korisnicima i cijelom aplikacijom. Korisnici vode poslovanje, ali ne mogu upravljati računima.</p>
           </div>
           <button class="btn btn-primary btn-block" type="submit">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5.4v13.2M5.4 12h13.2"/></svg>
@@ -246,6 +247,6 @@ html.dark .toast{background:#26272b;border:1px solid var(--line)}
 </script>
 <!-- LIVE: real team accounts, invites and roles from Supabase. -->
 <script type="module" src="live-users.js"></script>
-<p class="nero-mark">powered by <a href="https://nerosummit.com">nerosummit.com</a></p>
+<p class="nero-mark">Powered by <a href="https://nerosummit.com">Nero Summit</a></p>
 </body>
 </html>

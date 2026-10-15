@@ -41,6 +41,7 @@
   document.addEventListener('click', (e) => {
     if (!e.target.closest('[data-logout],[data-signout]')) return;
     e.preventDefault(); e.stopPropagation();
+    document.dispatchEvent(new CustomEvent('asc:sign-out'));
     dbReady.then((m) => m.signOut()).catch(() => {}).finally(() => S.bloom(() => S.handoff('login.html')));
   }, true);
 })();
@@ -57,13 +58,27 @@ try {
 } catch (e) {}
 const meta = document.querySelector('meta[name="theme-color"]');
 const reduce = matchMedia('(prefers-reduced-motion:reduce)').matches;
-try { if (localStorage.getItem('asc.theme') === 'dark') root.classList.add('dark'); } catch(e){}
-const paintTheme = () => meta.setAttribute('content', root.classList.contains('dark') ? '#0a0c11' : '#edf0f5');
+try {
+  if (!window.ASCTheme) {
+    const stored = localStorage.getItem('asc.theme');
+    const dark = stored === 'dark' || (stored !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches);
+    root.classList.toggle('dark', dark);
+  }
+} catch(e){}
+const paintTheme = () => {
+  if (window.ASCTheme) window.ASCTheme.paint();
+  else if (meta) meta.setAttribute('content', root.classList.contains('dark') ? '#0a0c11' : '#edf0f5');
+};
 paintTheme();
-document.getElementById('mode').addEventListener('click', () => {
-  const dark = root.classList.toggle('dark');
-  try { localStorage.setItem('asc.theme', dark ? 'dark' : 'light'); } catch(e){}
-  paintTheme();
+const modeBtn = document.getElementById('mode');
+if (modeBtn) modeBtn.addEventListener('click', () => {
+  if (window.ASCTheme) window.ASCTheme.toggle();
+  else {
+    const dark = root.classList.toggle('dark');
+    try { localStorage.setItem('asc.theme', dark ? 'dark' : 'light'); } catch(e){}
+    paintTheme();
+  }
+  document.dispatchEvent(new CustomEvent('asc:theme'));
 });
 
 // The logo is always a way home — click (or Enter/Space) → dashboard, from any page.
@@ -184,7 +199,7 @@ function animate(){
 (async () => {
   if (/\/login\.html$/.test(location.pathname)) return;
   const doc = document, root = doc.documentElement;
-  const {navigationIcons:I,renderAppNavigation,installWarehouseMenuReturn}=await import('./navigation.js');
+  const {navigationIcons:I,renderAppNavigation,applyNavAccess,syncThemeButton,installWarehouseMenuReturn}=await import('./navigation.js');
   const here = location.pathname.split('/').pop() || 'dashboard.html';
   const whPages = ['recycle.html', 'locate.html', 'locations.html', 'place.html', 'checkout.html'];
   const whOpen = whPages.includes(here) ||
@@ -271,6 +286,16 @@ function animate(){
   scrim.addEventListener('click', () => setMenuOpen(false));
   doc.addEventListener('keydown', (e) => { if (e.key === 'Escape') setMenuOpen(false); });
   aside.addEventListener('click', (e) => { if (e.target.closest('a.sb-item')) setMenuOpen(false); });
+  const themeBtn = aside.querySelector('#sbTheme');
+  const syncTheme = () => syncThemeButton(themeBtn);
+  syncTheme();
+  themeBtn?.addEventListener('click', () => {
+    const mode = doc.getElementById('mode');
+    if (mode) mode.click();
+    else { window.ASCTheme?.toggle(); syncTheme(); }
+  });
+  doc.addEventListener('asc:theme', syncTheme);
+  applyNavAccess(aside, null);
   installWarehouseMenuReturn(()=>{
     group.classList.add('open');
     group.querySelector('button').setAttribute('aria-expanded','true');
@@ -282,6 +307,7 @@ function animate(){
   // user card: real profile (name, role, avatar) — degrades to initials
   const ROLE = { admin: 'Administrator', manager: 'Voditelj', employee: 'Djelatnik', reception: 'Recepcija', readonly: 'Pregled' };
   import('../js/db.js').then((m) => m.loadMyProfile()).then((p) => {
+    applyNavAccess(aside, p?.role);
     if (!p) return;
     const name = (p.full_name || '').trim() || 'ASC korisnik';
     doc.getElementById('sbName').textContent = name;

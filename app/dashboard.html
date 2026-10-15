@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>ASC — Ploča</title>
 <meta name="theme-color" content="#edf0f5">
-<script>try{if(localStorage.getItem('asc.theme')==='dark'){document.documentElement.classList.add('dark');document.querySelector('meta[name="theme-color"]').content='#0a0c11';}}catch(e){}try{if(sessionStorage.getItem('asc.splash.warm')==='1'&&document.referrer&&new URL(document.referrer).origin===location.origin){document.documentElement.classList.add('warm-nav');}}catch(e){}</script>
+<script src="theme-boot.js"></script>
+<script>try{if(sessionStorage.getItem('asc.splash.warm')==='1'&&document.referrer&&new URL(document.referrer).origin===location.origin){document.documentElement.classList.add('warm-nav');}}catch(e){}</script>
 <script>
 /* ASC Prag v1 boot — dashboard. Same lifecycle as login's boot, two differences:
    no oauth mode, and the 6s watchdog ALSO restores documentElement visibility
@@ -151,7 +152,7 @@ html.splashing .greet{animation-play-state:paused}
 /* HERO grid: stage spans 2 rows beside two action cards; the AI card sits in a
    3rd row UNDER the stage, inheriting the stage's (column-1) width. */
 .hero{display:grid;grid-template-columns:1.5fr 1fr;grid-template-rows:1fr 1fr auto;gap:var(--gap)}
-.hero .stage{grid-column:1;grid-row:1 / 3}
+.hero .stage{grid-column:1;grid-row:1 / 3;min-height:300px}
 .hero .act.green{grid-column:2;grid-row:1}
 .hero .act.red{grid-column:2;grid-row:2}
 @media(max-width:900px){ .hero{grid-template-columns:1fr;grid-template-rows:auto} .hero .stage{grid-column:auto;grid-row:auto} .hero .act.green,.hero .act.red{grid-column:auto;grid-row:auto} }
@@ -442,6 +443,42 @@ if(sat>=59){d.classList.add('island');d.style.setProperty('--isl-y',(sat-48)+'px
     </nav>
   </header>
 
+  <section class="glance" id="glance" aria-label="Stanje skladišta">
+    <article class="card tight">
+      <span class="tab-tl">skladište</span>
+      <h3>Na čuvanju</h3>
+      <b class="num" data-glance="stored">—</b>
+      <span class="lbl">setova u hotelu</span>
+    </article>
+    <article class="card tight">
+      <span class="tab-tl">danas</span>
+      <h3>Zaprimljeno</h3>
+      <b class="num" data-glance="in">—</b>
+      <span class="lbl">danas</span>
+    </article>
+    <article class="card tight">
+      <span class="tab-tl">danas</span>
+      <h3>Preuzeto</h3>
+      <b class="num" data-glance="out">—</b>
+      <span class="lbl">danas</span>
+    </article>
+    <article class="card tight">
+      <span class="tab-tl">uskoro</span>
+      <h3>Rokovi</h3>
+      <p class="line"><b data-glance="due">—</b>preuzimanja</p>
+      <p class="line"><b data-glance="swaps">—</b>zamjene</p>
+    </article>
+    <article class="card tight span2">
+      <span class="tab-tl">mjesta</span>
+      <h3>Slobodno po zoni</h3>
+      <div class="zones" id="gZones">—</div>
+    </article>
+    <article class="card tight span2">
+      <span class="tab-tl">kretanja</span>
+      <h3>Nedavna kretanja</h3>
+      <ul class="moves" id="gMovesList"></ul>
+    </article>
+  </section>
 
   <!-- HERO: stage (spans 2 rows) + two stacked action cards, heights aligned -->
   <section class="hero">
@@ -726,13 +763,15 @@ document.addEventListener('click', function(e){
       if (window.ASCAgent && ASCAgent.configured && ASCAgent.configured()) {
         busy = true;
         const ans = (h) => show(me + '<span class="tb-ans">' + h + '</span>');
+        let streamed = '';
         ans('Razmišljam…');
         ASCAgent.ask(text, (ev) => {
-          if (ev.type === 'text') ans(esc(ev.text));
-          else if (ev.type === 'tool') ans('Radim…');
+          if (ev.type === 'delta') { streamed += ev.text; ans(esc(streamed) + '▍'); }
+          else if (ev.type === 'text') { streamed = ''; ans(esc(ev.text)); }
+          else if (ev.type === 'tool') ans('Nero provjerava…');
           else if (ev.type === 'error') ans(esc(ev.message || 'Greška.'));
-        }, { remote: true }).then((txt) => { busy = false; if (txt) ans(esc(txt)); })
-          .catch(() => { busy = false; ans('Veza je pukla — pokušaj ponovno.'); });
+        }, { remote: true, stream: true }).then((txt) => { busy = false; if (txt) ans(esc(txt)); })
+          .catch((err) => { busy = false; if (err && err.code === 'cancelled') return; ans('Veza je pukla — pokušaj ponovno.'); });
       } else {                                   // Gemini not wired → route to search
         show('Tražim…');
         setTimeout(() => { location.href = 'workshop.html?q=' + encodeURIComponent(text); }, 120);
@@ -853,6 +892,6 @@ document.addEventListener('click', function(e){
 <!-- LIVE: override the mock numbers/stream/reminders with real Supabase data. -->
 <script src="layout-edit.js" defer></script>
 <script type="module" src="live-dashboard.js"></script>
-<p class="nero-mark">powered by <a href="https://nerosummit.com">nerosummit.com</a></p>
+<p class="nero-mark">Powered by <a href="https://nerosummit.com">Nero Summit</a></p>
 </body>
 </html>

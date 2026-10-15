@@ -7,11 +7,8 @@
 <style>
   :root { --ink:#1c1e24; --slate:#6b7280; --line:rgba(28,30,36,.08); --lava:#f25c1d; --paper:#f4f6f9; --card:#fff; }
   * { box-sizing: border-box; }
-  html,body { min-height: 100%; }
-  body { min-height: 100vh; min-height: 100dvh; margin: 0; display: flex; flex-direction: column;
-    background: radial-gradient(900px 280px at 0 0, #fff, transparent 50%), var(--paper); color: var(--ink); font: 14px/1.4 Inter, "Segoe UI", sans-serif;
-    padding-bottom: 140px; }
-  .shell { width: 100%; max-width: 1100px; margin: 0 auto; padding: 22px 18px 40px; flex: 1 0 auto; }
+  body { margin: 0; background: radial-gradient(900px 280px at 0 0, #fff, transparent 50%), var(--paper); color: var(--ink); font: 14px/1.4 Inter, "Segoe UI", sans-serif; }
+  .shell { max-width: 1100px; margin: 0 auto; padding: 22px 18px 40px; }
   header { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; }
   .logo { font-weight: 800; letter-spacing: .08em; color: var(--lava); }
   nav a { color: var(--slate); text-decoration: none; margin-right: 14px; }
@@ -31,14 +28,10 @@
   .rack { margin-top: 8px; }
   .rack span { color: var(--slate); font-size: 12px; }
   .slots { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
-  .nero-mark{position:static;flex:none;width:100%;margin-top:auto;padding:16px 16px 12px;text-align:center;
-    font-family:"Sora","Inter",system-ui,sans-serif;font-weight:400;font-size:.78rem;line-height:1.45;letter-spacing:.08em;text-transform:lowercase;pointer-events:none;
-    color:rgba(46,42,38,.6)}
-  .nero-mark a{color:#2e2f31;opacity:.6;text-decoration-line:underline;text-decoration-thickness:1px;text-underline-offset:3px;
-    text-decoration-color:transparent;pointer-events:auto;transition:color 180ms ease,opacity 180ms ease,text-decoration-color 180ms ease}
-  .nero-mark a:hover,.nero-mark a:focus-visible{opacity:.85;color:var(--lava);text-decoration-color:currentColor}
-  .nero-mark a:focus-visible{outline:1px solid var(--lava);outline-offset:3px}
-  @media(prefers-reduced-motion:reduce){.nero-mark a{transition:none}}
+  .nero-mark{position:static;margin:12px 0 0;padding:0 16px 10px;text-align:center;
+    font:600 10px/1 Inter,system-ui,sans-serif;letter-spacing:.22em;text-transform:lowercase;pointer-events:none;
+    color:rgba(46,42,38,.42);text-shadow:0 1px 0 rgba(255,255,255,.72),0 -1px 1px rgba(28,22,16,.35)}
+  .nero-mark a{color:inherit;text-decoration:none;pointer-events:auto}
   .slot { width: 54px; height: 54px; border-radius: 12px; background: #f3f4f6; color: var(--ink); }
   .slot.filled { background: var(--lava); color: #fff; }
   .slot.reserved { background: #ffe4d6; color: #9a3412; }
@@ -120,6 +113,6 @@
       card.innerHTML = `<b>${s.dataset.name}</b><p>${s.dataset.plate || "Nema kompleta"}</p><p>${s.dataset.loc}</p><p>${s.dataset.set}</p>`;
     });
   </script>
-<p class="nero-mark">powered by <a href="https://nerosummit.com">nerosummit.com</a></p>
+<p class="nero-mark">Powered by <a href="https://nerosummit.com">Nero Summit</a></p>
 </body>
 </html>

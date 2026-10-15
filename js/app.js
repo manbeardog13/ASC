@@ -244,7 +244,7 @@ function openMenu() {
 
   // Choosing a navigation item closes the menu at once (the link still navigates).
   pop.addEventListener("click", (e) => { if (e.target.closest("a[role=menuitem]")) closeMenu(); });
-  pop.querySelector("#signOutBtn").onclick = async () => { closeMenu(); await db.signOut(); };
+  pop.querySelector("#signOutBtn").onclick = async () => { closeMenu(); document.dispatchEvent(new CustomEvent("asc:sign-out")); await db.signOut(); };
   pop.querySelector("#exportBtn").onclick = async (e) => {
     const btn = e.currentTarget;         // currentTarget is null after any await
     if (btn.disabled) return;
@@ -364,7 +364,7 @@ function renderAccessGate() {
         </div>
       </div>
     </div>`;
-  document.getElementById("gateOut").onclick = async () => { setState({ profile: null }); await db.signOut(); };
+  document.getElementById("gateOut").onclick = async () => { setState({ profile: null }); document.dispatchEvent(new CustomEvent("asc:sign-out")); await db.signOut(); };
 }
 
 // Signed in but nameless (older account, or a provider that sent no name):

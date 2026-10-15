@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>ASC — Zaprimi</title>
 <meta name="theme-color" content="#edf0f5">
-<script>try{if(localStorage.getItem('asc.theme')==='dark'){document.documentElement.classList.add('dark');document.querySelector('meta[name="theme-color"]').content='#0a0c11';}}catch(e){}try{if(sessionStorage.getItem('asc.splash.warm')==='1'&&document.referrer&&new URL(document.referrer).origin===location.origin){document.documentElement.classList.add('warm-nav');}}catch(e){}</script>
+<script src="theme-boot.js"></script>
+<script>try{if(sessionStorage.getItem('asc.splash.warm')==='1'&&document.referrer&&new URL(document.referrer).origin===location.origin){document.documentElement.classList.add('warm-nav');}}catch(e){}</script>
 <link rel="icon" href="assets/favicon-32.png" sizes="32x32">
 <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
@@ -276,7 +277,7 @@ html.dark .btn-primary{background:linear-gradient(180deg,var(--lava-2),var(--lav
       <fieldset>
         <legend>Gume</legend>
         <div class="row-between">
-          <span class="hint">Ispunite što možete — prazna polja se preskaču.</span>
+          <span class="hint" data-nero-move>Ispunite što možete — prazna polja se preskaču.</span>
         </div>
         <div id="tires">
           <datalist id="commonSizes"><option value="195/65R15"><option value="205/55R16"><option value="205/60R16"><option value="215/55R17"><option value="225/45R17"><option value="225/40R18"><option value="235/45R18"><option value="235/35R19"></datalist>
@@ -425,6 +426,6 @@ try{window.__ascPrefill=JSON.parse(sessionStorage.getItem('asc.prefill')||'null'
 })();
 </script>
 <script type="module" src="live-checkin.js"></script>
-<p class="nero-mark">powered by <a href="https://nerosummit.com">nerosummit.com</a></p>
+<p class="nero-mark">Powered by <a href="https://nerosummit.com">Nero Summit</a></p>
 </body>
 </html>
