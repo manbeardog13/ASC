@@ -97,13 +97,16 @@ begin
 end $$;
 
 -- Trigger still records an update after asc_audit() execute was revoked.
-update public.storage_sets set notes = 'trigger-still-fires' where public_code = 'ASC-2026-0004';
+-- Count rows around the write: the backfill may already have logged this set.
 do $$
+declare
+  v_before int;
+  v_after int;
 begin
-  if not exists (
-    select 1 from public.audit_events
-     where set_code = 'ASC-2026-0004' and summary = 'trigger'
-  ) then
+  select count(*) into v_before from public.audit_events where set_code = 'ASC-2026-0004';
+  update public.storage_sets set notes = 'trigger-still-fires' where public_code = 'ASC-2026-0004';
+  select count(*) into v_after from public.audit_events where set_code = 'ASC-2026-0004';
+  if v_after <= v_before then
     raise exception 'asc_audit trigger stopped firing after execute was revoked';
   end if;
 end $$;
@@ -143,3 +146,164 @@ begin
     raise exception 'set_updated_at search_path is %', v_path;
   end if;
 end $$;
+
+-- Definer grants and search_path. RLS helpers stay callable; triggers do not.
+do $$
+declare
+  fn text;
+  v_path text;
+  v_keep text[] := array[
+    'public.asc_role()',
+    'public.asc_is_admin()',
+    'public.set_my_name(text)',
+    'public.asc_owner_email()',
+    'public.mark_onboarded()'
+  ];
+  v_close text[] := array[
+    'public.handle_new_user()',
+    'public.purge_deleted(interval)',
+    'public.asc_protect_owner()',
+    'public.list_users()'
+  ];
+  v_all text[] := v_keep || v_close;
+  v_pinned text[] := array[
+    'asc_role', 'asc_is_admin', 'set_my_name', 'asc_owner_email',
+    'mark_onboarded', 'handle_new_user', 'purge_deleted', 'asc_protect_owner', 'list_users'
+  ];
+begin
+  foreach fn in array v_all loop
+    if has_function_privilege('anon', fn, 'execute') then
+      raise exception 'anon can execute %', fn;
+    end if;
+    if has_function_privilege('public', fn, 'execute') then
+      raise exception 'public can execute %', fn;
+    end if;
+  end loop;
+  foreach fn in array v_keep loop
+    if not has_function_privilege('authenticated', fn, 'execute') then
+      raise exception 'authenticated lost %', fn;
+    end if;
+  end loop;
+  foreach fn in array v_close loop
+    if has_function_privilege('authenticated', fn, 'execute') then
+      raise exception 'authenticated can still execute %', fn;
+    end if;
+  end loop;
+  if not has_function_privilege('service_role', 'public.purge_deleted(interval)', 'execute') then
+    raise exception 'service_role lost purge_deleted';
+  end if;
+  foreach fn in array v_pinned loop
+    select array_to_string(proconfig, ',') into v_path
+      from pg_proc
+     where proname = fn and pronamespace = 'public'::regnamespace
+     order by oid
+     limit 1;
+    if v_path is null or position('search_path=public, pg_temp' in v_path) = 0 then
+      raise exception '% search_path is %', fn, v_path;
+    end if;
+  end loop;
+end $$;
+
+-- Sign-in trigger still writes a profile after EXECUTE was revoked.
+do $$ begin
+  create role auth_writer nologin;
+exception when duplicate_object then null;
+end $$;
+grant usage on schema auth to auth_writer;
+grant insert on table auth.users to auth_writer;
+set role auth_writer;
+insert into auth.users (id, email, raw_user_meta_data)
+values ('00000000-0000-0000-0000-0000000000aa', 'new.staff@example.com', '{"full_name":"Nova Osoba"}'::jsonb);
+reset role;
+do $$
+begin
+  if not exists (
+    select 1 from public.profiles
+     where id = '00000000-0000-0000-0000-0000000000aa'
+       and role = 'readonly'
+       and full_name = 'Nova Osoba'
+  ) then
+    raise exception 'handle_new_user did not create the signup profile';
+  end if;
+end $$;
+
+-- Owner guard still fires.
+insert into public.profiles (id, email, role)
+values ('00000000-0000-0000-0000-0000000000bb', 'cryptonii13@gmail.com', 'employee')
+on conflict (id) do nothing;
+do $$
+begin
+  begin
+    delete from public.profiles where id = '00000000-0000-0000-0000-0000000000bb';
+    raise exception 'owner delete was allowed';
+  exception when others then
+    if sqlerrm not like '%cannot be removed%' then raise; end if;
+  end;
+  if (select role from public.profiles where id = '00000000-0000-0000-0000-0000000000bb') <> 'admin' then
+    raise exception 'owner insert was not forced to admin';
+  end if;
+end $$;
+
+-- Staff can still name themselves, stamp the tour, and read rows through RLS.
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000001', false);
+select set_config('request.jwt.claim.role', 'authenticated', false);
+set role authenticated;
+select public.set_my_name('Ana Horvat');
+do $$
+declare
+  v_first timestamptz;
+  v_second timestamptz;
+  v_sets int;
+begin
+  if public.asc_role() <> 'employee' then
+    raise exception 'asc_role after lock is %', public.asc_role();
+  end if;
+  if public.asc_is_admin() then
+    raise exception 'employee was treated as admin';
+  end if;
+  select count(*) into v_sets from public.storage_sets;
+  if v_sets < 1 then
+    raise exception 'RLS hid storage_sets from staff';
+  end if;
+  v_first := public.mark_onboarded();
+  v_second := public.mark_onboarded();
+  if v_first is null or v_first <> v_second then
+    raise exception 'onboarded_at did not stick (% / %)', v_first, v_second;
+  end if;
+  begin
+    perform * from public.list_users();
+    raise exception 'authenticated executed list_users';
+  exception when insufficient_privilege then
+    null;
+  end;
+end $$;
+reset role;
+do $$
+begin
+  if (select full_name from public.profiles where id = '00000000-0000-0000-0000-000000000001') <> 'Ana Horvat' then
+    raise exception 'set_my_name did not save';
+  end if;
+  if (select onboarded_at from public.profiles where id = '00000000-0000-0000-0000-000000000001') is null then
+    raise exception 'mark_onboarded did not save';
+  end if;
+end $$;
+
+-- Anon sees no sets. A missing policy and a missing grant are both safe.
+set role anon;
+do $$
+declare v_sets int;
+begin
+  begin
+    select count(*) into v_sets from public.storage_sets;
+    if v_sets <> 0 then raise exception 'anon saw % sets', v_sets; end if;
+  exception when insufficient_privilege then
+    null;
+  end;
+  begin
+    perform public.asc_role();
+    raise exception 'anon executed asc_role';
+  exception when insufficient_privilege then
+    null;
+  end;
+end $$;
+reset role;

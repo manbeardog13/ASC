@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Lint the location migrations on a throwaway database and load the main pages.
+# Load schema.sql plus every migration on a throwaway database, then the pages.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
 node scripts/i18n-guard.test.mjs
 node scripts/i18n-guard.mjs
-node --experimental-vm-modules --test tests/agent-surface.mjs tests/season-plan.mjs tests/concierge.mjs tests/location-grid.mjs tests/map-pin.mjs
+node --experimental-vm-modules --test tests/agent-surface.mjs tests/season-plan.mjs tests/concierge.mjs tests/location-grid.mjs tests/map-pin.mjs tests/first-run.mjs
 
 if ! command -v psql >/dev/null 2>&1; then
   echo "smoke: psql is required to lint migrations" >&2
@@ -17,11 +17,13 @@ if [[ -n "$ver" ]] && command -v pg_ctlcluster >/dev/null 2>&1; then
 fi
 sudo -u postgres psql -d postgres -c "drop database if exists asc_mig;" >/dev/null
 sudo -u postgres psql -d postgres -c "create database asc_mig;" >/dev/null
-sudo -u postgres psql -d asc_mig -v ON_ERROR_STOP=1 -f tests/sql/harness.sql >/dev/null
-sudo -u postgres psql -d asc_mig -v ON_ERROR_STOP=1 -f supabase/migrations/20261014223000_locations_and_movements.sql >/dev/null
-sudo -u postgres psql -d asc_mig -v ON_ERROR_STOP=1 -f supabase/migrations/20261014223100_revoke_asc_audit_and_fix_set_updated_at.sql >/dev/null
-sudo -u postgres psql -d asc_mig -v ON_ERROR_STOP=1 -f supabase/migrations/20261014230000_keep_plan_and_swap.sql >/dev/null
+sudo -u postgres psql -d asc_mig -v ON_ERROR_STOP=1 -f tests/sql/prelude.sql >/dev/null
+sudo -u postgres psql -d asc_mig -v ON_ERROR_STOP=1 -f supabase/schema.sql >/dev/null
+sudo -u postgres psql -d asc_mig -v ON_ERROR_STOP=1 -f tests/sql/seed.sql >/dev/null
+for migration in supabase/migrations/*.sql; do
+  sudo -u postgres psql -d asc_mig -v ON_ERROR_STOP=1 -f "$migration" >/dev/null
+done
 sudo -u postgres psql -d asc_mig -v ON_ERROR_STOP=1 -f tests/sql/exercise.sql >/dev/null
-echo "smoke: migrations applied on throwaway database asc_mig"
+echo "smoke: schema and migrations applied on throwaway database asc_mig"
 
 node scripts/smoke-pages.mjs
