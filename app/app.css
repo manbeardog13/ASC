@@ -1047,7 +1047,6 @@ html[data-side="rail"] .sb-search input{display:none}
 .nero-mark a:hover,.nero-mark a:focus-visible{opacity:.85;color:var(--lava);text-decoration-color:currentColor}
 .nero-mark a:focus-visible{outline:1px solid var(--lava);outline-offset:3px}
 html.dark .nero-mark{color:color-mix(in srgb, var(--ink-2) 60%, transparent)}
-html.dark .nero-mark a{color:var(--ink-2)}
 @media(prefers-reduced-motion:reduce){
   .nero-mark a{transition:none}
 }
