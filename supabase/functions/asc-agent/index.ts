@@ -25,7 +25,7 @@
 //          (optional) GEMINI_MODEL=gemini-flash-latest
 // ============================================================================
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { backoffMs, INJECTION_GUARD, isBusy, isQuotaExhausted, safeName, validateMessages } from "./guards.js";
+import { INJECTION_GUARD, isBusy, nextRetryWait, safeName, supportsThinking, validateMessages } from "./guards.js";
 
 // Primary: pinned current GA flash (the "-latest" alias is what the whole
 // world hammers — persistent 503 "high demand"). Old pinned versions get
@@ -43,7 +43,8 @@ const STREAM_TIMEOUT_MS = Number(Deno.env.get("GEMINI_STREAM_TIMEOUT_MS")) || 90
 // Speed: Gemini 3 "thinks" at high effort by default, which is where most of
 // Nero's 3–29 s per call went. Default to "low"; set GEMINI_THINKING_LEVEL=off
 // to restore the old behaviour (or high/medium/minimal to tune). Only sent to
-// gemini-3* models — older/lite models reject thinkingLevel.
+// gemini-3* models and the gemini-flash-latest / gemini-pro-latest aliases —
+// older/lite models reject thinkingLevel.
 const THINKING_RAW = (Deno.env.get("GEMINI_THINKING_LEVEL") || "low").toLowerCase();
 const THINKING_LEVEL = THINKING_RAW === "off" ? "" : THINKING_RAW;
 
@@ -413,7 +414,7 @@ function createAssembler() {
 const TOOLS_JSON = JSON.stringify([{ functionDeclarations: FUNCTION_DECLARATIONS }]);
 const GEN_JSON = JSON.stringify({ maxOutputTokens: 2048 });
 const GEN_JSON_THINK = JSON.stringify({ maxOutputTokens: 2048, ...(THINKING_LEVEL ? { thinkingConfig: { thinkingLevel: THINKING_LEVEL } } : {}) });
-export function genConfigFor(model: string) { return /^gemini-3/.test(model) ? GEN_JSON_THINK : GEN_JSON; }
+export function genConfigFor(model: string) { return supportsThinking(model) ? GEN_JSON_THINK : GEN_JSON; }
 function geminiBody(contents: unknown[], system: string, model: string) {
   return `{"systemInstruction":${JSON.stringify({ parts: [{ text: system }] })},"tools":${TOOLS_JSON},"toolConfig":{"functionCallingConfig":{"mode":"AUTO"}},"contents":${JSON.stringify(contents)},"generationConfig":${genConfigFor(model)}}`;
 }
@@ -577,16 +578,14 @@ Deno.serve(async (req) => {
     // discarded; the client only hears a model that already accepted the call.
     let res = await callModel(MODEL, wantStream);
     let detail = "";
-    if (busy(res.status)) {
+    // Short 429/5xx bursts get a bounded retry honouring Retry-After/RetryInfo;
+    // a spent daily quota (or a long server-requested wait) fails over at once.
+    for (let attempt = 0; busy(res.status); attempt++) {
       detail = await res.text();
-      // A spent free-tier quota won't recover in 1.6 s: skip the retry and go
-      // straight to the fallback model (its own quota bucket).
-      if (!isQuotaExhausted(res.status, detail)) {
-        const wait = backoffMs(0, res.headers.get("retry-after"));
-        await new Promise((r) => setTimeout(r, wait));
-        res = await callModel(MODEL, wantStream);
-        detail = busy(res.status) ? await res.text() : "";
-      }
+      const wait = nextRetryWait(res.status, detail, res.headers.get("retry-after"), attempt);
+      if (wait == null) break;
+      await new Promise((r) => setTimeout(r, wait));
+      res = await callModel(MODEL, wantStream);
     }
     if (busy(res.status) && FALLBACK_MODEL !== MODEL) {
       console.error("[asc-agent]", res.status, "on", MODEL, detail.slice(0, 300), "→ trying", FALLBACK_MODEL);
