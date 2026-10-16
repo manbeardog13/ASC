@@ -92,7 +92,9 @@
 
   // Conversation controls live inside the sheet's tool row — nothing below the composer.
   root.querySelector('.nero-tools').insertBefore(root.querySelector('.nero-pills'), root.querySelector('.nero-mic'));
+  // Pages that load composer.js without app.js (warehouse preview) still show the pills.
   if (window.ASCPills) ASCPills.observe(root.querySelector('.nero-pills'), root.querySelector('.nero-sheet') || root);
+  else root.querySelector('.nero-pills').classList.add('pills-in');
   root.insertBefore(root.querySelector('.nero-history'), suggest);
   // Docked to the bottom edge; on phones it rides the on-screen keyboard.
   function dock() {

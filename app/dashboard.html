@@ -793,13 +793,15 @@ document.addEventListener('click', function(e){
       };
     }
     window.__ascTypewriter = ascTypewriter;
+    let activeTyper = null;
     function askGemini(text, me) {
       if (window.ASCAgent && ASCAgent.configured && ASCAgent.configured()) {
         busy = true;
         const ans = (h) => show(me + '<span class="tb-ans">' + h + '</span>');
         // Models stream unevenly (often one tiny first chunk, then the rest at once),
         // so buffer what has arrived and reveal it at a steady, catch-up rate.
-        const typer = ascTypewriter((txt, more) => ans(esc(txt) + (more ? '▍' : '')));
+        if (activeTyper) activeTyper.reset();  // a new request cancels any still-draining reply
+        const typer = activeTyper = ascTypewriter((txt, more) => ans(esc(txt) + (more ? '▍' : '')));
         ans('Razmišljam…');                      // typing indicator until the first token
         ASCAgent.ask(text, (ev) => {
           if (ev.type === 'delta') typer.push(ev.text);
