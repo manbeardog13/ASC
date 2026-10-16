@@ -298,7 +298,7 @@ html[data-device="tablet"] .agent-reveal,html[data-device="mobile"] .agent-revea
 /* reveal: bubble first, then the chips cascade up one-by-one just after */
 @media(any-hover:hover){
   .agent-card:hover .text-bubble,.agent-card:focus-within .text-bubble{opacity:1;filter:blur(0);transform:none;transition-delay:.24s}
-  .agent-card:hover .qchip,.agent-card:focus-within .qchip{opacity:1;transform:none;transition-delay:calc(.34s + var(--ci,0)*.055s)}
+  .agent-card:hover .qchip,.agent-card:focus-within .qchip{opacity:1;transform:none;transition-delay:calc(.34s + var(--ci,0)*.055s),calc(.34s + var(--ci,0)*.055s),0s,0s,0s,0s,0s,0s}
 }
 /* ===== RESPONSIVE — adapt the agent window to each device tier ==============
    Capability-based detection (NOT user-agent sniffing): app.js reads matchMedia

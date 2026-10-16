@@ -1136,9 +1136,9 @@ html.dark input:-webkit-autofill{-webkit-box-shadow:0 0 0 1000px var(--panel-2) 
 /* Owning card scrolled out of view → pills fade/drop out; back in view → the same
    spring-in (cubic-bezier(.16,1,.3,1)) + fade-in, staggered by --ci. */
 .pills-host.pills-in>.qchip,.pills-host.pills-out>.qchip{
-  transition-property:opacity,transform,border-color,background!important;
-  transition-duration:.5s,.5s,.2s,.2s!important;transition-timing-function:cubic-bezier(.16,1,.3,1)!important}
-.pills-host.pills-auto.pills-in>.qchip{opacity:1;transform:none;transition-delay:calc(var(--ci,0)*.055s)}
+  transition-property:opacity,transform,translate,scale,box-shadow,background,background-color,border-color!important;
+  transition-duration:.5s,.5s,var(--tap-dur),var(--tap-dur),var(--tap-dur),.2s,.2s,.2s!important;transition-timing-function:cubic-bezier(.16,1,.3,1)!important}
+.pills-host.pills-auto.pills-in>.qchip{opacity:1;transform:none;transition-delay:calc(var(--ci,0)*.055s),calc(var(--ci,0)*.055s),0s,0s,0s,0s,0s,0s}
 .pills-host.pills-out>.qchip{opacity:0!important;transform:translateY(14px)!important;pointer-events:none;transition-delay:0s!important}
 @media(prefers-reduced-motion:reduce){
   .pills-host.pills-in>.qchip,.pills-host.pills-out>.qchip{transition-property:opacity!important;transition-duration:.25s!important;transition-timing-function:linear!important;transition-delay:0s!important;transform:none!important}
@@ -1153,3 +1153,23 @@ html.dark .text-bubble .tb-input,html.light .text-bubble .tb-input{background:tr
 /* Less noise: no grain texture, no ambient blobs, no preview ribbons. */
 .grain,.canvas{display:none!important}
 .sb-burger,.top .mode{font-family:Inter,system-ui,sans-serif}
+
+/* ===== Tactile feedback — one shared token set ==============================
+   Uses the individual translate/scale properties so it never fights the
+   transform-based pill spring or the composer item animations. No idle motion. */
+:root{--tap-lift:-1.5px;--tap-press:.98;--tap-dur:150ms;--tap-ease:var(--snap);
+  --tap-shadow-hover:0 10px 22px -14px rgba(2,3,5,.45);--tap-shadow-press:0 2px 6px -4px rgba(2,3,5,.30);
+  --focus-ring:2px solid var(--lava-2)}
+:is(.qchip,.mini,.nero-plus,.nero-mic,.nero-send,.act .go,#notesCard button){
+  transition-property:opacity,transform,translate,scale,box-shadow,background,background-color,border-color;
+  transition-duration:.5s,.5s,var(--tap-dur),var(--tap-dur),var(--tap-dur),.2s,.2s,.2s;
+  transition-timing-function:cubic-bezier(.16,1,.3,1),cubic-bezier(.16,1,.3,1),var(--tap-ease),var(--tap-ease),var(--tap-ease),var(--smooth),var(--smooth),var(--smooth)}
+@media(hover:hover){
+  :is(.qchip,.mini,.nero-plus,.nero-mic,.nero-send,.act .go,#notesCard button):hover{translate:0 var(--tap-lift);box-shadow:var(--tap-shadow-hover)}
+  :is(.nero-plus,.nero-mic,.act .go,#notesCard button):hover{background-color:color-mix(in srgb,currentColor 12%,transparent)}
+}
+:is(.qchip,.mini,.nero-plus,.nero-mic,.nero-send,.act .go,#notesCard button):active{translate:0 0;scale:var(--tap-press);box-shadow:var(--tap-shadow-press)}
+:is(.qchip,.mini,.act,.act .go,#notesCard button):focus-visible{outline:var(--focus-ring);outline-offset:2px}
+@media(prefers-reduced-motion:reduce){
+  :is(.qchip,.mini,.nero-plus,.nero-mic,.nero-send,.act .go,#notesCard button):is(:hover,:active){translate:none;scale:none}
+}
