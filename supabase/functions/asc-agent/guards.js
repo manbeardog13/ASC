@@ -29,7 +29,7 @@ export const LIMITS = {
 // "entryPrice", "supplier_company", "source-company" or "nabavna_cijena" are
 // caught too.
 const STAFF_KEY_RE = /(^|_)(supplier|suppliers|dobavljac|dobavljaci|margin|margins|marza|nabavna|nabavni)(_|$)|entry_?price|purchase_?price|internal_?cost|cost_?price|unit_?cost|source_?company|^cost$|^costs$/;
-const normKey = (k) => String(k).replace(/([a-z0-9])([A-Z])/g, "$1_$2").toLowerCase().replace(/[^a-z0-9]+/g, "_");
+const normKey = (k) => String(k).normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[đĐ]/g, "d").replace(/([a-z0-9])([A-Z])/g, "$1_$2").toLowerCase().replace(/[^a-z0-9]+/g, "_");
 export const isStaffOnlyKey = (k) => { const n = normKey(k); return STAFF_ONLY_KEYS.includes(n) || STAFF_KEY_RE.test(n); };
 
 // Recursively replaces the value of every protected key, at any depth, in
@@ -46,7 +46,7 @@ export function redactValue(v, depth = 0) {
 }
 
 // Any token that looks like a protected key used as a field name.
-const STAFF_TOKEN_RE = /["']?([A-Za-z_][A-Za-z0-9_\- ]{0,40})["']?\s*[:=]/g;
+const STAFF_TOKEN_RE = /["']?([\p{L}_][\p{L}\p{N}_\- ]{0,40})["']?\s*[:=]/gu;
 export const STAFF_WITHHELD = "[redacted: staff-only data withheld]";
 
 // Tool results are JSON in practice: parse, redact recursively, re-serialise.

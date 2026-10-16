@@ -62,6 +62,10 @@ test('staff-only values nested in objects/arrays are redacted at any depth', () 
   // Non-JSON text that names a protected field is withheld entirely (fail closed).
   assert.equal(redactStaffOnly('code ASC-3, supplier: {name: Tajni}'), '[redacted: staff-only data withheld]');
   assert.equal(redactStaffOnly('plain text ok'), 'plain text ok');
+  // Croatian diacritic key names.
+  const hr = redactStaffOnly(JSON.stringify({ dobavljač: { naziv: 'HrDob' }, marža: 12.34, Nabavna_cijena: 9.87, đ: 1 }));
+  assert.doesNotMatch(hr, /HrDob|12\.34|9\.87/);
+  assert.equal(redactStaffOnly('dobavljač: HrDob'), '[redacted: staff-only data withheld]');
 });
 
 test('display name cannot inject a prompt section', () => {
