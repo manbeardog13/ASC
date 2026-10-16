@@ -758,19 +758,56 @@ document.addEventListener('click', function(e){
     const show = (html) => { reply.innerHTML = html; reply.classList.add('on'); card.classList.add('agent-live'); };
 
     let busy = false;
+    // Small-chunk typewriter: requestAnimationFrame drains a buffer as stream data
+    // arrives. Base ~80 chars/s, speeding up with the backlog so long replies catch
+    // up within about a second — no stall, no dump at the end. Reduced motion or a
+    // hidden tab renders immediately.
+    function ascTypewriter(render) {
+      let target = '', shown = 0, raf = 0, last = 0, done = false;
+      const instant = () => matchMedia('(prefers-reduced-motion: reduce)').matches || document.hidden;
+      const tick = (t) => {
+        raf = 0;
+        const dt = last ? Math.min(64, t - last) : 16; last = t;
+        const backlog = target.length - shown;
+        shown = Math.min(target.length, shown + Math.max(1, Math.round(dt * (0.08 + backlog / 350))));
+        render(target.slice(0, shown), shown < target.length || !done);
+        if (shown < target.length) raf = requestAnimationFrame(tick); else last = 0;
+      };
+      const kick = () => {
+        if (instant()) { if (raf) cancelAnimationFrame(raf); raf = 0; shown = target.length; render(target, !done); }
+        else if (!raf && (shown < target.length || done)) raf = requestAnimationFrame(tick);
+      };
+      return {
+        push(t) { if (t) { target += t; kick(); } },
+        finish(full) {
+          // A whole answer that never streamed shows at once — there is nothing to pace.
+          if (!target && typeof full === 'string' && full) { target = full; shown = full.length; done = true; render(full, false); return; }
+          if (typeof full === 'string' && full && full !== target) {
+            if (!full.startsWith(target)) { let i = 0; while (i < shown && full[i] === target[i]) i++; shown = i; }
+            target = full;
+          }
+          done = true; if (target) kick();
+        },
+        reset() { if (raf) cancelAnimationFrame(raf); raf = 0; target = ''; shown = 0; last = 0; done = false; },
+        get state() { return { target, shown, done }; },
+      };
+    }
+    window.__ascTypewriter = ascTypewriter;
     function askGemini(text, me) {
       if (window.ASCAgent && ASCAgent.configured && ASCAgent.configured()) {
         busy = true;
         const ans = (h) => show(me + '<span class="tb-ans">' + h + '</span>');
-        let streamed = '';
-        ans('Razmišljam…');
+        // Models stream unevenly (often one tiny first chunk, then the rest at once),
+        // so buffer what has arrived and reveal it at a steady, catch-up rate.
+        const typer = ascTypewriter((txt, more) => ans(esc(txt) + (more ? '▍' : '')));
+        ans('Razmišljam…');                      // typing indicator until the first token
         ASCAgent.ask(text, (ev) => {
-          if (ev.type === 'delta') { streamed += ev.text; ans(esc(streamed) + '▍'); }
-          else if (ev.type === 'text') { streamed = ''; ans(esc(ev.text)); }
-          else if (ev.type === 'tool') ans('Nero provjerava…');
-          else if (ev.type === 'error') ans(esc(ev.message || 'Greška.'));
-        }, { remote: true, stream: true }).then((txt) => { busy = false; if (txt) ans(esc(txt)); })
-          .catch((err) => { busy = false; if (err && err.code === 'cancelled') return; ans('Veza je pukla — pokušaj ponovno.'); });
+          if (ev.type === 'delta') typer.push(ev.text);
+          else if (ev.type === 'text') typer.finish(ev.text);
+          else if (ev.type === 'tool') { typer.reset(); ans('Nero provjerava…'); }
+          else if (ev.type === 'error') { typer.reset(); ans(esc(ev.message || 'Greška.')); }
+        }, { remote: true, stream: true }).then((txt) => { busy = false; typer.finish(txt || ''); })
+          .catch((err) => { busy = false; typer.reset(); if (err && err.code === 'cancelled') return; ans('Veza je pukla — pokušaj ponovno.'); });
       } else {                                   // Gemini not wired → route to search
         show('Tražim…');
         setTimeout(() => { location.href = 'workshop.html?q=' + encodeURIComponent(text); }, 120);
