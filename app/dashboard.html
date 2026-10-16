@@ -294,11 +294,7 @@ html[data-device="tablet"] .agent-reveal,html[data-device="mobile"] .agent-revea
 @media(any-hover:hover){ .tb-send:hover{transform:translateY(-1px);box-shadow:0 10px 22px -8px rgba(224,64,208,.7)} }
 .tb-send:active{transform:scale(.92)}
 .chips{display:flex;flex-wrap:wrap;gap:9px}
-.qchip{display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:0 15px;border-radius:999px;cursor:pointer;
-  background:rgba(150,110,255,.12);border:1px solid rgba(150,110,255,.3);color:#e9e2ff;font:600 12.5px Inter;letter-spacing:.005em;
-  opacity:0;transform:translateY(14px);
-  transition:opacity .5s cubic-bezier(.16,1,.3,1),transform .5s cubic-bezier(.16,1,.3,1),border-color .2s var(--smooth),background .2s var(--smooth)}
-@media(any-hover:hover){ .qchip:hover{border-color:rgba(224,64,208,.55);background:rgba(150,110,255,.22)} }
+/* .qchip pill look + motion now live in app.css (shared with every composer) */
 /* reveal: bubble first, then the chips cascade up one-by-one just after */
 @media(any-hover:hover){
   .agent-card:hover .text-bubble,.agent-card:focus-within .text-bubble{opacity:1;filter:blur(0);transform:none;transition-delay:.24s}
@@ -531,7 +527,7 @@ if(sat>=59){d.classList.add('island');d.style.setProperty('--isl-y',(sat-48)+'px
               <input class="tb-input" id="tbInput" type="text" autocomplete="off" placeholder="Pitaj Nero…" aria-label="Pitaj Nero">
               <button class="tb-send" type="button" aria-label="Pošalji"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M13 6l6 6-6 6"/></svg></button>
             </div>
-            <div class="chips" role="list">
+            <div class="chips pills-host" role="list" data-pill-card="#agentShell">
               <button class="qchip" type="button" role="listitem" style="--ci:0" data-q="Nađi gume za DU 123-AB">nađi set</button>
               <button class="qchip" type="button" role="listitem" style="--ci:1" data-q="Koliko je slobodno u skladištu?">koliko je slobodno</button>
               <button class="qchip" type="button" role="listitem" style="--ci:2" data-q="Tko čeka na preuzimanje danas?">tko čeka</button>

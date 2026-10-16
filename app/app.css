@@ -193,7 +193,8 @@ html.dark .card.dark{background:radial-gradient(120% 100% at 90% -20%,rgba(255,7
 
 /* profile card */
 .row1{display:flex;align-items:center;gap:13px;margin-bottom:12px}
-.pavatar{width:44px;height:44px;border-radius:50%;flex:none;background:radial-gradient(circle at 32% 30%,var(--lava-2),var(--lava) 62%,#d6390c);color:#fff;display:grid;place-items:center;font:650 14px Inter;box-shadow:0 6px 16px rgba(255,78,27,.35)}
+/* Muted initials placeholder; a real profile photo (same avatar_url as the sidebar) replaces it. */
+.pavatar{width:44px;height:44px;border-radius:50%;flex:none;background:var(--panel);color:var(--ink-2);border:1px solid var(--line);display:grid;place-items:center;font:500 14px Inter;overflow:hidden}
 .profile h1{font-family:Sora;font-weight:600;font-size:18px;letter-spacing:-.01em}
 .profile .sub{font-size:12px;color:var(--muted)}
 .profile p{font-size:13px;line-height:1.55;color:var(--ink-2);flex:1}
@@ -1126,6 +1127,22 @@ input:-webkit-autofill,input:-webkit-autofill:hover,input:-webkit-autofill:focus
   -webkit-text-fill-color:var(--ink)!important;-webkit-box-shadow:0 0 0 1000px var(--panel) inset!important;box-shadow:0 0 0 1000px var(--panel) inset!important;transition:background-color 9999s}
 html.dark input:-webkit-autofill{-webkit-box-shadow:0 0 0 1000px var(--panel-2) inset!important;box-shadow:0 0 0 1000px var(--panel-2) inset!important}
 .sb-search input,.spatial-app .search-wrap input{background-color:transparent!important;border:0!important}
+/* Nero suggestion pills — the dashboard .qchip definitions, shared by every page. */
+.qchip{display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:0 15px;border-radius:999px;cursor:pointer;
+  background:rgba(150,110,255,.12);border:1px solid rgba(150,110,255,.3);color:#e9e2ff;font:600 12.5px Inter;letter-spacing:.005em;
+  opacity:0;transform:translateY(14px);
+  transition:opacity .5s cubic-bezier(.16,1,.3,1),transform .5s cubic-bezier(.16,1,.3,1),border-color .2s var(--smooth),background .2s var(--smooth)}
+@media(any-hover:hover){ .qchip:hover{border-color:rgba(224,64,208,.55);background:rgba(150,110,255,.22)} }
+/* Owning card scrolled out of view → pills fade/drop out; back in view → the same
+   spring-in (cubic-bezier(.16,1,.3,1)) + fade-in, staggered by --ci. */
+.pills-host.pills-in>.qchip,.pills-host.pills-out>.qchip{
+  transition-property:opacity,transform,border-color,background!important;
+  transition-duration:.5s,.5s,.2s,.2s!important;transition-timing-function:cubic-bezier(.16,1,.3,1)!important}
+.pills-host.pills-auto.pills-in>.qchip{opacity:1;transform:none;transition-delay:calc(var(--ci,0)*.055s)}
+.pills-host.pills-out>.qchip{opacity:0!important;transform:translateY(14px)!important;pointer-events:none;transition-delay:0s!important}
+@media(prefers-reduced-motion:reduce){
+  .pills-host.pills-in>.qchip,.pills-host.pills-out>.qchip{transition-property:opacity!important;transition-duration:.25s!important;transition-timing-function:linear!important;transition-delay:0s!important;transform:none!important}
+}
 /* Dashboard Nero card input: no field pill — only the card's own bubble shows behind it (every state/theme). */
 .text-bubble .tb-input,.text-bubble .tb-input:hover,.text-bubble .tb-input:focus,.text-bubble .tb-input:focus-visible,
 html.dark .text-bubble .tb-input,html.light .text-bubble .tb-input{background:transparent!important;background-color:transparent!important;

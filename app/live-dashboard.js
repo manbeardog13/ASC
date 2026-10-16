@@ -71,6 +71,13 @@ bootOnboarding();
     if (h1) h1.textContent = name || 'Smjena';
     const av = q('.profile .pavatar');
     if (av && name) av.textContent = initials(name);
+    // Real profile photo when there is one (same avatar_url as the sidebar).
+    if (av && p && p.avatar_url) {
+      const img = new Image(); img.alt = '';
+      img.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:50%';
+      img.onload = () => av.replaceChildren(img);
+      img.src = p.avatar_url;
+    }
   }).catch(() => { if (gn) gn.textContent = 'dobrodošli'; });
   const sub = q('.profile .row1 .sub');
   if (sub) {
