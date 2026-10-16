@@ -368,6 +368,9 @@ html[data-device="mobile"] .chips .qchip:nth-child(n+7){display:none}
     radial-gradient(circle var(--r) at 100% 100%,#0000 calc(var(--r) - .6px),#000 var(--r)) var(--tw,0px) 0/var(--r) var(--r) no-repeat,
     radial-gradient(circle var(--r) at 100% 100%,#0000 calc(var(--r) - .6px),#000 var(--r)) 0 var(--th,0px)/var(--r) var(--r) no-repeat;
   mask-composite:exclude,exclude,exclude,exclude,exclude}
+/* The tab cut fully covers the card's top-left corner, so that corner is square:
+   a rounded corner there left its anti-aliased arc visible beside the tab. */
+.notch-cut,.agent-card{border-top-left-radius:0!important}
 .notch-cut-tab{background:transparent!important;z-index:20}
 .notch-cut-tab::before,.notch-cut-tab::after{display:none!important}
 
