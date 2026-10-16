@@ -190,7 +190,7 @@ bootOnboarding();
     if (!dueSoon.length && minis.length) {
       const empty = document.createElement('p');
       empty.textContent = 'Nema podsjetnika.';
-      empty.style.cssText = 'margin:10px 2px 2px;font:500 13px Inter;color:var(--muted)';
+      empty.style.cssText = 'margin:10px 0 2px;font:500 13px Inter;color:var(--muted)';
       minis[0].parentElement.appendChild(empty);
     }
   }

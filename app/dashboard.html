@@ -371,6 +371,17 @@ html[data-device="mobile"] .chips .qchip:nth-child(n+7){display:none}
 /* The tab cut fully covers the card's top-left corner, so that corner is square:
    a rounded corner there left its anti-aliased arc visible beside the tab. */
 .notch-cut,.agent-card{border-top-left-radius:0!important}
+/* ===== Card inset & rhythm — one inner inset (= the tab label's text inset) and
+   one first-line offset under the tab, on every tabbed card. Polish only. */
+:root{--inset:16px;--tab-h:28px;--rhythm:calc(var(--tab-h) + 4px)}
+.tab-tl,.notch-cut-tab,.notch-tab{padding-left:var(--inset)!important;padding-right:var(--inset)!important}
+.card,.card.tight,.notes-shell .notes-card{padding:var(--rhythm) var(--inset) var(--inset)}
+.card .mini{margin-inline:-6px}  /* row text on the inset; hover highlight bleeds evenly */
+.act .body{padding-left:var(--inset);padding-right:var(--inset)}
+.agent-body{padding-left:var(--inset);padding-right:var(--inset)}
+.agent-reveal{left:var(--inset);right:var(--inset);bottom:var(--inset)}
+.notes-empty{padding-left:0;padding-right:0}
+.card .t b,.hstat b,.count-badge{font-variant-numeric:tabular-nums}
 .notch-cut-tab{background:transparent!important;z-index:20}
 .notch-cut-tab::before,.notch-cut-tab::after{display:none!important}
 
