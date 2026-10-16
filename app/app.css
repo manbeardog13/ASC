@@ -1126,6 +1126,12 @@ input:-webkit-autofill,input:-webkit-autofill:hover,input:-webkit-autofill:focus
   -webkit-text-fill-color:var(--ink)!important;-webkit-box-shadow:0 0 0 1000px var(--panel) inset!important;box-shadow:0 0 0 1000px var(--panel) inset!important;transition:background-color 9999s}
 html.dark input:-webkit-autofill{-webkit-box-shadow:0 0 0 1000px var(--panel-2) inset!important;box-shadow:0 0 0 1000px var(--panel-2) inset!important}
 .sb-search input,.spatial-app .search-wrap input{background-color:transparent!important;border:0!important}
+/* Dashboard Nero card input: no field pill — only the card's own bubble shows behind it (every state/theme). */
+.text-bubble .tb-input,.text-bubble .tb-input:hover,.text-bubble .tb-input:focus,.text-bubble .tb-input:focus-visible,
+html.dark .text-bubble .tb-input,html.light .text-bubble .tb-input{background:transparent!important;background-color:transparent!important;
+  border:0!important;border-radius:0!important;box-shadow:none!important;outline:0!important;color:#f3efff!important;caret-color:#f3efff}
+.text-bubble .tb-input:-webkit-autofill,.text-bubble .tb-input:-webkit-autofill:hover,.text-bubble .tb-input:-webkit-autofill:focus{
+  -webkit-text-fill-color:#f3efff!important;-webkit-box-shadow:0 0 0 1000px transparent inset!important;box-shadow:none!important}
 
 /* Less noise: no grain texture, no ambient blobs, no preview ribbons. */
 .grain,.canvas{display:none!important}
