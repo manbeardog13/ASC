@@ -40,6 +40,12 @@ async function create() {
     if (window.ASCQR && saved.length) window.ASCQR.printSlotLabels(saved);
     const back = returnLink();
     if (back && !document.getElementById("back-to-intake")) actions.append(back);
+    const zone = String(rows[0]?.zone || "").trim();
+    document.getElementById("open-on-map")?.remove();
+    if (zone && saved.length) {
+      actions.append(el("a", { class: "btn", id: "open-on-map",
+        href: "warehouse-preview/index.html?zone=" + encodeURIComponent(zone) }, t("flow.openOnMap", { zone })));
+    }
   } catch (error) {
     toast(error.message || t("flow.migration"));
   }

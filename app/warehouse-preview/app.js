@@ -2,7 +2,7 @@ import { renderAppNavigation, applyNavAccess, syncThemeButton } from '../navigat
 import { saveOperation, LocalSaveError } from './persistence.js';
 import { parseCroatianIntent, searchLocations, customerLabel } from './journey.js';
 import { createTour } from './tour.js';
-import { AREAS, emptyState, validateState, canPlace, createStack, moveStack, setCapacity, addTire, removeTire, stats } from './model.js';
+import { AREAS, syncAreas, createArea, removeArea, normalizeRack, emptyState, validateState, canPlace, createStack, moveStack, setCapacity, addTire, removeTire, stats } from './model.js';
 import { pinForSet } from '../../js/mapPin.js';
 import { loadMyProfile } from '../../js/db.js';
 export function startPreview({isActive=()=>false,registerRuntime=()=>{}}={}){
@@ -42,11 +42,12 @@ let storageAvailable=true, storageProblem=false;
 function readJSON(key,fallback){try{return JSON.parse(localStorage.getItem(key))??fallback;}catch{return fallback;}}
 let state;
 try {const raw=localStorage.getItem(KEY);state=raw===null?emptyState():JSON.parse(raw);if(!state||!validateState(state).valid){storageProblem=true;state=emptyState();}}catch{state=emptyState();storageProblem=true;}
+syncAreas(state);
 const storedView=readJSON(VIEW_KEY,{});
 let areaId=AREAS.some(a=>a.id===storedView.areaId)||storedView.areaId==='all'?storedView.areaId:'all';
 let selectedId=null, viewer=null, viewMode='3d', placing=null, toastTimer, scannerStream=null, scannerFrame=null, recognition=null, livePin=null;
 let tour=null, scannerStarting=false, scannerGeneration=0;
-let viewReady=false, liveSlots=null;
+let viewReady=false, liveSlots=null, liveSeats=null;
 try{localStorage.getItem(KEY);}catch{storageAvailable=false;}
 const tyreById = id => state.tires.find(t=>t.id===id);
 const selectedStack = () => state.stacks.find(s=>s.id===selectedId);
@@ -71,25 +72,25 @@ function changeArea(id){if(id!=='all'&&!AREAS.some(a=>a.id===id))return;
 }
 function renderAreas(){
  const focusHost=document.activeElement?.closest('#areas,#area-tabs')?.id,focusArea=document.activeElement?.dataset.area;
- $('areas').innerHTML=AREAS.map(a=>{const n=stats(state,a.id);const on=areaId===a.id;return `<button class="sb-item ${on?'on':''}" data-m="warehouse" type="button" data-area="${a.id}" aria-pressed="${on}"><span class="sb-code">${a.id}</span><span class="t"><span>${esc(a.name)}</span><span class="sub">${n.occupied} guma · ${n.stacks} stupaca</span></span></button>`;}).join('');
+ $('areas').innerHTML=AREAS.map(a=>{const n=stats(state,a.id);const on=areaId===a.id;return `<button class="sb-item ${on?'on':''}" data-m="warehouse" type="button" data-area="${esc(a.id)}" aria-pressed="${on}"><span class="sb-code">${esc(a.id)}</span><span class="t"><span>${esc(a.name)}</span><span class="sub">${n.occupied} guma · ${n.stacks} stupaca</span></span></button>`;}).join('');
  $('areas').querySelectorAll('button').forEach(b=>b.onclick=()=>changeArea(b.dataset.area));
- $('area-tabs').innerHTML=[{id:'all',name:'Sva skladišta'},...AREAS].map(a=>`<button class="${areaId===a.id?'active':''}" data-area="${a.id}" aria-pressed="${areaId===a.id}">${a.id==='all'?'':a.id+' · '}${esc(a.name)}</button>`).join('');
+ $('area-tabs').innerHTML=[{id:'all',name:'Sva skladišta'},...AREAS].map(a=>`<button class="${areaId===a.id?'active':''}" data-area="${esc(a.id)}" aria-pressed="${areaId===a.id}">${a.id==='all'?'':esc(a.id)+' · '}${esc(a.name)}</button>`).join('');
  $('area-tabs').querySelectorAll('button').forEach(b=>b.onclick=()=>changeArea(b.dataset.area));
  if(focusHost&&focusArea)$(focusHost).querySelector(`[data-area="${focusArea}"]`)?.focus({preventScroll:true});
  $('house-button').classList.toggle('on',areaId==='all');$('house-button').setAttribute('aria-pressed',String(areaId==='all'));
 }
 function render(){
- renderAreas();const current=area();const n=stats(state,areaId==='all'?null:areaId);
+ syncAreas(state);renderAreas();const current=area();const n=stats(state,areaId==='all'?null:areaId);
  $('area-code').textContent=areaId==='all'?'SVA':areaId;$('area-name').textContent=current?.name||'Sva skladišta';
  $('area-subtitle').textContent=current?`${n.stacks} stupaca · ${n.occupied} guma`:AREAS.length?`${AREAS.length} prostora`:'Još nema prostora';
  renderEmpty();
  $('stat-tyres').textContent=n.occupied;$('stat-vacant').textContent=n.vacant;
- $('geometry-note').textContent=AREAS.length?'Okviran tlocrt · visine nisu izmjerene':'Raspored još nije unesen';
+ $('geometry-note').textContent=!AREAS.length?'Raspored još nije unesen':current?(current.unit==='m'?`${current.width} × ${current.depth} m (izmjerio operater) · visine nisu izmjerene`:`${current.width} × ${current.depth} polja mreže · mjere nisu izmjerene`):'Raspored unosi operater · visine nisu izmjerene';
  viewer?.setData(state,areaId);viewer?.setSelection(selectedId);renderInspector();renderLocation();if(viewMode==='plan')renderPlan();
 }
 function renderEmpty(){
  const empty=!AREAS.length;const box=$('empty-state');if(box){box.hidden=!empty;const n=$('empty-slots');if(n)n.textContent=liveSlots==null?'':liveSlots===0?'U bazi još nema nijednog mjesta.':`U bazi postoji ${liveSlots} mjesta. Prostorni raspored za njih još nije unesen.`;}
- $('place-button').disabled=empty;$('list-button').disabled=!state.stacks.length;$('area-tabs').hidden=empty;
+ $('place-button').disabled=empty;const rm=$('remove-area-button');if(rm)rm.hidden=!(area()&&!state.stacks.some(s=>s.areaId===areaId));$('list-button').disabled=!state.stacks.length;$('area-tabs').hidden=empty;
 }
 function selectStack(id,focus=false){if(placing)endPlacement();const stack=state.stacks.find(s=>s.id===id);if(!stack)return;
  if(areaId!==stack.areaId){areaId=stack.areaId;storeView();}selectedId=id;render();if(focus)viewer?.focusStack(id);hideSearch();if(focus&&!tour?.active)$('inspector').focus();tour?.notify('found');
@@ -104,7 +105,7 @@ function renderInspectorBase(){
  const focusId=sameStack&&inspector.contains(document.activeElement)?document.activeElement.id:null;
  inspector.dataset.stackId=stack.id;
  const liveBanner=livePin&&livePin.stackId===stack.id?`<div class="live-pin"><b>${esc(livePin.text)}</b></div>`:'';
- inspector.innerHTML=`${liveBanner}<div class="inspector-top"><div><h3>${esc(stack.id)}</h3><p class="sub">${esc(AREAS.find(a=>a.id===stack.areaId)?.name)}</p></div><button id="close-inspector" class="icon-button" aria-label="Zatvori detalje stupca">${icon('close',17)}</button></div>
+ inspector.innerHTML=`${liveBanner}<div class="inspector-top"><div><h3>${esc(stack.id)}</h3><p class="sub">${esc(AREAS.find(a=>a.id===stack.areaId)?.name)}${stack.rack?' · regal '+esc(stack.rack):' · nije povezan s regalom'}</p></div><button id="close-inspector" class="icon-button" aria-label="Zatvori detalje stupca">${icon('close',17)}</button></div>
  <div class="stack-occupancy"><div class="stack-meter" aria-hidden="true">${Array.from({length:stack.capacity},(_,i)=>`<i class="${i<occupied?'filled':''}"></i>`).join('')}</div><span><b>${occupied}/${stack.capacity}</b> mjesta</span></div>
  <div class="tyres">${tyres.map((t,i)=>`<button class="tyre-row" data-tyre="${esc(t.id)}" aria-expanded="false"><span class="tyre-dot" style="border-color:${/^#[a-f0-9]{6}$/i.test(t.color)?t.color:'#343c40'}"></span><span class="tyre-text"><b>${esc(customerLabel(t.customer))}</b><small>${esc(t.plate)}</small></span><em aria-label="Položaj ${i+1}">${i+1}</em><span class="tyre-chevron" aria-hidden="true">⌄</span></button>`).join('')||'<p class="empty-stack">Stupac je prazan.</p>'}</div>
  <div class="inspector-actions"><button id="add-tyre" class="button primary" ${occupied>=stack.capacity?'disabled':''}>${icon('plus',15)}Dodaj gumu</button><button id="focus-stack" class="button quiet">Približi</button></div>
@@ -116,28 +117,48 @@ function renderInspectorBase(){
  if(focusId&&canFocus($(focusId)))$(focusId).focus({preventScroll:true});
 }
 function beginPlacement(type='place'){
- if(areaId==='all'){if(!AREAS.length){toast('Najprije stvorite mjesta pod Lokacije.');return;}changeArea(AREAS[0].id);}const stack=selectedStack();if(type==='move'&&!stack)return;
- placing={type,stackId:stack?.id,point:null,capacity:type==='move'?stack.capacity:8};viewer?.setMode(type);viewer?.setPlacementPreview(null);renderInspector();renderLocation();renderPlacement();
+ if(areaId==='all'){if(!AREAS.length){toast('Najprije dodajte prostor.');return;}changeArea(AREAS[0].id);}const stack=selectedStack();if(type==='move'&&!stack)return;
+ placing={type,stackId:stack?.id,point:null,capacity:type==='move'?stack.capacity:8};if($('place-rack'))$('place-rack').value='';if(type!=='move')void loadLiveSeats().then(()=>{if(placing)renderPlacement();});viewer?.setMode(type);viewer?.setPlacementPreview(null);renderInspector();renderLocation();renderPlacement();
  toast(type==='move'?'Odaberite novi položaj. Možete promijeniti skladište prije spremanja.':'Dodirnite slobodno mjesto na podu.');
 }
 function endPlacement(){placing=null;viewer?.setMode('browse');viewer?.setPlacementPreview(null);$('placement-card').hidden=true;renderInspector();renderLocation();renderPlanPreview();}
 function floorPick(point){if(!placing||areaId==='all')return;placing.point={x:Math.round(point.x*100)/100,z:Math.round(point.z*100)/100};renderPlacement();}
-function renderPlacement(){if(!placing)return;const p=placing.point;const card=$('placement-card');card.hidden=false;$('placement-title').textContent=placing.type==='move'?'Premjesti stupac':'Dodaj stupac';$('place-capacity').value=placing.capacity;$('place-capacity').disabled=placing.type==='move';
+function renderPlacement(){if(!placing)return;const p=placing.point;const card=$('placement-card');card.hidden=false;
+ const rackInput=$('place-rack');if(rackInput){rackInput.closest('label').hidden=placing.type==='move';if(placing.type!=='move')$('rack-options').innerHTML=rackOptions(areaId).map(r=>`<option value="${esc(r)}"></option>`).join('');}$('placement-title').textContent=placing.type==='move'?'Premjesti stupac':'Dodaj stupac';$('place-capacity').value=placing.capacity;$('place-capacity').disabled=placing.type==='move';
  if(p){$('place-x').value=p.x;$('place-z').value=p.z;const valid=canPlace(state,areaId,p.x,p.z,.27,placing.type==='move'?placing.stackId:null);card.classList.toggle('invalid',!valid.valid);$('placement-hint').textContent=valid.valid?'Slobodan pod. Spremite novi položaj.':valid.reason;$('confirm-placement').disabled=!valid.valid;$('confirm-placement').textContent=placing.type==='move'?'Spremi položaj':'Dodaj ovdje';viewer?.setPlacementPreview({...p,areaId,valid:valid.valid,radius:.27});}
  else{card.classList.remove('invalid');$('placement-hint').textContent='Dodirnite pod ili unesite položaj.';$('confirm-placement').disabled=true;$('confirm-placement').textContent='Odaberi položaj';}
  renderPlanPreview();
 }
+function zoneOptions(){if(!Array.isArray(liveSeats))return [];return [...new Set(liveSeats.map(r=>String(r?.zone??'').trim()).filter(Boolean))].filter(z=>!AREAS.some(a=>a.id===z)).sort();}
+function rackOptions(zone){if(!Array.isArray(liveSeats))return [];const used=new Set(state.stacks.filter(s=>s.areaId===zone&&s.rack).map(s=>s.rack));return [...new Set(liveSeats.filter(r=>String(r?.zone??'').trim()===zone).map(r=>normalizeRack(r?.rack)).filter(Boolean))].filter(r=>!used.has(r)).sort();}
+async function loadLiveSeats(){try{const db=await import('../../js/db.js');const rows=await db.listLocationSeats?.();if(!disposed&&Array.isArray(rows))liveSeats=rows;}catch{}}
+function showAddArea(){
+ const zones=zoneOptions();
+ openDialog('Dodaj prostor',`<form id="area-form" class="area-form" novalidate><p class="dialog-intro">Prostor odgovara zoni s naljepnica mjesta. Veličinu unesite na licu mjesta: izmjerenu u metrima ili okvirno u poljima mreže (npr. koracima). Ništa se ne popunjava unaprijed.</p>
+ <label>Zona (oznaka s naljepnice)<input id="area-zone" name="zone" required maxlength="24" list="zone-options" autocomplete="off"></label><datalist id="zone-options">${zones.map(z=>`<option value="${esc(z)}"></option>`).join('')}</datalist>
+ <label>Naziv (neobavezno)<input id="area-name" name="name" maxlength="60" autocomplete="off"></label>
+ <fieldset><legend>Mjere</legend><label><input type="radio" name="unit" value="m" required> Izmjereno u metrima</label><label><input type="radio" name="unit" value="grid" required> Okvirno, polja mreže (nije izmjereno)</label></fieldset>
+ <label>Širina<input id="area-width" name="width" type="number" required min="0.5" max="200" step="0.1" inputmode="decimal"></label>
+ <label>Dubina<input id="area-depth" name="depth" type="number" required min="0.5" max="200" step="0.1" inputmode="decimal"></label>
+ <p id="area-error" class="dialog-error" role="alert" hidden></p><button id="save-area" class="button primary" type="submit">Spremi prostor</button></form>`);
+ $('area-form').onsubmit=async e=>{e.preventDefault();const f=new FormData(e.currentTarget);const draft={id:f.get('zone'),name:f.get('name'),width:f.get('width')===''?NaN:Number(f.get('width')),depth:f.get('depth')===''?NaN:Number(f.get('depth')),unit:f.get('unit')};
+  try{createArea(state,draft);}catch(err){$('area-error').hidden=false;$('area-error').textContent=err.message;return;}
+  const ok=await commit(s=>createArea(s,draft),'Prostor je dodan');if(ok){closeDialog();changeArea(String(draft.id).trim());}};
+}
+$('remove-area-button').onclick=async()=>{const a=area();if(!a)return;if(!confirm(`Ukloniti prazan prostor ${a.id}? Mjesta u bazi ostaju netaknuta.`))return;const ok=await commit(s=>removeArea(s,a.id),'Prostor je uklonjen');if(ok)changeArea('all');};
+for(const id of ['add-area-button','add-area-empty'])$(id).onclick=()=>{void loadLiveSeats().then(()=>{if($('dialog').open&&$('zone-options'))$('zone-options').innerHTML=zoneOptions().map(z=>`<option value="${esc(z)}"></option>`).join('');});showAddArea();};
 $('place-button').onclick=()=>beginPlacement();$('cancel-placement').onclick=endPlacement;$('place-capacity').onchange=e=>{if(placing)placing.capacity=Number(e.target.value);};
 for(const id of ['place-x','place-z'])$(id).onchange=()=>{if(placing)floorPick({x:Number($('place-x').value),z:Number($('place-z').value)});};
-$('confirm-placement').onclick=async()=>{if(!placing?.point)return;const draft={...placing,areaId};let newId;
- const ok=await commit(s=>{const n=draft.type==='move'?moveStack(s,draft.stackId,{areaId:draft.areaId,...draft.point}):createStack(s,{areaId:draft.areaId,...draft.point,capacity:draft.capacity});newId=draft.type==='move'?draft.stackId:n.stacks.at(-1).id;return n;},draft.type==='move'?'Položaj je spremljen':'Stupac je dodan');
+$('confirm-placement').onclick=async()=>{if(!placing?.point)return;const draft={...placing,areaId,rack:$('place-rack')?.value||''};let newId;
+ const ok=await commit(s=>{const n=draft.type==='move'?moveStack(s,draft.stackId,{areaId:draft.areaId,...draft.point}):createStack(s,{areaId:draft.areaId,...draft.point,capacity:draft.capacity,rack:draft.rack});newId=draft.type==='move'?draft.stackId:n.stacks.at(-1).id;return n;},draft.type==='move'?'Položaj je spremljen':'Stupac je dodan');
  if(ok){endPlacement();selectStack(newId);}
 };
 
 function renderPlan(){
- const mount=$('plan-view');if(areaId==='all'){mount.innerHTML=`<div class="plan-house-message"><p>Odaberite skladište za prikaz tlocrta.</p>${AREAS.map(a=>`<button class="button quiet" data-plan-area="${a.id}">${a.id} · ${esc(a.name)}</button>`).join('')}</div>`;mount.querySelectorAll('[data-plan-area]').forEach(b=>b.onclick=()=>changeArea(b.dataset.planArea));return;}
+ const mount=$('plan-view');if(areaId==='all'){mount.innerHTML=`<div class="plan-house-message"><p>Odaberite skladište za prikaz tlocrta.</p>${AREAS.map(a=>`<button class="button quiet" data-plan-area="${esc(a.id)}">${esc(a.id)} · ${esc(a.name)}</button>`).join('')}</div>`;mount.querySelectorAll('[data-plan-area]').forEach(b=>b.onclick=()=>changeArea(b.dataset.planArea));return;}
  const a=area();const rect=r=>`x="${r.x-r.w/2}" y="${r.z-r.d/2}" width="${r.w}" height="${r.d}"`;
- mount.innerHTML=`<svg viewBox="-5.7 -7.7 11.4 15.4" role="group" aria-label="${esc(a.name)} — tlocrt"><defs><pattern id="planks" width=".36" height="2" patternUnits="userSpaceOnUse"><rect width=".36" height="2" fill="#e9dccb"/><path d="M0 0v2" stroke="#d5c4ab" stroke-width=".012"/></pattern></defs><rect x="-5" y="-7" width="10" height="14" fill="none" stroke="#d1d4d6" stroke-width=".025" stroke-dasharray=".12 .14"/>${a.voidRects.map(r=>`<rect ${rect(r)} fill="#dce2e6" fill-opacity=".6"/>`).join('')}${a.floorRects.map(r=>`<rect ${rect(r)} fill="${a.timber?'url(#planks)':'#e3e2dd'}" stroke="#bcb6ab" stroke-width=".025"/>`).join('')}${a.stair?`<g><rect ${rect(a.stair)} fill="#aeb6bc" stroke="#7b8791" stroke-width=".02"/>${Array.from({length:12},(_,i)=>`<path d="M${a.stair.x-a.stair.w/2} ${a.stair.z-a.stair.d/2+i*a.stair.d/12}h${a.stair.w}" stroke="#e2e7eb" stroke-width=".03"/>`).join('')}</g>`:''}${state.stacks.filter(s=>s.areaId===areaId).map(s=>`<g class="plan-stack" role="button" tabindex="0" data-plan-stack="${s.id}" aria-label="${s.id}, ${s.tireIds.length} od ${s.capacity} guma"><circle cx="${s.x}" cy="${s.z}" r="${s.radius+.045}" fill="${s.id===selectedId?'#f0c052':'#252e34'}" stroke="${s.id===selectedId?'#f0c052':'#3e474c'}" stroke-width=".025"/><circle cx="${s.x}" cy="${s.z}" r=".13" fill="#dddcd6"/><text x="${s.x}" y="${s.z+.055}" text-anchor="middle" fill="#303c45" font-family="Inter,sans-serif" font-size=".14">${s.tireIds.length}</text></g>`).join('')}<text x="0" y="-7.3" text-anchor="middle" fill="#87919c" font-size=".2" font-family="Inter,sans-serif">SJEVER ↑</text></svg>`;
+ const hw=(a.width||10)/2+.7,hd=(a.depth||14)/2+.7;
+ mount.innerHTML=`<svg viewBox="${-hw} ${-hd} ${hw*2} ${hd*2}" role="group" aria-label="${esc(a.name)} — tlocrt"><defs><pattern id="planks" width=".36" height="2" patternUnits="userSpaceOnUse"><rect width=".36" height="2" fill="#e9dccb"/><path d="M0 0v2" stroke="#d5c4ab" stroke-width=".012"/></pattern></defs><rect x="${-(a.width||10)/2}" y="${-(a.depth||14)/2}" width="${a.width||10}" height="${a.depth||14}" fill="none" stroke="#d1d4d6" stroke-width=".025" stroke-dasharray=".12 .14"/>${a.voidRects.map(r=>`<rect ${rect(r)} fill="#dce2e6" fill-opacity=".6"/>`).join('')}${a.floorRects.map(r=>`<rect ${rect(r)} fill="${a.timber?'url(#planks)':'#e3e2dd'}" stroke="#bcb6ab" stroke-width=".025"/>`).join('')}${a.stair?`<g><rect ${rect(a.stair)} fill="#aeb6bc" stroke="#7b8791" stroke-width=".02"/>${Array.from({length:12},(_,i)=>`<path d="M${a.stair.x-a.stair.w/2} ${a.stair.z-a.stair.d/2+i*a.stair.d/12}h${a.stair.w}" stroke="#e2e7eb" stroke-width=".03"/>`).join('')}</g>`:''}${state.stacks.filter(s=>s.areaId===areaId).map(s=>`<g class="plan-stack" role="button" tabindex="0" data-plan-stack="${s.id}" aria-label="${s.id}, ${s.tireIds.length} od ${s.capacity} guma"><circle cx="${s.x}" cy="${s.z}" r="${s.radius+.045}" fill="${s.id===selectedId?'#f0c052':'#252e34'}" stroke="${s.id===selectedId?'#f0c052':'#3e474c'}" stroke-width=".025"/><circle cx="${s.x}" cy="${s.z}" r=".13" fill="#dddcd6"/><text x="${s.x}" y="${s.z+.055}" text-anchor="middle" fill="#303c45" font-family="Inter,sans-serif" font-size=".14">${s.tireIds.length}</text></g>`).join('')}<text x="0" y="-7.3" text-anchor="middle" fill="#87919c" font-size=".2" font-family="Inter,sans-serif">SJEVER ↑</text></svg>`;
  mount.querySelectorAll('[data-plan-stack]').forEach(el=>{el.onclick=e=>{if(!placing){e.stopPropagation();selectStack(el.dataset.planStack);}};el.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();selectStack(el.dataset.planStack,true);}};});
  mount.querySelector('svg').onclick=e=>{if(!placing)return;const svg=e.currentTarget;const pt=svg.createSVGPoint();pt.x=e.clientX;pt.y=e.clientY;const local=pt.matrixTransform(svg.getScreenCTM().inverse());floorPick({x:local.x,z:local.y});};
  renderPlanPreview();
@@ -338,9 +359,20 @@ const runtime={
  dispose(){if(disposed)return;disposed=true;pausedDialog=false;if($('dialog').open)$('dialog').close();stopScanner();stopVoice();clearTimeout(toastTimer);tour?.dispose();for(const remove of listeners)remove();listeners.length=0;viewer?.dispose();viewer=null;}
 };
 registerRuntime(runtime);render();
+/** Jump to a real location (zone[/rack]) on the operator-built map. Never guesses. */
+function navigateToLocation({zone,rack}){
+ const pin=pinForSet({zone,rack},state.stacks,AREAS.map(a=>a.id));
+ const where=[zone,rack].filter(Boolean).join(' · ');
+ if(!pin.areaId){toast(`${where} · prostor još nije na karti. Dodajte ga pod Dodaj prostor.`);return false;}
+ changeArea(pin.areaId);
+ if(pin.stackId){selectStack(pin.stackId,true);return true;}
+ if(rack)toast(`${where} · regal još nije postavljen na karti.`);
+ return true;
+}
 async function highlightLiveQuery(){
  const params=new URLSearchParams(location.search);
- const setCode=params.get('set'), slot=params.get('slot');
+ const setCode=params.get('set'), slot=params.get('slot'), zoneParam=params.get('zone'), rackParam=params.get('rack');
+ if(!setCode&&!slot&&zoneParam){navigateToLocation({zone:zoneParam,rack:rackParam});return;}
  if(!setCode&&!slot)return;
  try{
   const db=await import('../../js/db.js');

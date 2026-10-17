@@ -1,6 +1,7 @@
 // Map a live storage location onto the warehouse map.
 // No floors or racks are hardcoded: a set is pinned only when its zone is a
-// real area on the map and its rack names an existing stack. Otherwise the
+// real area on the map and its rack names an existing stack (bound via
+// stack.rack by the operator, or by the stack id). Otherwise the
 // pin carries just the text location (stackId null, areaId null).
 
 export function pinForSet(row, stacks = [], areaIds = []) {
@@ -15,7 +16,9 @@ export function pinForSet(row, stacks = [], areaIds = []) {
     const numbered = rack.match(/^(?:.+-)?S?(\d+)$/);
     const candidates = [`${areaId}-${rack}`, rack];
     if (numbered) candidates.push(`${areaId}-S${String(Number(numbered[1])).padStart(3, "0")}`);
-    const stack = list.find((item) => item?.areaId === areaId && candidates.includes(String(item.id).toUpperCase()));
+    // An explicit operator binding (stack.rack) wins over id-shaped guesses.
+    const stack = list.find((item) => item?.areaId === areaId && typeof item.rack === "string" && item.rack === rack)
+      || list.find((item) => item?.areaId === areaId && candidates.includes(String(item.id).toUpperCase()));
     if (stack) { stackId = stack.id; approx = false; }
   }
   const where = [row?.zone, row?.rack, row?.shelf, row?.slot].filter((part) => part != null && part !== "").join(" · ");
