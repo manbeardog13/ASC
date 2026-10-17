@@ -1,3 +1,4 @@
+import { locationKey, locationKeyProblem } from '../../js/mapPin.js';
 /**
  * ASC warehouse spatial module — blank slate.
  * No warehouses, zones, stacks or tyres are hardcoded here. Areas are added
@@ -11,12 +12,10 @@ const EPSILON = 1e-8;
 export const DEFAULT_CAPACITY = 8;
 export const MAX_CAPACITY = 16;
 export const DEFAULT_RADIUS = 0.27;
-export const LAYOUT_VERSION = 'operator-1';
 export const MAX_AREAS = 40;
 export const MAX_AREA_SIZE = 200;
 export const AREA_UNITS = Object.freeze(['grid', 'm']);
-const AREA_ID = /^[\p{L}\p{N}][\p{L}\p{N}._-]{0,23}$/u;
-const RACK_ID = /^[\p{L}\p{N}][\p{L}\p{N}._-]{0,23}$/u;
+
 
 // Nothing is predefined. Areas are created by the operator on site and live in
 // state.areas; AREAS is only a live mirror of the current state for the scene,
@@ -40,12 +39,12 @@ export function getArea(areaId, state) {
   return areasOf(state).find(area => area && area.id === areaId) || null;
 }
 
-export function normalizeAreaId(value) { return String(value ?? '').trim(); }
-export function normalizeRack(value) { return String(value ?? '').trim().toUpperCase().replace(/\s+/g, ''); }
+export const normalizeAreaId = locationKey;
+export const normalizeRack = locationKey;
 
 function areaErrors(area) {
   const errors = [];
-  if (!area || typeof area !== 'object' || typeof area.id !== 'string' || !AREA_ID.test(area.id)) return ['Prostor nema valjanu oznaku zone.'];
+  if (!area || typeof area !== 'object' || typeof area.id !== 'string' || locationKeyProblem(area.id) || area.id !== locationKey(area.id)) return ['Prostor nema valjanu oznaku zone.'];
   const label = area.id;
   if (typeof area.name !== 'string' || !area.name.trim() || area.name.length > 60) errors.push(`${label}: naziv prostora nije valjan.`);
   for (const key of ['width', 'depth']) {
@@ -58,6 +57,7 @@ function areaErrors(area) {
   if (!rect || rect.x !== 0 || rect.z !== 0 || rect.w !== area.width || rect.d !== area.depth) errors.push(`${label}: tlocrt ne odgovara unesenoj veličini.`);
   if (!Array.isArray(area.voidRects) || area.voidRects.length) errors.push(`${label}: otvori nisu podržani.`);
   if (area.stair !== null) errors.push(`${label}: stubište nije podržano.`);
+  if (area.remoteId !== undefined && (typeof area.remoteId !== 'string' || !area.remoteId)) errors.push(`${label}: zajednička oznaka nije valjana.`);
   return errors;
 }
 
@@ -186,7 +186,7 @@ export function validateState(state) {
       errors.push(`${stack.id} ima nevaljan kapacitet.`);
     }
     if (!Number.isFinite(stack.radius) || stack.radius <= 0) errors.push(`${stack.id} ima nevaljan promjer.`);
-    if (stack.rack !== undefined && (typeof stack.rack !== 'string' || !RACK_ID.test(stack.rack) || stack.rack !== normalizeRack(stack.rack))) errors.push(`${stack.id} ima nevaljanu oznaku regala.`);
+    if (stack.rack !== undefined && (typeof stack.rack !== 'string' || locationKeyProblem(stack.rack) || stack.rack !== normalizeRack(stack.rack))) errors.push(`${stack.id} ima nevaljanu oznaku regala.`);
     if (stack.rack !== undefined && state.stacks.some(peer => peer !== stack && peer?.areaId === stack.areaId && peer?.rack === stack.rack)) errors.push(`${stack.id}: regal ${stack.rack} je već na karti.`);
     if (!Array.isArray(stack.tireIds)) { errors.push(`${stack.id} nema poredak guma.`); continue; }
     if (stack.tireIds.length > stack.capacity) errors.push(`${stack.id} prelazi svoj kapacitet.`);
@@ -237,7 +237,8 @@ export function createStack(state, { areaId, x, z, capacity = DEFAULT_CAPACITY, 
   const placement = canPlace(state, areaId, x, z);
   if (!placement.valid) throw new Error(placement.reason);
   const rackId = rack == null || rack === '' ? '' : normalizeRack(rack);
-  if (rackId && !RACK_ID.test(rackId)) throw new Error('Oznaka regala smije imati slova, brojeve, točku, crticu ili podvlaku.');
+  const rackProblem = rackId ? locationKeyProblem(rackId, 'Oznaka regala') : null;
+  if (rackProblem) throw new Error(rackProblem);
   if (rackId && state.stacks.some(stack => stack.areaId === areaId && stack.rack === rackId)) throw new Error(`Regal ${rackId} je već na karti.`);
   let id;
   if (rackId) {
@@ -259,7 +260,8 @@ export function createArea(state, { id, name, width, depth, unit } = {}) {
   assertState(state);
   const areas = Array.isArray(state.areas) ? state.areas : [];
   const areaId = normalizeAreaId(id);
-  if (!AREA_ID.test(areaId)) throw new Error('Unesite oznaku zone (kao na naljepnicama mjesta), do 24 znaka.');
+  const zoneProblem = locationKeyProblem(areaId, 'Oznaka zone');
+  if (zoneProblem) throw new Error(zoneProblem);
   if (areas.some(area => area.id === areaId)) throw new Error(`Prostor ${areaId} već postoji.`);
   if (areas.length >= MAX_AREAS) throw new Error('Dosegnut je najveći broj prostora.');
   if (!AREA_UNITS.includes(unit)) throw new Error('Odaberite jesu li mjere izmjerene ili okvirne.');
@@ -362,4 +364,60 @@ export function stats(state, areaId = null) {
   const occupied = selected.reduce((sum, stack) => sum + stack.tireIds.length, 0);
   const capacity = selected.reduce((sum, stack) => sum + stack.capacity, 0);
   return { stacks: selected.length, occupied, capacity, vacant: capacity - occupied };
+}
+
+/** Attach the shared-backend id after an area was stored remotely. */
+export function markAreaShared(state, areaId, remoteId) {
+  assertState(state);
+  const areas = Array.isArray(state.areas) ? state.areas : [];
+  if (!areas.some(area => area.id === areaId)) throw new Error('Ovaj prostor više ne postoji.');
+  return committed(state, { areas: areas.map(area => area.id === areaId ? { ...area, remoteId } : area) }, 'area-shared', { areaId });
+}
+
+/** Shared layout is the source of truth for shared areas and their rack positions.
+ * remote = { areas:[{id,zone,name,width,depth,unit}], positions:[{area_id,rack,x,z,capacity}] }.
+ * Local areas without a remoteId are kept as "this device only" (offered for upload).
+ * Tyres on existing stacks are kept; a shared position never deletes a local stack.
+ * Returns { state, changed, localOnly:[areaId] }. */
+export function mergeRemoteLayout(state, remote) {
+  assertState(state);
+  const local = Array.isArray(state.areas) ? state.areas : [];
+  const remoteAreas = [];
+  for (const row of remote?.areas || []) {
+    const id = locationKey(row?.zone);
+    const unit = row?.unit;
+    const width = Number(row?.width), depth = Number(row?.depth);
+    const area = { id, name: String(row?.name ?? '').trim().slice(0, 60) || `Zona ${id}`, width, depth, unit,
+      measurementStatus: unit === 'm' ? 'operator-measured' : 'operator-grid',
+      floorRects: [{ x: 0, z: 0, w: width, d: depth }], voidRects: [], stair: null, remoteId: String(row?.id ?? '') };
+    if (areaErrors(area).length || remoteAreas.some(a => a.id === id)) continue; // skip malformed rows, never guess
+    remoteAreas.push(area);
+  }
+  const remoteIds = new Set(remoteAreas.map(a => a.id));
+  // Areas that were shared before but are gone remotely are dropped only if empty locally.
+  const keptLocal = local.filter(a => !remoteIds.has(a.id) && (!a.remoteId || state.stacks.some(s => s.areaId === a.id)))
+    .map(a => (a.remoteId ? (({ remoteId, ...rest }) => rest)(a) : a));
+  const areas = [...remoteAreas, ...keptLocal];
+  const byRemote = new Map(remoteAreas.map(a => [a.remoteId, a.id]));
+  let stacks = state.stacks.map(s => ({ ...s }));
+  for (const row of remote?.positions || []) {
+    const areaId = byRemote.get(String(row?.area_id ?? ''));
+    const rack = locationKey(row?.rack);
+    const x = Number(row?.x), z = Number(row?.z), capacity = Number(row?.capacity ?? DEFAULT_CAPACITY);
+    if (!areaId || locationKeyProblem(rack) || ![x, z].every(Number.isFinite) || !Number.isInteger(capacity) || capacity < 1 || capacity > MAX_CAPACITY) continue;
+    const existing = stacks.find(s => s.rack === rack && (s.areaId === areaId || s.id === `${areaId}-${rack}`));
+    if (existing) {
+      if (existing.tireIds.length <= capacity) Object.assign(existing, { areaId, x, z, capacity });
+      else Object.assign(existing, { areaId, x, z });
+    } else if (!stacks.some(s => s.id === `${areaId}-${rack}`)) {
+      stacks.push({ id: `${areaId}-${rack}`, areaId, x, z, radius: DEFAULT_RADIUS, capacity, tireIds: [], rack });
+    }
+  }
+  const candidate = { ...state, areas, stacks };
+  if (!validateState(candidate).valid) {
+    return { state, changed: false, localOnly: local.filter(a => !a.remoteId).map(a => a.id), rejected: true };
+  }
+  const changed = JSON.stringify({ a: state.areas || [], s: state.stacks }) !== JSON.stringify({ a: areas, s: stacks });
+  const next = changed ? committed(state, { areas, stacks }, 'layout-synced', {}) : state;
+  return { state: next, changed, localOnly: keptLocal.filter(a => !a.remoteId).map(a => a.id) };
 }

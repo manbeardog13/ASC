@@ -25,6 +25,7 @@ for migration in supabase/migrations/*.sql; do
 done
 sudo -u postgres psql -d asc_mig -v ON_ERROR_STOP=1 -f tests/sql/exercise.sql >/dev/null
 sudo -u postgres psql -d asc_mig -v ON_ERROR_STOP=1 -f tests/sql/nero-chats.sql >/dev/null
+sudo -u postgres psql -d asc_mig -v ON_ERROR_STOP=1 -f tests/sql/warehouse-areas.sql >/dev/null
 echo "smoke: schema and migrations applied on throwaway database asc_mig"
 
 node scripts/smoke-pages.mjs
