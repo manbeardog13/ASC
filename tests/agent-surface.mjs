@@ -27,8 +27,11 @@ test('Nero is the card on the board and a carved line on every page', () => {
   assert.match(dash, /Powered by <a href="https:\/\/nerosummit.com">Nero Summit<\/a>/);
   assert.doesNotMatch(dash, /composer\.js/);
   const composer = readFileSync(new URL('../app/composer.js', import.meta.url), 'utf8');
-  assert.match(composer, /getElementById\('agentCard'\)/);
+  // The shared composer shows on every page, the dashboard included (2026-10-17).
+  assert.doesNotMatch(composer, /getElementById\('agentCard'\)/);
+  assert.match(composer, /getElementById\('neroComposer'\)/);
   assert.match(composer, /Pitaj Nero/);
+  assert.match(dash, /html\.has-composer #agentCard \.text-bubble\{display:none\}/);
   const pages = [
     'app/checkin.html', 'app/login.html', 'app/customers.html', 'app/scan.html',
     'app/workshop.html', 'app/reminders.html', 'app/users.html', 'app/recycle.html',
@@ -43,6 +46,7 @@ test('Nero is the card on the board and a carved line on every page', () => {
   const app = readFileSync(new URL('../app/app.js', import.meta.url), 'utf8');
   assert.match(app, /agentCard/);
   assert.match(app, /composer\.js/);
+  assert.doesNotMatch(app, /getElementById\('agentCard'\) \|\| \/\\\/login/);
 });
 
 test('free gemini stays on and the local assistant is gone', () => {

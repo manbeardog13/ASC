@@ -68,7 +68,7 @@ test('chat history is owner-scoped and the composer queues without tokens', () =
   assert.match(sql, /nero-attachments/);
   assert.match(sql, /role in \('user', 'assistant'\)/);
   assert.doesNotMatch(sql, /access_token|builder_relay/);
-  assert.match(composer, /getElementById\('agentCard'\)/);
+  assert.match(composer, /getElementById\('neroComposer'\)/);
   assert.match(composer, /Pitaj Nero/);
   assert.match(composer, /pointerdown/);
   assert.match(composer, /is-recording/);
