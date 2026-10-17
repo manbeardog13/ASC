@@ -460,7 +460,8 @@ document.addEventListener('click', (e) => {
 if (document.readyState !== 'loading') syncDisc(); else addEventListener('DOMContentLoaded', syncDisc);
 
 // The purple card on the dashboard is Nero. Load its brain here so that card
-// can ask. Everywhere else she is the collapsed composer, same violet.
+// can ask. The collapsed composer, same violet, shows on every page including
+// the dashboard (Toni, 2026-10-17).
 (() => {
   ['concierge.js', 'agent-config.js', 'qr.js', 'agent-gemini.js'].forEach((src) => {
     if ([...document.scripts].some(sc => sc.src && new URL(sc.src).pathname.endsWith('/' + src))) return;
@@ -469,7 +470,7 @@ if (document.readyState !== 'loading') syncDisc(); else addEventListener('DOMCon
     if (src === 'concierge.js') script.type = 'module';
     document.head.appendChild(script);
   });
-  if (document.getElementById('agentCard') || /\/login\.html$/.test(location.pathname)) return;
+  if (/\/login\.html$/.test(location.pathname)) return;
   if ([...document.scripts].some(sc => sc.src && new URL(sc.src).pathname.endsWith('/composer.js'))) return;
   const composer = document.createElement('script');
   composer.src = new URL('composer.js', document.currentScript.src).href;

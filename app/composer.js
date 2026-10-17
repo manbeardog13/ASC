@@ -1,9 +1,11 @@
-/* Nero, outside the dashboard card. Compact glass pill while browsing,
+/* Nero on every page, the dashboard included. Compact glass pill while browsing,
    expanded only while someone is typing. Push-to-talk, history, attachments,
    and the admin tailnet relay live here. */
 (function () {
   'use strict';
-  if (document.getElementById('agentCard') || document.getElementById('neroComposer')) return;
+  // One composer per page. The dashboard shows it too (Toni, 2026-10-17); the
+  // purple #agentCard stays as the board's card and hides its own input bubble.
+  if (document.getElementById('neroComposer')) return;
   if (/\/login\.html$/.test(location.pathname)) return;
 
   var script = document.currentScript;
