@@ -17,7 +17,13 @@ ignored `out/assistant-tests`, or `ASC_TEST_OUTPUT` if supplied.
 ```sh
 node tests/warehouse.browser.cjs
 node tests/composer.browser.cjs
+node tests/warehouse-areas.browser.cjs
 ```
+
+`tests/warehouse-areas.mjs` and `tests/warehouse-areas.browser.cjs` cover the
+operator-built map: empty start, area creation from operator-entered size only,
+binding a stack to a real rack, `?zone=&rack=` navigation, and that area changes
+never touch tyres, stacks or database rows.
 
 The purple AI window is the original ASC card, copied as-is in `nero-design-studio/`.
 `tests/agent-surface.mjs` locks that card and the free Gemini flag. `tests/season-plan.mjs`

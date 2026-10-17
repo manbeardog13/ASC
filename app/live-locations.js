@@ -40,6 +40,13 @@ async function create() {
     if (window.ASCQR && saved.length) window.ASCQR.printSlotLabels(saved);
     const back = returnLink();
     if (back && !document.getElementById("back-to-intake")) actions.append(back);
+    // One link per distinct zone in this batch (saved rows first, typed rows as fallback).
+    actions.querySelectorAll("[data-open-on-map]").forEach((node) => node.remove());
+    const zones = [...new Set((saved.length ? saved : []).map((row) => String(row?.zone || "").trim()).filter(Boolean))];
+    for (const zone of zones) {
+      actions.append(el("a", { class: "btn", "data-open-on-map": zone,
+        href: "warehouse-preview/index.html?zone=" + encodeURIComponent(zone) }, t("flow.openOnMap", { zone })));
+    }
   } catch (error) {
     toast(error.message || t("flow.migration"));
   }

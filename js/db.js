@@ -914,3 +914,45 @@ window.addEventListener("online", flushQueues);
 onAuthChange((event) => { if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") flushQueues(); });
 // Boot drain only if a session is already restored — avoids a doomed anon attempt.
 getSession().then((s) => { if (s) flushQueues(); }).catch(() => {});
+
+// ---- Shared warehouse map (warehouse_areas + warehouse_rack_positions) ----------
+// Tables arrive with migration 20261017030000_warehouse_areas.sql. Until it is
+// applied, available:false and the map stays device-local. Only these two
+// tables are written here; locations, customers, sets and tires are not touched.
+export const WAREHOUSE_EDIT_ROLES = ["admin", "manager", "employee", "reception"];
+export function canEditWarehouse(role) { return WAREHOUSE_EDIT_ROLES.includes(role); }
+
+export async function listWarehouseLayout() {
+  const areas = await supabase.from("warehouse_areas").select("id, warehouse, zone, name, width, depth, unit, updated_at");
+  if (relationMissing(areas.error)) return { available: false, areas: [], positions: [] };
+  if (areas.error) throw fail(areas.error, "load warehouse areas");
+  const positions = await supabase.from("warehouse_rack_positions").select("id, area_id, rack, x, z, capacity, updated_at");
+  if (relationMissing(positions.error)) return { available: false, areas: [], positions: [] };
+  if (positions.error) throw fail(positions.error, "load rack positions");
+  return { available: true, areas: areas.data ?? [], positions: positions.data ?? [] };
+}
+
+export async function createWarehouseArea({ zone, name, width, depth, unit, warehouse = "main" }) {
+  const { data, error } = await supabase.from("warehouse_areas")
+    .insert({ warehouse, zone, name, width, depth, unit }).select("id, zone").single();
+  if (error) throw fail(error, "save warehouse area");
+  return data;
+}
+
+export async function deleteWarehouseArea(id) {
+  const { error } = await supabase.from("warehouse_areas").delete().eq("id", id);
+  if (error) throw fail(error, "remove warehouse area");
+}
+
+export async function saveRackPosition({ area_id, rack, x, z, capacity }) {
+  const { data, error } = await supabase.from("warehouse_rack_positions")
+    .upsert({ area_id, rack, x, z, capacity }, { onConflict: "area_id,rack" }).select("id").single();
+  if (error) throw fail(error, "save rack position");
+  return data;
+}
+
+export async function moveRackPosition({ from_area_id, to_area_id, rack, x, z }) {
+  const { error } = await supabase.from("warehouse_rack_positions")
+    .update({ area_id: to_area_id, x, z }).eq("area_id", from_area_id).eq("rack", rack);
+  if (error) throw fail(error, "move rack position");
+}

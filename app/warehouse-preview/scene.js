@@ -245,7 +245,7 @@ export function createScene(container, callbacks = {}) {
     const texture = temporary(makeLabelTexture(`${area.id}  ${area.name || ''}`));
     const material = temporary(new THREE.SpriteMaterial({ map: texture, transparent: true, depthWrite: false, toneMapped: false }));
     const sprite = new THREE.Sprite(material);
-    sprite.position.set(-3, y + .03, 7.72); sprite.scale.set(3.2, .50, 1); parent.add(sprite);
+    sprite.position.set(-(area.width ? Math.min(area.width / 2, 3) : 3), y + .03, area.depth ? area.depth / 2 + .4 : 7.72); sprite.scale.set(3.2, .50, 1); parent.add(sprite);
   }
   function clearStatic() {
     staticGroup.clear(); floorMeshes = [];
@@ -370,7 +370,8 @@ export function createScene(container, callbacks = {}) {
   function fitCamera(animated = true) {
     const all = areaId === 'all', area = getArea(areaId), platformOnly = false;
     const target = new THREE.Vector3(0, all ? 4.3 : .6, platformOnly ? 2.8 : 0);
-    const width = platformOnly ? 6.7 : 12.0, depth = platformOnly ? 8.0 : 16;
+    // Operator areas carry their own entered size; fall back to the old frame.
+    const width = area?.width ? Math.max(4, area.width * 1.15) : 12.0, depth = area?.depth ? Math.max(4, area.depth * 1.15) : 16;
     const fov = THREE.MathUtils.degToRad(camera.fov);
     const viewHeight = all ? 22 : Math.max(depth * .79, width / Math.max(.45, camera.aspect));
     const distance = viewHeight / (2 * Math.tan(fov / 2)) * 1.14;
@@ -471,8 +472,9 @@ export function createScene(container, callbacks = {}) {
     setData(nextState, nextAreaId = areaId || 'all') {
       if (disposed) return;
       if (state === nextState && areaId === nextAreaId) return;
+      const changedLayout = (state?.areas || null) !== (nextState?.areas || null);
       state = nextState || { stacks: [], tires: [] };
-      const changedArea = areaId !== nextAreaId;
+      const changedArea = areaId !== nextAreaId || changedLayout;
       areaId = nextAreaId;
       if (changedArea) { buildArchitecture(); preview.visible = false; }
       buildInventory();

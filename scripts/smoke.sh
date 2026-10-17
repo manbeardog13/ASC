@@ -5,7 +5,7 @@ cd "$(dirname "$0")/.."
 
 node scripts/i18n-guard.test.mjs
 node scripts/i18n-guard.mjs
-node --experimental-vm-modules --test tests/agent-surface.mjs tests/agent-client.behavior.mjs tests/builder-queue.mjs tests/nero-source.mjs tests/season-plan.mjs tests/concierge.mjs tests/location-grid.mjs tests/map-pin.mjs tests/first-run.mjs tests/asc-agent-guards.mjs
+node --experimental-vm-modules --test tests/agent-surface.mjs tests/agent-client.behavior.mjs tests/builder-queue.mjs tests/nero-source.mjs tests/season-plan.mjs tests/concierge.mjs tests/location-grid.mjs tests/map-pin.mjs tests/warehouse-areas.mjs tests/first-run.mjs tests/asc-agent-guards.mjs
 
 if ! command -v psql >/dev/null 2>&1; then
   echo "smoke: psql is required to lint migrations" >&2
@@ -25,6 +25,7 @@ for migration in supabase/migrations/*.sql; do
 done
 sudo -u postgres psql -d asc_mig -v ON_ERROR_STOP=1 -f tests/sql/exercise.sql >/dev/null
 sudo -u postgres psql -d asc_mig -v ON_ERROR_STOP=1 -f tests/sql/nero-chats.sql >/dev/null
+sudo -u postgres psql -d asc_mig -v ON_ERROR_STOP=1 -f tests/sql/warehouse-areas.sql >/dev/null
 echo "smoke: schema and migrations applied on throwaway database asc_mig"
 
 node scripts/smoke-pages.mjs
