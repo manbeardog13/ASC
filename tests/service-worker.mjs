@@ -14,7 +14,7 @@ function worker() {
       addEventListener: (name, fn) => { listeners[name] = fn; }
     },
     caches: {
-      keys: async () => ['asc-tirehotel-v1', 'asc-tirehotel-v106-composer-controls', 'asc-tirehotel-v107-platform-review', 'another-pwa-v3'],
+      keys: async () => ['asc-tirehotel-v1', 'asc-tirehotel-v106-composer-controls', 'asc-tirehotel-v107-platform-review', 'asc-tirehotel-v108-receipt-disposal-clause', 'another-pwa-v3'],
       delete: async key => { deleted.push(key); return true; }
     }, URL, Request, Response, Promise
   };
@@ -25,7 +25,7 @@ test('ASC activation retires only its own obsolete caches', async () => {
   const w = worker();
   w.listeners.activate({ waitUntil: p => w.pending.push(p) });
   await Promise.all(w.pending);
-  assert.deepEqual(w.deleted, ['asc-tirehotel-v1', 'asc-tirehotel-v106-composer-controls']);
+  assert.deepEqual(w.deleted, ['asc-tirehotel-v1', 'asc-tirehotel-v106-composer-controls', 'asc-tirehotel-v107-platform-review']);
 });
 test('service worker never caches Supabase API or write requests', () => {
   const w = worker();
