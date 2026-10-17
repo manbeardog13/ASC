@@ -57,10 +57,10 @@
         '</button>' +
       '</div>' +
     '</div>' +
-    '<div class="nero-pills">' +
-      '<button class="nero-pill" type="button" data-act="new">Novi razgovor</button>' +
-      '<button class="nero-pill" type="button" data-act="history">Povijest</button>' +
-      '<button class="nero-pill" type="button" data-act="relay" hidden aria-pressed="false" aria-label="Send to Toni &amp; Nero">Toni &amp; Nero</button>' +
+    '<div class="nero-pills pills-host pills-auto" role="list">' +
+      '<button class="nero-pill qchip" type="button" role="listitem" style="--ci:0" data-act="new">Novi razgovor</button>' +
+      '<button class="nero-pill qchip" type="button" role="listitem" style="--ci:1" data-act="history">Povijest</button>' +
+      '<button class="nero-pill qchip" type="button" role="listitem" style="--ci:2" data-act="relay" hidden aria-pressed="false" aria-label="Send to Toni &amp; Nero">Toni &amp; Nero</button>' +
     '</div>' +
     '<div class="nero-history" hidden></div>';
   // Docked inside the page column, after the content — never floating over it.
@@ -94,6 +94,9 @@
 
   // Conversation controls live inside the sheet's tool row — nothing below the composer.
   root.querySelector('.nero-tools').insertBefore(root.querySelector('.nero-pills'), root.querySelector('.nero-mic'));
+  // Pages that load composer.js without app.js (warehouse preview) still show the pills.
+  if (window.ASCPills) ASCPills.observe(root.querySelector('.nero-pills'), root.querySelector('.nero-sheet') || root);
+  else root.querySelector('.nero-pills').classList.add('pills-in');
   root.insertBefore(root.querySelector('.nero-history'), suggest);
   // Docked to the bottom edge; on phones it rides the on-screen keyboard.
   function dock() {

@@ -459,6 +459,22 @@ document.addEventListener('click', (e) => {
 });
 if (document.readyState !== 'loading') syncDisc(); else addEventListener('DOMContentLoaded', syncDisc);
 
+// Nero pills: fade out when their owning card leaves the viewport, spring back in
+// when it returns. One observer per card; shared by the dashboard and composer.
+window.ASCPills = {
+  observe(host, card) {
+    if (!host || !card || host.__pillsObserved) return;
+    host.__pillsObserved = true;
+    [...host.children].forEach((c, i) => { if (c.classList.contains('qchip') && !c.style.getPropertyValue('--ci')) c.style.setProperty('--ci', i); });
+    if (!('IntersectionObserver' in window)) { host.classList.add('pills-in'); return; }
+    new IntersectionObserver((entries) => {
+      const on = entries[entries.length - 1].isIntersecting;
+      host.classList.toggle('pills-in', on); host.classList.toggle('pills-out', !on);
+    }, { threshold: 0.15 }).observe(card);
+  },
+};
+document.querySelectorAll('.pills-host[data-pill-card]').forEach((h) => ASCPills.observe(h, document.querySelector(h.dataset.pillCard) || h.parentElement));
+
 // The purple card on the dashboard is Nero. Load its brain here so that card
 // can ask. The collapsed composer, same violet, shows on every page including
 // the dashboard (Toni, 2026-10-17).

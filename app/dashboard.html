@@ -298,15 +298,11 @@ html.has-composer #agentCard .text-bubble{display:none}
 @media(any-hover:hover){ .tb-send:hover{transform:translateY(-1px);box-shadow:0 10px 22px -8px rgba(224,64,208,.7)} }
 .tb-send:active{transform:scale(.92)}
 .chips{display:flex;flex-wrap:wrap;gap:9px}
-.qchip{display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:0 15px;border-radius:999px;cursor:pointer;
-  background:rgba(150,110,255,.12);border:1px solid rgba(150,110,255,.3);color:#e9e2ff;font:600 12.5px Inter;letter-spacing:.005em;
-  opacity:0;transform:translateY(14px);
-  transition:opacity .5s cubic-bezier(.16,1,.3,1),transform .5s cubic-bezier(.16,1,.3,1),border-color .2s var(--smooth),background .2s var(--smooth)}
-@media(any-hover:hover){ .qchip:hover{border-color:rgba(224,64,208,.55);background:rgba(150,110,255,.22)} }
+/* .qchip pill look + motion now live in app.css (shared with every composer) */
 /* reveal: bubble first, then the chips cascade up one-by-one just after */
 @media(any-hover:hover){
   .agent-card:hover .text-bubble,.agent-card:focus-within .text-bubble{opacity:1;filter:blur(0);transform:none;transition-delay:.24s}
-  .agent-card:hover .qchip,.agent-card:focus-within .qchip{opacity:1;transform:none;transition-delay:calc(.34s + var(--ci,0)*.055s)}
+  .agent-card:hover .qchip,.agent-card:focus-within .qchip{opacity:1;transform:none;transition-delay:calc(.34s + var(--ci,0)*.055s),calc(.34s + var(--ci,0)*.055s),0s,0s,0s,0s,0s,0s}
 }
 /* ===== RESPONSIVE — adapt the agent window to each device tier ==============
    Capability-based detection (NOT user-agent sniffing): app.js reads matchMedia
@@ -376,6 +372,20 @@ html[data-device="mobile"] .chips .qchip:nth-child(n+7){display:none}
     radial-gradient(circle var(--r) at 100% 100%,#0000 calc(var(--r) - .6px),#000 var(--r)) var(--tw,0px) 0/var(--r) var(--r) no-repeat,
     radial-gradient(circle var(--r) at 100% 100%,#0000 calc(var(--r) - .6px),#000 var(--r)) 0 var(--th,0px)/var(--r) var(--r) no-repeat;
   mask-composite:exclude,exclude,exclude,exclude,exclude}
+/* The tab cut fully covers the card's top-left corner, so that corner is square:
+   a rounded corner there left its anti-aliased arc visible beside the tab. */
+.notch-cut,.agent-card{border-top-left-radius:0!important}
+/* ===== Card inset & rhythm — one inner inset (= the tab label's text inset) and
+   one first-line offset under the tab, on every tabbed card. Polish only. */
+:root{--inset:16px;--tab-h:28px;--rhythm:calc(var(--tab-h) + 4px)}
+.tab-tl,.notch-cut-tab,.notch-tab{padding-left:var(--inset)!important;padding-right:var(--inset)!important}
+.card,.card.tight,.notes-shell .notes-card{padding:var(--rhythm) var(--inset) var(--inset)}
+.card .mini{margin-inline:-6px}  /* row text on the inset; hover highlight bleeds evenly */
+.act .body{padding-left:var(--inset);padding-right:var(--inset)}
+.agent-body{padding-left:var(--inset);padding-right:var(--inset)}
+.agent-reveal{left:var(--inset);right:var(--inset);bottom:var(--inset)}
+.notes-empty{padding-left:0;padding-right:0}
+.card .t b,.hstat b,.count-badge{font-variant-numeric:tabular-nums}
 .notch-cut-tab{background:transparent!important;z-index:20}
 .notch-cut-tab::before,.notch-cut-tab::after{display:none!important}
 
@@ -535,7 +545,7 @@ if(sat>=59){d.classList.add('island');d.style.setProperty('--isl-y',(sat-48)+'px
               <input class="tb-input" id="tbInput" type="text" autocomplete="off" placeholder="Pitaj Nero…" aria-label="Pitaj Nero">
               <button class="tb-send" type="button" aria-label="Pošalji"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M13 6l6 6-6 6"/></svg></button>
             </div>
-            <div class="chips" role="list">
+            <div class="chips pills-host" role="list" data-pill-card="#agentShell">
               <button class="qchip" type="button" role="listitem" style="--ci:0" data-q="Nađi gume za DU 123-AB">nađi set</button>
               <button class="qchip" type="button" role="listitem" style="--ci:1" data-q="Koliko je slobodno u skladištu?">koliko je slobodno</button>
               <button class="qchip" type="button" role="listitem" style="--ci:2" data-q="Tko čeka na preuzimanje danas?">tko čeka</button>
@@ -763,19 +773,58 @@ document.addEventListener('click', function(e){
     const show = (html) => { reply.innerHTML = html; reply.classList.add('on'); card.classList.add('agent-live'); };
 
     let busy = false;
+    // Small-chunk typewriter: requestAnimationFrame drains a buffer as stream data
+    // arrives. Base ~80 chars/s, speeding up with the backlog so long replies catch
+    // up within about a second — no stall, no dump at the end. Reduced motion or a
+    // hidden tab renders immediately.
+    function ascTypewriter(render) {
+      let target = '', shown = 0, raf = 0, last = 0, done = false;
+      const instant = () => matchMedia('(prefers-reduced-motion: reduce)').matches || document.hidden;
+      const tick = (t) => {
+        raf = 0;
+        const dt = last ? Math.min(64, t - last) : 16; last = t;
+        const backlog = target.length - shown;
+        shown = Math.min(target.length, shown + Math.max(1, Math.round(dt * (0.08 + backlog / 350))));
+        render(target.slice(0, shown), shown < target.length || !done);
+        if (shown < target.length) raf = requestAnimationFrame(tick); else last = 0;
+      };
+      const kick = () => {
+        if (instant()) { if (raf) cancelAnimationFrame(raf); raf = 0; shown = target.length; render(target, !done); }
+        else if (!raf && (shown < target.length || done)) raf = requestAnimationFrame(tick);
+      };
+      return {
+        push(t) { if (t) { target += t; kick(); } },
+        finish(full) {
+          // A whole answer that never streamed shows at once — there is nothing to pace.
+          if (!target && typeof full === 'string' && full) { target = full; shown = full.length; done = true; render(full, false); return; }
+          if (typeof full === 'string' && full && full !== target) {
+            if (!full.startsWith(target)) { let i = 0; while (i < shown && full[i] === target[i]) i++; shown = i; }
+            target = full;
+          }
+          done = true; if (target) kick();
+        },
+        reset() { if (raf) cancelAnimationFrame(raf); raf = 0; target = ''; shown = 0; last = 0; done = false; },
+        get state() { return { target, shown, done }; },
+      };
+    }
+    window.__ascTypewriter = ascTypewriter;
+    let activeTyper = null;
     function askGemini(text, me) {
       if (window.ASCAgent && ASCAgent.configured && ASCAgent.configured()) {
         busy = true;
         const ans = (h) => show(me + '<span class="tb-ans">' + h + '</span>');
-        let streamed = '';
-        ans('Razmišljam…');
+        // Models stream unevenly (often one tiny first chunk, then the rest at once),
+        // so buffer what has arrived and reveal it at a steady, catch-up rate.
+        if (activeTyper) activeTyper.reset();  // a new request cancels any still-draining reply
+        const typer = activeTyper = ascTypewriter((txt, more) => ans(esc(txt) + (more ? '▍' : '')));
+        ans('Razmišljam…');                      // typing indicator until the first token
         ASCAgent.ask(text, (ev) => {
-          if (ev.type === 'delta') { streamed += ev.text; ans(esc(streamed) + '▍'); }
-          else if (ev.type === 'text') { streamed = ''; ans(esc(ev.text)); }
-          else if (ev.type === 'tool') ans('Nero provjerava…');
-          else if (ev.type === 'error') ans(esc(ev.message || 'Greška.'));
-        }, { remote: true, stream: true }).then((txt) => { busy = false; if (txt) ans(esc(txt)); })
-          .catch((err) => { busy = false; if (err && err.code === 'cancelled') return; ans('Veza je pukla — pokušaj ponovno.'); });
+          if (ev.type === 'delta') typer.push(ev.text);
+          else if (ev.type === 'text') typer.finish(ev.text);
+          else if (ev.type === 'tool') { typer.reset(); ans('Nero provjerava…'); }
+          else if (ev.type === 'error') { typer.reset(); ans(esc(ev.message || 'Greška.')); }
+        }, { remote: true, stream: true }).then((txt) => { busy = false; typer.finish(txt || ''); })
+          .catch((err) => { busy = false; typer.reset(); if (err && err.code === 'cancelled') return; ans('Veza je pukla — pokušaj ponovno.'); });
       } else {                                   // Gemini not wired → route to search
         show('Tražim…');
         setTimeout(() => { location.href = 'workshop.html?q=' + encodeURIComponent(text); }, 120);
