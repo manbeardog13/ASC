@@ -178,8 +178,8 @@ test('edit gate: only staff/admin roles may change the shared map', async () => 
   assert.match(db, /WAREHOUSE_EDIT_ROLES = \["admin", "manager", "employee", "reception"\]/);
   const sql = fs.readFileSync(new URL('../supabase/migrations/20261017030000_warehouse_areas.sql', import.meta.url), 'utf8');
   assert.match(sql, /NEEDS TONI'S APPROVAL TO APPLY/);
-  assert.equal((sql.match(/asc_role\(\) in \('admin', 'manager', 'employee', 'reception'\)/g) || []).length, 8);
-  assert.equal((sql.match(/using \(public\.asc_role\(\) <> 'readonly'\)/g) || []).length, 2);
+  assert.equal((sql.match(/asc_role\(\) in \('admin', 'manager', 'employee', 'reception'\)/g) || []).length, 10);
+  assert.doesNotMatch(sql, /asc_role\(\) <> 'readonly'/);
   assert.doesNotMatch(sql, /references public\.(locations|customers|storage_sets|tires)|on delete cascade/i);
 });
 
@@ -190,7 +190,7 @@ test('merge: remote areas/positions appear locally; local-only areas kept for up
   s = addTire(s, 'A-01', { setId: 'SYN-1', customer: 'Sintetički', plate: 'SY-1', brand: 'T', size: '205/55 R16', color: 'crna' });
   const remote = { areas: [{ id: 'r-a', zone: 'a', name: 'Hala', width: '6', depth: '4', unit: 'grid' }, { id: 'r-b', zone: 'B', name: 'B', width: 5, depth: 5, unit: 'm' },
     { id: 'bad', zone: 'X', name: 'x', width: -1, depth: 1, unit: 'm' }],
-    positions: [{ area_id: 'r-a', rack: '01', x: 1, z: 0, capacity: 8 }, { area_id: 'r-b', rack: 'k2', x: 0, z: 0, capacity: 4 }, { area_id: 'nope', rack: '9', x: 0, z: 0 }] };
+    positions: [{ id: 'p-a', area_id: 'r-a', rack: '01', x: 1, z: 0, capacity: 8 }, { id: 'p-b', area_id: 'r-b', rack: 'k2', x: 0, z: 0, capacity: 4 }, { area_id: 'nope', rack: '9', x: 0, z: 0 }] };
   const r = mergeRemoteLayout(s, remote);
   assert.equal(r.changed, true);
   assert.deepEqual(r.state.areas.map(a => [a.id, a.remoteId || null]), [['A', 'r-a'], ['B', 'r-b'], ['LOC', null]]);
@@ -203,4 +203,35 @@ test('merge: remote areas/positions appear locally; local-only areas kept for up
   const again = mergeRemoteLayout(r.state, remote);
   assert.equal(again.changed, false);
   assert.equal(mergeRemoteLayout(s, { areas: [], positions: [] }).changed, false, 'unavailable/empty remote drops nothing local');
+});
+
+
+test('remote position identity follows a moved rack without leaving a duplicate', () => {
+  const remote = {areas:[{id:'r-a',zone:'A',name:'A',width:6,depth:6,unit:'grid'}, {id:'r-b',zone:'B',name:'B',width:6,depth:6,unit:'grid'}], positions:[{id:'p-1',area_id:'r-a',rack:'01',x:0,z:0,capacity:8}]};
+  let s = mergeRemoteLayout(emptyState(),remote).state;
+  s = addTire(s,'A-01',{customer:'Synthetic',plate:'SYN',size:'205/55 R16'});
+  const tires=structuredClone(s.tires);
+  remote.positions[0].area_id='r-b';
+  const result=mergeRemoteLayout(s,remote);
+  assert.equal(result.rejected,undefined);
+  assert.equal(result.state.stacks.length,1);
+  assert.equal(result.state.stacks[0].areaId,'B');
+  assert.equal(result.state.stacks[0].remotePositionId,'p-1');
+  assert.deepEqual(result.state.tires,tires);
+  assert.equal(pinForSet({zone:'A',rack:'01'},result.state.stacks,['A','B']).stackId,null);
+});
+
+test('a partial upload remains retryable after its area has been created', () => {
+  let s=area(emptyState());s=createStack(s,{areaId:'A',rack:'01',x:0,z:0});
+  const result=mergeRemoteLayout(s,{areas:[{id:'r-a',zone:'A',name:'Hala',width:6,depth:4,unit:'grid'}],positions:[]});
+  assert.deepEqual(result.localOnly,['A']);
+  assert.equal(result.state.stacks.length,1);
+  assert.equal(result.state.areas[0].remoteId,'r-a');
+});
+
+test('moving a rack onto an existing binding is refused before persistence', () => {
+  let s=createArea(area(emptyState()),{id:'B',width:6,depth:4,unit:'grid'});
+  for(const areaId of ['A','B'])s=createStack(s,{areaId,rack:'01',x:0,z:0});
+  assert.throws(()=>moveStack(s,'A-01',{areaId:'B',x:2,z:0}),/već na karti/);
+  assert.equal(validateState(s).valid,true);
 });

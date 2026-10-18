@@ -8,15 +8,16 @@ const http=require('node:http'),fs=require('node:fs'),path=require('node:path'),
 const root=path.resolve(path.join(__dirname,'..'));
 const output=path.resolve(process.env.ASC_TEST_OUTPUT||path.join(root,'out','assistant-tests'));fs.mkdirSync(output,{recursive:true});
 const mime={'.html':'text/html','.js':'text/javascript','.css':'text/css','.png':'image/png','.svg':'image/svg+xml','.jpg':'image/jpeg','.woff2':'font/woff2','.webmanifest':'application/manifest+json'};
-const store={areas:[],positions:[],writes:0};let seq=0;
+const store={areas:[],positions:[],writes:0,failPosition:false};let seq=0,localSeed;
 const key=v=>String(v??'').normalize('NFC').trim().replace(/\s+/g,' ').toUpperCase();
 function stub(op,body){
  if(op==='layout')return {status:200,json:{available:true,areas:store.areas,positions:store.positions}};
+ if(op==='pos'&&store.failPosition)return {status:503,json:{error:'Synthetic write failure'}};
  store.writes++;
  if(op==='area'){if(store.areas.some(a=>a.zone===body.zone))return {status:409,json:{error:'That already exists.'}};const row={id:'area-'+(++seq),warehouse:'main',...body};store.areas.push(row);return {status:200,json:row};}
  if(op==='delarea'){if(store.positions.some(p=>p.area_id===body.id))return {status:409,json:{error:'in use'}};store.areas=store.areas.filter(a=>a.id!==body.id);return {status:200,json:{}};}
- if(op==='pos'){const i=store.positions.findIndex(p=>p.area_id===body.area_id&&p.rack===body.rack);const row={id:'pos-'+(++seq),...body};if(i>=0)store.positions[i]={...store.positions[i],...body};else store.positions.push(row);return {status:200,json:row};}
- if(op==='move'){const p=store.positions.find(p=>p.area_id===body.from_area_id&&p.rack===body.rack);if(p)Object.assign(p,{area_id:body.to_area_id,x:body.x,z:body.z});return {status:200,json:{}};}
+ if(op==='pos'){const i=store.positions.findIndex(p=>p.area_id===body.area_id&&p.rack===body.rack);const row={id:i>=0?store.positions[i].id:'pos-'+(++seq),...body};if(i>=0)store.positions[i]=row;else store.positions.push(row);return {status:200,json:row};}
+ if(op==='move'){const p=store.positions.find(p=>p.area_id===body.from_area_id&&p.rack===body.rack);if(p)Object.assign(p,{area_id:body.to_area_id,x:body.x,z:body.z});return {status:p?200:404,json:p||{error:'Position missing'}};}
  return {status:404,json:{}};
 }
 const server=http.createServer((req,res)=>{const url=new URL(req.url,'http://localhost');
@@ -28,7 +29,7 @@ const db=synthetic+`window.__dbWrites=window.__dbWrites||[];const seats=[{wareho
 const api=async(p,b)=>{const r=await fetch('/__stub/'+p,{method:b?'POST':'GET',body:b?JSON.stringify(b):undefined});const j=await r.json();if(!r.ok)throw new Error(j.error||'stub error');return j;};
 export const getSession=async()=>session;export const loadMyProfile=async()=>({full_name:'UI test',role:window.__role||'employee'});
 export const canEditWarehouse=(r)=>['admin','manager','employee','reception'].includes(r);
-export const countLocations=async()=>seats.length;export const listLocationSeats=async()=>seats.map(r=>({...r}));
+export const countLocations=async()=>seats.length;export const listLocationSeats=async()=>{if(window.__seatsFail)throw Error('Synthetic location outage');return seats.map(r=>({...r}));};
 export const findLocationByQr=async(q)=>q==='QR-SYN-01-1-01'?{zone:'syn',rack:'01',shelf:'1',slot:'01',qr_code:q}:null;
 export const loadStorageSet=async(c)=>c==='ASC-SYN-1'?{public_code:c,zone:'SYN',rack:'01',shelf:'1',slot:'01'}:null;
 export const listWarehouseLayout=async()=>window.__sharedOff?{available:false,areas:[],positions:[]}:api('layout');
@@ -75,6 +76,7 @@ try{
   await page.locator('#place-rack').fill('01');await page.locator('#confirm-placement').click();
   await page.waitForFunction(()=>JSON.parse(localStorage.getItem('asc.warehouse.preview.v2')||'{}').stacks?.length===1);
   const saved=await page.saved();assert.deepEqual([saved.areas[0].id,saved.areas[0].measurementStatus,saved.stacks[0].id,saved.stacks[0].rack],['SYN','operator-grid','SYN-01','01']);
+  localSeed=JSON.stringify(saved);
   assert.match(await page.locator('#inspector .inspector-note').textContent(),/polja mreže \(nije izmjereno\)/);
   assert.equal(await page.locator('#remove-area-button').isVisible(),false,'non-empty area cannot be removed');
   for(const q of ['?zone=SYN&rack=01','?zone=syn&rack=01','?slot=QR-SYN-01-1-01','?set=ASC-SYN-1']){
@@ -144,5 +146,39 @@ try{
   await page.waitForSelector('[data-open-on-map="B"]');
   assert.deepEqual(await page.locator('[data-open-on-map]').evaluateAll(n=>n.map(a=>a.getAttribute('href'))),['warehouse-preview/index.html?zone=A','warehouse-preview/index.html?zone=B']);
   report.cases.push({case:'locations multi-zone links',passed:true});await context.close();}
+ // Missing location data must never turn validation off.
+ {const {context,page,errors}=await device({sharedOff:true});await context.addInitScript(()=>{window.__seatsFail=true;});await page.open();
+  await page.locator('#add-area-empty').click();await page.locator('#area-zone').fill('INVENTED');await page.locator('input[name="unit"][value="grid"]').check();await page.locator('#area-width').fill('4');await page.locator('#area-depth').fill('4');await page.locator('#save-area').click();
+  await page.waitForSelector('#area-error:not([hidden])');assert.equal(await page.saved(),null,'unverified zone must not be saved');
+  assert.deepEqual(errors,[]);report.cases.push({case:'location outage fails closed',passed:true});await context.close();}
+ // A failed shared edit must not be acknowledged or replaced at the next sync.
+ {const {context,page,errors}=await device();await page.open('?zone=SYN&rack=01');await page.waitForSelector('#inspector:not([hidden])');
+  await page.locator('#stack-tools summary').click();store.failPosition=true;
+  const before=await page.saved();await page.locator('#capacity-input').fill('12');await page.locator('#capacity-input').dispatchEvent('change');
+  await page.waitForFunction(()=>/Synthetic write failure/.test(document.getElementById('toast').textContent));
+  assert.deepEqual(await page.saved(),before,'failed capacity write must preserve saved state');store.failPosition=false;
+  await page.locator('#capacity-input').fill('12');await page.locator('#capacity-input').dispatchEvent('change');
+  await page.waitForFunction(()=>JSON.parse(localStorage.getItem('asc.warehouse.preview.v2')).stacks[0].capacity===12);
+  assert.equal(store.positions[0].capacity,12,'capacity is persisted remotely');
+  const d2=await device();await d2.page.open('?zone=SYN&rack=01');await d2.page.waitForFunction(()=>JSON.parse(localStorage.getItem('asc.warehouse.preview.v2'))?.stacks[0]?.capacity===12);
+  assert.deepEqual(errors,[]);assert.deepEqual(d2.errors,[]);await noAuthInStorage(page);await noAuthInStorage(d2.page);
+  report.cases.push({case:'shared capacity and failed writes',passed:true});await context.close();await d2.context.close();}
+ // A readonly user with an offline cache cannot edit through the inspector.
+ {const {context,page,errors}=await device({role:'readonly',sharedOff:true,seed:localSeed});await page.open('?zone=SYN&rack=01');await page.waitForSelector('#inspector:not([hidden])');
+  assert.equal(await page.locator('#add-tyre').isVisible(),false);assert.equal(await page.locator('#stack-tools').isVisible(),false);
+  const before=await page.saved();await page.locator('#capacity-input').evaluate(n=>{n.value='16';n.dispatchEvent(new Event('change'));});
+  await page.sync();assert.deepEqual(await page.saved(),before);assert.deepEqual(errors,[]);
+  report.cases.push({case:'readonly cached inspector is immutable',passed:true});await context.close();}
+ // Interrupted uploads retain their unsent racks and retry the existing area.
+ {store.areas=[];store.positions=[];store.failPosition=true;
+  const {context,page,errors}=await device({seed:localSeed});await page.open();await page.waitForSelector('#upload-layout:not([hidden])');
+  await page.locator('#upload-layout').click();await page.waitForFunction(()=>/Synthetic write failure/.test(document.getElementById('toast').textContent));
+  assert.equal(store.areas.length,1);assert.equal(store.positions.length,0);assert.equal((await page.saved()).stacks.length,1);
+  assert.equal(await page.locator('#upload-layout').isVisible(),true,'partial upload remains retryable');
+  store.failPosition=false;await page.locator('#upload-layout').click();await page.waitForFunction(()=>document.getElementById('upload-layout').hidden);
+  assert.equal(store.areas.length,1,'retry must not duplicate area');assert.equal(store.positions.length,1);
+  const d2=await device();await d2.page.open('?zone=SYN&rack=01');await d2.page.waitForSelector('#inspector:not([hidden])');
+  assert.equal((await d2.page.saved()).stacks.length,1);assert.deepEqual(errors,[]);assert.deepEqual(d2.errors,[]);
+  await noAuthInStorage(page);await noAuthInStorage(d2.page);report.cases.push({case:'partial upload retries without losing racks',passed:true});await context.close();await d2.context.close();}
 }finally{await browser.close();await new Promise(r=>server.close(r));fs.writeFileSync(path.join(output,'AREAS-BROWSER.json'),JSON.stringify(report,null,2)+'\n');}
 console.log(JSON.stringify(report,null,2));})().catch(e=>{console.error(e);server.close();process.exitCode=1;});

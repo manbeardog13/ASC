@@ -25,6 +25,22 @@ operator-built map: empty start, area creation from operator-entered size only,
 binding a stack to a real rack, `?zone=&rack=` navigation, and that area changes
 never touch tyres, stacks or database rows.
 
+The smoke workflow also runs `tests/warehouse-areas.browser.cjs` and retains
+synthetic browser evidence for seven days. Its eleven scenarios cover the
+original seven cases plus unavailable location data, failed shared writes and
+capacity synchronization, readonly cached inspectors, and interrupted-upload
+recovery. Cross-device browser tests use an in-memory backend, not PostgreSQL.
+`tests/warehouse-db.mjs` separately exercises the real `js/db.js` adapter with
+only the Supabase transport mocked, including warehouse scoping and zero-row
+update/delete failures.
+
+The disposable PostgreSQL smoke job snapshots complete operational records
+immediately before the warehouse migration and checks their equality after the
+migration and after map CRUD. The warehouse SQL suite exercises every permitted
+role, readonly/unknown/missing profiles, least-privilege grants, real-location
+binding, geometric constraints and delete-restrict behavior. No production
+migration is authorized by these tests.
+
 The purple AI window is the original ASC card, copied as-is in `nero-design-studio/`.
 `tests/agent-surface.mjs` locks that card and the free Gemini flag. `tests/season-plan.mjs`
 locks the corner-number questions: a seasonal answer takes the first free bay about

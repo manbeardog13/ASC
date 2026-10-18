@@ -186,6 +186,7 @@ export function validateState(state) {
       errors.push(`${stack.id} ima nevaljan kapacitet.`);
     }
     if (!Number.isFinite(stack.radius) || stack.radius <= 0) errors.push(`${stack.id} ima nevaljan promjer.`);
+    if (stack.remotePositionId !== undefined && (typeof stack.remotePositionId !== 'string' || !stack.remotePositionId)) errors.push(`${stack.id} ima nevaljanu zajedničku oznaku.`);
     if (stack.rack !== undefined && (typeof stack.rack !== 'string' || locationKeyProblem(stack.rack) || stack.rack !== normalizeRack(stack.rack))) errors.push(`${stack.id} ima nevaljanu oznaku regala.`);
     if (stack.rack !== undefined && state.stacks.some(peer => peer !== stack && peer?.areaId === stack.areaId && peer?.rack === stack.rack)) errors.push(`${stack.id}: regal ${stack.rack} je već na karti.`);
     if (!Array.isArray(stack.tireIds)) { errors.push(`${stack.id} nema poredak guma.`); continue; }
@@ -288,6 +289,7 @@ export function moveStack(state, stackId, { areaId, x, z } = {}) {
   assertState(state);
   const stack = requireStack(state, stackId);
   const destination = areaId ?? stack.areaId;
+  if (stack.rack && state.stacks.some(peer => peer.id !== stackId && peer.areaId === destination && peer.rack === stack.rack)) throw new Error(`Regal ${stack.rack} je već na karti.`);
   const placement = canPlace(state, destination, x, z, stack.radius, stackId);
   if (!placement.valid) throw new Error(placement.reason);
   return committed(state, { stacks: state.stacks.map(item => item.id === stackId ?
@@ -374,6 +376,13 @@ export function markAreaShared(state, areaId, remoteId) {
   return committed(state, { areas: areas.map(area => area.id === areaId ? { ...area, remoteId } : area) }, 'area-shared', { areaId });
 }
 
+export function markStackShared(state, stackId, remotePositionId) {
+  assertState(state);
+  requireStack(state, stackId);
+  if (typeof remotePositionId !== 'string' || !remotePositionId) throw new Error('Položaj nije potvrđen.');
+  return committed(state, { stacks: state.stacks.map(stack => stack.id === stackId ? { ...stack, remotePositionId } : stack) }, 'stack-shared', { stackId });
+}
+
 /** Shared layout is the source of truth for shared areas and their rack positions.
  * remote = { areas:[{id,zone,name,width,depth,unit}], positions:[{area_id,rack,x,z,capacity}] }.
  * Local areas without a remoteId are kept as "this device only" (offered for upload).
@@ -405,12 +414,15 @@ export function mergeRemoteLayout(state, remote) {
     const rack = locationKey(row?.rack);
     const x = Number(row?.x), z = Number(row?.z), capacity = Number(row?.capacity ?? DEFAULT_CAPACITY);
     if (!areaId || locationKeyProblem(rack) || ![x, z].every(Number.isFinite) || !Number.isInteger(capacity) || capacity < 1 || capacity > MAX_CAPACITY) continue;
-    const existing = stacks.find(s => s.rack === rack && (s.areaId === areaId || s.id === `${areaId}-${rack}`));
+    const remotePositionId = row.id == null ? undefined : String(row.id);
+    const existing = stacks.find(s => remotePositionId && s.remotePositionId === remotePositionId)
+      || stacks.find(s => s.rack === rack && s.areaId === areaId);
     if (existing) {
+      if (remotePositionId) existing.remotePositionId = remotePositionId;
       if (existing.tireIds.length <= capacity) Object.assign(existing, { areaId, x, z, capacity });
       else Object.assign(existing, { areaId, x, z });
     } else if (!stacks.some(s => s.id === `${areaId}-${rack}`)) {
-      stacks.push({ id: `${areaId}-${rack}`, areaId, x, z, radius: DEFAULT_RADIUS, capacity, tireIds: [], rack });
+      stacks.push({ id: `${areaId}-${rack}`, areaId, x, z, radius: DEFAULT_RADIUS, capacity, tireIds: [], rack, ...(remotePositionId ? { remotePositionId } : {}) });
     }
   }
   const candidate = { ...state, areas, stacks };
@@ -419,5 +431,8 @@ export function mergeRemoteLayout(state, remote) {
   }
   const changed = JSON.stringify({ a: state.areas || [], s: state.stacks }) !== JSON.stringify({ a: areas, s: stacks });
   const next = changed ? committed(state, { areas, stacks }, 'layout-synced', {}) : state;
-  return { state: next, changed, localOnly: keptLocal.filter(a => !a.remoteId).map(a => a.id) };
+  // An interrupted upload can leave an area shared but some of its racks local.
+  // Keep offering those racks for retry; do not silently mark the upload complete.
+  const localOnly = areas.filter(a => !a.remoteId || stacks.some(s => s.areaId === a.id && s.rack && !s.remotePositionId)).map(a => a.id);
+  return { state: next, changed, localOnly };
 }

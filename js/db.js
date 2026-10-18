@@ -923,10 +923,11 @@ export const WAREHOUSE_EDIT_ROLES = ["admin", "manager", "employee", "reception"
 export function canEditWarehouse(role) { return WAREHOUSE_EDIT_ROLES.includes(role); }
 
 export async function listWarehouseLayout() {
-  const areas = await supabase.from("warehouse_areas").select("id, warehouse, zone, name, width, depth, unit, updated_at");
+  const areas = await supabase.from("warehouse_areas").select("id, warehouse, zone, name, width, depth, unit, updated_at").eq("warehouse", "main");
   if (relationMissing(areas.error)) return { available: false, areas: [], positions: [] };
   if (areas.error) throw fail(areas.error, "load warehouse areas");
-  const positions = await supabase.from("warehouse_rack_positions").select("id, area_id, rack, x, z, capacity, updated_at");
+  if (!areas.data?.length) return { available: true, areas: [], positions: [] };
+  const positions = await supabase.from("warehouse_rack_positions").select("id, area_id, rack, x, z, capacity, updated_at").in("area_id", areas.data.map(area => area.id));
   if (relationMissing(positions.error)) return { available: false, areas: [], positions: [] };
   if (positions.error) throw fail(positions.error, "load rack positions");
   return { available: true, areas: areas.data ?? [], positions: positions.data ?? [] };
@@ -940,7 +941,7 @@ export async function createWarehouseArea({ zone, name, width, depth, unit, ware
 }
 
 export async function deleteWarehouseArea(id) {
-  const { error } = await supabase.from("warehouse_areas").delete().eq("id", id);
+  const { error } = await supabase.from("warehouse_areas").delete().eq("id", id).select("id").single();
   if (error) throw fail(error, "remove warehouse area");
 }
 
@@ -952,7 +953,8 @@ export async function saveRackPosition({ area_id, rack, x, z, capacity }) {
 }
 
 export async function moveRackPosition({ from_area_id, to_area_id, rack, x, z }) {
-  const { error } = await supabase.from("warehouse_rack_positions")
-    .update({ area_id: to_area_id, x, z }).eq("area_id", from_area_id).eq("rack", rack);
+  const { data, error } = await supabase.from("warehouse_rack_positions")
+    .update({ area_id: to_area_id, x, z }).eq("area_id", from_area_id).eq("rack", rack).select("id").single();
   if (error) throw fail(error, "move rack position");
+  return data;
 }

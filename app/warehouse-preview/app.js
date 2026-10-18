@@ -2,7 +2,7 @@ import { renderAppNavigation, applyNavAccess, syncThemeButton } from '../navigat
 import { saveOperation, LocalSaveError } from './persistence.js';
 import { parseCroatianIntent, searchLocations, customerLabel } from './journey.js';
 import { createTour } from './tour.js';
-import { AREAS, syncAreas, createArea, removeArea, markAreaShared, mergeRemoteLayout, normalizeRack, emptyState, validateState, canPlace, createStack, moveStack, setCapacity, addTire, removeTire, stats } from './model.js';
+import { AREAS, syncAreas, createArea, removeArea, markAreaShared, markStackShared, mergeRemoteLayout, normalizeRack, emptyState, validateState, canPlace, createStack, moveStack, setCapacity, addTire, removeTire, stats } from './model.js';
 import { pinForSet, locationKey } from '../../js/mapPin.js';
 import { t as T } from '../../js/i18n.js';
 import { loadMyProfile, canEditWarehouse } from '../../js/db.js';
@@ -56,15 +56,16 @@ const selectedStack = () => state.stacks.find(s=>s.id===selectedId);
 const area = () => AREAS.find(a=>a.id===areaId);
 function toast(message){clearTimeout(toastTimer);$('toast').textContent=message;$('toast').hidden=false;toastTimer=setTimeout(()=>$('toast').hidden=true,4200);}
 function storeView(){try{localStorage.setItem(VIEW_KEY,JSON.stringify({areaId}));}catch{}}
-let saving=false;
+let saving=false, sharedWriting=false;
 let shared={available:false,localOnly:[]};
 const SHARE_ERR=e=>T('map.sharedFailed',{msg:e?.message||'—'});
-async function commit(operation,message,{recover=false,silent=false}={}){
+async function commit(operation,message,{recover=false,silent=false,readOnlySync=false,sharedSaved=false}={}){
  if(disposed||!isActive())return false;
+ if(!canEdit&&!readOnlySync){toast(T('map.readOnly'));return false;}
  if(saving){toast('Spremanje je u tijeku.');return false;}saving=true;
  try{
   const next=await saveOperation({key:KEY,storage:localStorage,locks:navigator.locks,expected:state,operation:current=>{if(disposed||!isActive())throw new LocalSaveError('Prikaz je zaustavljen. Promjena nije spremljena.');return operation(current);},recover});
-  state=next;storageAvailable=true;storageProblem=false;rawProblem=null;render();$('save-status').textContent=shared.available?T('map.savedShared'):T('map.savedLocal');if(!silent)toast(message);return true;
+  state=next;storageAvailable=true;storageProblem=false;rawProblem=null;render();$('save-status').textContent=sharedSaved?T('map.savedShared'):T('map.savedLocal');if(!silent)toast(message);return true;
  }catch(e){
   if(e.latest){state=e.latest;render();}
   $('save-status').textContent='Promjena nije spremljena';toast(e instanceof LocalSaveError?e.message:'Spremanje nije dostupno. Promjena nije spremljena.');return false;
@@ -118,13 +119,14 @@ function renderInspectorBase(){
  <div class="inspector-actions"><button id="add-tyre" class="button primary" ${occupied>=stack.capacity?'disabled':''}>${icon('plus',15)}Dodaj gumu</button><button id="focus-stack" class="button quiet">Približi</button></div>
  <details id="stack-tools" class="compact-details" ${editOpen?'open':''}><summary>Uredi stupac</summary><div class="disclosure-body"><div class="secondary-actions"><button id="move-stack" class="button quiet">Premjesti stupac</button><button id="remove-top" class="button quiet danger" ${occupied===0?'disabled':''}>Ukloni gornju gumu</button></div><label class="capacity-field">Kapacitet<input type="number" id="capacity-input" min="1" max="16" value="${stack.capacity}" aria-label="Kapacitet stupca"></label><p class="inspector-note">${esc(T(AREAS.find(a=>a.id===stack.areaId)?.unit==='m'?'map.posMetres':'map.posGrid',{x:stack.x.toFixed(2),z:stack.z.toFixed(2)}))}</p></div></details>`;
  $('close-inspector').onclick=()=>{selectedId=null;render();$('search').focus();};$('add-tyre').onclick=showAddTyre;$('move-stack').onclick=()=>beginPlacement('move');$('focus-stack').onclick=()=>viewer?.focusStack(stack.id);$('remove-top').onclick=()=>showRemoveTyre(stack.tireIds.at(-1));
- $('capacity-input').onchange=async e=>{const value=Number(e.target.value);if(!await commit(s=>setCapacity(s,stack.id,value),'Kapacitet je spremljen'))e.target.value=stack.capacity;};
+ $('capacity-input').onchange=async e=>{const value=Number(e.target.value);if(!await commitStack(s=>setCapacity(s,stack.id,value),stack.id,'Kapacitet je spremljen'))e.target.value=stack.capacity;};
  inspector.querySelectorAll('[data-tyre]').forEach(b=>b.onclick=()=>showTyre(b.dataset.tyre,true));
- const tools=$('stack-tools');if(tools)tools.hidden=!canEdit;
+ const tools=$('stack-tools');if(tools)tools.hidden=!canEdit;$('add-tyre').hidden=!canEdit;
  if(openTyre){showTyre(openTyre);if($('tyre-qr'))$('tyre-qr').open=qrOpen;}
  if(focusId&&canFocus($(focusId)))$(focusId).focus({preventScroll:true});
 }
 function beginPlacement(type='place'){
+ if(!canEdit)return;
  if(areaId==='all'){if(!AREAS.length){toast('Najprije dodajte prostor.');return;}changeArea(AREAS[0].id);}const stack=selectedStack();if(type==='move'&&!stack)return;
  placing={type,stackId:stack?.id,fromAreaId:stack?.areaId,point:null,capacity:type==='move'?stack.capacity:8};if($('place-rack'))$('place-rack').value='';if(type!=='move')void loadLiveSeats().then(()=>{if(placing)renderPlacement();});viewer?.setMode(type);viewer?.setPlacementPreview(null);renderInspector();renderLocation();renderPlacement();
  toast(type==='move'?'Odaberite novi položaj. Možete promijeniti skladište prije spremanja.':'Dodirnite slobodno mjesto na podu.');
@@ -141,7 +143,7 @@ function liveZoneKeys(){return Array.isArray(liveSeats)?new Set(liveSeats.map(r=
 function liveRackKeys(zone){return Array.isArray(liveSeats)?new Set(liveSeats.filter(r=>locationKey(r?.zone)===locationKey(zone)).map(r=>locationKey(r?.rack)).filter(Boolean)):null;}
 function zoneOptions(){const keys=liveZoneKeys();return keys?[...keys].filter(z=>!AREAS.some(a=>a.id===z)).sort():[];}
 function rackOptions(zone){const keys=liveRackKeys(zone);if(!keys)return [];const used=new Set(state.stacks.filter(s=>s.areaId===zone&&s.rack).map(s=>s.rack));return [...keys].filter(r=>!used.has(r)).sort();}
-async function loadLiveSeats(){try{const db=await import('../../js/db.js');const rows=await db.listLocationSeats?.();if(!disposed&&Array.isArray(rows))liveSeats=rows;}catch{}}
+async function loadLiveSeats(){try{const db=await import('../../js/db.js');const rows=await db.listLocationSeats?.();if(!disposed&&Array.isArray(rows))liveSeats=rows.filter(r=>(r.warehouse||'main')==='main');}catch{}}
 function showAddArea(){
  const zones=zoneOptions();
  openDialog(esc(T('map.addArea')),`<form id="area-form" class="area-form" novalidate><p class="dialog-intro">${esc(T('map.areaIntro'))}</p>
@@ -155,38 +157,66 @@ function showAddArea(){
   const fail=msg=>{$('area-error').hidden=false;$('area-error').textContent=msg;};
   if(!canEdit){fail(T('map.readOnly'));return;}
   let preview;try{preview=createArea(state,draft);}catch(err){fail(err.message);return;}
-  const made=preview.areas.at(-1);const zones=liveZoneKeys();
-  if(zones&&!zones.has(made.id)){fail(T('map.zoneNotInLocations',{zone:made.id}));return;}
+  const made=preview.areas.at(-1);await loadLiveSeats();const zones=liveZoneKeys();
+  if(!zones){fail(T('map.locationsUnavailable'));return;}
+  if(!zones.has(made.id)){fail(T('map.zoneNotInLocations',{zone:made.id}));return;}
   let remoteId=null;
   if(shared.available){try{remoteId=(await db().then(m=>m.createWarehouseArea({zone:made.id,name:made.name,width:made.width,depth:made.depth,unit:made.unit})))?.id||null;}catch(err){fail(SHARE_ERR(err));return;}}
-  const ok=await commit(s=>{const n=createArea(s,draft);return remoteId?markAreaShared(n,made.id,String(remoteId)):n;},T('map.areaAdded'));if(ok){closeDialog();changeArea(made.id);}};
+  const ok=await commit(s=>{const n=createArea(s,draft);return remoteId?markAreaShared(n,made.id,String(remoteId)):n;},T('map.areaAdded'),{sharedSaved:Boolean(remoteId)});if(ok){closeDialog();changeArea(made.id);}};
 }
 $('remove-area-button').onclick=()=>{const a=area();if(!a||!canEdit)return;
  openDialog(esc(T('map.removeTitle')),`<p class="dialog-intro">${esc(T('map.removeBody',{zone:a.id}))}</p><p id="remove-error" class="dialog-error" role="alert" hidden></p><div class="secondary-actions"><button id="remove-area-cancel" class="button quiet" type="button">${esc(T('map.cancel'))}</button><button id="remove-area-confirm" class="button primary danger" type="button">${esc(T('map.remove'))}</button></div>`);
  $('remove-area-cancel').onclick=closeDialog;
  $('remove-area-confirm').onclick=async()=>{try{removeArea(state,a.id);}catch(err){$('remove-error').hidden=false;$('remove-error').textContent=err.message;return;}
-  if(a.remoteId&&shared.available){try{await db().then(m=>m.deleteWarehouseArea(a.remoteId));}catch(err){$('remove-error').hidden=false;$('remove-error').textContent=SHARE_ERR(err);return;}}
-  const ok=await commit(s=>removeArea(s,a.id),T('map.areaRemoved'));if(ok){closeDialog();changeArea('all');}};};
+  if(a.remoteId&&!shared.available){$('remove-error').hidden=false;$('remove-error').textContent=T('map.sharedUnavailable');return;}
+  if(a.remoteId){try{await db().then(m=>m.deleteWarehouseArea(a.remoteId));}catch(err){$('remove-error').hidden=false;$('remove-error').textContent=SHARE_ERR(err);return;}}
+  const ok=await commit(s=>removeArea(s,a.id),T('map.areaRemoved'),{sharedSaved:Boolean(a.remoteId)});if(ok){closeDialog();changeArea('all');}};};
 const db=()=>import('../../js/db.js');
 let syncing=false;
 async function syncShared(){
- if(disposed||syncing)return;syncing=true;
+ if(disposed||syncing||sharedWriting||saving)return;syncing=true;
  try{const m=await db();if(!m.listWarehouseLayout)return;const remote=await m.listWarehouseLayout();if(disposed)return;
   shared.available=Boolean(remote?.available);
   if(!shared.available){shared.localOnly=[];render();return;}
   if(rawProblem){render();return;} // never overwrite an unreadable saved map
   let result=mergeRemoteLayout(state,remote);
-  if(result.changed){await commit(s=>{const r=mergeRemoteLayout(s,remote);result=r;if(!r.changed)throw new LocalSaveError('—');return r.state;},'',{silent:true});}
+  if(result.changed){await commit(s=>{const r=mergeRemoteLayout(s,remote);result=r;if(!r.changed)throw new LocalSaveError('—');return r.state;},'',{silent:true,readOnlySync:true,sharedSaved:true});}
   shared.localOnly=result.localOnly;if(result.rejected)toast(SHARE_ERR({message:'layout'}));render();if(placing)renderPlacement();
- }catch{}finally{syncing=false;}
+ }catch{shared.available=false;render();}finally{syncing=false;}
 }
 async function uploadLayout(){
- if(!canEdit||!shared.available)return;const m=await db();let n=0;
- for(const id of [...shared.localOnly]){const a=state.areas.find(x=>x.id===id);if(!a||a.remoteId)continue;
-  try{const row=await m.createWarehouseArea({zone:a.id,name:a.name,width:a.width,depth:a.depth,unit:a.unit});
-   for(const st of state.stacks.filter(x=>x.areaId===a.id&&x.rack))await m.saveRackPosition({area_id:row.id,rack:st.rack,x:st.x,z:st.z,capacity:st.capacity});
-   await commit(s=>markAreaShared(s,a.id,String(row.id)),'',{silent:true});n++;}catch(err){toast(SHARE_ERR(err));break;}}
+ if(!canEdit||!shared.available||sharedWriting)return;sharedWriting=true;const m=await db();let n=0;
+ try{for(const id of [...shared.localOnly]){let a=state.areas.find(x=>x.id===id);if(!a)continue;
+  try{await loadLiveSeats();const zones=liveZoneKeys();if(!zones)throw Error(T('map.locationsUnavailable'));
+   if(!zones.has(a.id))throw Error(T('map.zoneNotInLocations',{zone:a.id}));
+   if(!a.remoteId){const row=await m.createWarehouseArea({zone:a.id,name:a.name,width:a.width,depth:a.depth,unit:a.unit});
+    if(!await commit(s=>markAreaShared(s,a.id,String(row.id)),'',{silent:true}))break;
+    a=state.areas.find(x=>x.id===id);}
+   for(const st of state.stacks.filter(x=>x.areaId===a.id&&x.rack&&!x.remotePositionId)){
+    if(!liveRackKeys(a.id)?.has(st.rack))throw Error(T('map.rackNotInLocations',{rack:st.rack,zone:a.id}));
+    const row=await m.saveRackPosition({area_id:a.remoteId,rack:st.rack,x:st.x,z:st.z,capacity:st.capacity});
+    if(!await commit(s=>markStackShared(s,st.id,String(row.id)),'',{silent:true,sharedSaved:true}))throw Error(T('map.sharedUnavailable'));}
+   n++;}catch(err){toast(SHARE_ERR(err));break;}}
+ }finally{sharedWriting=false;}
  if(n)toast(T('map.uploadDone',{n}));await syncShared();
+}
+// Shared geometry is acknowledged only after the backend confirms the row.
+// Local inventory remains local; a failed remote write leaves the cache intact.
+async function commitStack(operation,stackId,message){
+ if(disposed||!isActive()||!canEdit||sharedWriting)return false;sharedWriting=true;
+ try{const next=operation(state);const st=next.stacks.find(x=>x.id===stackId)||next.stacks.at(-1);
+  const dest=next.areas.find(a=>a.id===st.areaId),old=state.stacks.find(x=>x.id===st.id),from=state.areas.find(a=>a.id===old?.areaId);
+  let remotePositionId=null;
+  if(st.rack&&(dest.remoteId||from?.remoteId)){
+   if(!shared.available||!dest.remoteId)throw Error(T('map.sharedUnavailable'));
+   const m=await db();const row=from?.remoteId&&from.remoteId!==dest.remoteId
+    ? await m.moveRackPosition({from_area_id:from.remoteId,to_area_id:dest.remoteId,rack:st.rack,x:st.x,z:st.z})
+    : await m.saveRackPosition({area_id:dest.remoteId,rack:st.rack,x:st.x,z:st.z,capacity:st.capacity});
+   if(!row?.id)throw Error(T('map.sharedUnavailable'));remotePositionId=String(row.id);
+  }
+  return await commit(s=>{const n=operation(s);return remotePositionId?markStackShared(n,st.id,remotePositionId):n;},message,{sharedSaved:Boolean(remotePositionId)});
+ }catch(err){toast(SHARE_ERR(err));$('save-status').textContent=T('map.sharedUnavailable');return false;}
+ finally{sharedWriting=false;}
 }
 $('upload-layout').onclick=()=>void uploadLayout();
 $('download-raw').onclick=()=>{if(rawProblem!=null)download('ASC_spremljena_karta.json',rawProblem,'application/json');};
@@ -196,16 +226,13 @@ const syncTimer=setInterval(()=>{if(!document.hidden)void syncShared();},30000);
 for(const id of ['add-area-button','add-area-empty'])$(id).onclick=()=>{void loadLiveSeats().then(()=>{if($('dialog').open&&$('zone-options'))$('zone-options').innerHTML=zoneOptions().map(z=>`<option value="${esc(z)}"></option>`).join('');});showAddArea();};
 $('place-button').onclick=()=>beginPlacement();$('cancel-placement').onclick=endPlacement;$('place-capacity').onchange=e=>{if(placing)placing.capacity=Number(e.target.value);};
 for(const id of ['place-x','place-z'])$(id).onchange=()=>{if(placing)floorPick({x:Number($('place-x').value),z:Number($('place-z').value)});};
-$('confirm-placement').onclick=async()=>{if(!placing?.point||!canEdit)return;const draft={...placing,areaId,rack:$('place-rack')?.value||''};let newId;
- if(draft.type!=='move'&&draft.rack){const racks=liveRackKeys(areaId);if(racks&&!racks.has(locationKey(draft.rack))){$('placement-hint').textContent=T('map.rackNotInLocations',{rack:locationKey(draft.rack),zone:areaId});toast($('placement-hint').textContent);return;}}
- const ok=await commit(s=>{const n=draft.type==='move'?moveStack(s,draft.stackId,{areaId:draft.areaId,...draft.point}):createStack(s,{areaId:draft.areaId,...draft.point,capacity:draft.capacity,rack:draft.rack});newId=draft.type==='move'?draft.stackId:n.stacks.at(-1).id;return n;},draft.type==='move'?'Položaj je spremljen':'Stupac je dodan');
- if(ok){endPlacement();selectStack(newId);
-  const st=state.stacks.find(x=>x.id===newId),dest=state.areas?.find(a=>a.id===st?.areaId);
-  if(st?.rack&&dest?.remoteId&&shared.available){try{const m=await db();
-   const from=draft.type==='move'?state.areas.find(a=>a.id===draft.fromAreaId):null;
-   if(from?.remoteId&&from.remoteId!==dest.remoteId)await m.moveRackPosition({from_area_id:from.remoteId,to_area_id:dest.remoteId,rack:st.rack,x:st.x,z:st.z});
-   else await m.saveRackPosition({area_id:dest.remoteId,rack:st.rack,x:st.x,z:st.z,capacity:st.capacity});
-  }catch(err){toast(SHARE_ERR(err));}}}
+$('confirm-placement').onclick=async()=>{if(!placing?.point||!canEdit||sharedWriting)return;const draft={...placing,areaId,rack:$('place-rack')?.value||''};let newId;
+ const rack=draft.type==='move'?state.stacks.find(s=>s.id===draft.stackId)?.rack:draft.rack;
+ if(rack){await loadLiveSeats();const racks=liveRackKeys(draft.areaId);
+  if(!racks||!racks.has(locationKey(rack))){$('placement-hint').textContent=!racks?T('map.locationsUnavailable'):T('map.rackNotInLocations',{rack:locationKey(rack),zone:draft.areaId});toast($('placement-hint').textContent);return;}}
+ const operation=s=>{const n=draft.type==='move'?moveStack(s,draft.stackId,{areaId:draft.areaId,...draft.point}):createStack(s,{areaId:draft.areaId,...draft.point,capacity:draft.capacity,rack:draft.rack});newId=draft.type==='move'?draft.stackId:n.stacks.at(-1).id;return n;};
+ const ok=await commitStack(operation,draft.type==='move'?draft.stackId:null,draft.type==='move'?'Položaj je spremljen':'Stupac je dodan');
+ if(ok){endPlacement();selectStack(newId);}
 };
 
 function renderPlan(){
@@ -424,15 +451,18 @@ function navigateToLocation({zone,rack}){
  return true;
 }
 async function highlightLiveQuery(){
+ if(disposed||!isActive())return;
  const params=new URLSearchParams(location.search);
  const setCode=params.get('set'), slot=params.get('slot'), zoneParam=params.get('zone'), rackParam=params.get('rack');
  if(!setCode&&!slot&&zoneParam){navigateToLocation({zone:zoneParam,rack:rackParam});return;}
  if(!setCode&&!slot)return;
  try{
   const db=await import('../../js/db.js');
+  if(disposed||!isActive())return;
   let row=null;
   if(setCode&&db.loadStorageSet)row=await db.loadStorageSet(setCode);
   else if(slot&&db.findLocationByQr)row=await db.findLocationByQr(slot);
+  if(disposed||!isActive())return;
   if(!row){toast('Komplet nije pronađen.');return;}
   const pin=pinForSet(row,state.stacks,AREAS.map(a=>a.id));
   if(!pin.stackId){toast(`${row.public_code||setCode||slot}${pin.where?' · '+pin.where:''} · još nije na karti`);return;}
@@ -441,7 +471,7 @@ async function highlightLiveQuery(){
   if(pin.stackId&&state.stacks.some(s=>s.id===pin.stackId))selectedId=pin.stackId;
   render();
   if(selectedId)viewer?.focusStack(selectedId);
- }catch{toast('Položaj nije učitan.');}
+ }catch{if(!disposed&&isActive())toast('Položaj nije učitan.');}
 }
 void ensureScene().then(()=>highlightLiveQuery());
 const deepCode=new URLSearchParams(location.hash.slice(1)).get('tyre');if(deepCode)resolveCode(deepCode);
