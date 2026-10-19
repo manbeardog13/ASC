@@ -16,7 +16,9 @@ export function pinForSet(row, stacks = [], areaIds = []) {
     const candidates = [`${areaId}-${rack}`, rack];
     if (numbered) candidates.push(`${areaId}-S${String(Number(numbered[1])).padStart(3, "0")}`);
     const stack = list.find((item) => item?.areaId === areaId && candidates.includes(String(item.id).toUpperCase()));
-    if (stack) { stackId = stack.id; approx = false; }
+    // A matching label selects the schematic stack, but the map is not a
+    // surveyed position, so the pin stays approximate (main, 80239fa).
+    if (stack) { stackId = stack.id; approx = true; }
   }
   const where = [row?.zone, row?.rack, row?.shelf, row?.slot].filter((part) => part != null && part !== "").join(" · ");
   return {
