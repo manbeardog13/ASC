@@ -6,7 +6,7 @@
 // rows only appear once real data lands. Every DB write completes BEFORE the
 // row leaves the DOM; a failure keeps the row and warns in the console.
 // ============================================================================
-import { getSession, listRecycleBin, restoreSet, purgeSetPermanently } from '../js/db.js';
+import { getSession, listRecycleBin, restoreSet, restoreSetUnplaced, purgeSetPermanently } from '../js/db.js';
 
 const SEASON_LABEL = { winter: 'Zimske', summer: 'Ljetne', all_season: 'Cjelogodišnje' };
 const SEASON_CLASS = { winter: 'win', summer: '', all_season: 'all' };
@@ -85,13 +85,43 @@ function removeRow(row, msg) {
   showToast(msg);
 }
 
+function offerUnplacedRestore(row) {
+  if (row.querySelector('.rec-recovery')) return;
+  const recovery = document.createElement('div');
+  recovery.className = 'rec-recovery';
+  const explanation = document.createElement('p');
+  explanation.className = 'rec-when';
+  explanation.textContent = 'Prethodno mjesto nije dostupno. Vratite komplet bez lokacije pa odaberite novo mjesto.';
+  const action = document.createElement('button');
+  action.type = 'button';
+  action.className = 'rbtn';
+  action.dataset.restoreUnplaced = '';
+  action.textContent = 'Vrati bez mjesta';
+  recovery.append(explanation, action);
+  row.querySelector('.rec-body').append(recovery);
+}
+
 // ---- Actions: DB first, DOM second — a failed call keeps the row ------------
 list?.addEventListener('click', async (e) => {
   const restore = e.target.closest('[data-restore]');
   const purge = e.target.closest('[data-purge]');
-  if (!restore && !purge) return;
-  const row = (restore || purge).closest('.rec-row');
+  const unplaced = e.target.closest('[data-restore-unplaced]');
+  if (!restore && !purge && !unplaced) return;
+  const row = (restore || purge || unplaced).closest('.rec-row');
   if (!row || row.dataset.busy) return;
+
+  if (unplaced) {
+    if (!window.confirm('Vratiti komplet ' + row.dataset.code + ' bez prethodne lokacije i odabrati novo mjesto?')) return;
+    row.dataset.busy = '1'; unplaced.disabled = true;
+    try {
+      await restoreSetUnplaced(row.dataset.id);
+      location.href = 'place.html?set=' + encodeURIComponent(row.dataset.code);
+    } catch (err) {
+      delete row.dataset.busy; unplaced.disabled = false;
+      showToast(err?.message || 'Vraćanje nije uspjelo');
+    }
+    return;
+  }
 
   if (restore) {
     row.dataset.busy = '1'; restore.disabled = true;
@@ -101,7 +131,8 @@ list?.addEventListener('click', async (e) => {
     } catch (err) {
       console.warn('[live] restore failed:', err);
       delete row.dataset.busy; restore.disabled = false;
-      showToast('Vraćanje nije uspjelo');
+      showToast(err?.message || 'Vraćanje nije uspjelo');
+      if (/already holds|blocked|already exists/i.test(err?.message || '')) offerUnplacedRestore(row);
     }
     return;
   }

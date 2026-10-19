@@ -804,7 +804,9 @@ html.sticker-lock, html.sticker-lock body{ overflow:hidden }
 .rp-prose{font:400 9.5px/1.4 Inter;color:#333;padding:4px 0}
 /* signatures + footer pinned to the page bottom via the flex spacer */
 .rp-spacer{flex:1}
-.rp-sign{display:grid;grid-template-columns:1fr 1fr;column-gap:48px;margin-top:40px}
+.rp-sign{display:grid;grid-template-columns:1fr 1fr;column-gap:48px;margin-top:40px;align-items:end}
+.rp-clause{font:400 9px/1.4 Inter;color:#555;padding:4px 0 0}
+.rp-sig-ack{font:400 8.5px/1.4 Inter;color:#333;margin-bottom:28px}
 .rp-sig{border-top:1px solid #111;padding-top:5px}
 .rp-sig-cap{font:500 9px Inter;color:#555}
 .rp-sig-date{font:500 8px Inter;color:#888;margin-top:3px}

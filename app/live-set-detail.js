@@ -268,7 +268,7 @@ function guard(btn, fn, failMsg) {
     try { await fn(); }
     catch (err) {
       console.warn('[live] action failed:', err);
-      alert(failMsg || 'Nije uspjelo. Pokušajte ponovno.');
+      alert(err?.message || failMsg || 'Nije uspjelo. Pokušajte ponovno.');
     }
     finally { btn.disabled = false; }
   };
@@ -301,10 +301,12 @@ function wire(s) {
   if (moveBtnEl) moveBtnEl.addEventListener('click', guard(moveBtnEl, async () => {
     const val = (id) => { const f = document.getElementById(id); return f ? f.value.trim() : ''; };
     const to = { zone: val('m_zone'), rack: val('m_rack'), shelf: val('m_shelf'), slot: val('m_slot') };
-    const occupant = await findSetAtLocation(to, s.id).catch(() => null);
-    if (occupant) { alert('Na toj lokaciji već je ' + occupant.public_code + '.'); return; }
-    await moveStorageSet(s, to);
-    s.zone = to.zone || null; s.rack = to.rack || null; s.shelf = to.shelf || null; s.slot = to.slot || null;
+    const result = await moveStorageSet(s, to);
+    const destination = result?.location;
+    if (destination) {
+      s.location_id = destination.id;
+      for (const key of ['zone', 'rack', 'shelf', 'slot']) s[key] = destination[key] || null;
+    }
     renderLocation(s);
     const area = document.getElementById('moveArea');
     if (area) area.hidden = true;

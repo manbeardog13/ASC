@@ -1,0 +1,20 @@
+import fs from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import path from 'node:path';
+import vm from 'node:vm';
+import assert from 'node:assert/strict';
+const root = process.env.ASC_TEST_ROOT || fileURLToPath(new URL('../', import.meta.url));
+const source=fs.readFileSync(path.join(root, 'app/live-checkin.js'),'utf8');
+const nodes=Object.fromEntries(['c_id','v_id','c_name','c_phone','c_email','c_address','v_make','v_model','v_year','v_plate'].map(id=>[id,{value:'',dataset:{}}]));
+const context=vm.createContext({hiddenId:id=>nodes[id],$:id=>nodes[id],editMode:false});
+for(const name of ['canonicalVehiclePlate','intakeVehicleId','rememberWho']) {const pattern=new RegExp('function '+name+'\\([^]*?\\n\\}');const body=source.match(pattern)?.[0];assert(body,name+' missing');vm.runInContext(body,context);}
+context.rememberWho({id:'customer-A',name:'Synthetic A'},{id:'vehicle-existing',plate:'ZG 1234 AB'});
+assert.equal(context.intakeVehicleId(),'vehicle-existing');
+nodes.v_plate.value='zg-1234-ab';assert.equal(context.intakeVehicleId(),'vehicle-existing');
+nodes.v_plate.value='ZG 9999 CD';assert.equal(context.intakeVehicleId(),null);assert.equal(nodes.c_id.value,'customer-A');
+context.rememberWho({id:'customer-A',name:'Synthetic A'},{id:'vehicle-existing',plate:'ZG 1234 AB'});
+context.editMode=true;nodes.v_plate.value='ZG 9999 CD';assert.equal(context.intakeVehicleId(),'vehicle-existing');
+context.editMode=false;context.rememberWho({id:'customer-A',name:'Synthetic A'},{id:'vehicle-empty',plate:''});nodes.v_plate.value='RI 1234 A';assert.equal(context.intakeVehicleId(),null);
+assert(source.includes('id: intakeVehicleId()'),'submit path must guard autofill/programmatic plate changes');
+assert(source.includes("addEventListener('input', intakeVehicleId)"),'typed plate change should detach old vehicle immediately');
+console.log('PASS same canonical plate retains existing vehicle; new plate detaches while keeping customer; intentional edit corrections remain; empty-plate selection guarded; submit/autofill path guarded.');

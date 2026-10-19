@@ -298,7 +298,7 @@ function closeMenu(){$('app-menu').hidden=true;$('menu-button').setAttribute('ar
 const mobileNav=matchMedia('(max-width:1020px)');
 let sidebarReturnFocus=null;
 function syncSidebar(){const open=document.documentElement.classList.contains('side-open');$('sidebar').inert=mobileNav.matches&&!open;const expanded=!mobileNav.matches||open;$('open-sidebar').setAttribute('aria-expanded',String(expanded));$('asc-menu-button').setAttribute('aria-expanded',String(expanded));$('main-content').inert=mobileNav.matches&&open;}
-function closeSidebar(){const wasOpen=document.documentElement.classList.contains('side-open');document.documentElement.classList.remove('side-open');syncSidebar();if(wasOpen){const target=canFocus(sidebarReturnFocus)?sidebarReturnFocus:$('asc-menu-button');target.focus({preventScroll:true});}}
+function closeSidebar(){const wasOpen=document.documentElement.classList.contains('side-open');document.documentElement.classList.remove('side-open');syncSidebar();if(wasOpen){const target=[sidebarReturnFocus,$('open-sidebar'),$('asc-menu-button')].find(canFocus);target?.focus({preventScroll:true});}}
 function openSidebar(event){sidebarReturnFocus=event.currentTarget;closeMenu();document.documentElement.classList.add('side-open');syncSidebar();$('sidebar').querySelector('#asc-navigation a')?.focus({preventScroll:true});}
 $('open-sidebar').onclick=openSidebar;$('asc-menu-button').onclick=openSidebar;
 $('close-sidebar').onclick=closeSidebar;$('side-scrim').onclick=closeSidebar;
@@ -335,18 +335,21 @@ function stopVoice(){
 const runtime={
  pause(){stopScanner();const status=$('scan-status');if(status)status.textContent='Skeniranje je zaustavljeno. Otvorite kameru ili odaberite fotografiju.';stopVoice();tour?.pause();viewer?.pause();if($('dialog').open){pausedDialog=true;$('dialog').close();}},
  resume(){if(disposed||!isActive())return;tour?.resume();if(pausedDialog){pausedDialog=false;$('dialog').showModal();}if(viewer)viewer.resume();else void ensureScene();},
- dispose(){if(disposed)return;disposed=true;pausedDialog=false;if($('dialog').open)$('dialog').close();stopScanner();stopVoice();clearTimeout(toastTimer);tour?.dispose();for(const remove of listeners)remove();listeners.length=0;viewer?.dispose();viewer=null;}
+ dispose(){if(disposed)return;exitFs();disposed=true;pausedDialog=false;if($('dialog').open)$('dialog').close();stopScanner();stopVoice();clearTimeout(toastTimer);tour?.dispose();for(const remove of listeners)remove();listeners.length=0;viewer?.dispose();viewer=null;}
 };
 registerRuntime(runtime);render();
 async function highlightLiveQuery(){
+ if(disposed||!isActive())return;
  const params=new URLSearchParams(location.search);
  const setCode=params.get('set'), slot=params.get('slot');
  if(!setCode&&!slot)return;
  try{
   const db=await import('../../js/db.js');
+  if(disposed||!isActive())return;
   let row=null;
   if(setCode&&db.loadStorageSet)row=await db.loadStorageSet(setCode);
   else if(slot&&db.findLocationByQr)row=await db.findLocationByQr(slot);
+  if(disposed||!isActive())return;
   if(!row){toast('Komplet nije pronađen.');return;}
   const pin=pinForSet(row,state.stacks,AREAS.map(a=>a.id));
   if(!pin.stackId){toast(`${row.public_code||setCode||slot}${pin.where?' · '+pin.where:''} · još nije na karti`);return;}
@@ -355,7 +358,7 @@ async function highlightLiveQuery(){
   if(pin.stackId&&state.stacks.some(s=>s.id===pin.stackId))selectedId=pin.stackId;
   render();
   if(selectedId)viewer?.focusStack(selectedId);
- }catch{toast('Položaj nije učitan.');}
+ }catch{if(!disposed&&isActive())toast('Položaj nije učitan.');}
 }
 void ensureScene().then(()=>highlightLiveQuery());
 const deepCode=new URLSearchParams(location.hash.slice(1)).get('tyre');if(deepCode)resolveCode(deepCode);

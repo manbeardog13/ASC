@@ -71,6 +71,9 @@ function wantsLiveData(question) {
 export function answer(question) {
   const q = String(question || "").trim();
   if (!q || q.length > 500 || wantsLiveData(q)) return null;
+  // Only explain general procedures locally. Commands such as "zaprimi" or
+  // "otvori" must reach the assistant's actual action/tool path.
+  if (!/^(kako|kada|kad|što je|sto je|čime|cime|dolaze li za|ostaju li|mogu li gume|how|what is|when)\b/iu.test(q)) return null;
   let best = null;
   let bestScore = 0;
   let second = 0;

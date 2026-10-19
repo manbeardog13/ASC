@@ -108,6 +108,15 @@ function enterEditChrome() {
   if (codeLabel) codeLabel.textContent = 'KÔD SETA';
   const btn = q('#ci .btn-primary');
   if (btn && btn.lastChild && btn.lastChild.nodeType === 3) btn.lastChild.textContent = 'Spremi promjene';
+  const loc = $('locField');
+  if (loc) {
+    loc.hidden = true;
+    const move = document.createElement('a');
+    move.className = 'btn ghost';
+    move.href = 'place.html?set=' + encodeURIComponent(editCode);
+    move.textContent = 'Premjesti komplet';
+    loc.before(move);
+  }
 }
 
 // Fill the form from the loaded set WITHOUT overwriting anything the prefill
@@ -208,7 +217,7 @@ function readForm() {
       name: val('c_name'), phone: val('c_phone'), email: val('c_email'), address: val('c_address'),
     },
     vehicle: {
-      id: val('v_id') || null,
+      id: intakeVehicleId(),
       make: val('v_make'), model: val('v_model'), year,
       plate: val('v_plate').toUpperCase(), vin: null,
     },
@@ -275,12 +284,31 @@ function showWizard(step) {
   }
 }
 
+function canonicalVehiclePlate(value) {
+  return String(value || '').trim().toUpperCase().replace(/[\s-]+/g, '');
+}
+
+function intakeVehicleId() {
+  const selected = $('v_id');
+  if (!selected) return null;
+  // A different car in a new intake must not rename the vehicle shared by old
+  // sets. Edit mode continues to support intentional corrections to that car.
+  if (!editMode && selected.value
+      && selected.dataset.selectedPlate !== canonicalVehiclePlate($('v_plate')?.value)) {
+    selected.value = '';
+  }
+  return selected.value || null;
+}
+
 function rememberWho(customer, vehicle) {
   const cid = hiddenId('c_id');
   const vid = hiddenId('v_id');
   if (cid) cid.value = customer?.id || '';
-  if (vid) vid.value = vehicle?.id || '';
-  const fill = (id, value) => { const node = $(id); if (node && value != null && value !== '') node.value = value; };
+  if (vid) {
+    vid.value = vehicle?.id || '';
+    vid.dataset.selectedPlate = canonicalVehiclePlate(vehicle?.plate);
+  }
+  const fill = (id, value) => { const node = $(id); if (node) node.value = value == null ? '' : value; };
   fill('c_name', customer?.name);
   fill('c_phone', customer?.phone);
   fill('c_email', customer?.email);
@@ -429,6 +457,7 @@ function installWizard() {
   }
   form.before(steps);
   installWhoSearch();
+  $('v_plate')?.addEventListener('input', intakeVehicleId);
   showWizard(1);
 }
 installWizard();
@@ -498,7 +527,7 @@ if (form) form.addEventListener('submit', async (e) => {
         season: s.season, on_rims: s.on_rims,
         rim_type: s.on_rims ? s.rim_type || null : null,
         quantity: s.quantity,
-        zone: s.zone || null, rack: s.rack || null, shelf: s.shelf || null, slot: s.slot || null,
+        // Location changes go through the QR-backed placement workflow.
         expected_out_date: s.expected_out_date || null,
         fee: s.fee, paid: s.paid, notes: s.notes || null,
         bolts_location: s.bolts_location || null, hubcaps_location: s.hubcaps_location || null, hubcaps_stored: s.hubcaps_stored,

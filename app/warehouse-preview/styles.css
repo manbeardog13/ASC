@@ -227,9 +227,9 @@ html.stage-fs,html.stage-fs body{overflow:hidden}
 .spatial-app .spatial-stage.is-fs{position:fixed;inset:0;z-index:200;width:100vw;height:100dvh;max-height:none;min-height:0;margin:0;border-radius:0}
 .spatial-app .spatial-stage.is-fs:fullscreen{width:100%;height:100%}
 .spatial-app .is-fs .fs-enter,.spatial-app .is-fs .scene-notes{display:none}
-.spatial-app .is-fs .fs-exit{display:grid;place-items:center;position:absolute;z-index:6;top:calc(64px + env(safe-area-inset-top,0px));left:calc(12px + env(safe-area-inset-left,0px));
+.spatial-app .is-fs .fs-exit{display:grid;place-items:center;position:absolute;z-index:8;top:calc(64px + env(safe-area-inset-top,0px));left:calc(12px + env(safe-area-inset-left,0px));
   width:44px;height:44px;border-radius:14px;border:1px solid var(--line)!important;background:var(--panel)!important;color:var(--ink);font:500 24px/1 Inter,system-ui,sans-serif;cursor:pointer;box-shadow:var(--shadow-card)}
-.spatial-app .is-fs .fs-menu{display:grid;place-items:center;position:absolute;z-index:6;top:calc(12px + env(safe-area-inset-top,0px));left:calc(12px + env(safe-area-inset-left,0px));
+.spatial-app .is-fs .fs-menu{display:grid;place-items:center;position:absolute;z-index:8;top:calc(12px + env(safe-area-inset-top,0px));left:calc(12px + env(safe-area-inset-left,0px));
   width:44px;height:44px;border-radius:14px;border:1px solid var(--line)!important;background:var(--panel)!important;color:var(--ink);cursor:pointer;box-shadow:var(--shadow-card)}
 .spatial-app .fs-menu{display:none}
 .spatial-app .is-fs .stage-header{left:68px}

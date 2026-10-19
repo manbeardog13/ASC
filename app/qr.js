@@ -304,10 +304,12 @@
           rline('Status plaćanja', data.paid ? 'Plaćeno ✓' : 'Neplaćeno') +
           rline('Cijena čuvanja', data.fee, true, 'rp-total')) +
         rsec('Napomene', '', '<div class="rp-prose">' + (data.notes ? esc(data.notes) : '—') + '</div>') +
+        '<div class="rp-clause">Gume koje nisu preuzete u roku od godinu dana od isteka pohrane zbrinjavaju se ekološki, u skladu s propisima.</div>' +
         '<div class="rp-spacer"></div>' +
         '<div class="rp-sign">' +
           '<div class="rp-sig"><div class="rp-sig-cap">Potpis djelatnika (ASC)</div><div class="rp-sig-date">Datum: ____________</div></div>' +
-          '<div class="rp-sig"><div class="rp-sig-cap">Potpis kupca</div><div class="rp-sig-date">Datum: ____________</div></div>' +
+          '<div class="rp-sig-wrap"><div class="rp-sig-ack">Potpisom potvrđujem da sam upoznat/a s uvjetima pohrane i prihvaćam ih.</div>' +
+          '<div class="rp-sig"><div class="rp-sig-cap">Potpis kupca</div><div class="rp-sig-date">Datum: ____________</div></div></div>' +
         '</div>' +
         '<footer class="rp-foot"><span>Ova potvrda služi kao dokaz o pohrani guma. Komplet se izdaje uz predočenje potvrde.</span>' +
           '<span class="tab">' + esc(code) + '</span></footer>' +

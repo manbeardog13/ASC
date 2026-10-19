@@ -23,19 +23,22 @@ assert.equal(await page.evaluate(()=>['asc.warehouse.preview.v1','asc.warehouse.
 await page.locator('#view-plan').click();assert.equal(await page.locator('.plan-stack').count(),0);await page.locator('#view-3d').click();
 await page.screenshot({path:path.join(output,'empty-'+width+'.png'),fullPage:true});
 assert.equal(await page.evaluate(()=>history.length),initialHistory);
-await page.locator('#asc-menu-button').click();assert.equal(await page.locator('#asc-menu-button').getAttribute('aria-expanded'),'true');if(width<=1020)assert.equal(await page.locator('#main-content').evaluate(n=>n.inert),true);
+// The in-page '#asc-menu-button' strip is hidden since 71faff5 (declutter); the header burger is the visible opener on narrow screens, and the sidebar is always shown above 1020px.
+const mobile=width<=1020,opener='#open-sidebar';assert.equal(await page.locator('#asc-menu-button').isVisible(),false);assert.equal(await page.locator(opener).isVisible(),mobile);
+if(mobile)await page.locator(opener).click();assert.equal(await page.locator(opener).getAttribute('aria-expanded'),'true');if(mobile)assert.equal(await page.locator('#main-content').evaluate(n=>n.inert),true);
 await page.locator('#asc-navigation .sb-group > button').click();assert.equal(await page.locator('#asc-navigation .sb-group-kids').evaluate(n=>n.inert),true);
-await page.keyboard.press('Escape');assert.equal(await page.evaluate(()=>document.activeElement.id),'asc-menu-button');assert.equal(await page.locator('#asc-menu-button').getAttribute('aria-expanded'),width<=1020?'false':'true');
-await page.evaluate(()=>{document.activeElement.blur();document.getElementById('asc-menu-button').click();});
-await page.keyboard.press('Escape');assert.equal(await page.evaluate(()=>document.activeElement.id),'asc-menu-button');
-await page.locator('#asc-menu-button').click();
+await page.keyboard.press('Escape');assert.equal(await page.locator(opener).getAttribute('aria-expanded'),mobile?'false':'true');if(mobile)assert.equal(await page.evaluate(()=>document.activeElement.id),'open-sidebar');else assert.ok(await page.evaluate(()=>document.getElementById('sidebar').contains(document.activeElement)),'desktop Escape moved focus out of the sidebar');
+// Opened from the hidden strip (e.g. a stale script or assistive tech), Escape must still land focus on a visible opener, not the hidden button.
+if(mobile){await page.evaluate(()=>{document.activeElement.blur();document.getElementById('asc-menu-button').click();});
+await page.keyboard.press('Escape');assert.equal(await page.evaluate(()=>document.activeElement.id),'open-sidebar');
+await page.locator(opener).click();}
 await page.locator('#asc-navigation a[href$="customers.html"]').click();await page.waitForURL('**/customers.html');await page.waitForSelector('.side .sb-nav');
 await page.evaluate(()=>history.replaceState({unrelated:'preserved'},''));
 if(width<=1020)await page.locator('.top .sb-burger').click();await page.locator('.side .sb-group > button').click();await page.locator('.side a[href$="warehouse-preview/index.html"]').click();await page.waitForURL('**/warehouse-preview/index.html');await page.waitForSelector('html[data-preview-state="ready"]');
 await page.goBack();await page.waitForURL('**/customers.html');await page.waitForSelector('html.side-open');assert.equal(await page.locator('.top .sb-burger').getAttribute('aria-expanded'),'true');assert.equal(await page.evaluate(()=>Boolean(history.state?.ascWarehouseMenuReturn)),false);assert.equal(await page.evaluate(()=>history.state.unrelated),'preserved');assert.equal(await page.locator('.side .sb-group > button').getAttribute('aria-expanded'),'true');assert.equal(await page.locator('.side .sb-group-kids').evaluate(n=>n.inert),false);assert.equal(await page.locator('.side a[href$="warehouse.html"]').count(),0);
 assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'horizontal overflow');
 await page.screenshot({path:path.join(output,'menu-return-'+width+'.png')});
-await page.goto(origin+'/ASC/app/warehouse-preview/');await page.waitForSelector('html[data-preview-state="ready"] #asc-navigation a');const directoryHistory=await page.evaluate(()=>history.length);await page.locator('#asc-menu-button').click();await page.locator('#asc-navigation a[aria-current="page"]').click();assert.ok(page.url().endsWith('/warehouse-preview/'));assert.equal(await page.evaluate(()=>history.length),directoryHistory);
+await page.goto(origin+'/ASC/app/warehouse-preview/');await page.waitForSelector('html[data-preview-state="ready"] #asc-navigation a');const directoryHistory=await page.evaluate(()=>history.length);if(mobile)await page.locator(opener).click();await page.locator('#asc-navigation a[aria-current="page"]').click();assert.ok(page.url().endsWith('/warehouse-preview/'));assert.equal(await page.evaluate(()=>history.length),directoryHistory);
 await page.goto(origin+'/ASC/app/warehouse.html');await page.waitForURL('**/customers.html');
 assert.deepEqual(errors,[]);report.cases.push({width,passed:true,checks:['shared nested menu links','blank-slate empty state','legacy demo storage removed','no stacks in plan view','menu inert/expanded state','native browser Back restores originating menu','legacy bookmark redirects to saved records','collapsed subgroup inert','visible opener focus restoration','source submenu and unrelated history state restored','directory self-link adds no Back step','no page errors/overflow']});await context.close();
 }
