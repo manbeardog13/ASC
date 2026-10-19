@@ -301,7 +301,7 @@ function closeMenu(){$('app-menu').hidden=true;$('menu-button').setAttribute('ar
 const mobileNav=matchMedia('(max-width:1020px)');
 let sidebarReturnFocus=null;
 function syncSidebar(){const open=document.documentElement.classList.contains('side-open');$('sidebar').inert=mobileNav.matches&&!open;const expanded=!mobileNav.matches||open;$('open-sidebar').setAttribute('aria-expanded',String(expanded));$('asc-menu-button').setAttribute('aria-expanded',String(expanded));$('main-content').inert=mobileNav.matches&&open;}
-function closeSidebar(){const wasOpen=document.documentElement.classList.contains('side-open');document.documentElement.classList.remove('side-open');syncSidebar();if(wasOpen){const target=canFocus(sidebarReturnFocus)?sidebarReturnFocus:$('asc-menu-button');target.focus({preventScroll:true});}}
+function closeSidebar(){const wasOpen=document.documentElement.classList.contains('side-open');document.documentElement.classList.remove('side-open');syncSidebar();if(wasOpen){const target=[sidebarReturnFocus,$('open-sidebar'),$('asc-menu-button')].find(canFocus);target?.focus({preventScroll:true});}}
 function openSidebar(event){sidebarReturnFocus=event.currentTarget;closeMenu();document.documentElement.classList.add('side-open');syncSidebar();$('sidebar').querySelector('#asc-navigation a')?.focus({preventScroll:true});}
 $('open-sidebar').onclick=openSidebar;$('asc-menu-button').onclick=openSidebar;
 $('close-sidebar').onclick=closeSidebar;$('side-scrim').onclick=closeSidebar;
