@@ -26,6 +26,7 @@ echo "→ Dumping customer data (data-only; triggers disabled so restore won't r
 pg_dump "$DB_URL" --data-only --no-owner --no-privileges --disable-triggers \
   --table=public.customers --table=public.vehicles --table=public.storage_sets \
   --table=public.tires --table=public.photos --table=public.audit_events \
+  --table=public.locations --table=public.set_movements \
   | gzip -9 \
   | openssl enc -aes-256-cbc -pbkdf2 -iter 200000 -salt -pass env:ENC_KEY \
   > "$OUT/asc-$STAMP.sql.gz.enc"

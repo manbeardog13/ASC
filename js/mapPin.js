@@ -38,7 +38,9 @@ export function pinForSet(row, stacks = [], areaIds = []) {
       ? inArea.find((item) => item.rack === undefined && locationKey(item.id) === `${locationKey(areaId)}-${rack}`)
       : null;
     const stack = bound || legacy;
-    if (stack) { stackId = stack.id; approx = false; }
+    // An operator binding (stack.rack) is the real position; a legacy id match
+    // only selects a schematic stack and stays approximate (main, 80239fa).
+    if (stack) { stackId = stack.id; approx = !bound; }
   }
   const where = [row?.zone, row?.rack, row?.shelf, row?.slot].filter((part) => part != null && part !== "").join(" · ");
   return { areaId, stackId, approx, where, label: [row?.public_code, where].filter(Boolean).join(" · ") };

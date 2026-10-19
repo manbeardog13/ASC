@@ -286,6 +286,10 @@ html[data-device="tablet"] .agent-reveal,html[data-device="mobile"] .agent-revea
   opacity:0;filter:blur(16px);transform:translateY(12px) scale(.98);
   transition:opacity .55s cubic-bezier(.16,1,.3,1),filter .55s cubic-bezier(.16,1,.3,1),transform .55s cubic-bezier(.16,1,.3,1),border-color .3s var(--smooth);
   will-change:opacity,filter,transform}
+/* One composer per page: the shared Nero composer (loaded by app.js) docks at the
+   bottom of the dashboard too, so the card's own input bubble steps aside.
+   The card, its hooks and its chips stay; chips still answer in the card. */
+html.has-composer #agentCard .text-bubble{display:none}
 .tb-input{flex:1;min-width:0;background:transparent;border:0;outline:0;color:#f3efff;font:500 14.5px Inter}
 .tb-input::placeholder{color:rgba(233,224,255,.46)}
 .tb-send{flex:none;width:38px;height:38px;border-radius:11px;border:0;cursor:pointer;display:grid;place-items:center;color:#fff;
@@ -789,9 +793,12 @@ document.addEventListener('click', function(e){
         show(me + '<span class="tb-ans">' + esc(fast) + '</span>');
         return true;
       };
-      const ready = window.ASCConcierge
-        ? Promise.resolve(window.ASCConcierge.answer(text))
-        : import('./concierge.js').then((mod) => mod.answer(text)).catch(() => null);
+      // A failed local answer must still reach the live assistant. Defer the
+      // call so synchronous concierge failures follow the same recovery path.
+      const ready = Promise.resolve().then(() => window.ASCConcierge
+        ? window.ASCConcierge.answer(text)
+        : import('./concierge.js').then((mod) => mod.answer(text)))
+        .catch(() => null);
       busy = true;
       ready.then((fast) => { if (!showFact(fast)) askGemini(text, me); else busy = false; });
     }

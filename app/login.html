@@ -125,8 +125,9 @@ html:not(.island).splash-cold .sp-topglow{display:block;position:fixed;left:0;ri
 <link rel="stylesheet" href="app.css">
 <style>
 /* Login — iPhone-calm: ambient canvas, a floating glass card, Google-first. */
-body{display:flex;align-items:center;justify-content:center;min-height:100dvh;padding:22px}
-.auth-card{position:relative;z-index:1;width:min(412px,100%);border-radius:30px;padding:30px 26px 24px;
+body{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100dvh;padding:22px}
+body>main{width:min(412px,100%);min-width:0;flex:none}
+.auth-card{position:relative;z-index:1;flex:none;min-width:0;width:min(412px,100%);border-radius:30px;padding:30px 26px 24px;
   background:var(--shell-solid);border:1px solid var(--rim);border-top-color:var(--rim-top);
   box-shadow:var(--shadow-card);animation:sheetIn 560ms var(--smooth) both}
 @supports ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
@@ -169,15 +170,17 @@ html.dark .auth-card{box-shadow:var(--shadow-card),inset 0 1px 0 rgba(255,255,25
 .auth-div{display:flex;align-items:center;gap:12px;margin:16px 0;color:var(--muted);font:600 11px Inter;letter-spacing:.08em;text-transform:uppercase}
 .auth-div::before,.auth-div::after{content:"";height:1px;flex:1;background:var(--line)}
 
-.fieldx{display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:0 12px;margin-bottom:11px;transition:border-color .2s var(--smooth)}
+.fieldx{display:flex;min-width:0;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:0 12px;margin-bottom:11px;transition:border-color .2s var(--smooth)}
 .fieldx:focus-within{border-color:var(--lava-ring)}
 .fieldx .fx-ic{flex:none;color:var(--muted);display:grid;place-items:center}
-.fieldx input{flex:1;min-width:0;border:0;background:none;outline:none;font:500 15px Inter;color:var(--ink);padding:14px 0}
+.fieldx input{flex:1;min-width:0;border:0;background:none;outline:none;font:500 16px Inter;color:var(--ink);padding:14px 0}
 .fieldx input::placeholder{color:var(--muted);opacity:.85}
 .fx-eye{flex:none;border:0;background:none;cursor:pointer;color:var(--muted);padding:13px;margin-right:-12px;display:grid;place-items:center}
 .auth-names{display:none;gap:11px}
-body.signup .auth-names{display:flex}
-body.signup .auth-names .fieldx{flex:1;margin-bottom:11px}
+body.signup .auth-names{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+body.signup .auth-names .fieldx{min-width:0;margin-bottom:11px}
+.auth-card .fieldx input{background:transparent!important;border:0!important;border-radius:0}
+@media(max-width:380px){body.signup .auth-names{grid-template-columns:minmax(0,1fr);gap:0}}
 
 .auth-forgot-row{display:flex;justify-content:flex-end;margin:-2px 0 12px}
 .auth-forgot{background:none;border:0;cursor:pointer;font:600 12.5px Inter;color:var(--muted);padding:2px}
@@ -339,6 +342,8 @@ if(sat>=59){d.classList.add('island');d.style.setProperty('--isl-y',(sat-48)+'px
     submit.firstChild.textContent = map.btn + ' ';
     $('password').placeholder = map.pass;
     $('password').autocomplete = next === 'signin' ? 'current-password' : 'new-password';
+    $('password').required = next !== 'reset';
+    $('email').required = next !== 'recover';
     switchBtn.textContent = next === 'signin' ? 'Napravi račun' : 'Imaš račun? Prijavi se';
     $('switchRow').firstChild.textContent = next === 'signin' ? 'Prvi put? ' : ' ';
     say('');
@@ -376,11 +381,11 @@ if(sat>=59){d.classList.add('island');d.style.setProperty('--isl-y',(sat-48)+'px
         S.bloom(() => S.handoff('dashboard.html'));    // cover, then swap under the opaque surface
       } else if (mode === 'signup') {
         const { needsConfirm } = await signUp(email, password, name);
-        if (needsConfirm) { say('Račun napravljen — provjeri email za potvrdu, pa se prijavi.', 'ok'); setMode('signin'); }
+        if (needsConfirm) { setMode('signin'); say('Račun napravljen — provjeri email za potvrdu, pa se prijavi.', 'ok'); }
         else S.bloom(() => S.handoff('dashboard.html'));
       } else if (mode === 'reset') {
         await sendPasswordReset(email);
-        say('Link za reset poslan na ' + email + '.', 'ok'); setMode('signin');
+        setMode('signin'); say('Link za reset poslan na ' + email + '.', 'ok');
       } else if (mode === 'recover') {
         await updatePassword(password);
         say('Lozinka spremljena — prijavljujem te…', 'ok');

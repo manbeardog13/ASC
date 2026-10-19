@@ -91,13 +91,14 @@ do $$ begin create role service_role;  exception when duplicate_object then null
 SQL
 pg_dump "$DB_URL" --schema-only --no-owner --no-privileges \
   -t public.customers -t public.vehicles -t public.storage_sets \
-  -t public.tires -t public.photos -t public.audit_events > /tmp/structure.sql 2>/tmp/structure.err || {
+  -t public.tires -t public.photos -t public.audit_events \
+  -t public.locations -t public.set_movements > /tmp/structure.sql 2>/tmp/structure.err || {
     bad "structure: could not read live schema (pg_dump failed)"; cat /tmp/structure.err; }
 # Load tolerantly: RLS policies / triggers that reference Supabase-only
 # functions (auth.uid, asc_role, asc_audit) will error and are skipped on
 # purpose — the CREATE TABLE / FK / index / sequence statements still apply.
 psql "$SCRATCH" -q -f /tmp/structure.sql >/tmp/structure.log 2>&1 || true
-for t in customers vehicles storage_sets tires; do
+for t in customers vehicles storage_sets tires locations set_movements; do
   got=$(psql "$SCRATCH" -tAc "select to_regclass('public.$t')" 2>/dev/null)
   if [ "$got" != "$t" ]; then bad "structure: table '$t' failed to create in scratch"; fi
 done
@@ -118,7 +119,7 @@ fi
 
 # ---- CHECKPOINT 4: core tables non-empty (vs live) -------------------------
 declare -A LIVE REST
-for t in customers vehicles storage_sets tires; do
+for t in customers vehicles storage_sets tires locations set_movements; do
   LIVE[$t]=$(psql "$DB_URL"  -tAc "select count(*) from public.$t" 2>/dev/null || echo -1)
   REST[$t]=$(psql "$SCRATCH" -tAc "select count(*) from public.$t" 2>/dev/null || echo -1)
   note "table $t: live=${LIVE[$t]} restored=${REST[$t]}"
@@ -131,10 +132,11 @@ done
 ORPH_V=$(psql "$SCRATCH" -tAc "select count(*) from vehicles v left join customers c on c.id=v.customer_id where v.customer_id is not null and c.id is null" 2>/dev/null || echo -1)
 ORPH_S=$(psql "$SCRATCH" -tAc "select count(*) from storage_sets s left join vehicles v on v.id=s.vehicle_id where s.vehicle_id is not null and v.id is null" 2>/dev/null || echo -1)
 ORPH_T=$(psql "$SCRATCH" -tAc "select count(*) from tires t left join storage_sets s on s.id=t.set_id where s.id is null" 2>/dev/null || echo -1)
-if [ "$ORPH_V" = 0 ] && [ "$ORPH_S" = 0 ] && [ "$ORPH_T" = 0 ]; then
+ORPH_L=$(psql "$SCRATCH" -tAc "select count(*) from storage_sets s left join locations l on l.id=s.location_id where s.location_id is not null and l.id is null" 2>/dev/null || echo -1)
+if [ "$ORPH_V" = 0 ] && [ "$ORPH_S" = 0 ] && [ "$ORPH_T" = 0 ] && [ "$ORPH_L" = 0 ]; then
   note "✓ referential integrity intact (0 orphan vehicles / sets / tires)"
 else
-  bad "referential: orphans after restore — vehicles=$ORPH_V sets=$ORPH_S tires=$ORPH_T"
+  bad "referential: orphans after restore — vehicles=$ORPH_V sets=$ORPH_S tires=$ORPH_T locations=$ORPH_L"
 fi
 
 # ---- CHECKPOINT 6: completeness vs live (tolerant) -------------------------
@@ -152,8 +154,16 @@ fi
 if [ "${REST[storage_sets]}" -gt 0 ]; then
   CODE=$(psql "$SCRATCH" -tAc "select public_code from storage_sets order by check_in_date desc nulls last, public_code desc limit 1" 2>/dev/null)
   if [ -n "$CODE" ]; then
-    RT=$(psql "$SCRATCH" -tAc "select count(*) from tires t join storage_sets s on s.id=t.set_id where s.public_code='$CODE'" 2>/dev/null || echo -1)
-    LT=$(psql "$DB_URL"  -tAc "select count(*) from tires t join storage_sets s on s.id=t.set_id where s.public_code='$CODE'" 2>/dev/null || echo '?')
+    # public_code comes from restored data, not trusted SQL. psql's quoted
+    # variable syntax produces one SQL literal even for quotes/newlines; stdin
+    # is deliberate because -c does not expand psql variables.
+    round_trip_tires() {
+      psql "$1" -X -v ON_ERROR_STOP=1 -v set_code="$CODE" -tA 2>/dev/null <<'SQL'
+select count(*) from tires t join storage_sets s on s.id=t.set_id where s.public_code = :'set_code';
+SQL
+    }
+    RT=$(round_trip_tires "$SCRATCH" || echo -1)
+    LT=$(round_trip_tires "$DB_URL" || echo '?')
     if [ "$RT" = "$LT" ]; then
       note "✓ round-trip: $CODE restored with $RT tire rows (matches live)"
     else

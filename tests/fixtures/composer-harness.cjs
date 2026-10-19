@@ -21,10 +21,11 @@ async function createHarness(options={}) {
    if(u.origin!=='http://asc.test')return route.fulfill({status:200,body:'',contentType:'text/plain'});
    const p=u.pathname;
    if(p==='/app/checkin.html')return route.fulfill({body:fixture,contentType:'text/html'});
-   if(p==='/js/db.js')return route.fulfill({body:db,contentType:'text/javascript'});
-   if(p==='/js/supabaseClient.js')return route.fulfill({body:supabase,contentType:'text/javascript'});
-   if(p==='/js/config.js')return route.fulfill({body:'export const config={};',contentType:'text/javascript'});
+   if(p==='/js/db.js')return route.fulfill({body:options.db||db,contentType:'text/javascript'});
+   if(p==='/js/supabaseClient.js')return route.fulfill({body:options.supabase||supabase,contentType:'text/javascript'});
+   if(p==='/js/config.js')return route.fulfill({body:options.config||'export const config={};',contentType:'text/javascript'});
    if(['/app/concierge.js','/app/agent-config.js','/app/qr.js','/app/agent-gemini.js','/app/builder-queue.js'].includes(p))return route.fulfill({body:'',contentType:'text/javascript'});
+   if(p==='/app/composer.js'&&options.composerSource)return route.fulfill({body:options.composerSource,contentType:'text/javascript'});
    let file=path.join(repo,p);
       if(fs.existsSync(file)&&fs.statSync(file).isFile())return route.fulfill({body:fs.readFileSync(file),contentType:p.endsWith('.css')?'text/css':p.endsWith('.js')?'text/javascript':p.endsWith('.woff2')?'font/woff2':'application/octet-stream'});
    return route.fulfill({status:404,body:''});

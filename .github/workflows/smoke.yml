@@ -32,16 +32,26 @@ jobs:
         env:
           CHROME_PATH: ${{ steps.chrome.outputs.chrome-path }}
         run: bash scripts/smoke.sh
-      - name: Composer controls and cancellation regression
+      - name: Browser interaction and cancellation regressions
         env:
           CHROMIUM_PATH: ${{ steps.chrome.outputs.chrome-path }}
         run: |
           npm install --prefix "$RUNNER_TEMP/asc-browser-tests" --no-save --package-lock=false playwright@1.62.1
-          NODE_PATH="$RUNNER_TEMP/asc-browser-tests/node_modules" node tests/composer.browser.cjs
+          export NODE_PATH="$RUNNER_TEMP/asc-browser-tests/node_modules"
+          node tests/composer.browser.cjs
+          node tests/platform.browser.cjs
+          node tests/placement.browser.cjs
+          node tests/warehouse-integrity.browser.cjs
+          node tests/composer-history.browser.cjs
+          node tests/composer-async.browser.cjs
+          node tests/dashboard-agent.browser.cjs
       - name: Warehouse areas, shared layouts and recovery regression
         env:
           CHROMIUM_PATH: ${{ steps.chrome.outputs.chrome-path }}
-        run: NODE_PATH="$RUNNER_TEMP/asc-browser-tests/node_modules" node tests/warehouse-areas.browser.cjs
+        run: |
+          export NODE_PATH="$RUNNER_TEMP/asc-browser-tests/node_modules"
+          node tests/warehouse-areas.browser.cjs
+          node tests/warehouse.browser.cjs
       - name: Retain synthetic browser evidence
         if: always()
         uses: actions/upload-artifact@v4

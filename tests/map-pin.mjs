@@ -12,12 +12,12 @@ test('with no stacks or areas the pin is a graceful no-op', () => {
   assert.equal(pinForSet(null).stackId, null);
 });
 
-test('a real area and rack selects that stack', () => {
+test('a real area and rack selects that stack, still approximate', () => {
   const stacks = [{ id: 'P-S001', areaId: 'P' }, { id: 'K-S025', areaId: 'K' }];
   const pin = pinForSet({ public_code: 'ASC-2', zone: 'K', rack: 'S025' }, stacks, ['P', 'K']);
   assert.equal(pin.stackId, 'K-S025');
   assert.equal(pin.areaId, 'K');
-  assert.equal(pin.approx, false);
+  assert.equal(pin.approx, true);
 });
 
 test('an unknown zone or rack is never guessed onto a stack', () => {
