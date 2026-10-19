@@ -7,3 +7,15 @@ html[data-preview-state="locked"] .side-scrim{display:none}
 #preview-root[hidden],#preview-gate[hidden]{display:none!important}
 @media(max-width:640px){.preview-return a{padding-inline:8px}}
 #warehouse-help,#inspector{scroll-margin-block:20px}
+/* Blank-slate empty state: sits above the empty 3D floor until real areas exist. */
+.empty-state{z-index:6;display:flex;flex-direction:column;gap:.55rem;align-items:center;justify-content:center;text-align:center;padding:1.5rem}
+.empty-state[hidden]{display:none}
+.empty-state span{max-width:34ch;color:var(--muted,#5d6870)}
+
+/* Operator area form (Dodaj prostor) */
+.area-form{display:grid;gap:.7rem}
+.area-form label{display:grid;gap:.3rem;font-size:.9rem}
+.area-form fieldset{border:1px solid var(--line,#d6d9dc);border-radius:10px;padding:.5rem .7rem;display:grid;gap:.35rem}
+.area-form fieldset label{display:flex;gap:.5rem;align-items:center}
+.area-form input:not([type=radio]){min-height:44px;padding:.4rem .6rem;border-radius:10px;border:1px solid var(--line,#c9ced2);font:inherit}
+.dialog-error{color:#b3261e;margin:0}

@@ -21,7 +21,13 @@ sudo -u postgres psql -d asc_mig -v ON_ERROR_STOP=1 -f tests/sql/prelude.sql >/d
 sudo -u postgres psql -d asc_mig -v ON_ERROR_STOP=1 -f supabase/schema.sql >/dev/null
 sudo -u postgres psql -d asc_mig -v ON_ERROR_STOP=1 -f tests/sql/seed.sql >/dev/null
 for migration in supabase/migrations/*.sql; do
+  if [[ "$migration" == *20261017030000_warehouse_areas.sql ]]; then
+    sudo -u postgres psql -d asc_mig -v ON_ERROR_STOP=1 -f tests/sql/warehouse-areas-before.sql >/dev/null
+  fi
   sudo -u postgres psql -d asc_mig -v ON_ERROR_STOP=1 -f "$migration" >/dev/null
+  if [[ "$migration" == *20261017030000_warehouse_areas.sql ]]; then
+    sudo -u postgres psql -d asc_mig -v ON_ERROR_STOP=1 -f tests/sql/warehouse-areas.sql >/dev/null
+  fi
 done
 sudo -u postgres psql -d asc_mig -v ON_ERROR_STOP=1 -f tests/sql/exercise.sql >/dev/null
 sudo -u postgres psql -d asc_mig -v ON_ERROR_STOP=1 -f tests/sql/nero-chats.sql >/dev/null

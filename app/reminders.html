@@ -156,137 +156,53 @@ html.dark .rem-sec .count-badge.win{background:rgba(244,245,247,.16);color:#f4f5
     <span class="photo" aria-hidden="true"></span>
     <span class="scrim" aria-hidden="true"></span>
     <span class="k">Jutarnji pregled · preuzimanja</span>
-    <div class="hero-num"><span data-count="7">0</span><em>za podsjetiti</em></div>
-    <div class="cap">2 kasne · 2 danas · 3 ovaj tjedan · 3 od 10 već podsjećeno</div>
-    <div class="meter"><i data-w="30"></i></div>
+    <div class="hero-num"><span data-count="0">0</span><em>za podsjetiti</em></div>
+    <div class="cap">—</div>
+    <div class="meter"><i data-w="0"></i></div>
     <div class="space"></div>
     <div class="spills">
-      <button type="button" class="spill"><b data-count="2">0</b><span>Kasni</span></button>
-      <button type="button" class="spill"><b data-count="2">0</b><span>Danas</span></button>
-      <button type="button" class="spill"><b data-count="3">0</b><span>Ovaj tjedan</span></button>
+      <button type="button" class="spill"><b data-count="0">0</b><span>Kasni</span></button>
+      <button type="button" class="spill"><b data-count="0">0</b><span>Danas</span></button>
+      <button type="button" class="spill"><b data-count="0">0</b><span>Ovaj tjedan</span></button>
     </div>
     <a class="cta" href="#"><span class="dot"></span>Podsjeti sve preostale</a>
-    <span class="tab-corner">pon · 7. srp · Dubrovnik</span>
+    <span class="tab-corner">Dubrovnik</span>
   </section>
 
-  <p class="rem-brief"><span class="dot"></span>Podsjetnici za danas: 7</p>
+  <p class="rem-brief"><span class="dot"></span>Podsjetnici za danas: 0</p>
 
   <div class="rem-sections">
 
     <!-- EMPTY STATE — the live module shows this (and only this) when nothing is due -->
-    <section class="card rem-sec rem-empty reveal" data-sec="empty" hidden style="animation-delay:150ms">
+    <section class="card rem-sec rem-empty reveal" data-sec="empty" style="animation-delay:150ms">
       <span class="tab-tl">podsjetnici</span>
       <h3>Nema podsjetnika</h3>
       <p class="rem-empty-sub">Podsjetnici stižu s očekivanim preuzimanjima.</p>
     </section>
 
     <!-- KASNI (overdue) — owns the lava accent -->
-    <section class="card rem-sec is-overdue reveal" data-sec="overdue" style="animation-delay:150ms">
+    <section class="card rem-sec is-overdue reveal" data-sec="overdue" hidden style="animation-delay:150ms">
       <span class="tab-tl">kasni</span>
-      <h3>Kasni <span class="count-badge" data-count="2">0</span></h3>
+      <h3>Kasni <span class="count-badge" data-count="0">0</span></h3>
       <div class="rr-list">
-
-        <article class="rr rr-overdue">
-          <div class="rr-top"><span class="rem-due"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.2"/><path d="M12 7.6v4.6l3 1.9"/></svg>Rok 4. srp</span><a class="rr-code" href="#">ASC-2026-0212</a></div>
-          <div class="rr-id"><span class="rr-name">Josip Horvat</span><span class="rr-plate">DU-234-AB</span></div>
-          <div class="rr-meta"><span class="chip win">Zimske</span></div>
-          <div class="rr-acts">
-            <a class="ract" href="tel:+385981234567" aria-label="Nazovi Josipa Horvata"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 4.5c.3 0 .6.2.7.5l1 2.4a.8.8 0 01-.2.9L7 9.3a11 11 0 004.7 4.7l1-1a.8.8 0 01.9-.2l2.4 1c.3.1.5.4.5.7V17a2 2 0 01-2 2A13 13 0 014.5 6.5a2 2 0 012-2z"/></svg>Nazovi</a>
-            <a class="ract" href="sms:+385981234567" aria-label="Pošalji poruku"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 6.4A1.4 1.4 0 016.4 5h11.2A1.4 1.4 0 0119 6.4v7.2a1.4 1.4 0 01-1.4 1.4H9l-4 3.4V6.4z"/></svg>Poruka</a>
-            <a class="ract" href="mailto:josip.horvat@example.hr?subject=ASC%20%E2%80%94%20ASC-2026-0212" aria-label="Pošalji e-poštu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="6" width="16" height="12" rx="2.2"/><path d="M4.6 7.2l7.4 5.6 7.4-5.6"/></svg>E-pošta</a>
-          </div>
-          <button type="button" class="ract wide" data-remind><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4.5 4.5L19 7"/></svg>Označi podsjećeno</button>
-        </article>
-
-        <article class="rr rr-overdue">
-          <div class="rr-top"><span class="rem-due"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.2"/><path d="M12 7.6v4.6l3 1.9"/></svg>Rok 5. srp</span><a class="rr-code" href="#">ASC-2026-0198</a></div>
-          <div class="rr-id"><span class="rr-name">Nikola Vlašić</span><span class="rr-plate">DU-778-CD</span></div>
-          <div class="rr-meta"><span class="chip all">Cjelogodišnje</span></div>
-          <div class="rr-acts">
-            <a class="ract" href="tel:+385991112233" aria-label="Nazovi Nikolu Vlašića"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 4.5c.3 0 .6.2.7.5l1 2.4a.8.8 0 01-.2.9L7 9.3a11 11 0 004.7 4.7l1-1a.8.8 0 01.9-.2l2.4 1c.3.1.5.4.5.7V17a2 2 0 01-2 2A13 13 0 014.5 6.5a2 2 0 012-2z"/></svg>Nazovi</a>
-            <a class="ract" href="sms:+385991112233" aria-label="Pošalji poruku"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 6.4A1.4 1.4 0 016.4 5h11.2A1.4 1.4 0 0119 6.4v7.2a1.4 1.4 0 01-1.4 1.4H9l-4 3.4V6.4z"/></svg>Poruka</a>
-            <a class="ract" href="mailto:nikola.vlasic@example.hr?subject=ASC%20%E2%80%94%20ASC-2026-0198" aria-label="Pošalji e-poštu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="6" width="16" height="12" rx="2.2"/><path d="M4.6 7.2l7.4 5.6 7.4-5.6"/></svg>E-pošta</a>
-          </div>
-          <button type="button" class="ract wide" data-remind><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4.5 4.5L19 7"/></svg>Označi podsjećeno</button>
-        </article>
 
       </div>
     </section>
 
     <!-- DANAS ZA PREUZIMANJE (due today) -->
-    <section class="card rem-sec reveal" data-sec="today" style="animation-delay:190ms">
+    <section class="card rem-sec reveal" data-sec="today" hidden style="animation-delay:190ms">
       <span class="tab-tl">danas</span>
-      <h3>Danas za preuzimanje <span class="count-badge" data-count="2">0</span></h3>
+      <h3>Danas za preuzimanje <span class="count-badge" data-count="0">0</span></h3>
       <div class="rr-list">
-
-        <article class="rr rr-today">
-          <div class="rr-top"><span class="rem-due"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.2"/><path d="M12 7.6v4.6l3 1.9"/></svg>Rok 7. srp</span><a class="rr-code" href="#">ASC-2026-0241</a></div>
-          <div class="rr-id"><span class="rr-name">Ana Kovačević</span><span class="rr-plate">DU-881-KL</span></div>
-          <div class="rr-meta"><span class="chip">Ljetne</span></div>
-          <div class="rr-acts">
-            <a class="ract" href="tel:+385915556677" aria-label="Nazovi Anu Kovačević"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 4.5c.3 0 .6.2.7.5l1 2.4a.8.8 0 01-.2.9L7 9.3a11 11 0 004.7 4.7l1-1a.8.8 0 01.9-.2l2.4 1c.3.1.5.4.5.7V17a2 2 0 01-2 2A13 13 0 014.5 6.5a2 2 0 012-2z"/></svg>Nazovi</a>
-            <a class="ract" href="sms:+385915556677" aria-label="Pošalji poruku"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 6.4A1.4 1.4 0 016.4 5h11.2A1.4 1.4 0 0119 6.4v7.2a1.4 1.4 0 01-1.4 1.4H9l-4 3.4V6.4z"/></svg>Poruka</a>
-            <a class="ract" href="mailto:ana.kovacevic@example.hr?subject=ASC%20%E2%80%94%20ASC-2026-0241" aria-label="Pošalji e-poštu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="6" width="16" height="12" rx="2.2"/><path d="M4.6 7.2l7.4 5.6 7.4-5.6"/></svg>E-pošta</a>
-          </div>
-          <button type="button" class="ract wide" data-remind><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4.5 4.5L19 7"/></svg>Označi podsjećeno</button>
-        </article>
-
-        <article class="rr rr-today">
-          <div class="rr-top"><span class="rem-due"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.2"/><path d="M12 7.6v4.6l3 1.9"/></svg>Rok 7. srp</span><a class="rr-code" href="#">ASC-2026-0239</a></div>
-          <div class="rr-id"><span class="rr-name">Marko Babić</span><span class="rr-plate">DU-455-MN</span></div>
-          <div class="rr-meta"><span class="chip win">Zimske</span></div>
-          <div class="rr-acts">
-            <a class="ract" href="tel:+385989988776" aria-label="Nazovi Marka Babića"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 4.5c.3 0 .6.2.7.5l1 2.4a.8.8 0 01-.2.9L7 9.3a11 11 0 004.7 4.7l1-1a.8.8 0 01.9-.2l2.4 1c.3.1.5.4.5.7V17a2 2 0 01-2 2A13 13 0 014.5 6.5a2 2 0 012-2z"/></svg>Nazovi</a>
-            <a class="ract" href="sms:+385989988776" aria-label="Pošalji poruku"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 6.4A1.4 1.4 0 016.4 5h11.2A1.4 1.4 0 0119 6.4v7.2a1.4 1.4 0 01-1.4 1.4H9l-4 3.4V6.4z"/></svg>Poruka</a>
-            <a class="ract" href="mailto:marko.babic@example.hr?subject=ASC%20%E2%80%94%20ASC-2026-0239" aria-label="Pošalji e-poštu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="6" width="16" height="12" rx="2.2"/><path d="M4.6 7.2l7.4 5.6 7.4-5.6"/></svg>E-pošta</a>
-          </div>
-          <button type="button" class="ract wide" data-remind><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4.5 4.5L19 7"/></svg>Označi podsjećeno</button>
-        </article>
 
       </div>
     </section>
 
     <!-- OVAJ TJEDAN (this week) -->
-    <section class="card rem-sec reveal" data-sec="week" style="animation-delay:230ms">
+    <section class="card rem-sec reveal" data-sec="week" hidden style="animation-delay:230ms">
       <span class="tab-tl">ovaj tjedan</span>
-      <h3>Ovaj tjedan <span class="count-badge mut" data-count="3">0</span></h3>
+      <h3>Ovaj tjedan <span class="count-badge mut" data-count="0">0</span></h3>
       <div class="rr-list">
-
-        <article class="rr">
-          <div class="rr-top"><span class="rem-due"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.2"/><path d="M12 7.6v4.6l3 1.9"/></svg>Rok 9. srp</span><a class="rr-code" href="#">ASC-2026-0236</a></div>
-          <div class="rr-id"><span class="rr-name">Petra Novak</span><span class="rr-plate">DU-303-RS</span></div>
-          <div class="rr-meta"><span class="chip">Ljetne</span></div>
-          <div class="rr-acts">
-            <a class="ract" href="tel:+385912223344" aria-label="Nazovi Petru Novak"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 4.5c.3 0 .6.2.7.5l1 2.4a.8.8 0 01-.2.9L7 9.3a11 11 0 004.7 4.7l1-1a.8.8 0 01.9-.2l2.4 1c.3.1.5.4.5.7V17a2 2 0 01-2 2A13 13 0 014.5 6.5a2 2 0 012-2z"/></svg>Nazovi</a>
-            <a class="ract" href="sms:+385912223344" aria-label="Pošalji poruku"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 6.4A1.4 1.4 0 016.4 5h11.2A1.4 1.4 0 0119 6.4v7.2a1.4 1.4 0 01-1.4 1.4H9l-4 3.4V6.4z"/></svg>Poruka</a>
-            <a class="ract" href="mailto:petra.novak@example.hr?subject=ASC%20%E2%80%94%20ASC-2026-0236" aria-label="Pošalji e-poštu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="6" width="16" height="12" rx="2.2"/><path d="M4.6 7.2l7.4 5.6 7.4-5.6"/></svg>E-pošta</a>
-          </div>
-          <button type="button" class="ract wide" data-remind><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4.5 4.5L19 7"/></svg>Označi podsjećeno</button>
-        </article>
-
-        <article class="rr">
-          <div class="rr-top"><span class="rem-due"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.2"/><path d="M12 7.6v4.6l3 1.9"/></svg>Rok 10. srp</span><a class="rr-code" href="#">ASC-2026-0233</a></div>
-          <div class="rr-id"><span class="rr-name">Luka Marić</span><span class="rr-plate">DU-620-TU</span></div>
-          <div class="rr-meta"><span class="chip win">Zimske</span></div>
-          <div class="rr-acts">
-            <a class="ract" href="tel:+385998877665" aria-label="Nazovi Luku Marića"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 4.5c.3 0 .6.2.7.5l1 2.4a.8.8 0 01-.2.9L7 9.3a11 11 0 004.7 4.7l1-1a.8.8 0 01.9-.2l2.4 1c.3.1.5.4.5.7V17a2 2 0 01-2 2A13 13 0 014.5 6.5a2 2 0 012-2z"/></svg>Nazovi</a>
-            <a class="ract" href="sms:+385998877665" aria-label="Pošalji poruku"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 6.4A1.4 1.4 0 016.4 5h11.2A1.4 1.4 0 0119 6.4v7.2a1.4 1.4 0 01-1.4 1.4H9l-4 3.4V6.4z"/></svg>Poruka</a>
-            <a class="ract" href="mailto:luka.maric@example.hr?subject=ASC%20%E2%80%94%20ASC-2026-0233" aria-label="Pošalji e-poštu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="6" width="16" height="12" rx="2.2"/><path d="M4.6 7.2l7.4 5.6 7.4-5.6"/></svg>E-pošta</a>
-          </div>
-          <button type="button" class="ract wide" data-remind><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4.5 4.5L19 7"/></svg>Označi podsjećeno</button>
-        </article>
-
-        <article class="rr">
-          <div class="rr-top"><span class="rem-due"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.2"/><path d="M12 7.6v4.6l3 1.9"/></svg>Rok 11. srp</span><a class="rr-code" href="#">ASC-2026-0229</a></div>
-          <div class="rr-id"><span class="rr-name">Ivana Šarić</span><span class="rr-plate">DU-147-VZ</span></div>
-          <div class="rr-meta"><span class="chip all">Cjelogodišnje</span></div>
-          <div class="rr-acts">
-            <a class="ract" href="tel:+385914455667" aria-label="Nazovi Ivanu Šarić"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 4.5c.3 0 .6.2.7.5l1 2.4a.8.8 0 01-.2.9L7 9.3a11 11 0 004.7 4.7l1-1a.8.8 0 01.9-.2l2.4 1c.3.1.5.4.5.7V17a2 2 0 01-2 2A13 13 0 014.5 6.5a2 2 0 012-2z"/></svg>Nazovi</a>
-            <a class="ract" href="sms:+385914455667" aria-label="Pošalji poruku"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 6.4A1.4 1.4 0 016.4 5h11.2A1.4 1.4 0 0119 6.4v7.2a1.4 1.4 0 01-1.4 1.4H9l-4 3.4V6.4z"/></svg>Poruka</a>
-            <span class="ract is-disabled" aria-disabled="true" title="Nema e-pošte"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="6" width="16" height="12" rx="2.2"/><path d="M4.6 7.2l7.4 5.6 7.4-5.6"/></svg>E-pošta</span>
-          </div>
-          <button type="button" class="ract wide" data-remind><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4.5 4.5L19 7"/></svg>Označi podsjećeno</button>
-        </article>
 
       </div>
     </section>
@@ -300,46 +216,10 @@ html.dark .rem-sec .count-badge.win{background:rgba(244,245,247,.16);color:#f4f5
 
     <!-- VEĆ PODSJEĆENO (already reminded) — collapsed -->
     <details class="card rem-sec rem-rested reveal" data-sec="rested" style="animation-delay:270ms">
-      <summary>Već podsjećeno <span class="count-badge" data-count="3">0</span>
+      <summary>Već podsjećeno <span class="count-badge" data-count="0">0</span>
         <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
       </summary>
       <div class="rr-list">
-
-        <article class="rr rr-rest">
-          <div class="rr-top"><span class="rem-due"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.2"/><path d="M12 7.6v4.6l3 1.9"/></svg>Rok 8. srp</span><a class="rr-code" href="#">ASC-2026-0221</a></div>
-          <div class="rr-id"><span class="rr-name">Ivan Perić</span><span class="rr-plate">DU-905-AA</span></div>
-          <div class="rr-meta"><span class="chip win">Zimske</span><span class="rr-ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4.5 4.5L19 7"/></svg>podsjećeno prije 2 h</span></div>
-          <div class="rr-acts">
-            <a class="ract" href="tel:+385981010101" aria-label="Nazovi Ivana Perića"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 4.5c.3 0 .6.2.7.5l1 2.4a.8.8 0 01-.2.9L7 9.3a11 11 0 004.7 4.7l1-1a.8.8 0 01.9-.2l2.4 1c.3.1.5.4.5.7V17a2 2 0 01-2 2A13 13 0 014.5 6.5a2 2 0 012-2z"/></svg>Nazovi</a>
-            <a class="ract" href="sms:+385981010101" aria-label="Pošalji poruku"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 6.4A1.4 1.4 0 016.4 5h11.2A1.4 1.4 0 0119 6.4v7.2a1.4 1.4 0 01-1.4 1.4H9l-4 3.4V6.4z"/></svg>Poruka</a>
-            <a class="ract" href="mailto:ivan.peric@example.hr?subject=ASC%20%E2%80%94%20ASC-2026-0221" aria-label="Pošalji e-poštu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="6" width="16" height="12" rx="2.2"/><path d="M4.6 7.2l7.4 5.6 7.4-5.6"/></svg>E-pošta</a>
-          </div>
-          <button type="button" class="ract wide again" data-remind><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4.5 4.5L19 7"/></svg>Podsjećeno — označi ponovno</button>
-        </article>
-
-        <article class="rr rr-rest">
-          <div class="rr-top"><span class="rem-due"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.2"/><path d="M12 7.6v4.6l3 1.9"/></svg>Rok 8. srp</span><a class="rr-code" href="#">ASC-2026-0217</a></div>
-          <div class="rr-id"><span class="rr-name">Marija Butković</span><span class="rr-plate">DU-058-BB</span></div>
-          <div class="rr-meta"><span class="chip">Ljetne</span><span class="rr-ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4.5 4.5L19 7"/></svg>podsjećeno prije 5 h</span></div>
-          <div class="rr-acts">
-            <a class="ract" href="tel:+385992020202" aria-label="Nazovi Mariju Butković"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 4.5c.3 0 .6.2.7.5l1 2.4a.8.8 0 01-.2.9L7 9.3a11 11 0 004.7 4.7l1-1a.8.8 0 01.9-.2l2.4 1c.3.1.5.4.5.7V17a2 2 0 01-2 2A13 13 0 014.5 6.5a2 2 0 012-2z"/></svg>Nazovi</a>
-            <a class="ract" href="sms:+385992020202" aria-label="Pošalji poruku"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 6.4A1.4 1.4 0 016.4 5h11.2A1.4 1.4 0 0119 6.4v7.2a1.4 1.4 0 01-1.4 1.4H9l-4 3.4V6.4z"/></svg>Poruka</a>
-            <a class="ract" href="mailto:marija.butkovic@example.hr?subject=ASC%20%E2%80%94%20ASC-2026-0217" aria-label="Pošalji e-poštu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="6" width="16" height="12" rx="2.2"/><path d="M4.6 7.2l7.4 5.6 7.4-5.6"/></svg>E-pošta</a>
-          </div>
-          <button type="button" class="ract wide again" data-remind><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4.5 4.5L19 7"/></svg>Podsjećeno — označi ponovno</button>
-        </article>
-
-        <article class="rr rr-rest">
-          <div class="rr-top"><span class="rem-due"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.2"/><path d="M12 7.6v4.6l3 1.9"/></svg>Rok 6. srp</span><a class="rr-code" href="#">ASC-2026-0209</a></div>
-          <div class="rr-id"><span class="rr-name">Stjepan Radić</span><span class="rr-plate">DU-412-CC</span></div>
-          <div class="rr-meta"><span class="chip all">Cjelogodišnje</span><span class="rr-ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4.5 4.5L19 7"/></svg>podsjećeno jučer</span></div>
-          <div class="rr-acts">
-            <a class="ract" href="tel:+385983030303" aria-label="Nazovi Stjepana Radića"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 4.5c.3 0 .6.2.7.5l1 2.4a.8.8 0 01-.2.9L7 9.3a11 11 0 004.7 4.7l1-1a.8.8 0 01.9-.2l2.4 1c.3.1.5.4.5.7V17a2 2 0 01-2 2A13 13 0 014.5 6.5a2 2 0 012-2z"/></svg>Nazovi</a>
-            <a class="ract" href="sms:+385983030303" aria-label="Pošalji poruku"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 6.4A1.4 1.4 0 016.4 5h11.2A1.4 1.4 0 0119 6.4v7.2a1.4 1.4 0 01-1.4 1.4H9l-4 3.4V6.4z"/></svg>Poruka</a>
-            <a class="ract" href="mailto:stjepan.radic@example.hr?subject=ASC%20%E2%80%94%20ASC-2026-0209" aria-label="Pošalji e-poštu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="6" width="16" height="12" rx="2.2"/><path d="M4.6 7.2l7.4 5.6 7.4-5.6"/></svg>E-pošta</a>
-          </div>
-          <button type="button" class="ract wide again" data-remind><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4.5 4.5L19 7"/></svg>Podsjećeno — označi ponovno</button>
-        </article>
 
       </div>
     </details>

@@ -2,9 +2,10 @@ import { renderAppNavigation, applyNavAccess, syncThemeButton } from '../navigat
 import { saveOperation, LocalSaveError } from './persistence.js';
 import { parseCroatianIntent, searchLocations, customerLabel } from './journey.js';
 import { createTour } from './tour.js';
-import { AREAS, seedState, validateState, canPlace, createStack, moveStack, setCapacity, addTire, removeTire, stats, LAYOUT_VERSION } from './model.js';
-import { pinForSet } from '../../js/mapPin.js';
-import { loadMyProfile } from '../../js/db.js';
+import { AREAS, syncAreas, createArea, removeArea, markAreaShared, markStackShared, mergeRemoteLayout, normalizeRack, emptyState, validateState, canPlace, createStack, moveStack, setCapacity, addTire, removeTire, stats } from './model.js';
+import { pinForSet, locationKey } from '../../js/mapPin.js';
+import { t as T } from '../../js/i18n.js';
+import { loadMyProfile, canEditWarehouse } from '../../js/db.js';
 export function startPreview({isActive=()=>false,registerRuntime=()=>{}}={}){
 if(!isActive())throw new Error('ASC preview inactive');
 let disposed=false;const listeners=[];
@@ -12,7 +13,9 @@ function listen(target,type,handler,options){const wrapped=(...args)=>{if(!dispo
 
 const $ = id => document.getElementById(id);
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const KEY = 'asc.warehouse.preview.v1', VIEW_KEY = 'asc.warehouse.preview.view.v1', CHECK_KEY = 'asc.warehouse.preview.checks.v1';
+const KEY = 'asc.warehouse.preview.v2', VIEW_KEY = 'asc.warehouse.preview.view.v2';
+// v1 held the old demo inventory (133 fake stacks); drop it from every device.
+for (const legacy of ['asc.warehouse.preview.v1','asc.warehouse.preview.view.v1','asc.warehouse.preview.checks.v1']) { try { localStorage.removeItem(legacy); } catch {} }
 const paths = {
  search:'<circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4.5 4.5"/>',
  mic:'<rect x="8.5" y="2.5" width="7" height="12" rx="3.5"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3.5M8.5 21.5h7"/>',
@@ -29,7 +32,8 @@ const paths = {
 const icon = (name,size=19) => `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.55" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name]||paths.stack}</svg>`;
 $('asc-navigation').innerHTML=renderAppNavigation({warehouseOpen:true});
 applyNavAccess($('asc-navigation'), null);
-loadMyProfile().then((profile)=>applyNavAccess($('asc-navigation'), profile?.role)).catch(()=>{});
+let canEdit=false;
+loadMyProfile().then((profile)=>{applyNavAccess($('asc-navigation'), profile?.role);canEdit=canEditWarehouse(profile?.role);if(!disposed){render();void syncShared();}}).catch(()=>{});
 syncThemeButton($('sbTheme'));
 $('sbTheme')?.addEventListener('click', ()=>{ window.ASCTheme?.toggle(); syncThemeButton($('sbTheme')); });
 const appWarehouseGroup=$('asc-navigation').querySelector('.sb-group');
@@ -38,26 +42,30 @@ for (const [id,name] of Object.entries({'menu-button':'menu','house-icon':'home'
 
 let storageAvailable=true, storageProblem=false;
 function readJSON(key,fallback){try{return JSON.parse(localStorage.getItem(key))??fallback;}catch{return fallback;}}
-let state;
-try {const raw=localStorage.getItem(KEY);state=raw===null?seedState():JSON.parse(raw);if(!state||!validateState(state).valid){storageProblem=true;state=seedState();}}catch{state=seedState();storageProblem=true;}
+let state, rawProblem=null;
+try {const raw=localStorage.getItem(KEY);state=raw===null?emptyState():JSON.parse(raw);if(!state||!validateState(state).valid){storageProblem=true;rawProblem=raw;state=emptyState();}}catch{state=emptyState();storageProblem=true;try{rawProblem=localStorage.getItem(KEY);}catch{}}
+syncAreas(state);
 const storedView=readJSON(VIEW_KEY,{});
-let areaId=AREAS.some(a=>a.id===storedView.areaId)||storedView.areaId==='all'?storedView.areaId:'2.3';
+let areaId=AREAS.some(a=>a.id===storedView.areaId)||storedView.areaId==='all'?storedView.areaId:'all';
 let selectedId=null, viewer=null, viewMode='3d', placing=null, toastTimer, scannerStream=null, scannerFrame=null, recognition=null, livePin=null;
 let tour=null, scannerStarting=false, scannerGeneration=0;
-let checkState=readJSON(CHECK_KEY,{}), viewReady=false;
+let viewReady=false, liveSlots=null, liveSeats=null;
 try{localStorage.getItem(KEY);}catch{storageAvailable=false;}
 const tyreById = id => state.tires.find(t=>t.id===id);
 const selectedStack = () => state.stacks.find(s=>s.id===selectedId);
 const area = () => AREAS.find(a=>a.id===areaId);
 function toast(message){clearTimeout(toastTimer);$('toast').textContent=message;$('toast').hidden=false;toastTimer=setTimeout(()=>$('toast').hidden=true,4200);}
 function storeView(){try{localStorage.setItem(VIEW_KEY,JSON.stringify({areaId}));}catch{}}
-let saving=false;
-async function commit(operation,message,{recover=false}={}){
+let saving=false, sharedWriting=false;
+let shared={available:false,localOnly:[]};
+const SHARE_ERR=e=>T('map.sharedFailed',{msg:e?.message||'—'});
+async function commit(operation,message,{recover=false,silent=false,readOnlySync=false,sharedSaved=false}={}){
  if(disposed||!isActive())return false;
+ if(!canEdit&&!readOnlySync){toast(T('map.readOnly'));return false;}
  if(saving){toast('Spremanje je u tijeku.');return false;}saving=true;
  try{
   const next=await saveOperation({key:KEY,storage:localStorage,locks:navigator.locks,expected:state,operation:current=>{if(disposed||!isActive())throw new LocalSaveError('Prikaz je zaustavljen. Promjena nije spremljena.');return operation(current);},recover});
-  state=next;storageAvailable=true;storageProblem=false;render();$('save-status').textContent='Spremljeno na ovom uređaju';toast(message);return true;
+  state=next;storageAvailable=true;storageProblem=false;rawProblem=null;render();$('save-status').textContent=sharedSaved?T('map.savedShared'):T('map.savedLocal');if(!silent)toast(message);return true;
  }catch(e){
   if(e.latest){state=e.latest;render();}
   $('save-status').textContent='Promjena nije spremljena';toast(e instanceof LocalSaveError?e.message:'Spremanje nije dostupno. Promjena nije spremljena.');return false;
@@ -69,20 +77,28 @@ function changeArea(id){if(id!=='all'&&!AREAS.some(a=>a.id===id))return;
 }
 function renderAreas(){
  const focusHost=document.activeElement?.closest('#areas,#area-tabs')?.id,focusArea=document.activeElement?.dataset.area;
- $('areas').innerHTML=AREAS.map(a=>{const n=stats(state,a.id);const on=areaId===a.id;return `<button class="sb-item ${on?'on':''}" data-m="warehouse" type="button" data-area="${a.id}" aria-pressed="${on}"><span class="sb-code">${a.id}</span><span class="t"><span>${esc(a.name)}</span><span class="sub">${n.occupied} guma · ${n.stacks} stupaca</span></span></button>`;}).join('');
+ $('areas').innerHTML=AREAS.map(a=>{const n=stats(state,a.id);const on=areaId===a.id;return `<button class="sb-item ${on?'on':''}" data-m="warehouse" type="button" data-area="${esc(a.id)}" aria-pressed="${on}"><span class="sb-code">${esc(a.id)}</span><span class="t"><span>${esc(a.name)}</span><span class="sub">${n.occupied} guma · ${n.stacks} stupaca</span></span></button>`;}).join('');
  $('areas').querySelectorAll('button').forEach(b=>b.onclick=()=>changeArea(b.dataset.area));
- $('area-tabs').innerHTML=[{id:'all',name:'Sva skladišta'},...AREAS].map(a=>`<button class="${areaId===a.id?'active':''}" data-area="${a.id}" aria-pressed="${areaId===a.id}">${a.id==='all'?'':a.id+' · '}${esc(a.name)}</button>`).join('');
+ $('area-tabs').innerHTML=[{id:'all',name:'Sva skladišta'},...AREAS].map(a=>`<button class="${areaId===a.id?'active':''}" data-area="${esc(a.id)}" aria-pressed="${areaId===a.id}">${a.id==='all'?'':esc(a.id)+' · '}${esc(a.name)}</button>`).join('');
  $('area-tabs').querySelectorAll('button').forEach(b=>b.onclick=()=>changeArea(b.dataset.area));
  if(focusHost&&focusArea)$(focusHost).querySelector(`[data-area="${focusArea}"]`)?.focus({preventScroll:true});
  $('house-button').classList.toggle('on',areaId==='all');$('house-button').setAttribute('aria-pressed',String(areaId==='all'));
 }
 function render(){
- renderAreas();const current=area();const n=stats(state,areaId==='all'?null:areaId);
- $('area-code').textContent=areaId==='all'?'KUĆA / 02':areaId;$('area-name').textContent=current?.name||'Pregled kuće';
- $('area-subtitle').textContent=current?`${n.stacks} stupaca · ${n.occupied} guma`:'Tri prostora';
+ syncAreas(state);renderAreas();const current=area();const n=stats(state,areaId==='all'?null:areaId);
+ $('area-code').textContent=areaId==='all'?'SVA':areaId;$('area-name').textContent=current?.name||'Sva skladišta';
+ $('area-subtitle').textContent=current?`${n.stacks} stupaca · ${n.occupied} guma`:AREAS.length?`${AREAS.length} prostora`:'Još nema prostora';
+ renderEmpty();
  $('stat-tyres').textContent=n.occupied;$('stat-vacant').textContent=n.vacant;
- $('geometry-note').textContent=areaId==='all'?'Razdvojene etaže · visine su okvirne':areaId==='2.2'?'Pristup i visina platforme nisu izmjereni':'Okviran tlocrt · visine nisu izmjerene';
+ $('geometry-note').textContent=!AREAS.length?T('map.noLayout'):current?T(current.unit==='m'?'map.geomM':'map.geomGrid',{w:current.width,d:current.depth}):T('map.geomAll');
  viewer?.setData(state,areaId);viewer?.setSelection(selectedId);renderInspector();renderLocation();if(viewMode==='plan')renderPlan();
+}
+function renderEmpty(){
+ const empty=!AREAS.length;const box=$('empty-state');if(box){box.hidden=!empty;const n=$('empty-slots');if(n)n.textContent=liveSlots==null?'':liveSlots===0?'U bazi još nema nijednog mjesta.':`U bazi postoji ${liveSlots} mjesta. Prostorni raspored za njih još nije unesen.`;}
+ $('place-button').disabled=empty||!canEdit;$('place-button').hidden=!canEdit;for(const id of ['add-area-button','add-area-empty'])$(id).hidden=!canEdit;
+ const rm=$('remove-area-button');if(rm)rm.hidden=!(canEdit&&area()&&!state.stacks.some(s=>s.areaId===areaId));
+ const up=$('upload-layout');if(up){up.hidden=!(canEdit&&shared.available&&shared.localOnly.length);up.title=T('map.uploadBody',{n:shared.localOnly.length});}
+ const raw=$('download-raw');if(raw)raw.hidden=!rawProblem;$('list-button').disabled=!state.stacks.length;$('area-tabs').hidden=empty;
 }
 function selectStack(id,focus=false){if(placing)endPlacement();const stack=state.stacks.find(s=>s.id===id);if(!stack)return;
  if(areaId!==stack.areaId){areaId=stack.areaId;storeView();}selectedId=id;render();if(focus)viewer?.focusStack(id);hideSearch();if(focus&&!tour?.active)$('inspector').focus();tour?.notify('found');
@@ -97,40 +113,133 @@ function renderInspectorBase(){
  const focusId=sameStack&&inspector.contains(document.activeElement)?document.activeElement.id:null;
  inspector.dataset.stackId=stack.id;
  const liveBanner=livePin&&livePin.stackId===stack.id?`<div class="live-pin"><b>${esc(livePin.text)}</b></div>`:'';
- inspector.innerHTML=`${liveBanner}<div class="inspector-top"><div><h3>${esc(stack.id)}</h3><p class="sub">${esc(AREAS.find(a=>a.id===stack.areaId)?.name)}</p></div><button id="close-inspector" class="icon-button" aria-label="Zatvori detalje stupca">${icon('close',17)}</button></div>
+ inspector.innerHTML=`${liveBanner}<div class="inspector-top"><div><h3>${esc(stack.id)}</h3><p class="sub">${esc(AREAS.find(a=>a.id===stack.areaId)?.name)}${' · '+esc(stack.rack?T('map.rack',{rack:stack.rack}):T('map.notBound'))}</p></div><button id="close-inspector" class="icon-button" aria-label="Zatvori detalje stupca">${icon('close',17)}</button></div>
  <div class="stack-occupancy"><div class="stack-meter" aria-hidden="true">${Array.from({length:stack.capacity},(_,i)=>`<i class="${i<occupied?'filled':''}"></i>`).join('')}</div><span><b>${occupied}/${stack.capacity}</b> mjesta</span></div>
  <div class="tyres">${tyres.map((t,i)=>`<button class="tyre-row" data-tyre="${esc(t.id)}" aria-expanded="false"><span class="tyre-dot" style="border-color:${/^#[a-f0-9]{6}$/i.test(t.color)?t.color:'#343c40'}"></span><span class="tyre-text"><b>${esc(customerLabel(t.customer))}</b><small>${esc(t.plate)}</small></span><em aria-label="Položaj ${i+1}">${i+1}</em><span class="tyre-chevron" aria-hidden="true">⌄</span></button>`).join('')||'<p class="empty-stack">Stupac je prazan.</p>'}</div>
  <div class="inspector-actions"><button id="add-tyre" class="button primary" ${occupied>=stack.capacity?'disabled':''}>${icon('plus',15)}Dodaj gumu</button><button id="focus-stack" class="button quiet">Približi</button></div>
- <details id="stack-tools" class="compact-details" ${editOpen?'open':''}><summary>Uredi stupac</summary><div class="disclosure-body"><div class="secondary-actions"><button id="move-stack" class="button quiet">Premjesti stupac</button><button id="remove-top" class="button quiet danger" ${occupied===0?'disabled':''}>Ukloni gornju gumu</button></div><label class="capacity-field">Kapacitet<input type="number" id="capacity-input" min="1" max="16" value="${stack.capacity}" aria-label="Kapacitet stupca"></label><p class="inspector-note">Položaj ${stack.x.toFixed(2)}, ${stack.z.toFixed(2)} · okvirne jedinice. Visina nije potvrđena.</p></div></details>`;
+ <details id="stack-tools" class="compact-details" ${editOpen?'open':''}><summary>Uredi stupac</summary><div class="disclosure-body"><div class="secondary-actions"><button id="move-stack" class="button quiet">Premjesti stupac</button><button id="remove-top" class="button quiet danger" ${occupied===0?'disabled':''}>Ukloni gornju gumu</button></div><label class="capacity-field">Kapacitet<input type="number" id="capacity-input" min="1" max="16" value="${stack.capacity}" aria-label="Kapacitet stupca"></label><p class="inspector-note">${esc(T(AREAS.find(a=>a.id===stack.areaId)?.unit==='m'?'map.posMetres':'map.posGrid',{x:stack.x.toFixed(2),z:stack.z.toFixed(2)}))}</p></div></details>`;
  $('close-inspector').onclick=()=>{selectedId=null;render();$('search').focus();};$('add-tyre').onclick=showAddTyre;$('move-stack').onclick=()=>beginPlacement('move');$('focus-stack').onclick=()=>viewer?.focusStack(stack.id);$('remove-top').onclick=()=>showRemoveTyre(stack.tireIds.at(-1));
- $('capacity-input').onchange=async e=>{const value=Number(e.target.value);if(!await commit(s=>setCapacity(s,stack.id,value),'Kapacitet je spremljen'))e.target.value=stack.capacity;};
+ $('capacity-input').onchange=async e=>{const value=Number(e.target.value);if(!await commitStack(s=>setCapacity(s,stack.id,value),stack.id,'Kapacitet je spremljen'))e.target.value=stack.capacity;};
  inspector.querySelectorAll('[data-tyre]').forEach(b=>b.onclick=()=>showTyre(b.dataset.tyre,true));
+ const tools=$('stack-tools');if(tools)tools.hidden=!canEdit;$('add-tyre').hidden=!canEdit;
  if(openTyre){showTyre(openTyre);if($('tyre-qr'))$('tyre-qr').open=qrOpen;}
  if(focusId&&canFocus($(focusId)))$(focusId).focus({preventScroll:true});
 }
 function beginPlacement(type='place'){
- if(areaId==='all')changeArea('2.3');const stack=selectedStack();if(type==='move'&&!stack)return;
- placing={type,stackId:stack?.id,point:null,capacity:type==='move'?stack.capacity:8};viewer?.setMode(type);viewer?.setPlacementPreview(null);renderInspector();renderLocation();renderPlacement();
+ if(!canEdit)return;
+ if(areaId==='all'){if(!AREAS.length){toast('Najprije dodajte prostor.');return;}changeArea(AREAS[0].id);}const stack=selectedStack();if(type==='move'&&!stack)return;
+ placing={type,stackId:stack?.id,fromAreaId:stack?.areaId,point:null,capacity:type==='move'?stack.capacity:8};if($('place-rack'))$('place-rack').value='';if(type!=='move')void loadLiveSeats().then(()=>{if(placing)renderPlacement();});viewer?.setMode(type);viewer?.setPlacementPreview(null);renderInspector();renderLocation();renderPlacement();
  toast(type==='move'?'Odaberite novi položaj. Možete promijeniti skladište prije spremanja.':'Dodirnite slobodno mjesto na podu.');
 }
 function endPlacement(){placing=null;viewer?.setMode('browse');viewer?.setPlacementPreview(null);$('placement-card').hidden=true;renderInspector();renderLocation();renderPlanPreview();}
 function floorPick(point){if(!placing||areaId==='all')return;placing.point={x:Math.round(point.x*100)/100,z:Math.round(point.z*100)/100};renderPlacement();}
-function renderPlacement(){if(!placing)return;const p=placing.point;const card=$('placement-card');card.hidden=false;$('placement-title').textContent=placing.type==='move'?'Premjesti stupac':'Dodaj stupac';$('place-capacity').value=placing.capacity;$('place-capacity').disabled=placing.type==='move';
+function renderPlacement(){if(!placing)return;const p=placing.point;const card=$('placement-card');card.hidden=false;
+ const rackInput=$('place-rack');if(rackInput){rackInput.closest('label').hidden=placing.type==='move';if(placing.type!=='move')$('rack-options').innerHTML=rackOptions(areaId).map(r=>`<option value="${esc(r)}"></option>`).join('');}$('placement-title').textContent=placing.type==='move'?'Premjesti stupac':'Dodaj stupac';$('place-capacity').value=placing.capacity;$('place-capacity').disabled=placing.type==='move';
  if(p){$('place-x').value=p.x;$('place-z').value=p.z;const valid=canPlace(state,areaId,p.x,p.z,.27,placing.type==='move'?placing.stackId:null);card.classList.toggle('invalid',!valid.valid);$('placement-hint').textContent=valid.valid?'Slobodan pod. Spremite novi položaj.':valid.reason;$('confirm-placement').disabled=!valid.valid;$('confirm-placement').textContent=placing.type==='move'?'Spremi položaj':'Dodaj ovdje';viewer?.setPlacementPreview({...p,areaId,valid:valid.valid,radius:.27});}
  else{card.classList.remove('invalid');$('placement-hint').textContent='Dodirnite pod ili unesite položaj.';$('confirm-placement').disabled=true;$('confirm-placement').textContent='Odaberi položaj';}
  renderPlanPreview();
 }
+function liveZoneKeys(){return Array.isArray(liveSeats)?new Set(liveSeats.map(r=>locationKey(r?.zone)).filter(Boolean)):null;}
+function liveRackKeys(zone){return Array.isArray(liveSeats)?new Set(liveSeats.filter(r=>locationKey(r?.zone)===locationKey(zone)).map(r=>locationKey(r?.rack)).filter(Boolean)):null;}
+function zoneOptions(){const keys=liveZoneKeys();return keys?[...keys].filter(z=>!AREAS.some(a=>a.id===z)).sort():[];}
+function rackOptions(zone){const keys=liveRackKeys(zone);if(!keys)return [];const used=new Set(state.stacks.filter(s=>s.areaId===zone&&s.rack).map(s=>s.rack));return [...keys].filter(r=>!used.has(r)).sort();}
+async function loadLiveSeats(){try{const db=await import('../../js/db.js');const rows=await db.listLocationSeats?.();if(!disposed&&Array.isArray(rows))liveSeats=rows.filter(r=>(r.warehouse||'main')==='main');}catch{}}
+function showAddArea(){
+ const zones=zoneOptions();
+ openDialog(esc(T('map.addArea')),`<form id="area-form" class="area-form" novalidate><p class="dialog-intro">${esc(T('map.areaIntro'))}</p>
+ <label>${esc(T('map.zoneLabel'))}<input id="area-zone" name="zone" required maxlength="60" list="zone-options" autocomplete="off"></label><datalist id="zone-options">${zones.map(z=>`<option value="${esc(z)}"></option>`).join('')}</datalist>
+ <label>${esc(T('map.nameLabel'))}<input id="area-name" name="name" maxlength="60" autocomplete="off"></label>
+ <fieldset><legend>${esc(T('map.size'))}</legend><label><input type="radio" name="unit" value="m" required> ${esc(T('map.unitM'))}</label><label><input type="radio" name="unit" value="grid" required> ${esc(T('map.unitGrid'))}</label></fieldset>
+ <label>${esc(T('map.width'))}<input id="area-width" name="width" type="number" required min="0.5" max="200" step="0.1" inputmode="decimal"></label>
+ <label>${esc(T('map.depth'))}<input id="area-depth" name="depth" type="number" required min="0.5" max="200" step="0.1" inputmode="decimal"></label>
+ <p id="area-error" class="dialog-error" role="alert" hidden></p><button id="save-area" class="button primary" type="submit">${esc(T('map.saveArea'))}</button></form>`);
+ $('area-form').onsubmit=async e=>{e.preventDefault();const f=new FormData(e.currentTarget);const draft={id:f.get('zone'),name:f.get('name'),width:f.get('width')===''?NaN:Number(f.get('width')),depth:f.get('depth')===''?NaN:Number(f.get('depth')),unit:f.get('unit')};
+  const fail=msg=>{$('area-error').hidden=false;$('area-error').textContent=msg;};
+  if(!canEdit){fail(T('map.readOnly'));return;}
+  let preview;try{preview=createArea(state,draft);}catch(err){fail(err.message);return;}
+  const made=preview.areas.at(-1);await loadLiveSeats();const zones=liveZoneKeys();
+  if(!zones){fail(T('map.locationsUnavailable'));return;}
+  if(!zones.has(made.id)){fail(T('map.zoneNotInLocations',{zone:made.id}));return;}
+  let remoteId=null;
+  if(shared.available){try{remoteId=(await db().then(m=>m.createWarehouseArea({zone:made.id,name:made.name,width:made.width,depth:made.depth,unit:made.unit})))?.id||null;}catch(err){fail(SHARE_ERR(err));return;}}
+  const ok=await commit(s=>{const n=createArea(s,draft);return remoteId?markAreaShared(n,made.id,String(remoteId)):n;},T('map.areaAdded'),{sharedSaved:Boolean(remoteId)});if(ok){closeDialog();changeArea(made.id);}};
+}
+$('remove-area-button').onclick=()=>{const a=area();if(!a||!canEdit)return;
+ openDialog(esc(T('map.removeTitle')),`<p class="dialog-intro">${esc(T('map.removeBody',{zone:a.id}))}</p><p id="remove-error" class="dialog-error" role="alert" hidden></p><div class="secondary-actions"><button id="remove-area-cancel" class="button quiet" type="button">${esc(T('map.cancel'))}</button><button id="remove-area-confirm" class="button primary danger" type="button">${esc(T('map.remove'))}</button></div>`);
+ $('remove-area-cancel').onclick=closeDialog;
+ $('remove-area-confirm').onclick=async()=>{try{removeArea(state,a.id);}catch(err){$('remove-error').hidden=false;$('remove-error').textContent=err.message;return;}
+  if(a.remoteId&&!shared.available){$('remove-error').hidden=false;$('remove-error').textContent=T('map.sharedUnavailable');return;}
+  if(a.remoteId){try{await db().then(m=>m.deleteWarehouseArea(a.remoteId));}catch(err){$('remove-error').hidden=false;$('remove-error').textContent=SHARE_ERR(err);return;}}
+  const ok=await commit(s=>removeArea(s,a.id),T('map.areaRemoved'),{sharedSaved:Boolean(a.remoteId)});if(ok){closeDialog();changeArea('all');}};};
+const db=()=>import('../../js/db.js');
+let syncing=false;
+async function syncShared(){
+ if(disposed||syncing||sharedWriting||saving)return;syncing=true;
+ try{const m=await db();if(!m.listWarehouseLayout)return;const remote=await m.listWarehouseLayout();if(disposed)return;
+  shared.available=Boolean(remote?.available);
+  if(!shared.available){shared.localOnly=[];render();return;}
+  if(rawProblem){render();return;} // never overwrite an unreadable saved map
+  let result=mergeRemoteLayout(state,remote);
+  if(result.changed){await commit(s=>{const r=mergeRemoteLayout(s,remote);result=r;if(!r.changed)throw new LocalSaveError('—');return r.state;},'',{silent:true,readOnlySync:true,sharedSaved:true});}
+  shared.localOnly=result.localOnly;if(result.rejected)toast(SHARE_ERR({message:'layout'}));render();if(placing)renderPlacement();
+ }catch{shared.available=false;render();}finally{syncing=false;}
+}
+async function uploadLayout(){
+ if(!canEdit||!shared.available||sharedWriting)return;sharedWriting=true;const m=await db();let n=0;
+ try{for(const id of [...shared.localOnly]){let a=state.areas.find(x=>x.id===id);if(!a)continue;
+  try{await loadLiveSeats();const zones=liveZoneKeys();if(!zones)throw Error(T('map.locationsUnavailable'));
+   if(!zones.has(a.id))throw Error(T('map.zoneNotInLocations',{zone:a.id}));
+   if(!a.remoteId){const row=await m.createWarehouseArea({zone:a.id,name:a.name,width:a.width,depth:a.depth,unit:a.unit});
+    if(!await commit(s=>markAreaShared(s,a.id,String(row.id)),'',{silent:true}))break;
+    a=state.areas.find(x=>x.id===id);}
+   for(const st of state.stacks.filter(x=>x.areaId===a.id&&x.rack&&!x.remotePositionId)){
+    if(!liveRackKeys(a.id)?.has(st.rack))throw Error(T('map.rackNotInLocations',{rack:st.rack,zone:a.id}));
+    const row=await m.saveRackPosition({area_id:a.remoteId,rack:st.rack,x:st.x,z:st.z,capacity:st.capacity});
+    if(!await commit(s=>markStackShared(s,st.id,String(row.id)),'',{silent:true,sharedSaved:true}))throw Error(T('map.sharedUnavailable'));}
+   n++;}catch(err){toast(SHARE_ERR(err));break;}}
+ }finally{sharedWriting=false;}
+ if(n)toast(T('map.uploadDone',{n}));await syncShared();
+}
+// Shared geometry is acknowledged only after the backend confirms the row.
+// Local inventory remains local; a failed remote write leaves the cache intact.
+async function commitStack(operation,stackId,message){
+ if(disposed||!isActive()||!canEdit||sharedWriting)return false;sharedWriting=true;
+ try{const next=operation(state);const st=next.stacks.find(x=>x.id===stackId)||next.stacks.at(-1);
+  const dest=next.areas.find(a=>a.id===st.areaId),old=state.stacks.find(x=>x.id===st.id),from=state.areas.find(a=>a.id===old?.areaId);
+  let remotePositionId=null;
+  if(st.rack&&(dest.remoteId||from?.remoteId)){
+   if(!shared.available||!dest.remoteId)throw Error(T('map.sharedUnavailable'));
+   const m=await db();const row=from?.remoteId&&from.remoteId!==dest.remoteId
+    ? await m.moveRackPosition({from_area_id:from.remoteId,to_area_id:dest.remoteId,rack:st.rack,x:st.x,z:st.z})
+    : await m.saveRackPosition({area_id:dest.remoteId,rack:st.rack,x:st.x,z:st.z,capacity:st.capacity});
+   if(!row?.id)throw Error(T('map.sharedUnavailable'));remotePositionId=String(row.id);
+  }
+  return await commit(s=>{const n=operation(s);return remotePositionId?markStackShared(n,st.id,remotePositionId):n;},message,{sharedSaved:Boolean(remotePositionId)});
+ }catch(err){toast(SHARE_ERR(err));$('save-status').textContent=T('map.sharedUnavailable');return false;}
+ finally{sharedWriting=false;}
+}
+$('upload-layout').onclick=()=>void uploadLayout();
+$('download-raw').onclick=()=>{if(rawProblem!=null)download('ASC_spremljena_karta.json',rawProblem,'application/json');};
+listen(window,'focus',()=>void syncShared());
+listen(document,'visibilitychange',()=>{if(!document.hidden)void syncShared();});
+const syncTimer=setInterval(()=>{if(!document.hidden)void syncShared();},30000);listeners.push(()=>clearInterval(syncTimer));
+for(const id of ['add-area-button','add-area-empty'])$(id).onclick=()=>{void loadLiveSeats().then(()=>{if($('dialog').open&&$('zone-options'))$('zone-options').innerHTML=zoneOptions().map(z=>`<option value="${esc(z)}"></option>`).join('');});showAddArea();};
 $('place-button').onclick=()=>beginPlacement();$('cancel-placement').onclick=endPlacement;$('place-capacity').onchange=e=>{if(placing)placing.capacity=Number(e.target.value);};
 for(const id of ['place-x','place-z'])$(id).onchange=()=>{if(placing)floorPick({x:Number($('place-x').value),z:Number($('place-z').value)});};
-$('confirm-placement').onclick=async()=>{if(!placing?.point)return;const draft={...placing,areaId};let newId;
- const ok=await commit(s=>{const n=draft.type==='move'?moveStack(s,draft.stackId,{areaId:draft.areaId,...draft.point}):createStack(s,{areaId:draft.areaId,...draft.point,capacity:draft.capacity});newId=draft.type==='move'?draft.stackId:n.stacks.at(-1).id;return n;},draft.type==='move'?'Položaj je spremljen':'Stupac je dodan');
+$('confirm-placement').onclick=async()=>{if(!placing?.point||!canEdit||sharedWriting)return;const draft={...placing,areaId,rack:$('place-rack')?.value||''};let newId;
+ const rack=draft.type==='move'?state.stacks.find(s=>s.id===draft.stackId)?.rack:draft.rack;
+ if(rack){await loadLiveSeats();const racks=liveRackKeys(draft.areaId);
+  if(!racks||!racks.has(locationKey(rack))){$('placement-hint').textContent=!racks?T('map.locationsUnavailable'):T('map.rackNotInLocations',{rack:locationKey(rack),zone:draft.areaId});toast($('placement-hint').textContent);return;}}
+ const operation=s=>{const n=draft.type==='move'?moveStack(s,draft.stackId,{areaId:draft.areaId,...draft.point}):createStack(s,{areaId:draft.areaId,...draft.point,capacity:draft.capacity,rack:draft.rack});newId=draft.type==='move'?draft.stackId:n.stacks.at(-1).id;return n;};
+ const ok=await commitStack(operation,draft.type==='move'?draft.stackId:null,draft.type==='move'?'Položaj je spremljen':'Stupac je dodan');
  if(ok){endPlacement();selectStack(newId);}
 };
 
 function renderPlan(){
- const mount=$('plan-view');if(areaId==='all'){mount.innerHTML=`<div class="plan-house-message"><p>Odaberite skladište za prikaz tlocrta.</p>${AREAS.map(a=>`<button class="button quiet" data-plan-area="${a.id}">${a.id} · ${esc(a.name)}</button>`).join('')}</div>`;mount.querySelectorAll('[data-plan-area]').forEach(b=>b.onclick=()=>changeArea(b.dataset.planArea));return;}
+ const mount=$('plan-view');if(areaId==='all'){mount.innerHTML=`<div class="plan-house-message"><p>Odaberite skladište za prikaz tlocrta.</p>${AREAS.map(a=>`<button class="button quiet" data-plan-area="${esc(a.id)}">${esc(a.id)} · ${esc(a.name)}</button>`).join('')}</div>`;mount.querySelectorAll('[data-plan-area]').forEach(b=>b.onclick=()=>changeArea(b.dataset.planArea));return;}
  const a=area();const rect=r=>`x="${r.x-r.w/2}" y="${r.z-r.d/2}" width="${r.w}" height="${r.d}"`;
- mount.innerHTML=`<svg viewBox="-5.7 -7.7 11.4 15.4" role="group" aria-label="${esc(a.name)} — tlocrt"><defs><pattern id="planks" width=".36" height="2" patternUnits="userSpaceOnUse"><rect width=".36" height="2" fill="#e9dccb"/><path d="M0 0v2" stroke="#d5c4ab" stroke-width=".012"/></pattern></defs><rect x="-5" y="-7" width="10" height="14" fill="none" stroke="#d1d4d6" stroke-width=".025" stroke-dasharray=".12 .14"/>${a.voidRects.map(r=>`<rect ${rect(r)} fill="#dce2e6" fill-opacity=".6"/>`).join('')}${a.floorRects.map(r=>`<rect ${rect(r)} fill="${areaId==='2.1'?'#e3e2dd':'url(#planks)'}" stroke="#bcb6ab" stroke-width=".025"/>`).join('')}${a.stair?`<g><rect ${rect(a.stair)} fill="#aeb6bc" stroke="#7b8791" stroke-width=".02"/>${Array.from({length:12},(_,i)=>`<path d="M${a.stair.x-a.stair.w/2} ${a.stair.z-a.stair.d/2+i*a.stair.d/12}h${a.stair.w}" stroke="#e2e7eb" stroke-width=".03"/>`).join('')}</g>`:''}${state.stacks.filter(s=>s.areaId===areaId).map(s=>`<g class="plan-stack" role="button" tabindex="0" data-plan-stack="${s.id}" aria-label="${s.id}, ${s.tireIds.length} od ${s.capacity} guma"><circle cx="${s.x}" cy="${s.z}" r="${s.radius+.045}" fill="${s.id===selectedId?'#f0c052':'#252e34'}" stroke="${s.id===selectedId?'#f0c052':'#3e474c'}" stroke-width=".025"/><circle cx="${s.x}" cy="${s.z}" r=".13" fill="#dddcd6"/><text x="${s.x}" y="${s.z+.055}" text-anchor="middle" fill="#303c45" font-family="Inter,sans-serif" font-size=".14">${s.tireIds.length}</text></g>`).join('')}<text x="0" y="-7.3" text-anchor="middle" fill="#87919c" font-size=".2" font-family="Inter,sans-serif">SJEVER ↑</text></svg>`;
+ const hw=a.width/2+.7,hd=a.depth/2+.7;
+ mount.innerHTML=`<svg viewBox="${-hw} ${-hd} ${hw*2} ${hd*2}" role="group" aria-label="${esc(a.name)} — tlocrt"><defs><pattern id="planks" width=".36" height="2" patternUnits="userSpaceOnUse"><rect width=".36" height="2" fill="#e9dccb"/><path d="M0 0v2" stroke="#d5c4ab" stroke-width=".012"/></pattern></defs><rect x="${-a.width/2}" y="${-a.depth/2}" width="${a.width}" height="${a.depth}" fill="none" stroke="#d1d4d6" stroke-width=".025" stroke-dasharray=".12 .14"/>${a.voidRects.map(r=>`<rect ${rect(r)} fill="#dce2e6" fill-opacity=".6"/>`).join('')}${a.floorRects.map(r=>`<rect ${rect(r)} fill="${a.timber?'url(#planks)':'#e3e2dd'}" stroke="#bcb6ab" stroke-width=".025"/>`).join('')}${a.stair?`<g><rect ${rect(a.stair)} fill="#aeb6bc" stroke="#7b8791" stroke-width=".02"/>${Array.from({length:12},(_,i)=>`<path d="M${a.stair.x-a.stair.w/2} ${a.stair.z-a.stair.d/2+i*a.stair.d/12}h${a.stair.w}" stroke="#e2e7eb" stroke-width=".03"/>`).join('')}</g>`:''}${state.stacks.filter(s=>s.areaId===areaId).map(s=>`<g class="plan-stack" role="button" tabindex="0" data-plan-stack="${s.id}" aria-label="${s.id}, ${s.tireIds.length} od ${s.capacity} guma"><circle cx="${s.x}" cy="${s.z}" r="${s.radius+.045}" fill="${s.id===selectedId?'#f0c052':'#252e34'}" stroke="${s.id===selectedId?'#f0c052':'#3e474c'}" stroke-width=".025"/><circle cx="${s.x}" cy="${s.z}" r=".13" fill="#dddcd6"/><text x="${s.x}" y="${s.z+.055}" text-anchor="middle" fill="#303c45" font-family="Inter,sans-serif" font-size=".14">${s.tireIds.length}</text></g>`).join('')}<text x="0" y="${-a.depth/2-.3}" text-anchor="middle" fill="#87919c" font-size="${Math.max(.2,Math.min(a.width,a.depth)/30)}" font-family="Inter,sans-serif">${esc(T('map.north'))}</text></svg>`;
  mount.querySelectorAll('[data-plan-stack]').forEach(el=>{el.onclick=e=>{if(!placing){e.stopPropagation();selectStack(el.dataset.planStack);}};el.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();selectStack(el.dataset.planStack,true);}};});
  mount.querySelector('svg').onclick=e=>{if(!placing)return;const svg=e.currentTarget;const pt=svg.createSVGPoint();pt.x=e.clientX;pt.y=e.clientY;const local=pt.matrixTransform(svg.getScreenCTM().inverse());floorPick({x:local.x,z:local.y});};
  renderPlanPreview();
@@ -182,8 +291,8 @@ $('dialog').addEventListener('close',()=>{
  const target=canFocus(dialogReturnFocus)?dialogReturnFocus:canFocus($('inspector'))?$('inspector'):$('menu-button');target.focus({preventScroll:true});
 });
 $('dialog').addEventListener('click',e=>{if(e.target===$('dialog')){const r=$('dialog').getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)closeDialog();}});
-function showAddTyre(){const s=selectedStack();if(!s)return;const t=tyreById(s.tireIds.at(-1));openDialog('Dodaj probnu gumu',`<p class="dialog-intro">Dodajte gumu u <b>${esc(s.id)}</b>. Sprema se samo probni zapis.</p><form id="add-form"><label class="dialog-field">Ime kupca<input id="new-customer" required maxlength="60" value="${esc((t?.customer||'Primjer Novi kupac').replace(/^(Demo|Primjer) /,''))}"></label><label class="dialog-field">Probna registracija<input id="new-plate" required maxlength="20" value="${esc(t?.plate||'PROBNO-NOVO')}"></label><label class="dialog-field">Dimenzija gume<input id="new-size" required maxlength="35" value="${esc(t?.size||'205/55 R16')}"></label><div class="dialog-actions"><button class="button primary" type="submit">Dodaj u stupac</button></div></form>`);$('add-form').onsubmit=async e=>{e.preventDefault();const name='Primjer '+$('new-customer').value.trim().replace(/^(Demo|Primjer) /,'');const plate=$('new-plate').value.trim();const match=state.tires.find(x=>x.customer===name&&x.plate===plate);const details={customer:name,plate,size:$('new-size').value.trim(),...(match?{setId:match.setId,color:match.color,brand:match.brand}:{})};if(await commit(data=>addTire(data,s.id,details),'Probna guma je dodana'))closeDialog();};}
-function showRemoveTyre(id){const s=selectedStack(),t=tyreById(id);if(!s||!t)return;openDialog('Ukloniti probnu gumu?',`<p class="dialog-intro">${esc(t.customer)} · ${esc(t.plate)}<br>Guma će biti uklonjena iz stupca ${esc(s.id)}. Ostale gume zadržavaju svoje oznake.</p><div class="dialog-actions"><button id="keep-tyre" class="button quiet">Zadrži gumu</button><button id="confirm-remove" class="button primary">Ukloni gumu</button></div>`);$('keep-tyre').onclick=closeDialog;$('confirm-remove').onclick=async()=>{if(await commit(data=>removeTire(data,s.id,id),'Guma je uklonjena'))closeDialog();};}
+function showAddTyre(){const s=selectedStack();if(!s)return;openDialog('Dodaj gumu',`<p class="dialog-intro">Dodajte gumu u <b>${esc(s.id)}</b>. Zapis se sprema na ovom uređaju.</p><form id="add-form"><label class="dialog-field">Ime kupca<input id="new-customer" required maxlength="60"></label><label class="dialog-field">Registracija<input id="new-plate" required maxlength="20"></label><label class="dialog-field">Dimenzija gume<input id="new-size" required maxlength="35"></label><div class="dialog-actions"><button class="button primary" type="submit">Dodaj u stupac</button></div></form>`);$('add-form').onsubmit=async e=>{e.preventDefault();const name=$('new-customer').value.trim();const plate=$('new-plate').value.trim();const match=state.tires.find(x=>x.customer===name&&x.plate===plate);const details={customer:name,plate,size:$('new-size').value.trim(),...(match?{setId:match.setId,color:match.color,brand:match.brand}:{})};if(await commit(data=>addTire(data,s.id,details),'Guma je dodana'))closeDialog();};}
+function showRemoveTyre(id){const s=selectedStack(),t=tyreById(id);if(!s||!t)return;openDialog('Ukloniti gumu?',`<p class="dialog-intro">${esc(t.customer)} · ${esc(t.plate)}<br>Guma će biti uklonjena iz stupca ${esc(s.id)}. Ostale gume zadržavaju svoje oznake.</p><div class="dialog-actions"><button id="keep-tyre" class="button quiet">Zadrži gumu</button><button id="confirm-remove" class="button primary">Ukloni gumu</button></div>`);$('keep-tyre').onclick=closeDialog;$('confirm-remove').onclick=async()=>{if(await commit(data=>removeTire(data,s.id,id),'Guma je uklonjena'))closeDialog();};}
 function renderInspector(){renderInspectorBase();renderFsPanel();}
 // ---- Fullscreen 3D -------------------------------------------------------
 // Entering 3D takes the whole screen (Fullscreen API, fixed full-viewport
@@ -242,7 +351,7 @@ function showTyre(id,toggle=false){const t=tyreById(id);const row=[...$('inspect
  row.setAttribute('aria-expanded','true');row.setAttribute('aria-controls','tyre-details');
  const details=document.createElement('section');details.id='tyre-details';details.className='tyre-details';details.setAttribute('aria-label','Detalji odabrane gume');
  row.after(details);
- details.innerHTML=`<div class="inspector-top"><h4>${esc(t.size)}</h4><button id="close-tyre-details" class="icon-button" aria-label="Zatvori detalje gume">×</button></div><p class="tyre-brand">${esc(t.brand)}</p><details id="tyre-qr" class="compact-details"><summary>QR oznaka</summary><div class="code-label disclosure-body"><div id="tyre-qr-image"></div><strong>${esc(t.code)}</strong><p>Probna oznaka · samo ovaj prikaz</p></div></details><div class="dialog-actions"><button id="copy-code" class="button quiet">Kopiraj kod</button><button id="remove-label-tyre" class="button quiet danger">Ukloni gumu</button></div>`;
+ details.innerHTML=`<div class="inspector-top"><h4>${esc(t.size)}</h4><button id="close-tyre-details" class="icon-button" aria-label="Zatvori detalje gume">×</button></div><p class="tyre-brand">${esc(t.brand)}</p><details id="tyre-qr" class="compact-details"><summary>QR oznaka</summary><div class="code-label disclosure-body"><div id="tyre-qr-image"></div><strong>${esc(t.code)}</strong><p>Oznaka · samo ovaj prikaz</p></div></details><div class="dialog-actions"><button id="copy-code" class="button quiet">Kopiraj kod</button><button id="remove-label-tyre" class="button quiet danger">Ukloni gumu</button></div>`;
  const qrImage=$('tyre-qr-image');
  $('tyre-qr').ontoggle=e=>{if(disposed||!e.currentTarget.isConnected||!e.currentTarget.open||qrImage.childNodes.length)return;const payload=location.origin+location.pathname+'#tyre='+encodeURIComponent(t.code);try{const qr=window.qrcode(0,'M');qr.addData(payload);qr.make();qrImage.innerHTML=qr.createSvgTag({cellSize:5,margin:20,scalable:true});}catch{qrImage.textContent='QR oznaka trenutačno nije dostupna.';}};
  $('close-tyre-details').onclick=()=>{details.remove();row.setAttribute('aria-expanded','false');row.removeAttribute('aria-controls');row.focus({preventScroll:true});};
@@ -251,25 +360,15 @@ function showTyre(id,toggle=false){const t=tyreById(id);const row=[...$('inspect
 function showList(){const stacks=state.stacks.filter(s=>areaId==='all'||s.areaId===areaId);openDialog('Popis stupaca',`<p class="dialog-intro">Odaberite stupac za detalje. Popis radi i bez 3D prikaza.</p><div class="stack-list">${stacks.map(s=>`<button class="result" data-list-stack="${s.id}"><span><b>${esc(s.id)}</b><small>Zauzeto ${s.tireIds.length} od ${s.capacity} mjesta</small></span><span class="result-location">Otvori ↗</span></button>`).join('')}</div>`);$('dialog-content').querySelectorAll('[data-list-stack]').forEach(b=>b.onclick=()=>{closeDialog();selectStack(b.dataset.listStack,true);});}
 $('list-button').onclick=showList;
 
-const CHECKS=[['geometry','Pod potkrovlja','Bočni otvori završavaju na sredini. Ispred stubišta nalazi se pod.'],['navigate','Tri skladišta','Otvorite sva skladišta, približite stupac i vratite se na pregled.'],['search','Pronađite gumu','Pretražite ime, registraciju ili oznaku stupca.'],['place','Dodaj stupac','Dodajte stupac na pod. Provjerite da otvori ostaju slobodni.'],['capacity','Kapacitet','Dodajte gumu i provjerite ograničenje kapaciteta.'],['move','Premještanje','Premjestite stupac na slobodan pod ili u drugo skladište.'],['qr','QR oznaka','Kopirajte kod gume i pronađite ga u skeneru.'],['persist','Spremanje','Osvježite stranicu i provjerite promjene.'],['fallback','Tlocrt i popis','Isprobajte tlocrt i popis stupaca.']];
-function showGuide(){openDialog('Provjera prikaza',`<p class="dialog-intro">Označite što ste provjerili. Svi zapisi su probni.</p><div>${CHECKS.map(([id,title,description])=>`<label class="test-item"><input type="checkbox" data-check="${id}" ${checkState[id]?'checked':''}><span><b>${title}</b><small>${description}</small></span></label>`).join('')}</div><label class="dialog-field">Što treba popraviti?<textarea id="test-notes" rows="3" maxlength="4000" placeholder="Npr. desni otvor počinje predaleko…">${esc(checkState.notes||'')}</textarea></label><div class="status-note">Promjene ostaju na ovom uređaju. Stvarni podaci nisu povezani, a mjere nisu potvrđene.</div><div class="dialog-actions"><button id="guide-attic" class="button quiet">Otvori potkrovlje</button><button id="export-guide" class="button primary">Preuzmi probne podatke</button></div>`);$('dialog-content').querySelectorAll('[data-check]').forEach(i=>i.onchange=()=>{checkState[i.dataset.check]=i.checked;try{localStorage.setItem(CHECK_KEY,JSON.stringify(checkState));}catch{}});$('test-notes').oninput=e=>{checkState.notes=e.target.value;try{localStorage.setItem(CHECK_KEY,JSON.stringify(checkState));}catch{}};$('guide-attic').onclick=()=>{closeDialog();changeArea('2.3');};$('export-guide').onclick=exportSession;}
-$('test-status-button').onclick=()=>{closeMenu();showGuide();};
 function download(name,data,type){const blob=data instanceof Blob?data:new Blob([data],{type});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);}
-function exportSession(){closeMenu();const output={module:'ASC house spatial test',build:'0.2.0',exportedAt:new Date().toISOString(),dataMode:'fictional-local-demo',layoutVersion:LAYOUT_VERSION,measurements:'unverified',areaId,checks:checkState,feedback:checkState.notes||'',validation:validateState(state),state};download('ASC_probni_podaci.json',JSON.stringify(output,null,2),'application/json');toast('Probni podaci su preuzeti');}
-$('export-button').onclick=exportSession;$('menu-button').onclick=()=>{$('app-menu').hidden=!$('app-menu').hidden;$('menu-button').setAttribute('aria-expanded',String(!$('app-menu').hidden));};
-$('capture-button').onclick=()=>{closeMenu();if(viewMode==='plan'||!viewer){toast('Za sliku otvorite 3D prikaz. Cijeli raspored možete preuzeti kroz probne podatke.');return;}try{viewer.getCanvas().toBlob(blob=>{if(blob){download('ASC_prikaz_skladista.png',blob,'image/png');toast('Slika je spremljena');}else toast('Sliku trenutačno nije moguće spremiti.');});}catch{toast('Preglednik ne može spremiti ovu sliku.');}};
-$('reset-button').onclick=()=>{
- openDialog('Vratiti početni raspored?',`<p class="dialog-intro">Vratite početne gume i 133 stupca. Promjene s ovog uređaja bit će uklonjene. Prije vraćanja možete preuzeti izvorni zapis.</p><div class="dialog-actions"><button id="download-backup" class="button quiet">Preuzmi izvorni zapis</button><button id="cancel-reset" class="button quiet">Zadrži promjene</button><button id="confirm-reset" class="button primary">Vrati početno stanje</button></div>`);
- $('download-backup').onclick=()=>{try{const raw=localStorage.getItem(KEY);if(raw===null){exportSession();return;}download('ASC_izvorni_zapis.json',raw,'application/json');toast('Izvorni zapis je preuzet.');}catch{toast('Izvorni zapis nije dostupan.');}};
- $('cancel-reset').onclick=closeDialog;
- $('confirm-reset').onclick=async()=>{const ok=await commit(current=>({...seedState(),revision:current.revision+1}),'Početni raspored je vraćen',{recover:true});if(ok){selectedId=null;endPlacement();closeDialog();render();}};
-};
+$('menu-button').onclick=()=>{$('app-menu').hidden=!$('app-menu').hidden;$('menu-button').setAttribute('aria-expanded',String(!$('app-menu').hidden));};
+$('capture-button').onclick=()=>{closeMenu();if(viewMode==='plan'||!viewer){toast('Za sliku otvorite 3D prikaz.');return;}try{viewer.getCanvas().toBlob(blob=>{if(blob){download('ASC_prikaz_skladista.png',blob,'image/png');toast('Slika je spremljena');}else toast('Sliku trenutačno nije moguće spremiti.');});}catch{toast('Preglednik ne može spremiti ovu sliku.');}};
 
 function normalizeCode(raw){try{const u=new URL(raw);const hash=new URLSearchParams(u.hash.slice(1));return hash.get('tyre')||raw;}catch{return raw.trim();}}
-function resolveCode(raw){const code=normalizeCode(raw).trim();const tyre=state.tires.find(t=>t.code===code||t.id===code);const stack=tyre&&state.stacks.find(s=>s.tireIds.includes(tyre.id));if(!stack){toast('Ova oznaka nije u probnim podacima. Stvarne ASC oznake još nisu povezane.');return false;}closeDialog();selectStack(stack.id,true);toast('Guma je pronađena');return true;}
+function resolveCode(raw){const code=normalizeCode(raw).trim();const tyre=state.tires.find(t=>t.code===code||t.id===code);const stack=tyre&&state.stacks.find(s=>s.tireIds.includes(tyre.id));if(!stack){toast('Ova oznaka nije na karti.');return false;}closeDialog();selectStack(stack.id,true);toast('Guma je pronađena');return true;}
 function stopScanner(){const video=$('scan-video');if(video){video.pause();video.srcObject=null;video.hidden=true;}scannerGeneration++;scannerStarting=false;const start=$('start-camera');if(start)start.disabled=false;if(scannerFrame){cancelAnimationFrame(scannerFrame);scannerFrame=null;}if(scannerStream){scannerStream.getTracks().forEach(t=>t.stop());scannerStream=null;}}
-async function startScanner(){if(scannerStarting||scannerStream)return;const status=$('scan-status'),start=$('start-camera'),generation=++scannerGeneration;scannerStarting=true;if(start)start.disabled=true;try{if(!navigator.mediaDevices?.getUserMedia)throw new Error('Kamera nije dostupna. Zalijepite kod ili odaberite fotografiju QR oznake.');const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false});if(generation!==scannerGeneration||!$('dialog').open||!$('scan-video')){stream.getTracks().forEach(track=>track.stop());return;}scannerStream=stream;scannerStarting=false;const video=$('scan-video');video.hidden=false;video.srcObject=scannerStream;await video.play();if(generation!==scannerGeneration)return;status.textContent='Usmjerite kameru prema probnoj QR oznaci.';const canvas=document.createElement('canvas'),ctx=canvas.getContext('2d',{willReadFrequently:true});let last=0;function frame(now){if(generation!==scannerGeneration||!scannerStream||!$('dialog').open)return;if(now-last>180&&video.readyState>=2){last=now;const ratio=Math.min(1,720/video.videoWidth);canvas.width=Math.round(video.videoWidth*ratio);canvas.height=Math.round(video.videoHeight*ratio);ctx.drawImage(video,0,0,canvas.width,canvas.height);const data=ctx.getImageData(0,0,canvas.width,canvas.height);const result=window.jsQR?.(data.data,data.width,data.height,{inversionAttempts:'dontInvert'});if(result&&resolveCode(result.data))return;}scannerFrame=requestAnimationFrame(frame);}scannerFrame=requestAnimationFrame(frame);}catch(e){if(generation!==scannerGeneration)return;if(status)status.textContent=e.name==='NotAllowedError'?'Pristup kameri nije dopušten. Zalijepite kod ili odaberite fotografiju.':'Kamera nije dostupna. Zalijepite kod ili odaberite fotografiju.';stopScanner();}}
-function showScan(){openDialog('Pronađi QR oznaku',`<p class="dialog-intro">Skenirajte probnu oznaku ili zalijepite kod.</p><video id="scan-video" class="scan-video" playsinline muted hidden></video><div id="scan-status" class="scan-status">Kamera se uključuje tek na vaš dodir.</div><div class="dialog-actions" style="justify-content:flex-start"><button id="start-camera" class="button quiet">Otvori kameru</button><label class="button quiet file-label">Odaberi fotografiju<input id="scan-photo" type="file" accept="image/*"></label></div><form id="scan-form"><label class="dialog-field">Probni kod ili poveznica<input id="scan-code" autocomplete="off" placeholder="ASC-DEMO-…" required></label><div class="dialog-actions"><button class="button primary" type="submit">Pronađi gumu</button></div></form>`);$('start-camera').onclick=startScanner;$('scan-form').onsubmit=e=>{e.preventDefault();resolveCode($('scan-code').value);};$('scan-photo').onchange=async e=>{
+async function startScanner(){if(scannerStarting||scannerStream)return;const status=$('scan-status'),start=$('start-camera'),generation=++scannerGeneration;scannerStarting=true;if(start)start.disabled=true;try{if(!navigator.mediaDevices?.getUserMedia)throw new Error('Kamera nije dostupna. Zalijepite kod ili odaberite fotografiju QR oznake.');const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false});if(generation!==scannerGeneration||!$('dialog').open||!$('scan-video')){stream.getTracks().forEach(track=>track.stop());return;}scannerStream=stream;scannerStarting=false;const video=$('scan-video');video.hidden=false;video.srcObject=scannerStream;await video.play();if(generation!==scannerGeneration)return;status.textContent='Usmjerite kameru prema QR oznaci.';const canvas=document.createElement('canvas'),ctx=canvas.getContext('2d',{willReadFrequently:true});let last=0;function frame(now){if(generation!==scannerGeneration||!scannerStream||!$('dialog').open)return;if(now-last>180&&video.readyState>=2){last=now;const ratio=Math.min(1,720/video.videoWidth);canvas.width=Math.round(video.videoWidth*ratio);canvas.height=Math.round(video.videoHeight*ratio);ctx.drawImage(video,0,0,canvas.width,canvas.height);const data=ctx.getImageData(0,0,canvas.width,canvas.height);const result=window.jsQR?.(data.data,data.width,data.height,{inversionAttempts:'dontInvert'});if(result&&resolveCode(result.data))return;}scannerFrame=requestAnimationFrame(frame);}scannerFrame=requestAnimationFrame(frame);}catch(e){if(generation!==scannerGeneration)return;if(status)status.textContent=e.name==='NotAllowedError'?'Pristup kameri nije dopušten. Zalijepite kod ili odaberite fotografiju.':'Kamera nije dostupna. Zalijepite kod ili odaberite fotografiju.';stopScanner();}}
+function showScan(){openDialog('Pronađi QR oznaku',`<p class="dialog-intro">Skenirajte oznaku ili zalijepite kod.</p><video id="scan-video" class="scan-video" playsinline muted hidden></video><div id="scan-status" class="scan-status">Kamera se uključuje tek na vaš dodir.</div><div class="dialog-actions" style="justify-content:flex-start"><button id="start-camera" class="button quiet">Otvori kameru</button><label class="button quiet file-label">Odaberi fotografiju<input id="scan-photo" type="file" accept="image/*"></label></div><form id="scan-form"><label class="dialog-field">Kod ili poveznica<input id="scan-code" autocomplete="off" placeholder="ASC-…" required></label><div class="dialog-actions"><button class="button primary" type="submit">Pronađi gumu</button></div></form>`);$('start-camera').onclick=startScanner;$('scan-form').onsubmit=e=>{e.preventDefault();resolveCode($('scan-code').value);};$('scan-photo').onchange=async e=>{
  const file=e.target.files?.[0];if(!file)return;stopScanner();
  const generation=scannerGeneration,status=$('scan-status');
  const current=()=>generation===scannerGeneration&&$('dialog').open&&status?.isConnected;
@@ -341,10 +440,21 @@ const runtime={
  dispose(){if(disposed)return;exitFs();disposed=true;pausedDialog=false;if($('dialog').open)$('dialog').close();stopScanner();stopVoice();clearTimeout(toastTimer);tour?.dispose();for(const remove of listeners)remove();listeners.length=0;viewer?.dispose();viewer=null;}
 };
 registerRuntime(runtime);render();
+/** Jump to a real location (zone[/rack]) on the operator-built map. Never guesses. */
+function navigateToLocation({zone,rack}){
+ const pin=pinForSet({zone,rack},state.stacks,AREAS.map(a=>a.id));
+ const where=[zone,rack].filter(Boolean).join(' · ');
+ if(!pin.areaId){toast(T('map.zoneNotOnMap',{where}));return false;}
+ changeArea(pin.areaId);
+ if(pin.stackId){selectStack(pin.stackId,true);return true;}
+ if(rack)toast(T('map.rackNotOnMap',{where}));
+ return true;
+}
 async function highlightLiveQuery(){
  if(disposed||!isActive())return;
  const params=new URLSearchParams(location.search);
- const setCode=params.get('set'), slot=params.get('slot');
+ const setCode=params.get('set'), slot=params.get('slot'), zoneParam=params.get('zone'), rackParam=params.get('rack');
+ if(!setCode&&!slot&&zoneParam){navigateToLocation({zone:zoneParam,rack:rackParam});return;}
  if(!setCode&&!slot)return;
  try{
   const db=await import('../../js/db.js');
@@ -353,18 +463,20 @@ async function highlightLiveQuery(){
   if(setCode&&db.loadStorageSet)row=await db.loadStorageSet(setCode);
   else if(slot&&db.findLocationByQr)row=await db.findLocationByQr(slot);
   if(disposed||!isActive())return;
-  if(!row){toast('Živi komplet nije pronađen. Karta je i dalje probni prikaz.');return;}
-  const pin=pinForSet(row,state.stacks);
+  if(!row){toast('Komplet nije pronađen.');return;}
+  const pin=pinForSet(row,state.stacks,AREAS.map(a=>a.id));
+  if(!pin.stackId){toast(`${row.public_code||setCode||slot}${pin.where?' · '+pin.where:''} · još nije na karti`);return;}
   livePin={...pin,text:`${row.public_code||setCode||slot}${pin.where?' · '+pin.where:''}${pin.approx?' · približno na karti':''}`};
   if(pin.areaId&&AREAS.some(a=>a.id===pin.areaId))areaId=pin.areaId;
   if(pin.stackId&&state.stacks.some(s=>s.id===pin.stackId))selectedId=pin.stackId;
   render();
   if(selectedId)viewer?.focusStack(selectedId);
- }catch{if(!disposed&&isActive())toast('Živi položaj nije učitan. Karta je i dalje probni prikaz.');}
+ }catch{if(!disposed&&isActive())toast('Položaj nije učitan.');}
 }
 void ensureScene().then(()=>highlightLiveQuery());
 const deepCode=new URLSearchParams(location.hash.slice(1)).get('tyre');if(deepCode)resolveCode(deepCode);
-if(storageProblem){$('save-status').textContent='Potrebno je obnoviti probne podatke';toast('Spremljeni podaci nisu valjani. U dodatnim mogućnostima preuzmite izvorni zapis i vratite početni raspored.');}
+if(storageProblem){$('save-status').textContent=T('map.corrupt');toast(T('map.corrupt'));}
+import('../../js/db.js').then(db=>db.countLocations?.()).then(n=>{if(disposed)return;liveSlots=Number.isFinite(n)?n:null;renderEmpty();}).catch(()=>{});
 if(!storageAvailable)$('save-status').textContent='Spremanje nije dostupno';
 
 listen(document,'invalid',e=>{if(e.target.matches('input')){e.target.setCustomValidity(e.target.validity.valueMissing?'Ispunite ovo polje.':'Provjerite unesenu vrijednost.');}},true);

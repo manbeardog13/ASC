@@ -1,7 +1,8 @@
 import { tutorialExample } from './journey.js';
+import { AREAS } from './model.js';
 const KEY='asc.warehouse.preview.tutorial.hr.v1';
 const steps=[
-  {title:'Odaberite prostor',text:'Kuća ima tri skladišta. Krenimo od potkrovlja.',action:'Otvori potkrovlje'},
+  {title:'Odaberite prostor',text:'Odaberite skladište ili sva skladišta.',action:'Dalje'},
   {title:'Pronađite gume',text:'Upišite ime, registraciju ili oznaku. Isprobajmo jedan stupac.',action:'Pronađi primjer'},
   {title:'Ovdje su',text:'Stupac je označen. Detalji su ispod prikaza. Dodirnite gumu za QR oznaku.',action:'Završi vodič'},
 ];
@@ -31,7 +32,7 @@ export function createTour({getState,navigate,findExample,closeOverlays,onFinish
     document.getElementById('tour-next').onclick=()=>{
       if(step===2){finish();return;}
       acting=true;
-      if(step===0)navigate('2.3');
+      if(step===0)navigate(AREAS[0]?.id||'all');
       else {const sample=tutorialExample(getState());if(sample)findExample(sample.id);}
       acting=false;step++;render();
     };

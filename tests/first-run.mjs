@@ -26,23 +26,31 @@ test("return hops stay inside intake and placement", () => {
   assert.equal(placeReturn("ASC-2026-0003"), "place.html?set=ASC-2026-0003");
 });
 
-test("the tour names zone 2.1 when it has a free seat, else the next free zone", () => {
+test("with no shop preference the tour names the first free zone", () => {
+  assert.equal(tourTarget([
+    { warehouse: "main", zone: "B", status: "free" },
+    { warehouse: "main", zone: "A", status: "occupied" },
+    { warehouse: "main", zone: "C", status: "free" },
+  ]).zone, "B");
+});
+
+test("a preferred zone is named when it has a free seat, else the next free zone", () => {
   assert.deepEqual(tourTarget([]), { mode: "create", zone: "" });
   assert.deepEqual(tourTarget(null), { mode: "create", zone: "" });
   assert.equal(tourTarget([
     { warehouse: "main", zone: "1", rack: "A", status: "free" },
     { warehouse: "main", zone: "2.1", rack: "A", status: "free" },
-  ]).zone, "2.1");
+  ], "2.1").zone, "2.1");
   assert.equal(tourTarget([
     { warehouse: "main", zone: "1", status: "free" },
     { warehouse: "main", zone: "2.1", status: "occupied" },
     { warehouse: "main", zone: "2.2", status: "free" },
     { warehouse: "main", zone: "9", status: "free" },
-  ]).zone, "2.2");
+  ], "2.1").zone, "2.2");
   assert.equal(tourTarget([
     { warehouse: "main", zone: "1", status: "free" },
     { warehouse: "main", zone: "2.1", status: "occupied" },
-  ]).zone, "1");
+  ], "2.1").zone, "1");
   assert.equal(tourTarget([
     { warehouse: "main", zone: "2.1", status: "occupied" },
   ]).mode, "create");

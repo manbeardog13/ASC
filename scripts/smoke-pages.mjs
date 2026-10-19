@@ -33,8 +33,8 @@ const dbOverrides = {
   countLocations: 'export const countLocations=async()=>location.pathname.endsWith("/place.html")?1:0;',
   listLocationSeats: `export const listLocationSeats=async()=>{
     const tour=new URLSearchParams(location.search).get("tour");
-    if (tour==="zone") return [{warehouse:"main",zone:"1",rack:"A",shelf:"",slot:"01",status:"free"},{warehouse:"main",zone:"2.1",rack:"A",shelf:"",slot:"03",status:"free"}];
-    if (tour==="next") return [{warehouse:"main",zone:"1",rack:"A",shelf:"",slot:"01",status:"free"},{warehouse:"main",zone:"2.1",rack:"A",shelf:"",slot:"01",status:"occupied"},{warehouse:"main",zone:"2.2",rack:"A",shelf:"",slot:"01",status:"free"}];
+    if (tour==="zone") return [{warehouse:"main",zone:"1",rack:"A",shelf:"",slot:"01",status:"occupied"},{warehouse:"main",zone:"2.1",rack:"A",shelf:"",slot:"03",status:"free"}];
+    if (tour==="next") return [{warehouse:"main",zone:"1",rack:"A",shelf:"",slot:"01",status:"occupied"},{warehouse:"main",zone:"2.1",rack:"A",shelf:"",slot:"01",status:"occupied"},{warehouse:"main",zone:"2.2",rack:"A",shelf:"",slot:"01",status:"free"}];
     return [];
   };`,
   findLocationByQr: 'export const findLocationByQr=async()=>null;',

@@ -1,7 +1,10 @@
+import { locationKey, locationKeyProblem } from '../../js/mapPin.js';
 /**
- * ASC house test module — deterministic, local-only demo inventory.
- * Geometry uses schematic units, NOT measured metres. Rectangle x/z are centres.
- * None of this fixture data represents a customer or a verified physical capacity.
+ * ASC warehouse spatial module — blank slate.
+ * No warehouses, zones, stacks or tyres are hardcoded here. Areas are added
+ * only from the real layout once it has been measured on site; until then the
+ * map renders an empty state. Geometry uses schematic units, NOT metres.
+ * Rectangle x/z are centres.
  */
 
 const FIELD_NAMES = { setId:'komplet', customer:'kupac', plate:'registracija', brand:'marka', size:'dimenzija', color:'boja', code:'kod' };
@@ -9,48 +12,53 @@ const EPSILON = 1e-8;
 export const DEFAULT_CAPACITY = 8;
 export const MAX_CAPACITY = 16;
 export const DEFAULT_RADIUS = 0.27;
-export const LAYOUT_VERSION = 'house-schematic-1';
+export const MAX_AREAS = 40;
+export const MAX_AREA_SIZE = 200;
+export const AREA_UNITS = Object.freeze(['grid', 'm']);
 
-function deepFreeze(value) {
-  if (value && typeof value === 'object' && !Object.isFrozen(value)) {
-    Object.values(value).forEach(deepFreeze);
-    Object.freeze(value);
-  }
-  return value;
+
+// Nothing is predefined. Areas are created by the operator on site and live in
+// state.areas; AREAS is only a live mirror of the current state for the scene,
+// voice and tour modules (see syncAreas). Shape of an operator area:
+// { id, name, width, depth, unit:'grid'|'m', measurementStatus:'operator-grid'|'operator-measured',
+//   floorRects:[{x:0,z:0,w:width,d:depth}], voidRects:[], stair:null }
+// `id` equals the zone code of the real `locations` rows it represents.
+export const AREAS = [];
+
+export function syncAreas(state) {
+  AREAS.length = 0;
+  if (Array.isArray(state?.areas)) AREAS.push(...state.areas);
+  return AREAS;
 }
 
-export const AREAS = deepFreeze([
-  {
-    id: '2.1', name: 'Prizemlje', subtitle: '87 početnih mjesta za stupce',
-    width: 10, depth: 14, measurementStatus: 'unmeasured',
-    floorRects: [{ x: 0, z: 0, w: 10, d: 14 }], voidRects: [],
-    stair: { x: 4.2, z: 2, w: 1, d: 3.4 },
-    description: 'Prizemlje sa stupcima uz rubove, tri unutarnja niza i istočnim stubištem.',
-  },
-  {
-    id: '2.2', name: 'Drvena platforma', subtitle: '15 početnih mjesta za stupce',
-    width: 10, depth: 14, measurementStatus: 'unmeasured',
-    floorRects: [{ x: 0, z: 2.93, w: 5, d: 5.42 }], voidRects: [], stair: null,
-    description: 'Uvučena drvena platforma prema jugu. Pristup i visina nisu izmjereni.',
-  },
-  {
-    id: '2.3', name: 'Potkrovlje', subtitle: '25 + 6 početnih mjesta za stupce',
-    width: 10, depth: 14, measurementStatus: 'unmeasured',
-    floorRects: [
-      { x: 0, z: -3.35, w: 10, d: 7.3 },
-      { x: 0.825, z: 3.65, w: 4.35, d: 6.7 },
-    ],
-    voidRects: [
-      { x: -3.175, z: 3.65, w: 3.65, d: 6.7 },
-      { x: 4, z: 3.65, w: 2, d: 6.7 },
-    ],
-    stair: { x: 4.2, z: 2, w: 1, d: 3.4 },
-    description: 'Puni pod na sjeveru i ispred stubišta. Bočni otvori počinju od sredine, uz središnji pod i šest južnih stupaca. Visina krova nije izmjerena.',
-  },
-]);
+function areasOf(state) {
+  return Array.isArray(state?.areas) ? state.areas : (state && typeof state === 'object' ? [] : AREAS);
+}
 
-export function getArea(areaId) {
-  return AREAS.find(area => area.id === areaId) || null;
+export function getArea(areaId, state) {
+  return areasOf(state).find(area => area && area.id === areaId) || null;
+}
+
+export const normalizeAreaId = locationKey;
+export const normalizeRack = locationKey;
+
+function areaErrors(area) {
+  const errors = [];
+  if (!area || typeof area !== 'object' || typeof area.id !== 'string' || locationKeyProblem(area.id) || area.id !== locationKey(area.id)) return ['Prostor nema valjanu oznaku zone.'];
+  const label = area.id;
+  if (typeof area.name !== 'string' || !area.name.trim() || area.name.length > 60) errors.push(`${label}: naziv prostora nije valjan.`);
+  for (const key of ['width', 'depth']) {
+    if (!Number.isFinite(area[key]) || area[key] <= 0 || area[key] > MAX_AREA_SIZE) errors.push(`${label}: veličina prostora nije valjana.`);
+  }
+  if (!AREA_UNITS.includes(area.unit)) errors.push(`${label}: jedinica nije valjana.`);
+  const expectedStatus = area.unit === 'm' ? 'operator-measured' : 'operator-grid';
+  if (area.measurementStatus !== expectedStatus) errors.push(`${label}: status mjerenja nije valjan.`);
+  const rect = Array.isArray(area.floorRects) && area.floorRects.length === 1 ? area.floorRects[0] : null;
+  if (!rect || rect.x !== 0 || rect.z !== 0 || rect.w !== area.width || rect.d !== area.depth) errors.push(`${label}: tlocrt ne odgovara unesenoj veličini.`);
+  if (!Array.isArray(area.voidRects) || area.voidRects.length) errors.push(`${label}: otvori nisu podržani.`);
+  if (area.stair !== null) errors.push(`${label}: stubište nije podržano.`);
+  if (area.remoteId !== undefined && (typeof area.remoteId !== 'string' || !area.remoteId)) errors.push(`${label}: zajednička oznaka nije valjana.`);
+  return errors;
 }
 
 function bounds(rect) {
@@ -75,8 +83,8 @@ function circleIntersectsRect(x, z, radius, rect) {
  * Splitting the bounding box at rectangle edges permits crossing a valid floor
  * seam, while detecting even a narrow unsupported portion of the tyre footprint.
  */
-export function hasFloorSupport(areaId, x, z, radius = DEFAULT_RADIUS) {
-  const area = getArea(areaId);
+export function hasFloorSupport(areaId, x, z, radius = DEFAULT_RADIUS, state) {
+  const area = getArea(areaId, state);
   if (!area || ![x, z, radius].every(Number.isFinite) || radius <= 0) return false;
   const minX = x - radius, maxX = x + radius;
   const minZ = z - radius, maxZ = z + radius;
@@ -101,7 +109,7 @@ export function hasFloorSupport(areaId, x, z, radius = DEFAULT_RADIUS) {
 }
 
 export function canPlace(state, areaId, x, z, radius = DEFAULT_RADIUS, excludeId = null) {
-  const area = getArea(areaId);
+  const area = getArea(areaId, state);
   if (!area) return { valid: false, reason: 'Odaberite skladište.' };
   if (![x, z, radius].every(Number.isFinite) || radius <= 0) {
     return { valid: false, reason: 'Unesite valjan položaj i promjer stupca.' };
@@ -109,71 +117,18 @@ export function canPlace(state, areaId, x, z, radius = DEFAULT_RADIUS, excludeId
   if (area.stair && circleIntersectsRect(x, z, radius, area.stair)) {
     return { valid: false, reason: 'Ostavite stubište slobodno.' };
   }
-  if (!hasFloorSupport(areaId, x, z, radius)) {
+  if (!hasFloorSupport(areaId, x, z, radius, state)) {
     return { valid: false, reason: 'Cijeli stupac mora stajati na čvrstom podu, izvan otvora i rubova.' };
   }
   const collision = (state?.stacks || []).find(stack => stack.id !== excludeId &&
     stack.areaId === areaId && Math.hypot(stack.x - x, stack.z - z) < stack.radius + radius - EPSILON);
   if (collision) return { valid: false, reason: `Ovo se mjesto preklapa sa stupcem ${collision.id}.` };
-  return { valid: true, reason: 'Pod je potpun. Visina prostora nije potvrđena.' };
+  return { valid: true, reason: area.unit === 'm' ? 'Pod je potpun. Visina prostora nije potvrđena.' : 'Mjesto je unutar okvira. Mjere nisu potvrđene (mreža).' };
 }
 
-const DEMO_CUSTOMERS = [
-  ['Primjer Ana', 'DEMO-101', '#769e96'], ['Primjer Luka', 'DEMO-202', '#8a9cac'],
-  ['Primjer Mia', 'DEMO-303', '#b7a378'], ['Primjer Ivan', 'DEMO-404', '#a99baf'],
-  ['Primjer Petra', 'DEMO-505', '#9fa886'], ['Primjer Marko', 'DEMO-606', '#b59c91'],
-  ['Primjer Ema', 'DEMO-707', '#87a9ac'], ['Primjer Niko', 'DEMO-808', '#a3a3b2'],
-];
-
-const round = value => Math.round(value * 1000000) / 1000000;
-
-function seedPositions() {
-  const positions = [];
-  const add = (areaId, x, z) => positions.push({ areaId, x: round(x), z: round(z) });
-  // Shared north-west / south-west corners occur only in the west run.
-  for (let i = 0; i < 18; i++) add('2.1', -4.4, -6.4 + i * 12.8 / 17);
-  for (let i = 1; i < 5; i++) add('2.1', -4.4 + i * .75, -6.4);
-  for (let i = 1; i < 12; i++) add('2.1', -4.4 + i * 8.1 / 11, 6.4);
-  for (const z of [-5.75, -5.05, -2.6, -1.9, -1.2, 4, 4.75, 5.5, 6.25]) add('2.1', 4.4, z);
-  for (const x of [-1.4, 1.35, 2.02]) {
-    for (let i = 0; i < 15; i++) add('2.1', x, -4.8 + i * .7);
-  }
-  // 15 unique platform positions, with an entry gap in its north-east corner.
-  for (let i = 0; i < 5; i++) add('2.2', -1.85, .95 + i);
-  for (const x of [-.925, 0]) add('2.2', x, .95);
-  for (const x of [-.925, 0, .925, 1.85]) add('2.2', x, 4.95);
-  for (let i = 0; i < 4; i++) add('2.2', 1.85, .95 + i);
-  // Main attic group is tightly clustered, with no invented aisles inside it.
-  for (let row = 0; row < 5; row++) {
-    for (let col = 0; col < 5; col++) add('2.3', -.65 + col * .67, -5.8 + row * .67);
-  }
-  for (let row = 0; row < 2; row++) {
-    for (let col = 0; col < 3; col++) add('2.3', .15 + col * .67, 4.6 + row * .67);
-  }
-  return positions;
-}
-
-export function seedState() {
-  const stacks = [], tires = [];
-  const areaCounts = {};
-  for (const [index, position] of seedPositions().entries()) {
-    const localNumber = areaCounts[position.areaId] = (areaCounts[position.areaId] || 0) + 1;
-    const stack = { id: `${position.areaId}-S${String(localNumber).padStart(3, '0')}`,
-      ...position, radius: DEFAULT_RADIUS, capacity: DEFAULT_CAPACITY, tireIds: [] };
-    const occupied = 3 + (index % 6);
-    for (let level = 0; level < occupied; level++) {
-      const number = tires.length + 1;
-      const setNumber = Math.floor((number - 1) / 4) + 1;
-      const [customer, plate, color] = DEMO_CUSTOMERS[(setNumber - 1) % DEMO_CUSTOMERS.length];
-      const id = `T-${String(number).padStart(6, '0')}`;
-      tires.push({ id, setId: `SET-${String(setNumber).padStart(4, '0')}`,
-        customer, plate, color, brand: ['Continental', 'Michelin', 'Goodyear'][setNumber % 3],
-        size: ['205/55 R16', '225/45 R17', '215/60 R16'][setNumber % 3], code: `ASC-DEMO-${id}` });
-      stack.tireIds.push(id);
-    }
-    stacks.push(stack);
-  }
-  return { version: 1, revision: 0, stacks, tires, history: [] };
+/** A device starts with nothing: no stacks, no tyres, no history. */
+export function emptyState() {
+  return { version: 1, revision: 0, areas: [], stacks: [], tires: [], history: [] };
 }
 
 export function validateState(state) {
@@ -185,6 +140,18 @@ export function validateState(state) {
     return { valid: false, errors: [...errors, 'Popis stupaca, guma ili promjena nije valjan.'] };
   }
   if (state.history.length > 30) errors.push('Povijest prelazi lokalno ograničenje.');
+  if (state.areas !== undefined) {
+    if (!Array.isArray(state.areas)) return { valid: false, errors: [...errors, 'Popis prostora nije valjan.'] };
+    if (state.areas.length > MAX_AREAS) errors.push('Previše prostora.');
+    const areaIds = new Set();
+    for (const area of state.areas) {
+      errors.push(...areaErrors(area));
+      if (area && typeof area === 'object') {
+        if (areaIds.has(area.id)) errors.push(`Ponovljena oznaka prostora: ${area.id}.`);
+        areaIds.add(area.id);
+      }
+    }
+  }
   const eventIds = new Set();
   for (const event of state.history) {
     if (!event || typeof event !== 'object' || typeof event.id !== 'string' ||
@@ -219,6 +186,9 @@ export function validateState(state) {
       errors.push(`${stack.id} ima nevaljan kapacitet.`);
     }
     if (!Number.isFinite(stack.radius) || stack.radius <= 0) errors.push(`${stack.id} ima nevaljan promjer.`);
+    if (stack.remotePositionId !== undefined && (typeof stack.remotePositionId !== 'string' || !stack.remotePositionId)) errors.push(`${stack.id} ima nevaljanu zajedničku oznaku.`);
+    if (stack.rack !== undefined && (typeof stack.rack !== 'string' || locationKeyProblem(stack.rack) || stack.rack !== normalizeRack(stack.rack))) errors.push(`${stack.id} ima nevaljanu oznaku regala.`);
+    if (stack.rack !== undefined && state.stacks.some(peer => peer !== stack && peer?.areaId === stack.areaId && peer?.rack === stack.rack)) errors.push(`${stack.id}: regal ${stack.rack} je već na karti.`);
     if (!Array.isArray(stack.tireIds)) { errors.push(`${stack.id} nema poredak guma.`); continue; }
     if (stack.tireIds.length > stack.capacity) errors.push(`${stack.id} prelazi svoj kapacitet.`);
     for (const id of stack.tireIds) {
@@ -226,7 +196,7 @@ export function validateState(state) {
       assigned.set(id, (assigned.get(id) || 0) + 1);
     }
     // Defensive import validation avoids dereferencing malformed peer records.
-    const peers = { stacks: state.stacks.filter(peer => peer && typeof peer === 'object') };
+    const peers = { areas: Array.isArray(state.areas) ? state.areas : [], stacks: state.stacks.filter(peer => peer && typeof peer === 'object') };
     const placement = canPlace(peers, stack.areaId, stack.x, stack.z, stack.radius, stack.id);
     if (!placement.valid) errors.push(`${stack.id}: ${placement.reason}`);
   }
@@ -262,22 +232,64 @@ function committed(state, changes, type, details) {
       type, at: new Date().toISOString(), ...details }].slice(-30) };
 }
 
-export function createStack(state, { areaId, x, z, capacity = DEFAULT_CAPACITY } = {}) {
+export function createStack(state, { areaId, x, z, capacity = DEFAULT_CAPACITY, rack } = {}) {
   assertState(state);
   checkCapacity(capacity);
   const placement = canPlace(state, areaId, x, z);
   if (!placement.valid) throw new Error(placement.reason);
-  let sequence = 1;
-  while (state.stacks.some(stack => stack.id === `${areaId}-S${String(sequence).padStart(3, '0')}`)) sequence++;
-  const stack = { id: `${areaId}-S${String(sequence).padStart(3, '0')}`, areaId,
-    x, z, radius: DEFAULT_RADIUS, capacity, tireIds: [] };
-  return committed(state, { stacks: [...state.stacks, stack] }, 'stack-created', { stackId: stack.id, areaId, x, z });
+  const rackId = rack == null || rack === '' ? '' : normalizeRack(rack);
+  const rackProblem = rackId ? locationKeyProblem(rackId, 'Oznaka regala') : null;
+  if (rackProblem) throw new Error(rackProblem);
+  if (rackId && state.stacks.some(stack => stack.areaId === areaId && stack.rack === rackId)) throw new Error(`Regal ${rackId} je već na karti.`);
+  let id;
+  if (rackId) {
+    id = `${areaId}-${rackId}`;
+    if (state.stacks.some(stack => stack.id === id)) throw new Error(`Oznaka ${id} već postoji.`);
+  } else {
+    let sequence = 1;
+    while (state.stacks.some(stack => stack.id === `${areaId}-S${String(sequence).padStart(3, '0')}`)) sequence++;
+    id = `${areaId}-S${String(sequence).padStart(3, '0')}`;
+  }
+  const stack = { id, areaId, x, z, radius: DEFAULT_RADIUS, capacity, tireIds: [], ...(rackId ? { rack: rackId } : {}) };
+  return committed(state, { stacks: [...state.stacks, stack] }, 'stack-created', { stackId: stack.id, areaId, x, z, ...(rackId ? { rack: rackId } : {}) });
+}
+
+/** Operator-entered area. Width/depth are required input; nothing is defaulted.
+ * unit 'grid' = relative squares paced or estimated on site (unmeasured);
+ * unit 'm' = the operator measured the room in metres. */
+export function createArea(state, { id, name, width, depth, unit } = {}) {
+  assertState(state);
+  const areas = Array.isArray(state.areas) ? state.areas : [];
+  const areaId = normalizeAreaId(id);
+  const zoneProblem = locationKeyProblem(areaId, 'Oznaka zone');
+  if (zoneProblem) throw new Error(zoneProblem);
+  if (areas.some(area => area.id === areaId)) throw new Error(`Prostor ${areaId} već postoji.`);
+  if (areas.length >= MAX_AREAS) throw new Error('Dosegnut je najveći broj prostora.');
+  if (!AREA_UNITS.includes(unit)) throw new Error('Odaberite jesu li mjere izmjerene ili okvirne.');
+  const w = Number(width), d = Number(depth);
+  if (![w, d].every(v => Number.isFinite(v) && v > 0 && v <= MAX_AREA_SIZE)) throw new Error(`Unesite širinu i dubinu od 0 do ${MAX_AREA_SIZE}.`);
+  const label = String(name ?? '').trim() || `Zona ${areaId}`;
+  if (label.length > 60) throw new Error('Naziv je predug.');
+  const area = { id: areaId, name: label, width: w, depth: d, unit,
+    measurementStatus: unit === 'm' ? 'operator-measured' : 'operator-grid',
+    floorRects: [{ x: 0, z: 0, w, d }], voidRects: [], stair: null };
+  return committed(state, { areas: [...areas, area] }, 'area-created', { areaId });
+}
+
+/** Only an empty area can be removed, so no stack or tyre is ever orphaned. */
+export function removeArea(state, areaId) {
+  assertState(state);
+  const areas = Array.isArray(state.areas) ? state.areas : [];
+  if (!areas.some(area => area.id === areaId)) throw new Error('Ovaj prostor više ne postoji.');
+  if (state.stacks.some(stack => stack.areaId === areaId)) throw new Error('Najprije premjestite ili uklonite stupce iz ovog prostora.');
+  return committed(state, { areas: areas.filter(area => area.id !== areaId) }, 'area-removed', { areaId });
 }
 
 export function moveStack(state, stackId, { areaId, x, z } = {}) {
   assertState(state);
   const stack = requireStack(state, stackId);
   const destination = areaId ?? stack.areaId;
+  if (stack.rack && state.stacks.some(peer => peer.id !== stackId && peer.areaId === destination && peer.rack === stack.rack)) throw new Error(`Regal ${stack.rack} je već na karti.`);
   const placement = canPlace(state, destination, x, z, stack.radius, stackId);
   if (!placement.valid) throw new Error(placement.reason);
   return committed(state, { stacks: state.stacks.map(item => item.id === stackId ?
@@ -302,9 +314,12 @@ export function addTire(state, stackId, template = {}) {
   const revision = state.revision + 1;
   let serial = 1, id;
   do { id = `T-D${String(revision).padStart(6, '0')}-${serial++}`; } while (state.tires.some(tire => tire.id === id));
-  const defaults = { setId: `SET-D${String(revision).padStart(6, '0')}`,
-    customer: 'Primjer Novi kupac', plate: 'PROBNO-NOVO', brand: 'Probna guma', size: '205/55 R16', color: '#8a9cac' };
-  const tire = { id, code: `ASC-DEMO-${id}` };
+  const defaults = { setId: `SET-D${String(revision).padStart(6, '0')}`, brand: 'Nepoznato', color: '#8a9cac' };
+  const tire = { id, code: `ASC-${id}` };
+  for (const key of ['customer', 'plate', 'size']) {
+    if (typeof template[key] !== 'string' || !template[key].trim()) throw new Error(`Unesite valjano polje: ${FIELD_NAMES[key] || 'podatak'}.`);
+    tire[key] = template[key].trim();
+  }
   for (const [key, fallback] of Object.entries(defaults)) {
     if (template[key] !== undefined && (typeof template[key] !== 'string' || !template[key].trim())) {
       throw new Error(`Unesite valjano polje: ${FIELD_NAMES[key] || 'podatak'}.`);
@@ -336,7 +351,7 @@ export function findMatches(state, query = '') {
   const words = text.split(/\s+/);
   const tires = new Map(state.tires.map(tire => [tire.id, tire]));
   return state.stacks.filter(stack => {
-    const values = [stack.id, stack.areaId, getArea(stack.areaId)?.name];
+    const values = [stack.id, stack.areaId, stack.rack, getArea(stack.areaId, state)?.name];
     for (const id of stack.tireIds) {
       const tire = tires.get(id);
       if (tire) values.push(tire.id, tire.setId, tire.customer, tire.plate, tire.code, tire.brand, tire.size);
@@ -351,4 +366,73 @@ export function stats(state, areaId = null) {
   const occupied = selected.reduce((sum, stack) => sum + stack.tireIds.length, 0);
   const capacity = selected.reduce((sum, stack) => sum + stack.capacity, 0);
   return { stacks: selected.length, occupied, capacity, vacant: capacity - occupied };
+}
+
+/** Attach the shared-backend id after an area was stored remotely. */
+export function markAreaShared(state, areaId, remoteId) {
+  assertState(state);
+  const areas = Array.isArray(state.areas) ? state.areas : [];
+  if (!areas.some(area => area.id === areaId)) throw new Error('Ovaj prostor više ne postoji.');
+  return committed(state, { areas: areas.map(area => area.id === areaId ? { ...area, remoteId } : area) }, 'area-shared', { areaId });
+}
+
+export function markStackShared(state, stackId, remotePositionId) {
+  assertState(state);
+  requireStack(state, stackId);
+  if (typeof remotePositionId !== 'string' || !remotePositionId) throw new Error('Položaj nije potvrđen.');
+  return committed(state, { stacks: state.stacks.map(stack => stack.id === stackId ? { ...stack, remotePositionId } : stack) }, 'stack-shared', { stackId });
+}
+
+/** Shared layout is the source of truth for shared areas and their rack positions.
+ * remote = { areas:[{id,zone,name,width,depth,unit}], positions:[{area_id,rack,x,z,capacity}] }.
+ * Local areas without a remoteId are kept as "this device only" (offered for upload).
+ * Tyres on existing stacks are kept; a shared position never deletes a local stack.
+ * Returns { state, changed, localOnly:[areaId] }. */
+export function mergeRemoteLayout(state, remote) {
+  assertState(state);
+  const local = Array.isArray(state.areas) ? state.areas : [];
+  const remoteAreas = [];
+  for (const row of remote?.areas || []) {
+    const id = locationKey(row?.zone);
+    const unit = row?.unit;
+    const width = Number(row?.width), depth = Number(row?.depth);
+    const area = { id, name: String(row?.name ?? '').trim().slice(0, 60) || `Zona ${id}`, width, depth, unit,
+      measurementStatus: unit === 'm' ? 'operator-measured' : 'operator-grid',
+      floorRects: [{ x: 0, z: 0, w: width, d: depth }], voidRects: [], stair: null, remoteId: String(row?.id ?? '') };
+    if (areaErrors(area).length || remoteAreas.some(a => a.id === id)) continue; // skip malformed rows, never guess
+    remoteAreas.push(area);
+  }
+  const remoteIds = new Set(remoteAreas.map(a => a.id));
+  // Areas that were shared before but are gone remotely are dropped only if empty locally.
+  const keptLocal = local.filter(a => !remoteIds.has(a.id) && (!a.remoteId || state.stacks.some(s => s.areaId === a.id)))
+    .map(a => (a.remoteId ? (({ remoteId, ...rest }) => rest)(a) : a));
+  const areas = [...remoteAreas, ...keptLocal];
+  const byRemote = new Map(remoteAreas.map(a => [a.remoteId, a.id]));
+  let stacks = state.stacks.map(s => ({ ...s }));
+  for (const row of remote?.positions || []) {
+    const areaId = byRemote.get(String(row?.area_id ?? ''));
+    const rack = locationKey(row?.rack);
+    const x = Number(row?.x), z = Number(row?.z), capacity = Number(row?.capacity ?? DEFAULT_CAPACITY);
+    if (!areaId || locationKeyProblem(rack) || ![x, z].every(Number.isFinite) || !Number.isInteger(capacity) || capacity < 1 || capacity > MAX_CAPACITY) continue;
+    const remotePositionId = row.id == null ? undefined : String(row.id);
+    const existing = stacks.find(s => remotePositionId && s.remotePositionId === remotePositionId)
+      || stacks.find(s => s.rack === rack && s.areaId === areaId);
+    if (existing) {
+      if (remotePositionId) existing.remotePositionId = remotePositionId;
+      if (existing.tireIds.length <= capacity) Object.assign(existing, { areaId, x, z, capacity });
+      else Object.assign(existing, { areaId, x, z });
+    } else if (!stacks.some(s => s.id === `${areaId}-${rack}`)) {
+      stacks.push({ id: `${areaId}-${rack}`, areaId, x, z, radius: DEFAULT_RADIUS, capacity, tireIds: [], rack, ...(remotePositionId ? { remotePositionId } : {}) });
+    }
+  }
+  const candidate = { ...state, areas, stacks };
+  if (!validateState(candidate).valid) {
+    return { state, changed: false, localOnly: local.filter(a => !a.remoteId).map(a => a.id), rejected: true };
+  }
+  const changed = JSON.stringify({ a: state.areas || [], s: state.stacks }) !== JSON.stringify({ a: areas, s: stacks });
+  const next = changed ? committed(state, { areas, stacks }, 'layout-synced', {}) : state;
+  // An interrupted upload can leave an area shared but some of its racks local.
+  // Keep offering those racks for retry; do not silently mark the upload complete.
+  const localOnly = areas.filter(a => !a.remoteId || stacks.some(s => s.areaId === a.id && s.rack && !s.remotePositionId)).map(a => a.id);
+  return { state: next, changed, localOnly };
 }
