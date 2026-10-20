@@ -120,10 +120,6 @@ html.has-composer body{padding-bottom:calc(var(--nero-stack, 84px) + env(safe-ar
 .nero-composer.is-busy .nero-send .nero-stop{display:block}
 
 .nero-pills{display:flex;flex-wrap:wrap;gap:8px}
-.nero-pill{border:1px solid rgba(150,110,255,.28);background:rgba(20,15,38,.86);
-  color:#f3efff;border-radius:12px;min-height:36px;padding:0 14px;cursor:pointer;
-  font:500 12.5px Inter;
-  -webkit-backdrop-filter:blur(16px) saturate(160%);backdrop-filter:blur(16px) saturate(160%)}
 .nero-pill[aria-pressed="true"]{background:rgba(139,92,246,.4);border-color:rgba(224,64,208,.55)}
 .nero-pill[hidden]{display:none}
 
@@ -173,7 +169,7 @@ html.has-composer body{padding-bottom:calc(var(--nero-stack, 84px) + env(safe-ar
 @keyframes neroBlink{50%{opacity:0}}
 
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))){
-  .nero-sheet,.nero-card,.nero-pill,.nero-q,.nero-history{background:rgba(14,11,28,.92)}
+  .nero-sheet,.nero-card,.nero-q,.nero-history{background:rgba(14,11,28,.92)}
 }
 @media(prefers-reduced-motion:reduce){
   .nero-composer,.nero-bubble,.nero-suggest.on .nero-bubble{transition:opacity 150ms linear!important;transform:translate(-50%,0)}
@@ -252,7 +248,8 @@ html.has-composer body{padding-bottom:calc(var(--nero-stack, 84px) + env(safe-ar
 .nero-composer{justify-content:flex-end}
 .nero-composer .nero-log{min-height:0;max-height:min(46dvh,420px);overscroll-behavior:contain}
 .nero-composer .nero-pills{display:flex;flex-wrap:nowrap;gap:4px;margin-right:auto}
-.nero-composer .nero-pill{min-height:44px;padding:0 10px;font-size:12px;background:transparent;border-color:rgba(150,110,255,.28)}
+/* 44px tap target only — look and motion come from the shared .qchip */
+.nero-composer .nero-pill{min-height:44px}
 .nero-composer.is-compact .nero-pills{display:none}
 .nero-composer .nero-plus{margin-right:0}
 /* Keep primary controls reachable when the conversation tools need their own row. */
