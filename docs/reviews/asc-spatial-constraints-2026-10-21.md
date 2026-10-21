@@ -42,9 +42,10 @@ room fitting. Dimensions remain unmeasured; this does not certify exact scale.
 The corrected common-edge image puts the office's east wall against the rack
 attic's west wall. The earlier verbal specification puts that same office wall
 against the existing house while also joining the rack attic's north wall to
-the house. The current rectangular house footprint cannot satisfy all these
-contacts without overlap. The existing-house junction therefore remains
-unresolved. It is not repaired by silently changing another room.
+the house. The currently assumed house footprint and floor levels cannot
+satisfy all these contacts without overlap. The relative floor levels and
+existing-house junction therefore remain unresolved. They are not repaired
+by silently changing another room.
 
 `BUILDING_TOPOLOGY.integrationReady` is false. The app keeps its operational
 area layouts and actual inventory; the canonical upper assembly is available

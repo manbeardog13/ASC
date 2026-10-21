@@ -46,6 +46,9 @@ images were rejected as geometry sources.
   opacity, architectural occlusion, 120-second idle, interruption and disposal.
   Two identical seeded 60-action cycles retain equal geometry, material,
   texture and shader counts; paused/disposed scenes produce no frames.
+- The actual standalone upper-review page loads without missing assets or
+  errors; cutaway/reset, synthetic set focus and valid PNG export pass. It
+  makes no backend requests and persists no data.
 - Synthetic app integration covers complete inventory, mapped/unmapped and
   inactive records, overflow, real record links, shared bindings, permissions,
   failed writes, stale reads, logout, readiness false/true, context loss and
@@ -79,7 +82,7 @@ It is an architectural review image, not the requested finished dusk building.
 
 ## Release blockers
 
-1. Resolve the contradictory existing-house junction without redesigning the
+1. Resolve the existing-house junction and relative floor levels without redesigning the
    upper assembly; see `docs/reviews/asc-spatial-constraints-2026-10-21.md`.
 2. Confirm physical dimensions, actual room/rack bindings and tier positions.
 3. Finish and review the unified exterior, materials and dusk presentation
@@ -87,3 +90,16 @@ It is an architectural review image, not the requested finished dusk building.
 4. Run the review candidate in independent CI and on representative iPhone/iPad
    hardware. Inspect first-use loading, sustained GPU temperature and recovery.
 5. Obtain required explicit migration/release approval. This report grants none.
+
+## Independent CI outcome
+
+Draft PR [35](https://github.com/manbeardog13/ASC/pull/35) was opened. For
+candidate `7bb04e622988b79bfc70ffc82f61fa922f7cb504`, both the
+[smoke run](https://github.com/manbeardog13/ASC/actions/runs/39561831905)
+and [i18n run](https://github.com/manbeardog13/ASC/actions/runs/39561831793)
+failed before any job steps executed. A retry produced the same result.
+The exposed jobs have no step results and no downloadable logs. The runner
+failure reason is not available through the connected diagnostics, so this
+is **not an independently verified passing candidate**. No test failure can
+be inferred from jobs that never ran tests. The repository owner needs to
+inspect the Actions annotations and resolve the startup block before rerunning.

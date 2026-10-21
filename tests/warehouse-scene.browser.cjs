@@ -93,7 +93,27 @@ const server=http.createServer((req,res)=>{const rel=new URL(req.url,'http://loc
   checks.push('120 seeded random interactions: focus, clear, cutaway, building, viewport, pause, refresh, bindings and manual input; finite camera and stable GPU/material counts on replay');
   await page.evaluate(()=>viewer.resume());
   await page.clock.runFor(80);fs.mkdirSync(output,{recursive:true});await page.screenshot({path:path.join(output,'warehouse-scene-synthetic.png')});
-  await page.evaluate(()=>viewer.dispose());const disposed=await page.evaluate(()=>viewer.getRenderStats());await page.clock.fastForward(1000);const afterDispose=await page.evaluate(()=>viewer.getRenderStats());assert.equal(afterDispose.renderedFrames,disposed.renderedFrames);assert.equal(afterDispose.frameScheduled,false);assert.equal(afterDispose.idleTimerScheduled,false);assert.equal(afterDispose.materialCount,0);assert.equal(await page.locator('canvas').count(),0);assert.deepEqual(errors,[]);checks.push('pause/resume and dispose cleanly release scene without page errors');await context.close();
+  await page.evaluate(()=>viewer.dispose());const disposed=await page.evaluate(()=>viewer.getRenderStats());await page.clock.fastForward(1000);const afterDispose=await page.evaluate(()=>viewer.getRenderStats());assert.equal(afterDispose.renderedFrames,disposed.renderedFrames);assert.equal(afterDispose.frameScheduled,false);assert.equal(afterDispose.idleTimerScheduled,false);assert.equal(afterDispose.materialCount,0);assert.equal(await page.locator('canvas').count(),0);assert.deepEqual(errors,[]);checks.push('pause/resume and dispose cleanly release scene without page errors');
+  const review=await context.newPage(),reviewErrors=[],failedAssets=[],reviewRequests=[];
+  review.on('pageerror',error=>reviewErrors.push(error.message));review.on('response',response=>{if(response.status()>=400)failedAssets.push({url:response.url(),status:response.status()});});review.on('request',request=>reviewRequests.push({url:request.url(),method:request.method()}));
+  // Expose the real scene API only in this test; renderer and behavior stay intact.
+  const source=fs.readFileSync(path.join(root,'app/warehouse-preview/scene.js'),'utf8');
+  await review.route('**/app/warehouse-preview/scene.js',route=>route.fulfill({contentType:'text/javascript',body:source.replace('export function createScene(', 'function createRealScene(')+'\nexport function createScene(...args){const scene=createRealScene(...args);window.__reviewScene=scene;return scene;}'}));
+  await review.goto(origin+'/design/warehouse-review.html');await review.waitForFunction(()=>window.__reviewScene?.getMotionState().buildingView==='upper-assembly');
+  assert.equal(await review.locator('#fallback').isVisible(),false);assert.match(await review.locator('#status').textContent(),/nije potvrđen/);
+  assert.equal(await review.evaluate(async()=>{const {BUILDING_TOPOLOGY}=await import('/app/warehouse-preview/building.js');return BUILDING_TOPOLOGY.integrationReady;}),false);
+  assert.equal((await review.evaluate(()=>__reviewScene.getRenderStats())).visibleTireCount,0);
+  assert.equal(await review.locator('header img').evaluate(img=>img.complete&&img.naturalWidth>0),true);
+  await review.locator('#samples').click();assert.match(await review.locator('#status').textContent(),/Sintetički/);assert.ok((await review.evaluate(()=>__reviewScene.getRenderStats())).visibleTireCount>0);
+  await review.locator('#focus-sample').click();assert.equal((await review.evaluate(()=>__reviewScene.getRenderStats())).focusedTireCount,4);
+  await review.locator('#cutaway').click();assert.equal((await review.evaluate(()=>__reviewScene.getMotionState())).cutaway,'closed');await review.locator('#cutaway').click();assert.equal((await review.evaluate(()=>__reviewScene.getMotionState())).cutaway,'review');
+  await review.locator('#reset').click();assert.equal((await review.evaluate(()=>__reviewScene.getRenderStats())).focusedTireCount,0);assert.equal((await review.evaluate(()=>__reviewScene.getMotionState())).buildingView,'upper-assembly');
+  const [download]=await Promise.all([review.waitForEvent('download'),review.locator('#capture').click()]);const stream=await download.createReadStream(),chunks=[];for await(const chunk of stream)chunks.push(chunk);const png=Buffer.concat(chunks);assert.equal(png.subarray(1,4).toString(),'PNG');assert.ok(png.length>5000,'capture is not a rendered PNG');
+  await review.locator('#samples').click();assert.equal((await review.evaluate(()=>__reviewScene.getRenderStats())).visibleTireCount,0);assert.equal(await review.locator('#focus-sample').isVisible(),false);
+  assert.deepEqual(await review.evaluate(()=>({local:Object.keys(localStorage),session:Object.keys(sessionStorage)})),{local:[],session:[]});
+  assert.deepEqual(reviewErrors,[]);assert.deepEqual(failedAssets,[]);assert.ok(reviewRequests.every(request=>request.method==='GET'&&new URL(request.url).origin===origin));assert.ok(reviewRequests.every(request=>!/(?:\/js\/db\.js|supabase|\/rest\/|\/auth\/|\/rpc\/)/i.test(request.url)));
+  checks.push('actual isolated review page: upper-only unconfirmed disclosure, no missing assets/errors/backend requests, opt-in synthetic sets/focus, cutaway/reset, valid PNG capture, no persistence');
+  await review.close();await context.close();
  }finally{await browser.close();await new Promise(resolve=>server.close(resolve));}
  console.log(JSON.stringify({scope:'Synthetic isolated actual WebGL; not a physical device performance certification',checks},null,2));
 })().catch(error=>{console.error(error);server.close();process.exitCode=1;});

@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>ASC · Provjera 3D modela</title>
+<link rel="icon" href="data:,">
 <meta name="robots" content="noindex"><meta name="color-scheme" content="dark">
 <script type="importmap">{"imports":{"three":"../app/warehouse-preview/vendor/three.module.js"}}</script>
 <style>
@@ -11,7 +12,7 @@
 </style>
 </head>
 <body>
-<header><img src="../assets/logo.png" alt="ASC"><p><strong>Provjera gornjeg sklopa</strong>Dva potkrovlja i ured · spoj s postojećom kućom još nije potvrđen</p><nav aria-label="Pregled modela"><select id="space" aria-label="Prostor"><option value="all">Dva potkrovlja i ured</option></select><button id="cutaway" aria-pressed="true">Presjek</button><button id="samples" aria-pressed="false">Probne gume</button><button id="focus-sample" hidden>Pronađi probni set</button><button id="reset">Vrati pogled</button><button id="capture">Spremi sliku</button></nav></header>
+<header><img src="../app/assets/logo.png" alt="ASC"><p><strong>Provjera gornjeg sklopa</strong>Dva potkrovlja i ured · spoj s postojećom kućom još nije potvrđen</p><nav aria-label="Pregled modela"><select id="space" aria-label="Prostor"><option value="all">Dva potkrovlja i ured</option></select><button id="cutaway" aria-pressed="true">Presjek</button><button id="samples" aria-pressed="false">Probne gume</button><button id="focus-sample" hidden>Pronađi probni set</button><button id="reset">Vrati pogled</button><button id="capture">Spremi sliku</button></nav></header>
 <main id="scene"><div id="status" role="status">Učitavanje modela…</div><section id="fallback" hidden><h1>3D nije dostupan u ovom pregledniku</h1><p>Prikaz zahtijeva WebGL. Ovaj pregled ne pristupa poslovnoj bazi i ne mijenja inventar.</p><ul id="space-list"></ul></section></main>
 <footer>Powered by Nero Summit</footer>
 <script type="module" src="warehouse-review.js"></script>
