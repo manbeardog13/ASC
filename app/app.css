@@ -280,6 +280,7 @@ html[data-side="rail"] .sb-collapse{transform:rotate(180deg)}
   -webkit-mask-image:linear-gradient(180deg,transparent,#000 12px,#000 calc(100% - 12px),transparent);
   mask-image:linear-gradient(180deg,transparent,#000 12px,#000 calc(100% - 12px),transparent)}
 .sb-nav::-webkit-scrollbar{display:none}
+.sb-nav .sb-theme{margin-top:auto}
 .sb-item{position:relative;display:flex;align-items:center;gap:10px;min-height:40px;
   padding:0 12px;border-radius:12px;text-decoration:none;cursor:pointer;border:0;background:transparent;
   font:var(--type-nav);color:var(--ink-2);text-align:left;width:100%;
@@ -1075,16 +1076,19 @@ html[data-side="rail"] .sb-search input{display:none}
 
 /* Nero's name, carved into the floor of every page. Not a banner: the letters
    sit in the surface, highlight on the lower lip, shadow in the cut. */
-.nero-mark{position:static;display:block;z-index:auto;margin:18px 0 0;
-  padding:12px 16px calc(8px + env(safe-area-inset-bottom,0px));
+.nero-mark{position:fixed;display:block;z-index:39;margin:0;
+  left:50%;bottom:calc(8px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);
+  width:max-content;max-width:calc(100% - 32px);padding:0;
   text-align:center;pointer-events:none;user-select:none;
   font:600 11px/1.4 Inter,system-ui,sans-serif;letter-spacing:.18em;text-transform:uppercase}
 .nero-mark a{font-weight:600}
 .nero-mark,.nero-mark a{color:rgba(32,28,24,.55);text-decoration:none;
   text-shadow:0 1px 0 rgba(255,255,255,.75),0 -1px 1px rgba(20,16,12,.45)}
 .nero-mark a{pointer-events:auto}
-html.dark .nero-mark,html.dark .nero-mark a{color:rgba(210,206,200,.28);
+html.dark .nero-mark,html.dark .nero-mark a{color:rgba(210,206,200,.55);
   text-shadow:0 -1px 0 rgba(0,0,0,.8),0 1px 0 rgba(255,255,255,.06)}
+@media(min-width:1021px){html.has-side .nero-mark{left:calc((100% + var(--sbw) + 22px) / 2)}}
+@media print{.nero-mark{display:none}}
 
 /* Composer glass, states, and chat cards live in composer.css.
    Clearance follows the live stack height that script measures. */

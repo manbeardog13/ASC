@@ -98,7 +98,7 @@ const reduce = matchMedia('(prefers-reduced-motion:reduce)').matches;
 try {
   if (!window.ASCTheme) {
     const stored = localStorage.getItem('asc.theme');
-    const dark = stored === 'dark' || (stored !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches);
+    const dark = stored !== 'light';
     root.classList.toggle('dark', dark);
   }
 } catch(e){}

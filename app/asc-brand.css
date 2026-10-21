@@ -1,0 +1,122 @@
+/* Uses the alpha of the real ASC artwork, not a substitute wordmark. */
+.asc-brand-frame {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  isolation: isolate;
+  vertical-align: middle;
+}
+.asc-brand-frame::before,
+.asc-brand-frame::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  -webkit-mask: var(--asc-brand-mask) center / 100% 100% no-repeat;
+  mask: var(--asc-brand-mask) center / 100% 100% no-repeat;
+}
+.asc-brand-frame::before {
+  z-index: -1;
+  background: #ed292e;
+  transform: translateY(4px);
+  filter: blur(5px);
+  opacity: .6;
+  animation: asc-red-breathe 6.4s ease-in-out infinite;
+}
+.asc-brand-frame::after {
+  background: linear-gradient(168deg, rgba(255,255,255,.16) 2%, rgba(245,247,255,.55) 23%, rgba(255,255,255,.05) 38%, rgba(220,225,234,.27) 55%, rgba(255,255,255,.025) 66%, rgba(255,255,255,.13) 100%);
+  opacity: .85;
+}
+.asc-brand-frame > img.asc-brandmark {
+  display: block;
+  object-fit: contain;
+  filter: grayscale(1) brightness(.12) contrast(1.35) drop-shadow(0 1px 0 rgba(255,255,255,.16)) drop-shadow(0 3px 3px rgba(0,0,0,.5));
+}
+.asc-brand-frame > img.asc-brandmark:focus-visible {
+  outline: 2px solid var(--focus, #e4b66c);
+  outline-offset: 8px;
+}
+@keyframes asc-red-breathe {
+  0%, 100% { opacity: .38; }
+  50% { opacity: .72; }
+}
+
+/* No theme flash, no interference with documentElement's auth visibility. */
+#splash.asc-entry {
+  position: fixed;
+  z-index: 2147483000;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  visibility: visible;
+  overflow: hidden;
+  background: radial-gradient(ellipse 44% 28% at 50% 54%, rgba(67,9,14,.18), transparent 78%), #07080b;
+  opacity: 1;
+  transition: opacity 220ms ease;
+  color: #d7d9df;
+  font-family: inherit;
+}
+#splash.asc-entry[hidden] { display: none !important; }
+#splash.asc-entry.out { opacity: 0; pointer-events: none; }
+#splash.asc-entry .sp-isl,
+#splash.asc-entry .sp-topglow,
+#splash.asc-entry .sp-rule { display: none; }
+#splash.asc-entry .sp-core {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: min(70vw, 440px);
+  transform-origin: center;
+}
+#splash.asc-entry .asc-brand-frame--entry { width: 100%; }
+#splash.asc-entry .sp-mark {
+  width: 100%;
+  height: auto;
+}
+#splash.asc-entry .asc-brand-frame--entry::before {
+  transform: translateY(10px);
+  filter: blur(14px);
+}
+#splash.asc-entry .asc-brand-frame--entry::after {
+  background: linear-gradient(168deg, rgba(255,255,255,.03) 4%, rgba(245,247,255,.58) 22%, rgba(255,255,255,.025) 34%, rgba(220,225,234,.24) 56%, rgba(255,255,255,.015) 68%, rgba(255,255,255,.15));
+}
+.splash-cold #splash.asc-entry .sp-core {
+  animation: asc-mark-reveal 1200ms ease-out both, asc-mark-arrival 1000ms cubic-bezier(.08,.8,.16,1) 1200ms both;
+}
+@keyframes asc-mark-reveal {
+  from { opacity: 0; filter: blur(5px); }
+  to { opacity: 1; filter: blur(0); }
+}
+/* Only 1.8% travel in the final second, settling with nonlinear deceleration. */
+@keyframes asc-mark-arrival {
+  from { transform: scale(1); }
+  to { transform: scale(1.018); }
+}
+#splash.asc-entry .asc-entry-skip {
+  position: absolute;
+  bottom: max(22px, env(safe-area-inset-bottom));
+  right: max(24px, env(safe-area-inset-right));
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: 24px;
+  background: rgba(255,255,255,.025);
+  color: #aeb2bd;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.2;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+#splash.asc-entry .asc-entry-skip:hover { background: rgba(255,255,255,.06); color: #fff; }
+#splash.asc-entry .asc-entry-skip:focus-visible { outline: 2px solid #e4b66c; outline-offset: 4px; }
+.asc-brand-paused .asc-brand-frame::before,
+.asc-brand-paused #splash.asc-entry .sp-core { animation-play-state: paused; }
+@media (prefers-reduced-motion: reduce) {
+  .asc-brand-frame::before { animation: none; opacity: .5; }
+  #splash.asc-entry { transition: none; }
+  .splash-cold #splash.asc-entry .sp-core { animation: none; transform: none; filter: none; }
+}

@@ -24,11 +24,11 @@ async function client(replies=[]){
 }
 const plain=x=>JSON.parse(JSON.stringify(x));
 test('real map reader scopes areas to main and positions to those area ids',async()=>{
- const c=await client([{data:[{id:'a',warehouse:'main',zone:'SYN'}]},{data:[{id:'p',area_id:'a',rack:'01'}]}]);
+ const c=await client([{data:[{id:'a',warehouse:'main',zone:'SYN'}]},{data:[]},{data:[{id:'p',area_id:'a',rack:'01'}]},{data:[]}]);
  const result=await c.db.listWarehouseLayout();assert.equal(result.available,true);
- assert.deepEqual(c.calls.map(x=>x.table),['warehouse_areas','warehouse_rack_positions']);
- assert.deepEqual(plain(c.calls[0].steps.at(-1)),['eq','warehouse','main']);
- assert.deepEqual(plain(c.calls[1].steps.at(-1)),['in','area_id',['a']]);
+ assert.deepEqual(c.calls.map(x=>x.table),['warehouse_areas','warehouse_areas','warehouse_rack_positions','warehouse_rack_positions']);
+ assert.deepEqual(plain(c.calls[0].steps.find(step=>step[0]==='eq')),['eq','warehouse','main']);
+ assert.deepEqual(plain(c.calls[2].steps.find(step=>step[0]==='in')),['in','area_id',['a']]);
 });
 test('missing migration is distinct from permission or transport failure',async()=>{
  const absent=await client([{error:{code:'42P01',message:'relation missing'}}]);assert.equal((await absent.db.listWarehouseLayout()).available,false);
