@@ -29,6 +29,22 @@ rotated/redesigned the upper layout and misplaced the triangular store.
 The production scene must never seed pictured tires as customer inventory.
 Real sets require exact location/rack bindings, with unmapped records disclosed.
 
+## Rack attic refinement
+
+The owner clarified that the rear rack banks stand on the lower floor, below
+the height of the wooden platform. Only the middle of this room is raised.
+The west/left passage must allow a full tire set alongside room for a person
+to walk. This correction applies within the right-hand rack attic; it does
+not authorize another redesign of the white-shelf room or office.
+
+The review model lowers both rear banks to the base concrete floor, pulls the
+deck's rear edge forward beyond those banks, and moves its left edge and left
+side rack inward. The front deck edge, short stair, front racks, goods lift,
+right side rack, room outline and entire neighboring white-shelf/office
+assembly stay fixed. Visual deck, picking plane and inventory elevation use
+one platform footprint and the same top height. The passage dimensions are
+schematic proportions pending measurement, not a certified access clearance.
+
 ## Drift audit and unresolved junction
 
 The original combined upper-floor reference has a common front and rear edge

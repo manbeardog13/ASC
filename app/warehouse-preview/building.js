@@ -3,7 +3,7 @@
  * New adjacency follows Toni's references. No automatic zone/rack bindings.
  */
 export const DIMENSIONS_UNMEASURED = true;
-export const BUILDING_VERSION = 'asc-upper-assembly-review-2';
+export const BUILDING_VERSION = 'asc-upper-assembly-review-3';
 const freeze = value => { if (value && typeof value === 'object') { Object.values(value).forEach(freeze); Object.freeze(value); } return value; };
 export const UPPER_SPACE_IDS = Object.freeze(['attic-parts','attic-racks','office']);
 // One placement transform for the entire reconstructed reference assembly.
@@ -11,13 +11,17 @@ export const UPPER_SPACE_IDS = Object.freeze(['attic-parts','attic-racks','offic
 // silently shown as an integrated building. These are unmeasured drawing units.
 export const UPPER_ASSEMBLY_TRANSFORM=freeze({translation:[-5,1,0],rotationY:0,scale:[1,1,1]});
 const rackReferenceDepth=32/18;
+// Owner correction: only the middle is raised. Rear banks and the west
+// tire-set/pedestrian passage remain on the lower floor. Drawing units only.
+const rackDeck=freeze({west:2.2,east:9.1,north:3.8,south:10.2,rise:1.2});
+const rackPlatform=freeze({x:(rackDeck.west+rackDeck.east)/2-5,z:((rackDeck.north+rackDeck.south)/2-9)*rackReferenceDepth,w:rackDeck.east-rackDeck.west,d:(rackDeck.south-rackDeck.north)*rackReferenceDepth,rise:rackDeck.rise});
 const houseFloor = [{x:0,z:0,w:10,d:14}];
 const LOCAL_SPACES = [
   { id:'house-ground', name:'Kuća · prizemlje', x:5,y:0,z:-7,width:10,depth:14,floorRects:houseFloor,voidRects:[],source:'d8a3552:2.1',inventory:true },
   { id:'house-platform', name:'Kuća · drvena platforma', x:5,y:1.6,z:-7,width:10,depth:14,floorRects:[{x:0,z:2.93,w:5,d:5.42}],voidRects:[],source:'d8a3552:2.2',inventory:true },
   { id:'house-attic', name:'Kuća · potkrovlje', x:5,y:3.2,z:-7,width:10,depth:14,floorRects:[{x:0,z:-3.35,w:10,d:7.3},{x:.825,z:3.65,w:4.35,d:6.7}],voidRects:[{x:-3.175,z:3.65,w:3.65,d:6.7},{x:4,z:3.65,w:2,d:6.7}],source:'d8a3552:2.3',inventory:true },
   { id:'attic-parts', name:'Potkrovlje · bijele police', x:-6,y:3.2,z:2,width:12,depth:32,floorRects:[{x:0,z:7,w:12,d:18},{x:-4,z:-9,w:4,d:14}],voidRects:[{x:2,z:-9,w:8,d:14}],source:'Toni reference 1',inventory:true },
-  { id:'attic-racks', name:'Potkrovlje · regali i platforma', x:5,y:3.2,z:2,width:10,depth:32,floorRects:[{x:0,z:0,w:10,d:32}],voidRects:[],platform:{x:0,z:-3.5*rackReferenceDepth,w:8.2,d:9.4*rackReferenceDepth,rise:1.2},source:'Toni reference 2 + approved combined common front/rear edges',inventory:true },
+  { id:'attic-racks', name:'Potkrovlje · regali i platforma', x:5,y:3.2,z:2,width:10,depth:32,floorRects:[{x:0,z:0,w:10,d:32}],voidRects:[],platform:rackPlatform,source:'Toni reference 2 + common front/rear edges + lower rear racks / wider west passage correction',inventory:true },
   { id:'office', name:'Ured', x:-4,y:3.2,z:-7,width:8,depth:14,floorRects:[{x:0,z:0,w:8,d:14}],voidRects:[],source:'Toni reference 5',inventory:false },
   {id:'workshop',name:'Radionica · ulazni prostor',x:-1.5,y:0,z:4.5,width:31,depth:29,floorRects:[{x:-7,z:-9.5,w:17,d:10},{x:0,z:5,w:31,d:19}],voidRects:[],inventory:false},
   {id:'table-room',name:'Soba sa stolom',x:-8.5,y:0,z:-13.5,width:17,depth:7,floorRects:[{x:0,z:0,w:17,d:7}],voidRects:[],inventory:false},
@@ -137,7 +141,7 @@ export function createBuilding(THREE, options={}) {
   function floor(p,s,r,mat){box(p,s.x+r.x,s.y-.095,s.z+r.z,r.w,.19,r.d,mat,'Pod');const hit=new THREE.Mesh(keep(new THREE.PlaneGeometry(r.w,r.d)),pickMaterial);hit.rotation.x=-Math.PI/2;hit.position.set(s.x+r.x,s.y+.012,s.z+r.z);hit.userData={spaceId:s.id,roomId:s.id,inventory:false};hit.name=s.name+' · odabir poda';p.add(hit);targets.push(hit);}
   function roof(p,points,name='Krov'){const geo=keep(new THREE.BufferGeometry());geo.setAttribute('position',new THREE.Float32BufferAttribute(points.flat(),3));geo.setIndex([0,1,2,0,2,3]);geo.computeVertexNormals();const mat=keep(m.roof.clone());const o=new THREE.Mesh(geo,mat);o.name=name;o.userData={spaceId:p.userData.spaceId,kind:'roof'};o.castShadow=true;o.receiveShadow=true;p.add(o);roofMeshes.push(o);return o;}
   const pickMaterial=keep(new THREE.MeshBasicMaterial({transparent:true,opacity:0,colorWrite:false,depthWrite:false,side:THREE.DoubleSide}));
-  for(const s of LOCAL_SPACES){const p=rooms.get(s.id);for(const r of s.floorRects)floor(p,s,r,s.id==='house-ground'?m.concrete:s.id==='office'?m.plaster:s.id==='attic-parts'?m.concrete:m.wood);}
+  for(const s of LOCAL_SPACES){const p=rooms.get(s.id);for(const r of s.floorRects)floor(p,s,r,['house-ground','attic-parts','attic-racks'].includes(s.id)?m.concrete:s.id==='office'?m.plaster:m.wood);}
   // Ground-floor outline and west gates ported from Sites d75100dc.
   // Physical plan frame: x=u, z=v-10; no rotation of the actual building.
   box(exterior,-1.5,-.23,1,31.7,.35,36.7,m.concrete,'Temelj');
@@ -203,24 +207,27 @@ export function createBuilding(THREE, options={}) {
     for(const px of [-width/2,width/2])for(const pz of [-depth/2,depth/2])box(p,px,height/2,pz,.06,height,.06,steel,'Stup regala');
     for(let i=0;i<4;i++){const sy=.12+i*(height-.18)/3;for(const pz of [-depth/2,depth/2])box(p,0,sy,pz,width,.075,.06,white?m.white:m.orange,'Poprečni nosač');if(white)box(p,0,sy-.035,0,width,.035,depth,m.white,'Bijela polica');}
     if(!white){beam(p,[-width/2,.15,depth/2],[width/2,height-.1,depth/2],.028,steel);}
+    return p;
   }
   for(let z=-12.4;z<=16.5;z+=2.4)shelving(a,-11.2,z,ay,2.25,.85,2.05,Math.PI/2,true);
   for(const x of [-10.5,-8.25,-6,-3.75,-1.5])shelving(a,x,17.25,ay,2.2,.85,2.05,0,true);
   for(let x=-6.7;x<-.7;x+=2.2)shelving(a,x,.65,ay,2.1,.85,2.05,0,true);
   // B: two rear transverse rack banks, two side banks, two front paired banks.
-  // Correct the former B-only depth error as one longitudinal reconstruction
-  // of its complete existing fixture group. Relative fixture positions/order
-  // are preserved; no independent rack/furniture moves or new fixtures.
+  // Preserve the common room edges. Only the owner's corrected middle deck,
+  // lower rear banks and wider west passage change within this room.
   const b=new THREE.Group(),by=3.2;b.name='B · zajednički prednji i stražnji rub';b.userData={spaceId:'attic-racks',kind:'reference-depth-reconstruction',unmeasured:true};b.scale.z=rackReferenceDepth;b.position.z=-14;rooms.get('attic-racks').add(b);
   wall(b,5,0,10,.2,by,2.7);wall(b,10,9,.24,18,by,2.7);wall(b,5,18,10,.24,by,2.7,m.stone,{reviewFront:true});
   roof(b,[[10.2,by+2.2,-.2],[6.6,by+4.4,-.2],[6.6,by+4.4,18.2],[10.2,by+2.2,18.2]],'Istočna krovna kosina B');
   for(let z=.5;z<18;z+=2.2)roofStructure.push(beam(b,[10.05,by+2.23,z],[6.65,by+4.34,z],.09,m.woodDark));
-  box(b,5,by+.58,5.5,8.2,1.16,9.4,m.dark,'Platforma · okvir');box(b,5,by+1.18,5.5,8.2,.12,9.4,m.wood,'Platforma · drveni pod');
-  for(let x=1;x<9;x+=.3)box(b,x,by+1.245,5.5,.012,.006,9.4,m.woodDark,'Spoj dasaka');
-  const platformHit=new THREE.Mesh(keep(new THREE.PlaneGeometry(8.2,9.4)),pickMaterial);platformHit.rotation.x=-Math.PI/2;platformHit.position.set(5,by+1.27,5.5);platformHit.userData={spaceId:'attic-racks',roomId:'attic-racks',inventory:false};b.add(platformHit);targets.push(platformHit);
-  for(const z of [1.45,3.05])for(const x of [2.1,4.5,6.9])shelving(b,x,z,by+1.25,2.3,.85,2.15,0,false);
-  for(const x of [1.55,8.45])for(const z of [5.3,7.7])shelving(b,x,z,by+1.25,2.3,.85,2.15,Math.PI/2,false);
-  for(const x of [2.4,3.5,6.0,7.1])shelving(b,x,14.5,by,4.25,.82,2.15,Math.PI/2,false);
+  const deckX=(rackDeck.west+rackDeck.east)/2,deckZ=(rackDeck.north+rackDeck.south)/2,deckW=rackDeck.east-rackDeck.west,deckD=rackDeck.south-rackDeck.north,deckY=by+rackDeck.rise;
+  box(b,deckX,by+(rackDeck.rise-.12)/2,deckZ,deckW,rackDeck.rise-.12,deckD,m.dark,'Platforma · okvir');
+  const deck=box(b,deckX,deckY-.06,deckZ,deckW,.12,deckD,m.wood,'Platforma · drveni pod',true);deck.userData={kind:'raised-deck',spaceId:'attic-racks',unmeasured:true};
+  for(let x=rackDeck.west+.1;x<rackDeck.east-.05;x+=.3)box(b,x,deckY-.003,deckZ,.012,.006,deckD,m.woodDark,'Spoj dasaka');
+  const platformHit=new THREE.Mesh(keep(new THREE.PlaneGeometry(deckW,deckD)),pickMaterial);platformHit.rotation.x=-Math.PI/2;platformHit.position.set(deckX,deckY,deckZ);platformHit.userData={kind:'platform-hit',spaceId:'attic-racks',roomId:'attic-racks',inventory:false};b.add(platformHit);targets.push(platformHit);
+  const rack=(bank,x,z,y,width,depth,rotation)=>{const p=shelving(b,x,z,y,width,depth,2.15,rotation,false);p.name=`B · ${bank} rack`;p.userData={kind:'rack',bank,spaceId:'attic-racks',inventory:false};};
+  for(const z of [1.45,3.05])for(const x of [2.1,4.5,6.9])rack('rear',x,z,by,2.3,.85,0);
+  for(const x of [2.85,8.45])for(const z of [5.3,7.7])rack('side',x,z,deckY,2.3,.85,Math.PI/2);
+  for(const x of [2.4,3.5,6.0,7.1])rack('front',x,14.5,by,4.25,.82,Math.PI/2);
   const steps=new THREE.Group();steps.name='Kratke stube platforme B';steps.userData={kind:'platform-steps',notHouseStair:true};b.add(steps);
   for(let i=0;i<6;i++)box(steps,5,by+(6-i)*.2-.1,10.4+i*.3,1.5,.2,.31,m.wood,'Stuba platforme');
   for(const x of [4.2,5.8]){beam(steps,[x,by+2.05,10.2],[x,by+.85,12.2],.045,m.dark);for(const z of [10.2,12.2])beam(steps,[x,by+(z===10.2?1.2:0),z],[x,by+(z===10.2?2.05:.85),z],.04,m.dark);}

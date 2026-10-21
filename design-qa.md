@@ -39,7 +39,7 @@ images were rejected as geometry sources.
 
 ## Validation evidence
 
-- `node --experimental-vm-modules --test tests/*.mjs`: 196 passing tests at
+- `node --experimental-vm-modules --test tests/*.mjs`: 199 passing tests at
   the geometry/scene freeze, zero failures.
 - Localization guard: 19 guard tests and the UI scan pass.
 - Actual Chromium/SwiftShader scene test: exact 4-of-8 selection, neighbor
@@ -76,9 +76,18 @@ presented as a physical-device or production-data test.
 `scripts/export-warehouse.mjs --view upper-assembly --cutaway review` exports
 the same source meshes used by the application. `scripts/render-warehouse.py`
 renders the geometry without architectural substitution. The final source
-SHA-256 is `406635e6b0fab15bc8a5c37601a5fa9921b0fe76830c23220cd8e965322dbe98`.
-The 1800×1100 proof contains 645 mesh instances and zero inventory records.
+SHA-256 is `906a58c77ce62744cbb288e2742b84e4ff4aa2cc0329ac254e19e763c56136fc`.
+The 1800×1100 proof contains 641 mesh instances and zero inventory records.
 It is an architectural review image, not the requested finished dusk building.
+
+The owner's next refinement lowers the right room's rear racks to its concrete
+base floor, restricts the raised wooden deck to the middle, and widens the west
+passage for a schematic tire-set footprint beside a walking envelope. The deck
+mesh, picking plane and inventory mapping agree on footprint and top height.
+Three new geometry regressions pass, including edge-crossing rejection and
+clearance samples. The WebGL/isolated-review browser suite was rerun successfully.
+An independent mesh/material/transform comparison confirms the white-shelf
+attic and office are unchanged. Clearances still require physical measurement.
 
 ## Release blockers
 

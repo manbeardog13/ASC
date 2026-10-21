@@ -89,6 +89,85 @@ test('tire footprints cannot straddle the raised platform boundary',()=>{
   assert.equal(mapAreaPoint('attic-racks',area,4.6,-3.5,.2).y,4.2);
 });
 
+test('rear racks stand on the lower floor and the middle deck agrees with placement and picking',()=>{
+  const scene=createBuilding(THREE),space=getSpace('attic-racks'),area={width:space.width,depth:space.depth};
+  scene.root.updateMatrixWorld(true);
+  const racks=[],decks=[],picks=[];
+  scene.rooms.get(space.id).traverse(o=>{
+    if(o.userData.kind==='rack')racks.push(o);
+    if(o.userData.kind==='raised-deck')decks.push(o);
+    if(o.userData.kind==='platform-hit')picks.push(o);
+  });
+  assert.equal(decks.length,1);assert.equal(picks.length,1);
+  const deck=new THREE.Box3().setFromObject(decks[0]),p=space.platform;
+  const near=(actual,expected)=>assert.ok(Math.abs(actual-expected)<1e-6,`${actual} ≠ ${expected}`);
+  near(deck.min.x,space.x+p.x-p.w/2);near(deck.max.x,space.x+p.x+p.w/2);
+  near(deck.min.z,space.z+p.z-p.d/2);near(deck.max.z,space.z+p.z+p.d/2);
+  near(deck.max.y,space.y+p.rise);
+  const centre=deck.getCenter(new THREE.Vector3());
+  const mapped=mapAreaPoint(space.id,area,centre.x-space.x,centre.z-space.z,.2);
+  near(mapped.y,deck.max.y);
+  const ray=new THREE.Raycaster(new THREE.Vector3(centre.x,deck.max.y+1,centre.z),new THREE.Vector3(0,-1,0));
+  const hit=ray.intersectObject(picks[0],false)[0];assert.ok(hit);near(hit.point.y,mapped.y);
+  assert.equal(racks.filter(r=>r.userData.bank==='rear').length,6);
+  assert.equal(racks.filter(r=>r.userData.bank==='side').length,4);
+  for(const rack of racks){
+    const bounds=new THREE.Box3().setFromObject(rack),point=bounds.getCenter(new THREE.Vector3());
+    const floor=mapAreaPoint(space.id,area,point.x-space.x,point.z-space.z);
+    assert.ok(floor);near(bounds.min.y,floor.y);
+    if(rack.userData.bank==='rear'){
+      near(bounds.min.y,space.y);assert.ok(bounds.max.z<deck.min.z,'rear racks must be behind and below the middle deck');
+    }else if(rack.userData.bank==='side'){
+      near(bounds.min.y,deck.max.y);
+      assert.ok(bounds.min.x>=deck.min.x&&bounds.max.x<=deck.max.x);
+      assert.ok(bounds.min.z>=deck.min.z&&bounds.max.z<=deck.max.z);
+    }else near(bounds.min.y,space.y);
+  }
+  scene.dispose();
+});
+
+test('tire footprints cannot cross the refined west or north deck edges from either level',()=>{
+  const space=getSpace('attic-racks'),area={width:space.width,depth:space.depth},p=space.platform;
+  const west=p.x-p.w/2,north=p.z-p.d/2,radius=.2;
+  for(const edge of [
+    {point:offset=>[west+offset,p.z]},
+    {point:offset=>[p.x,north+offset]},
+  ]){
+    for(const offset of [-.1,.1])assert.equal(mapAreaPoint(space.id,area,...edge.point(offset),radius),null);
+    assert.equal(mapAreaPoint(space.id,area,...edge.point(-.3),radius).y,space.y);
+    assert.equal(mapAreaPoint(space.id,area,...edge.point(.3),radius).y,space.y+p.rise);
+  }
+});
+
+test('the lower west strip holds a schematic full tire-set footprint beside a continuous walking envelope',()=>{
+  const scene=createBuilding(THREE),space=getSpace('attic-racks'),area={width:space.width,depth:space.depth};
+  scene.root.updateMatrixWorld(true);
+  let deckMesh;const rackBounds=[];
+  scene.rooms.get(space.id).traverse(o=>{
+    if(o.userData.kind==='raised-deck')deckMesh=o;
+    if(o.userData.kind==='rack')rackBounds.push(new THREE.Box3().setFromObject(o));
+  });
+  const deck=new THREE.Box3().setFromObject(deckMesh),west=space.x-space.width/2;
+  // These are review envelopes in unmeasured drawing units, not surveyed
+  // accessibility dimensions. A set stacked vertically retains one footprint.
+  const tireRadius=.42,personRadius=.4,wallHalfThickness=.11,margin=.1;
+  const tireX=west+wallHalfThickness+margin+tireRadius,personX=deck.min.x-margin-personRadius;
+  assert.ok(personX-tireX>=tireRadius+personRadius+margin,'a person must pass beside the full tire-set footprint');
+  for(let step=0;step<=20;step++){
+    const z=deck.min.z+.5+(deck.max.z-deck.min.z-1)*step/20;
+    for(const [x,radius]of [[tireX,tireRadius],[personX,personRadius]]){
+      const floor=mapAreaPoint(space.id,area,x-space.x,z-space.z,radius);
+      assert.ok(floor);assert.equal(floor.y,space.y);
+      for(const rack of rackBounds){
+        const dx=x-Math.max(rack.min.x,Math.min(x,rack.max.x));
+        const dz=z-Math.max(rack.min.z,Math.min(z,rack.max.z));
+        assert.ok(dx*dx+dz*dz>radius*radius,'the west clearance must not intersect a rack');
+      }
+    }
+  }
+  assert.equal(DIMENSIONS_UNMEASURED,true);scene.dispose();
+});
+
 test('declared building camera bounds contain actual mesh geometry',()=>{
   const scene=createBuilding(THREE);scene.root.updateMatrixWorld(true);
   const actual=new THREE.Box3().setFromObject(scene.root);
