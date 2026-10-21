@@ -1,5 +1,7 @@
 const assert=require('node:assert/strict');
 const {start,pageFor}=require('./fixtures/platform-harness.cjs');
+const fs=require('node:fs');
+const path=require('node:path');
 async function navigation(browser){
   for(const width of [320,390,1020,1021,1440]){
     const h=await pageFor(browser,{width});
@@ -138,8 +140,81 @@ async function intakeAndIntroduction(browser){
   }
   console.log('PASS intake and introduction: reachable action, focus containment, real Locations route, Escape restores page');
 }
+async function locate(browser){
+  const output=path.resolve(__dirname,'../out/locate-tests');fs.mkdirSync(output,{recursive:true});
+  for(const width of [390,1440]){
+    const h=await pageFor(browser,{width,height:900,theme:'dark'});
+    try{
+      const p=h.page;
+      await h.context.addInitScript(()=>{
+        window.__inventoryRequests=[];
+        window.__loadInventory=()=>new Promise((resolve,reject)=>window.__inventoryRequests.push({resolve,reject}));
+        window.__testInventory=Array.from({length:1005},(_,i)=>({id:'set-'+i,public_code:'ASC-2026-'+String(i+1).padStart(4,'0'),
+          zone:'A',rack:'R1',shelf:'2',slot:'3',vehicle:{plate:'DU'+String(i+1)+'TEST',customer:{name:'Sintetički kupac '+i}},tires:[{size:'225/45 R17'}]}));
+        window.__beforeInventory=JSON.stringify(window.__testInventory);
+      });
+      await p.goto('http://asc.test/app/locate.html');
+      const query=p.getByRole('searchbox',{name:'Ime, registracija, kôd ili dimenzija'});
+      await query.waitFor();
+      const submit=p.locator('.locate-submit'),status=p.locator('#locate-status');
+      assert.equal(await submit.isDisabled(),true,'Search cannot report false empty results before inventory loads');
+      await query.fill('ASC-2026-1005');await query.press('Enter');
+      assert.match(await status.innerText(),/Učitavanje/);
+      assert.equal(await p.locator('.flow-hit').count(),0);
+      await p.evaluate(()=>window.__inventoryRequests[0].reject(new Error('Synthetic unavailable inventory')));
+      await p.locator('.locate-retry').waitFor({state:'visible'});
+      assert.match(await status.innerText(),/nije učitan/);
+      assert.equal(await query.inputValue(),'ASC-2026-1005','An error preserves the operator query');
+      assert.equal(await submit.isDisabled(),true);
+      await p.locator('.locate-retry').click();
+      await p.waitForFunction(()=>window.__inventoryRequests.length===2);
+      await p.evaluate(()=>window.__inventoryRequests[1].resolve({sets:window.__testInventory,locations:[]}));
+      await p.locator('.flow-hit').waitFor();
+      assert.match(await p.locator('.flow-hit').innerText(),/ASC-2026-1005/,'A real row beyond the old server default cap remains searchable');
+      assert.equal(await p.locator('.flow-hit').getAttribute('href'),'set-detail.html?code=ASC-2026-1005');
+      assert.equal(await p.evaluate(()=>JSON.stringify(window.__testInventory)===window.__beforeInventory),true,'Search must never modify customer/inventory records');
+      assert.equal(await p.locator('.locate-results').getAttribute('aria-busy'),'false');
+      assert.equal(await status.getAttribute('role'),'status');
+      assert.equal(await p.locator('.side .sb-group').count(),1,'Keep a single approved warehouse navigation group');
+      assert.equal(await p.locator('.side a[href$="warehouse-preview/index.html"]').count(),1);
+      assert.doesNotMatch(await p.locator('.side').innerText(),/Sva skladišta|PROSTORI/,'No duplicate warehouse tree belongs in the sidebar');
+      const geometry=await p.evaluate(()=>{
+        const rect=s=>{const r=document.querySelector(s).getBoundingClientRect();return{x:r.x,right:r.right,height:r.height};};
+        return{width:document.documentElement.scrollWidth,font:getComputedStyle(document.querySelector('.flow-head h1')).fontFamily,input:rect('#locate-query'),submit:rect('.locate-submit')};
+      });
+      assert.ok(geometry.width<=width,'Locate must not overflow horizontally');
+      assert.match(geometry.font,/system-ui|sans-serif/,'A blocked web font must never fall back to serif headings');
+      for(const control of [geometry.input,geometry.submit])assert.ok(control.x>=0&&control.right<=width&&control.height>=44,'Search controls stay visible and touch-sized');
+      await query.fill('Sintetički');
+      assert.equal(await p.locator('.flow-hit').count(),0,'Editing removes results from the previous query');
+      await query.press('Enter');
+      assert.equal(await p.locator('.flow-hit').count(),30,'Keep result DOM bounded');
+      assert.match(await status.innerText(),/1005.*30/,'Announce full match count and visible limit honestly');
+      await p.waitForFunction(()=>[...document.querySelectorAll('.nero-bubble')].some(b=>b.textContent.includes('ASC-2026-0001')));
+      await p.evaluate(()=>window.__oldSuggestion=[...document.querySelectorAll('.nero-bubble')].find(b=>b.textContent.includes('ASC-2026-0001')));
+      await query.fill('ASC-2026-1005');
+      // Invoke the captured old listener before/after its refresh: it must not
+      // navigate to an earlier customer's now-detached record.
+      await p.evaluate(()=>window.__oldSuggestion.click());
+      assert.match(p.url(),/\/locate\.html$/,'A stale record shortcut must never navigate');
+      assert.equal(await query.inputValue(),'ASC-2026-1005','Suggestion refresh preserves the typed query');
+      await query.fill('ASC-2026-1005');await query.press('Enter');
+      await p.waitForFunction(()=>![...document.querySelectorAll('.nero-bubble')].some(b=>/ASC-2026-000[12]/.test(b.textContent)));
+      await p.screenshot({path:path.join(output,`locate-dark-${width}.png`)});
+      await query.focus();await p.keyboard.press('Tab');
+      assert.equal(await p.evaluate(()=>document.activeElement.classList.contains('locate-submit')),true);
+      await p.keyboard.press('Tab');
+      assert.equal(await p.evaluate(()=>document.activeElement.classList.contains('flow-hit')),true,'Results remain reachable after the search button');
+      assert.equal(await p.locator('.flow-hit').evaluate(el=>getComputedStyle(el).outlineStyle),'solid');
+      await p.keyboard.press('Enter');
+      await p.waitForURL('**/set-detail.html?code=ASC-2026-1005');
+      assert.deepEqual(h.errors,[]);
+    }finally{await h.context.close();}
+  }
+  console.log('PASS locate: ASC styling at390/1440, complete inventory search, loading/error/retry, record preservation, keyboard result navigation');
+}
 (async()=>{
   const browser=await start();
-  try{await navigation(browser);await authentication(browser);await intakeAndIntroduction(browser);}
+  try{await navigation(browser);await authentication(browser);await intakeAndIntroduction(browser);await locate(browser);}
   finally{await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

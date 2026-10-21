@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="hr" data-theme="dark">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>ASC · Provjera 3D modela</title>
+<meta name="robots" content="noindex"><meta name="color-scheme" content="dark">
+<script type="importmap">{"imports":{"three":"../app/warehouse-preview/vendor/three.module.js"}}</script>
+<style>
+@font-face{font-family:Inter;src:url('../app/warehouse-preview/vendor/inter-latin.woff2') format('woff2');font-display:swap}
+*{box-sizing:border-box}body{margin:0;background:#101419;color:#eef0f1;font:14px Inter,system-ui,sans-serif}button,select{font:inherit;color:inherit;background:#20262c;border:1px solid #535b62;border-radius:10px;min-height:44px;padding:10px 14px;cursor:pointer}button:focus-visible,select:focus-visible{outline:2px solid #edba67;outline-offset:3px}button[aria-pressed=true]{background:#51302e;border-color:#b16a62}header{position:relative;z-index:3;display:flex;align-items:center;gap:16px;padding:18px 24px;background:#101419}header img{width:116px;height:auto}header p{margin:0;color:#c0c7cd;font-size:12px;line-height:1.5}header strong{display:block;color:#fff;font-size:15px;margin-bottom:3px}nav{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto}#scene{height:calc(100svh - 146px);min-height:460px;position:relative;background:radial-gradient(ellipse at 50% 35%,#293446,#11171f 75%)}#status{position:absolute;left:24px;bottom:24px;z-index:3;max-width:min(480px,calc(100% - 48px));background:#101419e8;padding:12px 16px;border-radius:10px;line-height:1.5;pointer-events:none}footer{min-height:42px;text-align:center;padding:15px 12px 10px;font-size:10px;letter-spacing:.16em;color:#969fa7}#fallback{padding:40px;line-height:1.7}#fallback[hidden]{display:none}#fallback p{max-width:620px}#fallback li{margin:8px 0}#focus-sample[hidden]{display:none}@media(max-width:760px){header{align-items:flex-start;flex-wrap:wrap;padding:16px}header p{flex:1}nav{width:100%;margin:0}nav select{flex:1;min-width:160px}#scene{height:66svh;min-height:380px}#status{left:14px;bottom:14px;max-width:calc(100% - 28px);font-size:12px}}
+</style>
+</head>
+<body>
+<header><img src="../assets/logo.png" alt="ASC"><p><strong>Provjera gornjeg sklopa</strong>Dva potkrovlja i ured · spoj s postojećom kućom još nije potvrđen</p><nav aria-label="Pregled modela"><select id="space" aria-label="Prostor"><option value="all">Dva potkrovlja i ured</option></select><button id="cutaway" aria-pressed="true">Presjek</button><button id="samples" aria-pressed="false">Probne gume</button><button id="focus-sample" hidden>Pronađi probni set</button><button id="reset">Vrati pogled</button><button id="capture">Spremi sliku</button></nav></header>
+<main id="scene"><div id="status" role="status">Učitavanje modela…</div><section id="fallback" hidden><h1>3D nije dostupan u ovom pregledniku</h1><p>Prikaz zahtijeva WebGL. Ovaj pregled ne pristupa poslovnoj bazi i ne mijenja inventar.</p><ul id="space-list"></ul></section></main>
+<footer>Powered by Nero Summit</footer>
+<script type="module" src="warehouse-review.js"></script>
+</body></html>

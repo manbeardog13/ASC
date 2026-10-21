@@ -1,23 +1,40 @@
-import { listStorageSets } from "../js/db.js";
+import { listWarehouseInventory } from "../js/db.js";
 import { searchSets } from "./agent-search.js";
-import { t, toast, el, button, field, input, queryParam } from "./flow-ui.js";
+import { t, el, button, field, input, queryParam } from "./flow-ui.js";
 import { bootOnboarding } from "./onboarding.js";
 
 bootOnboarding();
 
 const root = document.getElementById("flow-root");
 let rows = [];
+let state = "loading";
+
+const box = input({ id: "locate-query", type: "search", autocomplete: "off", enterkeyhint: "search", value: queryParam("q"), "aria-describedby": "locate-status" });
+const form = el("form", { class: "locate-search", role: "search", "aria-label": t("flow.lookup") });
+const label = field(t("flow.locatePh"), box);
+label.classList.add("locate-field");
+const submit = el("button", { type: "submit", class: "btn btn-primary locate-submit", disabled: "" }, t("flow.lookup"));
+form.append(label, submit);
+const feedback = el("div", { class: "locate-feedback" });
+const status = el("p", { id: "locate-status", class: "locate-status", role: "status", "aria-live": "polite", "aria-atomic": "true" });
+const retry = button(t("flow.locateRetry"), "btn locate-retry", load);
+retry.hidden = true;
+feedback.append(status, retry);
+const results = el("div", { class: "locate-results", "aria-busy": "true" });
+root.append(form, feedback, results);
 
 function where(row) {
   return [row.zone, row.rack, row.shelf, row.slot].filter((part) => part != null && part !== "").join(" · ") || "—";
 }
 
+function say(message, kind = "ready") {
+  status.textContent = message;
+  status.dataset.state = kind;
+  status.hidden = !message;
+}
+
 function renderHits(hits, query) {
   const list = el("div", { class: "flow-list" });
-  if (!hits.length) {
-    list.append(el("p", { class: "lead" }, t("flow.locateEmpty")));
-    return list;
-  }
   for (const row of hits.slice(0, 30)) {
     const link = el("a", { class: "flow-hit", href: "set-detail.html?code=" + encodeURIComponent(row.public_code) });
     const who = [row.vehicle?.customer?.name, row.vehicle?.plate].filter(Boolean).join(" · ");
@@ -26,35 +43,56 @@ function renderHits(hits, query) {
     link.append(el("small", null, [where(row), size].filter(Boolean).join(" · ")));
     list.append(link);
   }
-  if (hits.length > 30) list.append(el("p", { class: "lead" }, String(hits.length)));
   list.dataset.query = query;
   return list;
 }
 
-function run(query) {
-  const q = String(query || "").trim();
-  const old = root.querySelector(".flow-list");
-  if (old) old.remove();
-  if (!q) return;
-  root.append(renderHits(searchSets(rows, q), q));
+function run() {
+  if (state !== "ready") return;
+  results.replaceChildren();
+  const query = box.value.trim();
+  if (!query) { say(""); return; }
+  const hits = searchSets(rows, query);
+  say(hits.length ? t("flow.locateResults", { n: hits.length, shown: Math.min(30, hits.length) }) : t("flow.locateEmpty"));
+  if (hits.length) results.append(renderHits(hits, query));
 }
 
-async function boot() {
-  const box = input({ placeholder: t("flow.locatePh"), autocomplete: "off", value: queryParam("q") });
-  root.append(el("p", { class: "lead" }, t("flow.locatePh")));
-  root.append(field(t("flow.lookup"), box));
-  const actions = el("div", { class: "flow-actions" });
-  actions.append(button(t("flow.lookup"), "btn btn-primary", () => run(box.value)));
-  root.append(actions);
-  box.addEventListener("keydown", (event) => {
-    if (event.key === "Enter") { event.preventDefault(); run(box.value); }
-  });
+form.addEventListener("submit", (event) => { event.preventDefault(); run(); });
+box.addEventListener("input", () => {
+  // Old results must not appear to belong to the edited query.
+  if (state === "ready") { results.replaceChildren(); say(""); }
+});
+
+async function load() {
+  if (state === "loading" && load.pending) return;
+  load.pending = true;
+  state = "loading";
+  rows = [];
+  submit.disabled = true;
+  retry.disabled = true;
+  retry.hidden = true;
+  results.replaceChildren();
+  results.setAttribute("aria-busy", "true");
+  say(t("common.loading"), "loading");
   try {
-    rows = await listStorageSets();
-    if (box.value) run(box.value);
-  } catch (error) {
-    toast(error.message || t("flow.notFound"));
+    // Uses the complete paginated, authorized inventory. A failed page must
+    // never produce a convincing partial list or a false "no matches" result.
+    const inventory = await listWarehouseInventory();
+    if (!Array.isArray(inventory?.sets)) throw new Error("Incomplete inventory");
+    rows = inventory.sets;
+    state = "ready";
+    submit.disabled = false;
+    say("");
+    if (box.value.trim()) run();
+  } catch (_) {
+    state = "error";
+    say(t("flow.locateFailed"), "error");
+    retry.disabled = false;
+    retry.hidden = false;
+  } finally {
+    load.pending = false;
+    results.setAttribute("aria-busy", "false");
   }
 }
 
-boot();
+load();

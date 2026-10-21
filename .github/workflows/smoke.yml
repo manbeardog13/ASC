@@ -45,6 +45,7 @@ jobs:
           node tests/composer-history.browser.cjs
           node tests/composer-async.browser.cjs
           node tests/dashboard-agent.browser.cjs
+          node tests/asc-brand.browser.cjs
       - name: Warehouse areas, shared layouts and recovery regression
         env:
           CHROMIUM_PATH: ${{ steps.chrome.outputs.chrome-path }}
@@ -52,11 +53,17 @@ jobs:
           export NODE_PATH="$RUNNER_TEMP/asc-browser-tests/node_modules"
           node tests/warehouse-areas.browser.cjs
           node tests/warehouse.browser.cjs
+          node tests/warehouse-live-app.browser.cjs
+          node tests/warehouse-scene.browser.cjs
       - name: Retain synthetic browser evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: synthetic-browser-evidence
-          path: out/assistant-tests/
+          path: |
+            out/assistant-tests/
+            out/brand-tests/
+            out/composer-tests/
+            out/locate-tests/
           if-no-files-found: ignore
           retention-days: 7
