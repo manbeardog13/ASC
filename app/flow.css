@@ -38,3 +38,76 @@
 .lp-actions{display:flex;flex-wrap:wrap;gap:8px}
 .lp-actions:empty{display:none}
 .is-gated{opacity:.45;cursor:not-allowed}
+/* ============================== Checkout — slide-to-release ================
+   Height is reserved by the skeleton BEFORE data arrives so loading the set
+   never shifts the layout. Thumb target is 60x60 (>=44 required). Brand red
+   fill grows with drag or 600ms keyboard hold. prefers-reduced-motion disables
+   all transforms and transitions; the control still works, just without
+   animation. Contrast meets WCAG AA in both themes: white chevron on brand
+   red (~5.1:1), slate label on panel-2, --brand-ink text on --brand-tint. */
+.release-skeleton{height:76px;border-radius:999px;background:var(--panel-2);
+  border:1px solid var(--line);
+  background-image:linear-gradient(90deg,var(--panel-2) 0,rgba(225,6,0,.08) 50%,var(--panel-2) 100%);
+  background-size:200% 100%;
+  animation:releaseSkel 1400ms var(--smooth,cubic-bezier(.25,1,.5,1)) infinite}
+@keyframes releaseSkel{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+.release-context{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;
+  margin:0 0 14px;padding:12px 14px;border-radius:14px;background:var(--panel-2);border:1px solid var(--line)}
+.release-context dt{font:600 11px Inter;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);align-self:center}
+.release-context dd{margin:0;font:600 14px Inter;color:var(--ink)}
+.release-context .release-context__code{font-family:Sora;font-weight:600;letter-spacing:.02em}
+
+.release-slider{position:relative;height:76px;border-radius:999px;background:var(--panel-2);
+  border:1px solid var(--line);overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none;
+  outline:none;transition:box-shadow 120ms var(--snap,cubic-bezier(.22,1,.36,1)),border-color 120ms var(--snap,cubic-bezier(.22,1,.36,1))}
+.release-slider:focus-visible{box-shadow:0 0 0 3px var(--brand-ring,rgba(225,6,0,.32));border-color:var(--brand,#e10600)}
+.release-slider__track{position:relative;width:100%;height:100%;display:flex;align-items:center}
+.release-slider__fill{position:absolute;left:0;top:0;bottom:0;width:0;z-index:0;
+  background:linear-gradient(90deg,var(--brand,#e10600),var(--brand-hi,#ff3b30));
+  border-radius:999px 0 0 999px;will-change:width}
+.release-slider__label{position:absolute;inset:0;z-index:1;display:flex;align-items:center;justify-content:center;
+  pointer-events:none;font:600 14px Inter;color:var(--ink);letter-spacing:.02em;text-align:center;padding:0 72px}
+.release-slider__thumb{position:relative;z-index:2;margin-left:8px;flex:none;width:60px;height:60px;
+  border-radius:50%;background:var(--brand,#e10600);color:#fff;display:grid;place-items:center;
+  box-shadow:0 6px 18px -6px rgba(225,6,0,.65),inset 0 1px 0 rgba(255,255,255,.3);
+  cursor:grab;touch-action:none;will-change:transform;
+  transition:transform 220ms cubic-bezier(.16,1,.3,1),background-color 120ms cubic-bezier(.22,1,.36,1)}
+.release-slider__thumb::after{content:"";width:14px;height:14px;border-right:3px solid #fff;border-top:3px solid #fff;transform:rotate(45deg);margin-left:-5px}
+.release-slider__thumb:active{cursor:grabbing}
+.release-slider.is-disabled{opacity:.65;pointer-events:none}
+.release-slider__kbd{margin:8px 2px 0;font:500 12.5px Inter;color:var(--muted);text-align:center}
+
+.release-error{margin-top:10px;padding:12px 14px;border-radius:14px;
+  background:rgba(225,6,0,.08);border:1px solid rgba(225,6,0,.35);
+  color:var(--brand-ink,#c40500);display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+html.dark .release-error{background:rgba(255,42,31,.14);border-color:rgba(255,90,79,.45);color:var(--brand-ink,#ff5a4f)}
+.release-error__msg{flex:1;min-width:0;font:600 13.5px Inter}
+.release-error__retry{min-height:44px;padding:0 16px;border-radius:999px;
+  background:var(--panel);color:var(--ink);border:1px solid var(--line);font:600 13px Inter;cursor:pointer;
+  transition:background 120ms var(--snap,cubic-bezier(.22,1,.36,1))}
+.release-error__retry:hover{background:var(--panel-2)}
+
+.release-done{display:flex;flex-direction:column;gap:12px;padding:16px;border-radius:18px;
+  background:var(--panel-2);border:1px solid var(--brand-ring,rgba(225,6,0,.32));
+  box-shadow:var(--glow-under,0 12px 40px -8px rgba(225,6,0,.18))}
+.release-done h2{margin:0;font:600 18px Sora;color:var(--ink);letter-spacing:-.01em}
+.release-done p{margin:0;color:var(--ink-2,var(--muted));font:500 13.5px Inter}
+.release-done__actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:4px}
+.release-done__undo{min-height:44px;padding:0 18px;border-radius:999px;
+  background:var(--panel);color:var(--ink);border:1px solid var(--line);font:600 14px Inter;cursor:pointer;
+  transition:background 120ms var(--snap,cubic-bezier(.22,1,.36,1)),transform 120ms var(--snap,cubic-bezier(.22,1,.36,1))}
+.release-done__undo:hover{background:var(--panel-2)}
+.release-done__open{min-height:44px;padding:0 20px;border-radius:999px;flex:1;min-width:140px;
+  background:var(--brand,#e10600);color:#fff;border:0;font:600 14px Inter;cursor:pointer;
+  box-shadow:0 8px 20px -8px rgba(225,6,0,.6);
+  transition:transform 120ms var(--snap,cubic-bezier(.22,1,.36,1)),box-shadow 220ms cubic-bezier(.16,1,.3,1)}
+.release-done__open:hover{transform:translateY(-1px);box-shadow:0 12px 28px -10px rgba(225,6,0,.7)}
+html.dark .release-done__open{background:var(--brand-hi,#ff2a1f)}
+
+@media(prefers-reduced-motion:reduce){
+  .release-skeleton,.release-slider__thumb,.release-slider__fill,.release-slider__label,
+  .release-done__open,.release-done__undo,.release-error__retry{
+    animation:none!important;transition:none!important}
+  .release-done__open:hover,.release-done__undo:hover{transform:none}
+}
