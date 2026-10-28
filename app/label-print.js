@@ -3,7 +3,7 @@
 // (window.ASC_PRINT_BRIDGE, same-origin when Nero Summit serves ASC), else the
 // system print dialog. The chosen printer is remembered per site. Check-in is
 // complete only once the label printed (bridge OK, or the user confirms the
-// system print) or the user explicitly retried after a failure.
+// system print). Retrying or closing the dialog is not proof of a print.
 //
 // Bridge contract: GET  {bridge}/printers -> {printers:[{id,name,online}]}
 //                  POST {bridge}/print {printer,code,test,label:{who,plate,season}} -> {ok:true}|{ok:false,error}
@@ -33,13 +33,20 @@ export async function discoverPrinters() {
 
 function systemPrint(code, label) {
   return new Promise((resolve) => {
-    if (!window.ASCQR) { resolve('failed'); return; }
-    window.ASCQR.printSticker(code, label);
-    let done = false;
-    const after = () => { if (done) return; done = true; removeEventListener('afterprint', after); resolve('confirm'); };
+    try {
+      if (!window.ASCQR?.printSticker || window.ASCQR.printSticker(code, label) === false) { resolve('failed'); return; }
+    } catch (e) { resolve('failed'); return; }
+    let done = false, timer;
+    const finish = (result) => {
+      if (done) return;
+      done = true; clearTimeout(timer); removeEventListener('afterprint', after); resolve(result);
+    };
+    // afterprint also fires for cancel / Save to PDF. Only the operator can
+    // confirm a physical label; a missing event or exception stays failed.
+    const after = () => finish('confirm');
     addEventListener('afterprint', after);
-    try { window.print(); } catch (e) { after(); }
-    setTimeout(after, 60000);
+    timer = setTimeout(() => finish('failed'), 60000);
+    try { window.print(); } catch (e) { finish('failed'); }
   });
 }
 
@@ -55,7 +62,7 @@ async function bridgePrint(printer, code, label, test) {
 }
 
 // Renders the print block into `host` and calls onComplete(reason) once the
-// label printed or the user retried after a problem. Returns nothing.
+// bridge reports success or the operator confirms the system print. Returns nothing.
 export function mountLabelPrint(host, { code, label, onComplete }) {
   const box = document.createElement('div');
   box.className = 'lp';
@@ -71,26 +78,25 @@ export function mountLabelPrint(host, { code, label, onComplete }) {
   box.append(row, status, actions);
   host.append(box);
 
-  let completed = false, hadProblem = false;
+  let completed = false, busy = false;
   const complete = (reason) => { if (completed) return; completed = true; box.dataset.state = 'done'; onComplete && onComplete(reason); };
-  const setState = (state, extra) => {
+  const setState = (state, extra, isTest = false) => {
     box.dataset.state = state;
     status.textContent = t('print.' + state, extra);
     actions.replaceChildren();
     if (state === 'none' || state === 'offline' || state === 'failed') {
-      hadProblem = true;
       const retry = document.createElement('button'); retry.type = 'button'; retry.className = 'btn'; retry.textContent = t('print.retry');
-      retry.addEventListener('click', () => { if (hadProblem) complete('retried'); state === 'failed' ? print(false) : refresh(); });
+      retry.addEventListener('click', () => { state === 'failed' ? print(isTest) : refresh(); });
       actions.append(retry);
     }
     if (state === 'confirm') {
       const yes = document.createElement('button'); yes.type = 'button'; yes.className = 'btn btn-primary'; yes.textContent = t('print.confirmYes');
       const no = document.createElement('button'); no.type = 'button'; no.className = 'btn ghost'; no.textContent = t('print.confirmNo');
-      yes.addEventListener('click', () => { setState('printed'); complete('printed'); });
-      no.addEventListener('click', () => setState('failed'));
+      yes.addEventListener('click', () => { setState(isTest ? 'testOk' : 'printed'); if (!isTest) complete('printed'); });
+      no.addEventListener('click', () => setState('failed', undefined, isTest));
       actions.append(yes, no);
     }
-    go.disabled = test.disabled = state === 'searching' || state === 'printing';
+    go.disabled = test.disabled = select.disabled = state === 'searching' || state === 'printing';
   };
 
   async function refresh() {
@@ -107,11 +113,20 @@ export function mountLabelPrint(host, { code, label, onComplete }) {
   }
 
   async function print(isTest) {
-    const printer = select.value || SYSTEM;
-    try { localStorage.setItem(siteKey(), printer); } catch (e) {}
-    setState('printing');
-    const result = printer === SYSTEM ? await systemPrint(isTest ? 'TEST' : code, label) : await bridgePrint(printer, isTest ? 'TEST' : code, label, isTest);
-    if (isTest) { setState(result === 'printed' || result === 'confirm' ? 'testOk' : result); return; }
+    if (busy || completed) return;
+    busy = true;
+    let result;
+    try {
+      const printer = select.value || SYSTEM;
+      try { localStorage.setItem(siteKey(), printer); } catch (e) {}
+      setState('printing');
+      result = printer === SYSTEM ? await systemPrint(isTest ? 'TEST' : code, label) : await bridgePrint(printer, isTest ? 'TEST' : code, label, isTest);
+    } catch (e) {
+      result = 'failed';
+    } finally {
+      busy = false;
+    }
+    if (isTest) { setState(result === 'printed' ? 'testOk' : result, undefined, true); return; }
     setState(result);
     if (result === 'printed') complete('printed');
   }

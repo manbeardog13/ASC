@@ -1,0 +1,8 @@
+{
+  "provenance": "synthetic browser test",
+  "payload": "https://asc.invalid/app/set-detail.html?code=ASC-2099-0000&k=N68K",
+  "code": "ASC-2099-0000",
+  "expected": "https://asc.invalid/app/set-detail.html?code=ASC-2099-0000&k=N68K",
+  "physicalPrint": "UNVERIFIED",
+  "paperProfile": "A4, 10 mm margins; actual label stock UNKNOWN"
+}

@@ -1,0 +1,87 @@
+{
+  "schemaVersion": 1,
+  "provenance": "synthetic author-side mechanical evidence",
+  "baseCommit": "39bc6cc6b0cfdbdc19caf10040d914d33fc9229e",
+  "createdAt": "2026-10-28T17:58:54.090Z",
+  "sourceFiles": [
+    {
+      "path": "app/qr.js",
+      "gitBlob": "dfd3350822c831d1f6d760b2493be7e89d9fa6a1",
+      "sha256": "168d7e5e4f4801b5668ad8cdb71a50e552a836640d623e4c5ee794884118383c"
+    },
+    {
+      "path": "app/label-print.js",
+      "gitBlob": "5dcd4630233b8a01e3f0bada9eeee479b3697a49",
+      "sha256": "46e70c3ebc0f53c1720f3278fd98e67a754c631c8dc2fb27820201c0f768c2e0"
+    },
+    {
+      "path": "app/app.css",
+      "gitBlob": "d48c405eaf1ec2a0cde449ab832ce637bdfa31d8",
+      "sha256": "45ee50da6e282581e060ce89c9ca49b548a9d942278c54cf3a8a42bd7f614fbb"
+    },
+    {
+      "path": "app/tokens.css",
+      "gitBlob": "a519c877f19da2e0c6ba77a3f6017a7958409b2d",
+      "sha256": "97e1461e495b66029a1882f6b2dd7dc7faf239d0af8b866ed1a8bff098b5fcac"
+    },
+    {
+      "path": "app/flow.css",
+      "gitBlob": "3d1d01552cfe91d93613e6186359938236e6809f",
+      "sha256": "98216cc0ba57166e750d3a592b6a8d596c9a4557ead71334c226c46d15e9672c"
+    },
+    {
+      "path": "js/i18n.js",
+      "gitBlob": "428cfd709f26ba2f19e14e2fa893df73dc2fd0de",
+      "sha256": "1f1e89416f91bb58340142df452c9b8b65be3f5d1c81718325a2a22e05b16bf0"
+    },
+    {
+      "path": "app/warehouse-preview/vendor/qrcode.js",
+      "gitBlob": "76889b589ec831dd9b791601f6592793356ce9cd",
+      "sha256": "18ae399f81182bc9de916e9c77b195df20cc58d6f2d55a62b085a299f1bf1780"
+    },
+    {
+      "path": "app/warehouse-preview/vendor/jsQR.js",
+      "gitBlob": "429896a9d087eb3977cf67521f738d01af17c808",
+      "sha256": "bc40c8a15196236b2314db0856f72ca0b49980cd5413b8c852a7349f5fee0859"
+    },
+    {
+      "path": "tests/label-render.browser.cjs",
+      "gitBlob": "8fa6858f3bc29a5a6c3eaf089bc74d03a3088f31",
+      "sha256": "b22c060101b5ecfe7ae878c55ff34b14e491500abb03760d8f177c3ebecc45ec"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "pdf-validation.json",
+      "sha256": "787eea6907a1d26c89fc261098461c04e3a282406bec6571e1840c51e863f0e8"
+    },
+    {
+      "path": "qr-roundtrip.json",
+      "sha256": "793f0d76e5524b4a16b7e78646d80e235fadc32a2b49ff96e49faaa0f7915bd6"
+    },
+    {
+      "path": "README.md",
+      "sha256": "fdff8dfcd177bf0216a54c6941853b7b115f8c5088c58859dffbba71ea35dd71"
+    },
+    {
+      "path": "scenarios.json",
+      "sha256": "9d952352bd851ae6b0cb0b7298b17561262a69ba72bd6771689365a32312b570"
+    },
+    {
+      "path": "synthetic-label-mobile.png",
+      "sha256": "9629125061f18c696bfaceac69485c616ebbcaf1554889665a7475c6202f4e15"
+    },
+    {
+      "path": "synthetic-label-pdf-page.png",
+      "sha256": "30e419590fc1ee99deea14ba656f51122ff5c45bb85013ababffda8df8cab8b1"
+    },
+    {
+      "path": "synthetic-label.pdf",
+      "sha256": "693a196e042997e9a677ac9f6711a310f1a8f3d8c35dcabf8652112f7be7eab1"
+    }
+  ],
+  "physicalPrint": "UNVERIFIED",
+  "liveScan": "UNVERIFIED",
+  "labelStock": "UNKNOWN",
+  "sourceCommit": "6984d358d0771bdc3b60a76306005dc176a951ab"
+}

@@ -47,6 +47,7 @@ jobs:
           node tests/composer-async.browser.cjs
           node tests/dashboard-agent.browser.cjs
           node tests/label-print.browser.cjs
+          node tests/label-render.browser.cjs
           node tests/detail-overlay.browser.cjs
       - name: Warehouse areas, shared layouts and recovery regression
         env:
