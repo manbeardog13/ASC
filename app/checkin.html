@@ -24,6 +24,7 @@
   Dedicated imagery: zaprimi.jpg (green) belongs to check-in ONLY. Copy grounded
   in js/i18n.js (hr). Placeholder data is illustrative.
 -->
+<link rel="stylesheet" href="tokens.css">
 <link rel="stylesheet" href="app.css">
 <link rel="stylesheet" href="flow.css">
 <style>
@@ -57,8 +58,8 @@
   transition:transform .15s var(--snap),background .15s var(--snap)}
 @media(any-hover:hover){.voice-cta:hover{transform:translateY(-1px);background:rgba(244,245,247,.2)}}
 .voice-cta:active{transform:scale(.96)}
-.voice-cta.listening{background:rgba(255,78,27,.18);border-color:rgba(255,78,27,.55);animation:micPulse 1s ease-in-out infinite}
-@keyframes micPulse{0%,100%{box-shadow:0 0 0 0 rgba(255,78,27,.4)}50%{box-shadow:0 0 0 6px rgba(255,78,27,0)}}
+.voice-cta.listening{background:rgba(225,6,0,.18);border-color:rgba(225,6,0,.55);animation:micPulse 1s ease-in-out infinite}
+@keyframes micPulse{0%,100%{box-shadow:0 0 0 0 rgba(225,6,0,.4)}50%{box-shadow:0 0 0 6px rgba(225,6,0,0)}}
 
 /* Form scaffolding */
 form#ci{display:block}
@@ -140,9 +141,9 @@ html.dark .btn{background:rgba(244,245,247,.06)}
 @media(any-hover:hover){.btn:hover{transform:translateY(-1px);background:var(--panel)}}
 .btn:active{transform:scale(.97);transition-duration:80ms}
 .btn.small{min-height:38px;padding:0 14px;font-size:12.5px;border-radius:19px}
-.btn-primary{background:linear-gradient(180deg,var(--lava-2),var(--lava));color:#fff;border-color:transparent;box-shadow:0 10px 24px -10px rgba(255,78,27,.7)}
+.btn-primary{background:linear-gradient(180deg,var(--lava-2),var(--lava));color:#fff;border-color:transparent;box-shadow:0 10px 24px -10px rgba(225,6,0,.7)}
 html.dark .btn-primary{background:linear-gradient(180deg,var(--lava-2),var(--lava));color:#fff}
-@media(any-hover:hover){.btn-primary:hover{background:linear-gradient(180deg,var(--lava-2),var(--lava));box-shadow:0 14px 30px -10px rgba(255,78,27,.8)}}
+@media(any-hover:hover){.btn-primary:hover{background:linear-gradient(180deg,var(--lava-2),var(--lava));box-shadow:0 14px 30px -10px rgba(225,6,0,.8)}}
 .action-bar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-top:18px}
 .action-bar .btn-primary{flex:1}
 .action-bar .btn.ghost{flex:none}

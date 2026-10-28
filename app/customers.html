@@ -24,6 +24,7 @@
   .crow / detail internals) stays inline below. Copy is grounded in i18n hr.
   No green/red action imagery here — that belongs to check-in / pickup only.
 -->
+<link rel="stylesheet" href="tokens.css">
 <link rel="stylesheet" href="app.css">
 <style>
 /* ---- Customers-page-specific layout only (shared rules live in app.css) ---- */
@@ -55,7 +56,7 @@
 .crow:active{transform:scale(.99);transition-duration:90ms}
 .crow.sel{border-color:var(--lava-ring);box-shadow:0 0 0 1px var(--lava-ring),var(--shadow-card);background:var(--panel)}
 .crow .cav{width:40px;height:40px;border-radius:50%;flex:none;align-self:center;display:grid;place-items:center;
-  font:650 13px Inter;color:#fff;background:radial-gradient(circle at 32% 30%,var(--lava-2),var(--lava) 62%,#d6390c);box-shadow:0 5px 14px rgba(255,78,27,.3)}
+  font:650 13px Inter;color:#fff;background:radial-gradient(circle at 32% 30%,var(--lava-2),var(--lava) 62%,#d6390c);box-shadow:0 5px 14px rgba(225,6,0,.3)}
 .crow .body{flex:1;min-width:0}
 .crow .who{font:650 14.5px Inter;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .crow .spec{font:500 12.5px Inter;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}

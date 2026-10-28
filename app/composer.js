@@ -1059,7 +1059,7 @@
     var v = cs.getPropertyValue('--acc').trim() || getComputedStyle(document.documentElement).getPropertyValue('--acc').trim();
     if (v) return v;
     var m = document.documentElement.getAttribute('data-module') || '';
-    return ({ checkin: '#2fbf5b', scan: '#547898', warehouse: '#f0c052', customers: '#5A63E8', reminders: '#e0a33a', workshop: '#8b5cf6', users: '#63676f' })[m] || '#ff4e1b';
+    return ({ checkin: '#2fbf5b', scan: '#547898', warehouse: '#f0c052', customers: '#5A63E8', reminders: '#e0a33a', workshop: '#8b5cf6', users: '#63676f' })[m] || '#e10600';
   }
   function labelOf(el) {
     return (el.getAttribute('aria-label') || el.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 32);

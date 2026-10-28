@@ -72,15 +72,15 @@ html.dark #splash{background:#0a0c11}
 html.dark #splash::before{background:radial-gradient(60vmax 56vmax at 6% -14%,rgba(255,110,55,.09),transparent 60%),radial-gradient(54vmax 50vmax at 98% 116%,rgba(90,130,165,.07),transparent 60%),radial-gradient(44vmax 40vmax at 86% -8%,rgba(244,245,247,.04),transparent 62%)}
 #splash::after{content:"";position:absolute;inset:0;opacity:.04;mix-blend-mode:overlay;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E")}
 .sp-core{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;transform:translateY(-4vh)}
-.sp-mark{height:32px;width:auto;filter:drop-shadow(0 3px 8px rgba(255,78,27,.28))}
-html.dark .sp-mark{filter:drop-shadow(0 4px 14px rgba(255,78,27,.38))}
+.sp-mark{height:32px;width:auto;filter:drop-shadow(0 3px 8px rgba(225,6,0,.28))}
+html.dark .sp-mark{filter:drop-shadow(0 4px 14px rgba(225,6,0,.38))}
 html.splash-cold .sp-mark,html.splash-oauth .sp-mark{animation:spMark 480ms cubic-bezier(.32,1.4,.36,1) 60ms both}
 html.splash-cold .sp-rule,html.splash-oauth .sp-rule{animation:spRule 560ms cubic-bezier(.22,1,.36,1) 240ms both}
-.sp-rule{width:68px;height:1.5px;border-radius:1px;margin-top:14px;background:linear-gradient(90deg,#ff8a5c,#ff4e1b);box-shadow:0 0 12px rgba(255,78,27,.35)}
+.sp-rule{width:68px;height:1.5px;border-radius:1px;margin-top:14px;background:linear-gradient(90deg,#ff3b30,#e10600);box-shadow:0 0 12px rgba(225,6,0,.35)}
 @keyframes spMark{from{opacity:0;transform:scale(.94)}}
 @keyframes spRule{from{transform:scaleX(0)}}
 html.splash-handoff .sp-mark,html.splash-handoff .sp-rule{animation:none}
-#splash.wait .sp-rule{background:linear-gradient(90deg,#ff4e1b 0%,#ffb9a1 50%,#ff4e1b 100%);background-size:220% 100%;animation:spSweep 1200ms linear infinite!important}
+#splash.wait .sp-rule{background:linear-gradient(90deg,#e10600 0%,#ffb9a1 50%,#e10600 100%);background-size:220% 100%;animation:spSweep 1200ms linear infinite!important}
 @keyframes spSweep{from{background-position:200% 0}to{background-position:-120% 0}}
 #splash.out{opacity:0;pointer-events:none;transition:opacity 420ms cubic-bezier(.25,1,.5,1) 90ms}
 #splash.out .sp-core{opacity:0;transform:translateY(-4vh) scale(1.045);transition:opacity 420ms cubic-bezier(.25,1,.5,1),transform 420ms cubic-bezier(.25,1,.5,1)}
@@ -93,13 +93,13 @@ html.splash-handoff .sp-mark,html.splash-handoff .sp-rule{animation:none}
   #splash.out{transition:opacity 240ms linear}
   #splash.out .sp-core{transform:translateY(-4vh);transition:opacity 240ms linear}
   #splash.in{animation:none;opacity:1}               /* cover trap: global animation:none must not leave the veil invisible */
-  #splash.wait .sp-rule{background:linear-gradient(90deg,#ff8a5c,#ff4e1b);animation:spPulse 1600ms ease-in-out infinite!important}
+  #splash.wait .sp-rule{background:linear-gradient(90deg,#ff3b30,#e10600);animation:spPulse 1600ms ease-in-out infinite!important}
 }
 /* island crowning (installed PWA on island iPhones): a 1.5px lava trace laps the
    capsule during the cold entrance, then dims to quiet company; non-island
    devices get a soft top glow instead. Rides the existing state machine. */
 .sp-isl,.sp-topglow{display:none}
-html.island.splash-cold .sp-isl,html.island.splash-oauth .sp-isl{display:block;position:fixed;left:50%;top:calc(var(--isl-y,11px) - 8px);width:134px;height:46px;transform:translateX(-50%);opacity:0;filter:drop-shadow(0 0 6px rgba(255,78,27,.4));animation:spIslIn 180ms linear 120ms both,spIslDim 240ms linear 820ms both}
+html.island.splash-cold .sp-isl,html.island.splash-oauth .sp-isl{display:block;position:fixed;left:50%;top:calc(var(--isl-y,11px) - 8px);width:134px;height:46px;transform:translateX(-50%);opacity:0;filter:drop-shadow(0 0 6px rgba(225,6,0,.4));animation:spIslIn 180ms linear 120ms both,spIslDim 240ms linear 820ms both}
 html.island.splash-cold .sp-isl rect,html.island.splash-oauth .sp-isl rect{animation:spIsl 700ms cubic-bezier(.22,1,.36,1) 120ms both}
 @keyframes spIslIn{to{opacity:.9}}
 @keyframes spIslDim{to{opacity:.45}}
@@ -130,6 +130,7 @@ html:not(.island).splash-cold .sp-topglow{display:block;position:fixed;left:0;ri
   imagery: zaprimi.jpg (green) = check-in, preuzmi.jpg (red) = pickup — used ONLY
   there. Numbers are placeholders.
 -->
+<link rel="stylesheet" href="tokens.css">
 <link rel="stylesheet" href="app.css">
 <style>
 /* ---- Dashboard-page-specific layout only (shared rules live in app.css) ---- */
@@ -421,7 +422,7 @@ html.dark .notes-name,html.dark .notes-text{background:rgba(244,245,247,.05)}
 </head>
 <body>
 <div id="splash" aria-hidden="true">
-  <svg class="sp-isl" viewBox="0 0 134 46" aria-hidden="true"><rect x="4" y="4" width="126" height="37" rx="18.5" pathLength="100" fill="none" stroke="#ff4e1b" stroke-width="1.5" stroke-dasharray="100" stroke-dashoffset="100"/></svg><i class="sp-topglow" aria-hidden="true"></i>
+  <svg class="sp-isl" viewBox="0 0 134 46" aria-hidden="true"><rect x="4" y="4" width="126" height="37" rx="18.5" pathLength="100" fill="none" stroke="#e10600" stroke-width="1.5" stroke-dasharray="100" stroke-dashoffset="100"/></svg><i class="sp-topglow" aria-hidden="true"></i>
   <div class="sp-core">
     <img class="sp-mark" src="assets/logo.png" alt="" width="488" height="92" decoding="sync" fetchpriority="high">
     <i class="sp-rule"></i>

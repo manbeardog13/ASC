@@ -24,6 +24,7 @@
   js/views/scan.js; Croatian strings from i18n.js (hr). No green/red imagery here
   (those belong to check-in / pickup only). Numbers are placeholders.
 -->
+<link rel="stylesheet" href="tokens.css">
 <link rel="stylesheet" href="app.css">
 <style>
 /* ---- Scan-page-specific layout only (shared rules live in app.css) ---- */
@@ -40,7 +41,7 @@
 
 /* ---- Premium camera viewfinder ---- */
 .vf{position:relative;border-radius:var(--radius);overflow:hidden;aspect-ratio:5/4;
-  background:radial-gradient(120% 90% at 88% -12%,rgba(255,78,27,.22),transparent 52%),linear-gradient(172deg,var(--stage-1) 0%,var(--stage-2) 100%);
+  background:radial-gradient(120% 90% at 88% -12%,rgba(225,6,0,.22),transparent 52%),linear-gradient(172deg,var(--stage-1) 0%,var(--stage-2) 100%);
   border-top:1px solid rgba(255,255,255,.10);box-shadow:inset 0 1px 0 rgba(255,255,255,.06),var(--shadow-card)}
 @media(max-width:420px){ .vf{aspect-ratio:4/4} }
 
