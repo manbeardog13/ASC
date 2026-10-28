@@ -1138,3 +1138,5 @@ html.dark input:-webkit-autofill{-webkit-box-shadow:0 0 0 1000px var(--panel-2) 
 /* Less noise: no grain texture, no ambient blobs, no preview ribbons. */
 .grain,.canvas{display:none!important}
 .sb-burger,.top .mode{font-family:Inter,system-ui,sans-serif}
+
+.sb-lang-k{width:20px;height:20px;flex:none;display:inline-grid;place-items:center;font:700 10px/1 Inter,system-ui,sans-serif;letter-spacing:.02em;border:1.5px solid currentColor;border-radius:6px}
