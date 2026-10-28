@@ -63,7 +63,7 @@ test('free gemini stays on and the local assistant is gone', () => {
   assert.doesNotMatch(app, /installNineAgent|nine-studio/);
   const checkin = readFileSync(new URL('../app/checkin.html', import.meta.url), 'utf8');
   assert.doesNotMatch(checkin, /sluhBtn|asc-agent|Drži i govori/);
-  const spa = readFileSync(new URL('../js/app.js', import.meta.url), 'utf8');
-  assert.doesNotMatch(spa, /\/assistant/);
-  assert.equal(existsSync(new URL('../js/views/assistant.js', import.meta.url)), false);
+  // The legacy hash SPA (js/app.js, js/views/*) is retired; only app/*.html remains.
+  assert.equal(existsSync(new URL('../js/app.js', import.meta.url)), false);
+  assert.equal(existsSync(new URL('../js/views', import.meta.url)), false);
 });

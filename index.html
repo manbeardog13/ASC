@@ -26,7 +26,9 @@
   } catch(e){}
   var p = location.pathname;
   var base = p.indexOf('/app/') >= 0 ? p.slice(0, p.indexOf('/app/') + 1) : p.replace(/[^\/]*$/, '');
-  location.replace(base + 'app/dashboard.html');
+  // Old printed labels encode #/set/CODE on the root URL; keep them working.
+  var m = /^#\/set\/([^?&#\/]+)/.exec(location.hash || '');
+  location.replace(base + (m ? 'app/set-detail.html?code=' + encodeURIComponent(decodeURIComponent(m[1])) : 'app/dashboard.html'));
 })();
 </script>
 <style>
