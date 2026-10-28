@@ -25,7 +25,7 @@ const before=await page.locator('#area-code').textContent(),beforeStatus=await p
 await test('auth disposal releases fullscreen fallback',async()=>{assert.equal(await page.evaluate(()=>document.documentElement.classList.contains('stage-fs')),false);});
 await page.evaluate(()=>window.__resolveRow());await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
 await test('late live row cannot render after auth disposal',async()=>{assert.equal(await page.locator('#area-code').textContent(),before);assert.equal(await page.locator('#inventory-status').textContent(),beforeStatus);assert.equal(await page.evaluate(()=>window.__renderCount),beforeRenders,'late inventory must not reach the scene');});
-await page.goto(origin+'/ASC/app/locate.html?q=ASC-SYNTHETIC');await page.waitForSelector('.flow-hit');
+await page.goto(origin+'/ASC/app/locate.html?q=ASC-SYNTHETIC');await page.waitForFunction(()=>window.__requested&&typeof window.__resolveRow==='function');await page.evaluate(()=>window.__resolveRow());await page.waitForSelector('.flow-hit');
 await test('find result opens the actual saved record',async()=>{const href=await page.locator('.flow-hit').first().getAttribute('href');assert.equal(href,'set-detail.html?code=ASC-SYNTHETIC-1');return {href};});
 report.pageErrors=errors;await context.close();
 }finally{await browser.close();await new Promise(r=>server.close(r));fs.writeFileSync(path.join(out,report.mode+'-report.json'),JSON.stringify(report,null,2)+'\n');}console.log(JSON.stringify(report,null,2));if(report.cases.some(c=>!c.passed))process.exitCode=1;})().catch(error=>{console.error(error);server.close();process.exitCode=1;});
