@@ -1,272 +1,145 @@
-/* Nero composer — dark violet glass, ASC colors (#8b5cf6 / #e040d0).
-   Compact while browsing. Expanded only while typing. */
+/* ASC composer: neutral, slightly frosted glass; the established workflow stays intact. */
+:root{
+  --nero-glass:rgba(248,249,251,.54);--nero-surface:rgba(246,247,249,.9);
+  --nero-fallback:#f1f2f4;--nero-ink:#23262d;--nero-muted:#626974;
+  --nero-rim:rgba(35,40,49,.16);--nero-soft:rgba(30,35,44,.045);
+  --nero-red:#9e2930;--nero-focus:#ac3037;--nero-frost:blur(20px) saturate(110%)}
+html.dark,html[data-theme="dark"]{
+  --nero-glass:rgba(30,32,37,.46);--nero-surface:rgba(28,30,35,.9);
+  --nero-fallback:#24262c;--nero-ink:#f1f3f5;--nero-muted:#afb5bf;
+  --nero-rim:rgba(241,245,250,.2);--nero-soft:rgba(255,255,255,.055);
+  --nero-focus:#e9a3a7}
 .nero-composer{position:fixed;z-index:90;left:50%;
-  bottom:calc(8px + var(--kb, 0px) + env(safe-area-inset-bottom, 0px));
-  top:auto;max-height:calc(var(--nero-viewport, 100dvh) - 24px - env(safe-area-inset-bottom, 0px));
-  width:min(680px, calc(100vw - 16px));
-  display:flex;flex-direction:column;gap:8px;
-  transform:translate(-50%,0);
-  transition:transform 520ms cubic-bezier(.34,1.56,.64,1);
-  font-family:Inter,system-ui,sans-serif;color:#f3efff}
-@media(min-width:1021px){
-  html.has-side .nero-composer{left:calc((100% + var(--sbw, 260px) + 22px) / 2)}
-}
-.nero-composer.is-open{transform:translate(-50%,-6px)}
-.nero-composer.is-scrolling{transform:translate(-50%,2px) scale(.985)}
+  bottom:calc(36px + var(--kb,0px) + env(safe-area-inset-bottom,0px));top:auto;
+  max-height:calc(var(--nero-viewport,100dvh) - 24px - env(safe-area-inset-bottom,0px));
+  width:min(476px,calc(100vw - 24px));display:flex;flex-direction:column;justify-content:flex-end;gap:8px;
+  transform:translate(-50%,0);transform-origin:50% 100%;transition:transform 180ms ease;
+  font-family:Inter,system-ui,sans-serif;color:var(--nero-ink)}
+@media(min-width:1021px){html.has-side .nero-composer{left:calc((100% + var(--sbw,260px) + 22px) / 2)}}
+.nero-composer.is-open{transform:translate(-50%,-3px)}
+.nero-composer.is-scrolling{transform:translate(-50%,1px)}
 body:has(.nero-plan:not([hidden])) .nero-composer{display:none}
-/* the page reserves the composer's height so nothing hides beneath it */
-html.has-composer body{padding-bottom:calc(var(--nero-stack, 84px) + env(safe-area-inset-bottom, 0px))}
-
-/* Liquid-coloured glass: a tinted, saturated sheet — not see-through. */
-.nero-composer .nero-sheet{
-  background:
-    radial-gradient(120% 140% at 0% 0%, color-mix(in srgb, var(--merge-tint, #8b5cf6) 38%, transparent), transparent 60%),
-    radial-gradient(120% 140% at 100% 100%, rgba(224,64,208,.30), transparent 60%),
-    linear-gradient(160deg, rgba(34,24,64,.94), rgba(16,12,30,.96)) !important;
-  border:1px solid color-mix(in srgb, var(--merge-tint, #8b5cf6) 45%, rgba(255,255,255,.18)) !important;
-  transition:border-color 300ms ease, box-shadow 300ms ease, border-radius 200ms ease}
-.nero-composer.is-merged .nero-sheet{
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.22),
-    0 0 0 1px color-mix(in srgb, var(--merge-tint) 55%, transparent),
-    0 -10px 30px -12px color-mix(in srgb, var(--merge-tint) 60%, transparent) !important}
-
-/* Card side of the merge: melting edge along the whole border + quiet ring. */
-.card.nero-merged{box-shadow:var(--shadow-card), 0 0 0 1.5px color-mix(in srgb, var(--merge-tint) 55%, transparent)}
-.card.nero-merged::after,.card.nero-recoil::after{content:"";position:absolute;inset:-1px;border-radius:inherit;pointer-events:none;
-  background:linear-gradient(0deg, color-mix(in srgb, var(--merge-tint) 30%, transparent), transparent 40%);
-  -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  -webkit-mask-composite:xor;mask-composite:exclude;padding:3px;
-  filter:blur(1.5px);opacity:1;transition:opacity 300ms ease}
-.card.nero-recoil::after{animation:neroRecoil 450ms cubic-bezier(.22,1.4,.36,1) both}
-@keyframes neroRecoil{
-  0%{opacity:1;transform:translateY(0) scaleY(1)}
-  40%{opacity:.8;transform:translateY(-3px) scaleY(1.012)}
-  70%{opacity:.35;transform:translateY(1px) scaleY(.997)}
-  100%{opacity:0;transform:none}}
-
-/* Workflow suggestion bubbles, tinted from the active card. */
-.nero-suggest{display:flex;gap:4px;padding:0 18px;margin-bottom:-9px;position:relative;z-index:0;pointer-events:none}
-.nero-composer .nero-sheet{position:relative;z-index:1}
-.nero-suggest.on{pointer-events:auto}
-/* Bubbles sprout up out of the composer: no bottom edge, slightly arched tops. */
-.nero-bubble{position:relative;overflow:hidden;border:1px solid color-mix(in srgb, var(--merge-tint, #8b5cf6) 45%, rgba(255,255,255,.18));border-bottom:0;
-  border-radius:16px 16px 0 0 / 9px 9px 0 0;
-  background:linear-gradient(180deg, color-mix(in srgb, var(--merge-tint, #8b5cf6) 34%, rgba(34,24,64,.95)), rgba(34,24,64,.94));
-  color:#fff;min-height:40px;padding:0 14px 9px;cursor:pointer;font:600 13px Inter,system-ui,sans-serif;
-  transform-origin:50% 100%;opacity:0;transform:translateY(10px) scaleY(.6);
-  transition:opacity 1.2s ease, transform 1.2s ease}
-.nero-suggest.on .nero-bubble{opacity:1;transform:none;
-  transition:opacity 260ms ease calc(var(--i,0) * 70ms), transform 420ms cubic-bezier(.34,1.56,.64,1) calc(var(--i,0) * 70ms)}
-.nero-suggest .nero-bubble{overflow:visible}
-.nero-bubble::before{content:"";position:absolute;left:12%;right:12%;bottom:-6px;height:14px;z-index:-1;pointer-events:none;border-radius:50%;
-  background:color-mix(in srgb, var(--merge-tint, #8b5cf6) 70%, transparent);filter:blur(10px);opacity:.28}
-.nero-bubble::after{content:"";position:absolute;inset:0;border-radius:inherit;overflow:hidden;pointer-events:none;opacity:0;
-  background:linear-gradient(100deg, transparent 30%, rgba(255,255,255,.16) 50%, transparent 70%);background-size:220% 100%}
-.nero-suggest.nero-ripple .nero-bubble::after{animation:neroShim 250ms ease-out calc(var(--i,0) * 70ms) both}
-@keyframes neroShim{0%{opacity:.9;background-position:120% 0;transform:scaleY(1)}50%{transform:scaleY(1.03)}100%{opacity:0;background-position:-20% 0;transform:none}}
-
-.nero-log{display:flex;flex-direction:column;gap:8px;max-height:min(46vh, 420px);
-  overflow:auto;padding:2px;scroll-behavior:smooth}
-.nero-composer.is-compact .nero-log,
-.nero-composer.is-compact .nero-queue,
-.nero-composer.is-compact .nero-pills,
-.nero-composer.is-compact .nero-history,
-.nero-composer.is-compact .nero-files,
-.nero-composer.is-compact .nero-plus{display:none}
+html.has-composer{scroll-padding-bottom:calc(var(--nero-stack,146px) + 24px + env(safe-area-inset-bottom,0px))}
+html.has-composer body{padding-bottom:calc(var(--nero-stack,146px) + 24px + env(safe-area-inset-bottom,0px))}
 .nero-composer [hidden]{display:none!important}
-
-.nero-sheet{display:flex;flex:none;flex-direction:column;gap:8px;min-width:0;
-  border-radius:var(--radius,22px);padding:14px 12px 10px;min-height:112px;
-  background:rgba(20,15,38,.94);
-  border:1px solid rgba(255,255,255,.16);
-  -webkit-backdrop-filter:blur(22px) saturate(180%);
-  backdrop-filter:blur(22px) saturate(180%);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.22), 0 18px 40px -24px rgba(76,42,168,.65);
-  transition:border-radius 200ms ease, background 200ms ease, padding 200ms ease, min-height 200ms ease, box-shadow 200ms ease}
-.nero-composer.is-compact .nero-sheet{flex-direction:row;align-items:center;gap:8px;
-  border-radius:16px;min-height:52px;padding:6px 8px 6px 16px;
-  background:rgba(20,15,38,.92)}
-.nero-composer.is-recording .nero-sheet{box-shadow:inset 0 1px 0 rgba(255,255,255,.22), 0 0 0 2px rgba(224,64,208,.72)}
-
-.nero-files{display:flex;flex-wrap:wrap;gap:6px}
-.nero-filechip{display:inline-flex;align-items:center;gap:6px;max-width:100%;
-  padding:4px 8px;border-radius:999px;border:1px solid rgba(255,255,255,.16);
-  background:rgba(255,255,255,.08);font:500 12px/1.2 Inter}
-.nero-filechip img{width:22px;height:22px;border-radius:6px;object-fit:cover}
-.nero-filechip button{border:0;background:transparent;color:#f3efff;cursor:pointer}
-
-.nero-input{width:100%;min-height:52px;max-height:160px;resize:none;border:0;outline:0;
-  background:transparent;color:#f3efff;font:500 16px/1.4 Inter;padding:4px 6px}
-.nero-composer.is-compact .nero-input{min-height:0;max-height:22px;padding:0;overflow:hidden}
-.nero-input::placeholder{color:rgba(233,224,255,.46)}
-
-.nero-tools{display:flex;align-items:center;gap:8px}
-.nero-composer.is-compact .nero-tools{flex:none}
-.nero-plus,.nero-mic,.nero-send{flex:none;border:0;cursor:pointer;display:grid;place-items:center;color:#f3efff}
-.nero-plus{width:44px;height:44px;margin-right:auto;border-radius:50%;
-  background:rgba(244,245,247,.08);font:500 22px/1 Inter}
-.nero-rec{display:inline-flex;align-items:center;gap:6px;margin-right:auto;max-width:46%;
-  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-  font:600 12px/1 Inter;letter-spacing:.02em}
-.nero-rec::before{content:"";width:8px;height:8px;border-radius:50%;background:#e040d0;
-  box-shadow:0 0 0 4px rgba(224,64,208,.28)}
-.nero-mic{width:44px;height:44px;border-radius:50%;background:rgba(244,245,247,.08);touch-action:none}
-.nero-mic[aria-pressed="true"]{background:rgba(224,64,208,.55);box-shadow:0 0 0 3px rgba(224,64,208,.35)}
-.nero-send{width:44px;height:44px;border-radius:11px;color:#fff;
-  background:linear-gradient(135deg,#8b5cf6,#e040d0);
-  box-shadow:0 6px 16px -6px rgba(139,92,246,.7)}
-.nero-send .nero-stop{display:none}
-.nero-composer.is-busy .nero-send .nero-go{display:none}
+.nero-composer.is-compact .nero-log,.nero-composer.is-compact .nero-queue,
+.nero-composer.is-compact .nero-pills,.nero-composer.is-compact .nero-history,
+.nero-composer.is-compact .nero-files{display:none}
+.nero-sheet{position:relative;z-index:1;display:flex;flex:none;flex-direction:column;gap:8px;min-width:0;
+  box-sizing:border-box;border-radius:24px;padding:16px;min-height:122px;
+  background:linear-gradient(140deg,rgba(255,255,255,.1),rgba(255,255,255,0) 56%),var(--nero-glass);
+  border:1px solid var(--nero-rim);border-top-color:rgba(255,255,255,.32);
+  -webkit-backdrop-filter:var(--nero-frost);backdrop-filter:var(--nero-frost);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 10px 24px -14px rgba(0,0,0,.32);
+  transition:border-color 160ms ease,box-shadow 160ms ease}
+.nero-composer .nero-sheet:focus-within{border-color:var(--nero-focus)}
+.nero-composer.is-recording .nero-sheet{box-shadow:inset 0 1px 0 rgba(255,255,255,.14),0 0 0 1px var(--nero-red)}
+.nero-tools{display:flex;align-items:center;gap:8px;flex-wrap:nowrap;min-width:0}
+.nero-plus,.nero-mic,.nero-send{box-sizing:border-box;flex:none;width:44px;height:44px;border-radius:50%;
+  border:1px solid transparent;cursor:pointer;display:grid;place-items:center;color:var(--nero-ink)}
+.nero-plus{margin-right:auto;background:var(--nero-soft);border-color:var(--nero-rim);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.1)}
+.nero-mic{background:transparent;color:var(--nero-muted);touch-action:none}
+.nero-mic svg{width:22px;height:22px}
+.nero-mic[aria-pressed="true"]{background:var(--nero-red);color:#fff}
+.nero-send{background:var(--nero-red);color:#fff;border-color:rgba(255,255,255,.16);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.14),0 2px 5px rgba(0,0,0,.16);
+  transition:background 150ms ease,transform 150ms ease}
+.nero-send:hover{background:#b53139}.nero-send:active{transform:scale(.96)}
+.nero-send:disabled{cursor:wait;opacity:.6;transform:none}
+.nero-plus:hover,.nero-mic:hover{background:var(--nero-soft);color:var(--nero-ink)}
+.nero-composer button:focus-visible{outline:2px solid var(--nero-focus);outline-offset:2px}
+.nero-send .nero-stop{display:none}.nero-composer.is-busy .nero-send .nero-go{display:none}
 .nero-composer.is-busy .nero-send .nero-stop{display:block}
+.nero-field{position:relative;flex:1 0 auto;min-width:0;display:block}
+.nero-input{position:relative;z-index:0;display:block;box-sizing:border-box;width:100%;min-height:36px;max-height:160px;
+  resize:none;border:0;outline:0;background:transparent;color:var(--nero-ink);caret-color:var(--nero-ink);
+  font:400 16px/1.5 Inter,system-ui,sans-serif;padding:4px 0}
+.nero-composer.is-compact .nero-input{min-height:36px;max-height:36px;overflow:hidden}
+.nero-input::placeholder{color:var(--nero-muted);opacity:1}
+.nero-rec{display:inline-flex;align-items:center;gap:6px;margin-right:auto;max-width:46%;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:600 12px/1 Inter;letter-spacing:.02em}
+.nero-rec::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--nero-red)}
 
-.nero-pills{display:flex;flex-wrap:wrap;gap:8px}
-.nero-pill{border:1px solid rgba(150,110,255,.28);background:rgba(20,15,38,.86);
-  color:#f3efff;border-radius:12px;min-height:36px;padding:0 14px;cursor:pointer;
-  font:500 12.5px Inter;
-  -webkit-backdrop-filter:blur(16px) saturate(160%);backdrop-filter:blur(16px) saturate(160%)}
-.nero-pill[aria-pressed="true"]{background:rgba(139,92,246,.4);border-color:rgba(224,64,208,.55)}
-.nero-pill[hidden]{display:none}
+/* One quiet suggestion row. A 28px visual capsule lives inside a 44px touch target. */
+.nero-suggest{display:flex;flex-direction:row-reverse;flex-wrap:nowrap;justify-content:flex-start;
+  gap:6px;padding:0 4px;margin-bottom:-8px;min-width:0;flex-shrink:0;overflow-x:auto;overflow-y:hidden;
+  overscroll-behavior-x:contain;scrollbar-width:none;pointer-events:none}
+.nero-suggest:not(.on){display:none}.nero-suggest.on{pointer-events:auto}
+.nero-bubble{position:relative;isolation:isolate;flex:none;max-width:min(220px,80vw);min-width:44px;height:44px;
+  box-sizing:border-box;border:0;border-radius:20px;background:transparent;color:var(--nero-ink);
+  padding:0 12px;cursor:pointer;font:500 12px/28px Inter,system-ui,sans-serif;white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis;touch-action:pan-y;opacity:0;transform:translateY(3px);
+  transition:opacity 140ms ease,transform 140ms ease}
+.nero-suggest.on .nero-bubble{opacity:1;transform:none}
+.nero-bubble::before{content:"";position:absolute;z-index:-1;inset:8px 0;border-radius:14px;
+  background:var(--nero-surface);border:1px solid var(--nero-rim);pointer-events:none}
+.nero-bubble:hover::before{border-color:var(--nero-focus)}
+.nero-bubble.is-linked::before{border-left:2px solid var(--nero-red)}
+.nero-bubble.is-drag{transition:none!important;z-index:3}
+.card.nero-merged{box-shadow:var(--shadow-card),0 0 0 1px color-mix(in srgb,var(--merge-tint,#9e2930) 28%,transparent)}
+.card.nero-recoil::after,.card.nero-next::before{display:none}
+.nero-composer.is-merged .nero-sheet{border-color:var(--nero-rim)}
 
+.nero-pills{display:flex;flex-wrap:nowrap;gap:6px;padding:0 4px;flex-shrink:0;overflow-x:auto;scrollbar-width:none}
+.nero-pill{flex:none;box-sizing:border-box;border:1px solid var(--nero-rim);background:var(--nero-surface);
+  color:var(--nero-ink);border-radius:18px;min-height:44px;min-width:44px;padding:0 12px;cursor:pointer;
+  font:500 12px Inter;-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px)}
+.nero-pill[aria-pressed="true"]{border-color:var(--nero-red);box-shadow:inset 0 -2px 0 var(--nero-red)}
+.nero-files{display:flex;flex-wrap:wrap;gap:6px}
+.nero-filechip{display:inline-flex;align-items:center;gap:6px;max-width:100%;padding:4px 8px;border-radius:999px;
+  border:1px solid var(--nero-rim);background:var(--nero-soft);font:500 12px/1.2 Inter}
+.nero-filechip img{width:22px;height:22px;border-radius:6px;object-fit:cover}
+.nero-filechip button{border:0;background:transparent;color:var(--nero-ink);cursor:pointer}
+.nero-log{display:flex;flex-direction:column;gap:8px;min-height:0;max-height:min(46dvh,420px);
+  overflow:auto;overscroll-behavior:contain;padding:22px 10px 10px;border-radius:20px;margin-bottom:0;
+  background:var(--nero-surface);border:1px solid var(--nero-rim);scroll-behavior:smooth;
+  -webkit-backdrop-filter:var(--nero-frost);backdrop-filter:var(--nero-frost);transition:transform 180ms ease}
+.nero-grab{display:none;align-self:center;width:44px;height:24px;margin-bottom:-32px;position:relative;z-index:2;cursor:grab;touch-action:none}
+.nero-grab::before{content:"";position:absolute;left:6px;right:6px;top:9px;height:3px;border-radius:2px;background:var(--nero-muted)}
+.nero-composer.has-convo:not(.is-compact) .nero-grab{display:block}
 .nero-queue{display:flex;flex-direction:column;gap:6px}
-.nero-q{display:flex;align-items:center;justify-content:space-between;gap:8px;
-  padding:8px 10px;border-radius:14px;background:rgba(14,11,28,.45);
-  border:1px solid rgba(255,255,255,.16);font:500 12.5px/1.35 Inter}
-.nero-q button,.nero-act{border:0;background:transparent;color:#f3efff;cursor:pointer;font:600 12px Inter}
-.nero-connect{margin:0;padding:8px 12px;border-radius:14px;background:rgba(224,64,208,.16);
-  border:1px solid rgba(224,64,208,.4);font:600 12.5px/1.35 Inter}
-
-.nero-history{min-height:0;max-height:220px;overflow:auto;padding:8px;border-radius:16px;
-  background:rgba(14,11,28,.45);border:1px solid rgba(255,255,255,.16)}
-.nero-history button{display:block;width:100%;text-align:left;border:0;background:transparent;
-  color:#f3efff;padding:8px;border-radius:10px;cursor:pointer;font:500 13px Inter}
-.nero-history .nero-empty{margin:0;padding:8px;color:rgba(233,224,255,.7);font:500 12.5px Inter}
-
-.nero-card{display:flex;gap:8px;align-items:flex-start;padding:10px 12px;border-radius:18px;
-  background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.16);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.18), 0 16px 40px -28px rgba(0,0,0,.8);
-  -webkit-backdrop-filter:blur(18px) saturate(160%);backdrop-filter:blur(18px) saturate(160%);
-  animation:neroIn .28s ease}
-.nero-card-user{margin-left:18%;flex-direction:column;align-items:flex-end;
-  background:rgba(139,92,246,.18)}
-.nero-avatar{flex:none;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;
-  font:700 13px/1 Inter;color:#fff;background:linear-gradient(135deg,#8b5cf6,#e040d0)}
+.nero-q{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;border-radius:14px;
+  background:var(--nero-surface);border:1px solid var(--nero-rim);font:500 12.5px/1.35 Inter}
+.nero-q button,.nero-act{border:0;background:transparent;color:var(--nero-ink);cursor:pointer;font:600 12px Inter}
+.nero-connect{margin:0;padding:8px 12px;border-radius:14px;background:var(--nero-surface);border:1px solid var(--nero-red);font:600 12.5px/1.35 Inter}
+.nero-history{min-height:0;max-height:220px;overflow:auto;padding:8px;border-radius:16px;background:var(--nero-surface);border:1px solid var(--nero-rim)}
+.nero-history button{display:block;width:100%;text-align:left;border:0;background:transparent;color:var(--nero-ink);padding:8px;border-radius:10px;cursor:pointer;font:500 13px Inter}
+.nero-history .nero-empty{margin:0;padding:8px;color:var(--nero-muted);font:500 12.5px Inter}
+.nero-card{display:flex;gap:8px;align-items:flex-start;padding:10px 12px;border-radius:16px;
+  background:var(--nero-soft);border:1px solid var(--nero-rim);animation:neroIn .18s ease}
+.nero-card-user{margin-left:12%;flex-direction:column;align-items:flex-end;background:var(--nero-soft)}
+.nero-avatar{flex:none;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font:700 13px/1 Inter;color:#fff;background:var(--nero-red)}
 .nero-body{min-width:0;font:500 13.5px/1.45 Inter;white-space:normal;overflow-wrap:anywhere}
-.nero-meta{display:flex;gap:8px;align-items:center;margin-top:6px;color:rgba(233,224,255,.62);
-  font:500 11px Inter}
-.nero-card.is-stream .nero-body{background-image:linear-gradient(100deg, transparent 20%, rgba(255,255,255,.2) 40%, transparent 60%);
-  background-size:200% 100%;animation:neroShimmer 1.4s linear infinite}
-.nero-caret{display:inline-block;width:7px;color:#e040d0;animation:neroBlink 1s steps(1) infinite}
-
-.nero-set{display:flex;gap:10px;align-items:center;margin:6px 0;padding:8px;border-radius:14px;
-  text-decoration:none;color:inherit;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14)}
-.nero-thumb{flex:none;width:42px;height:42px;border-radius:10px;background:rgba(255,255,255,.08) center/cover no-repeat}
-.nero-set-copy{display:flex;flex-direction:column;gap:4px;min-width:0}
-.nero-set-copy b{font:650 12.5px Inter}
-.nero-slot,.nero-chip{display:inline-flex;align-items:center;width:fit-content;max-width:100%;
-  padding:2px 8px;border-radius:999px;text-decoration:none;color:#f3efff;
-  background:rgba(139,92,246,.38);border:1px solid rgba(255,255,255,.16);font:600 11px Inter}
-.nero-chip{margin:0 2px}
-.nero-set-rest{color:rgba(243,239,255,.78);font:500 12px/1.35 Inter}
-
-@keyframes neroIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.nero-meta{display:flex;gap:8px;align-items:center;margin-top:6px;color:var(--nero-muted);font:500 11px Inter}
+.nero-card.is-stream .nero-body{background-image:linear-gradient(100deg,transparent 20%,rgba(255,255,255,.15) 40%,transparent 60%);background-size:200% 100%;animation:neroShimmer 1.4s linear infinite}
+.nero-caret{display:inline-block;width:7px;color:var(--nero-red);animation:neroBlink 1s steps(1) infinite}
+.nero-set{display:flex;gap:10px;align-items:center;margin:6px 0;padding:8px;border-radius:14px;text-decoration:none;color:inherit;background:var(--nero-soft);border:1px solid var(--nero-rim)}
+.nero-thumb{flex:none;width:42px;height:42px;border-radius:10px;background:var(--nero-soft) center/cover no-repeat}
+.nero-set-copy{display:flex;flex-direction:column;gap:4px;min-width:0}.nero-set-copy b{font:650 12.5px Inter}
+.nero-slot,.nero-chip{display:inline-flex;align-items:center;width:fit-content;max-width:100%;padding:2px 8px;border-radius:999px;text-decoration:none;color:var(--nero-ink);background:var(--nero-soft);border:1px solid var(--nero-rim);font:600 11px Inter}
+.nero-chip{margin:0 2px}.nero-set-rest{color:var(--nero-muted);font:500 12px/1.35 Inter}
+.nero-flow{position:fixed;inset:0;z-index:95;display:grid;place-items:center;background:rgba(10,12,16,.35)}
+.nero-flow-card{position:relative;width:min(380px,calc(100vw - 32px));padding:18px;border-radius:22px;color:var(--nero-ink);background:var(--nero-fallback);border:1px solid var(--nero-rim)}
+.nero-flow-card ol{margin:12px 0 0;padding-left:20px;display:flex;flex-direction:column;gap:8px}
+.nero-flow-card ol button{width:100%;text-align:left;min-height:44px;padding:0 12px;border-radius:12px;border:1px solid var(--nero-rim);background:var(--nero-soft);color:var(--nero-ink);font:600 13px Inter;cursor:pointer}
+.nero-flow-close{position:absolute;top:10px;right:10px;width:44px;height:44px;border:0;border-radius:50%;background:var(--nero-soft);color:var(--nero-ink);cursor:pointer}
+@keyframes neroIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
 @keyframes neroShimmer{from{background-position:120% 0}to{background-position:-20% 0}}
 @keyframes neroBlink{50%{opacity:0}}
 
-@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))){
-  .nero-sheet,.nero-card,.nero-pill,.nero-q,.nero-history{background:rgba(14,11,28,.92)}
-}
-@media(prefers-reduced-motion:reduce){
-  .nero-composer,.nero-bubble,.nero-suggest.on .nero-bubble{transition:opacity 150ms linear!important;transform:translate(-50%,0)}
-  .nero-bubble{transform:none!important}
-  .nero-suggest.nero-ripple .nero-bubble::after{animation:none}
-  .card.nero-recoil::after{animation:none}
-  .nero-sheet,.nero-card,.nero-log{transition:none;animation:none}
-  .nero-card.is-stream .nero-body,.nero-caret{animation:none}
-}
-
-/* Night-lamp caret (see composer.js). Text is plain white; the lamp adds light. */
-.nero-field{position:relative;flex:1;min-width:0;display:block}
-.nero-field .nero-input{position:relative;z-index:0;color:#fff;caret-color:#fff}
-.nero-mirror{position:absolute;inset:0;visibility:hidden;pointer-events:none;overflow:hidden;
-  white-space:pre-wrap;overflow-wrap:break-word;word-break:break-word;font:500 16px/1.4 Inter;padding:4px 6px}
-.nero-composer.is-compact .nero-mirror{padding:0;white-space:pre}
-/* Lamp: 2.5 glyphs wide, ending at the caret. Horizontal falloff is a
-   smoothstep-shaped ramp to exactly zero across the 3rd letter; the vertical
-   mask is dark at the caret top and light toward the baseline. */
-.nero-lamp{position:absolute;z-index:1;pointer-events:none;opacity:0;
-  left:calc(var(--cx,0px) - 2.5ch + 1px);top:var(--cy,0px);width:2.5ch;height:var(--ch,20px);
-  font:500 16px/1.4 Inter;mix-blend-mode:screen;
-  background:linear-gradient(to left,
-    rgba(255,255,255,.34) 0%, rgba(255,255,255,.28) 20%, rgba(255,255,255,.19) 40%,
-    rgba(255,255,255,.11) 60%, rgba(255,255,255,.05) 80%, rgba(255,255,255,.028) 86%,
-    rgba(255,255,255,.01) 93%, rgba(255,255,255,.002) 97%, rgba(255,255,255,0) 100%);
-  -webkit-mask:linear-gradient(to bottom, transparent 0%, rgba(0,0,0,.35) 35%, #000 80%, rgba(0,0,0,.6) 100%);
-          mask:linear-gradient(to bottom, transparent 0%, rgba(0,0,0,.35) 35%, #000 80%, rgba(0,0,0,.6) 100%);
-  filter:blur(1.2px)}
+/* Existing caret aid, now neutral and readable in either ASC theme. */
+.nero-mirror{position:absolute;inset:0;visibility:hidden;pointer-events:none;overflow:hidden;white-space:pre-wrap;
+  overflow-wrap:break-word;word-break:break-word;font:400 16px/1.5 Inter,system-ui,sans-serif;padding:4px 0}
+.nero-lamp{position:absolute;z-index:1;pointer-events:none;opacity:0;left:calc(var(--cx,0px) - 2.5ch + 1px);
+  top:var(--cy,0px);width:2.5ch;height:var(--ch,20px);font:400 16px/1.5 Inter,system-ui,sans-serif;mix-blend-mode:screen;
+  background:linear-gradient(to left,rgba(255,255,255,.18),transparent);filter:blur(1px)}
 .nero-field.lamp-on .nero-lamp{opacity:1}
-
-/* ---- Behaviour pass (transforms/opacity only) ---- */
-.nero-composer{transform-origin:50% 100%}
-.nero-composer.is-compact.is-scrolling{transform:translate(-50%,3px) scale(.97)}
-.nero-composer.is-open .nero-sheet{animation:neroSprout 560ms cubic-bezier(.34,1.56,.64,1) both;transform-origin:50% 100%}
-@keyframes neroSprout{from{transform:scaleY(.72) translateY(10px);opacity:.6}to{transform:none;opacity:1}}
-.nero-composer.is-open .nero-field,.nero-composer.is-open .nero-plus,.nero-composer.is-open .nero-mic,.nero-composer.is-open .nero-send{animation:neroItem 420ms cubic-bezier(.34,1.56,.64,1) both}
-.nero-composer.is-open .nero-field{animation-delay:60ms}
-.nero-composer.is-open .nero-plus{animation-delay:120ms}
-.nero-composer.is-open .nero-mic{animation-delay:180ms}
-.nero-composer.is-open .nero-send{animation-delay:240ms}
-@keyframes neroItem{from{opacity:0;transform:translateY(8px) scale(.9)}to{opacity:1;transform:none}}
-/* Glass with a purple tint throughout. */
-.nero-composer .nero-log{border-radius:22px 22px 0 0;background:linear-gradient(180deg, rgba(40,26,78,.9), rgba(24,16,46,.94));
-  border:1px solid rgba(150,110,255,.3);border-bottom:0;padding:22px 10px 10px;margin-bottom:-8px;will-change:transform;transition:transform 260ms cubic-bezier(.34,1.56,.64,1)}
-.nero-grab{display:none;align-self:center;width:44px;height:18px;margin-bottom:-26px;position:relative;z-index:2;cursor:grab;touch-action:none}
-.nero-grab::before{content:"";position:absolute;left:6px;right:6px;top:7px;height:4px;border-radius:2px;background:rgba(243,239,255,.5)}
-.nero-composer.has-convo:not(.is-compact) .nero-grab{display:block}
-/* Bubbles: anchored right, stacking leftwards. */
-.nero-suggest{flex-direction:row-reverse;justify-content:flex-start}
-.nero-bubble{touch-action:pan-y}
-.nero-bubble.is-linked{background:linear-gradient(90deg, color-mix(in srgb, var(--merge-tint) 34%, rgba(34,24,64,.95)) 0 55%, color-mix(in srgb, var(--join-tint) 34%, rgba(34,24,64,.95)));
-  animation:neroNudge 1.8s cubic-bezier(.36,0,.2,1) 600ms 2}
-.nero-bubble.is-drag{animation:none;transition:none!important;z-index:3}
-@keyframes neroNudge{0%,70%,100%{transform:none}78%{transform:translate3d(4px,0,0)}86%{transform:translate3d(-1px,0,0)}}
-/* Heartbeat underglow (opacity only). */
-.nero-suggest.on .nero-bubble::before{animation:neroBeat 2.6s cubic-bezier(.4,0,.2,1) infinite}
-@keyframes neroBeat{0%{opacity:.18}12%{opacity:.34}22%{opacity:.22}32%{opacity:.3}60%,100%{opacity:.18}}
-/* The card just left keeps a faint glow recommending its next step. */
-.card.nero-next::before{content:"";position:absolute;left:10%;right:10%;bottom:-10px;height:20px;border-radius:50%;pointer-events:none;z-index:-1;
-  background:color-mix(in srgb, var(--merge-tint, #8b5cf6) 70%, transparent);filter:blur(14px);animation:neroBeat 2.6s cubic-bezier(.4,0,.2,1) infinite}
-/* Combined workflow pop-up. */
-.nero-flow{position:fixed;inset:0;z-index:95;display:grid;place-items:center;background:rgba(10,8,20,.35);animation:neroItem 300ms ease both}
-.nero-flow-card{position:relative;width:min(380px,calc(100vw - 32px));padding:18px;border-radius:22px;color:#f3efff;
-  background:linear-gradient(160deg, rgba(40,26,78,.96), rgba(20,14,40,.97));border:1px solid rgba(150,110,255,.35)}
-.nero-flow-card ol{margin:12px 0 0;padding-left:20px;display:flex;flex-direction:column;gap:8px}
-.nero-flow-card ol button{width:100%;text-align:left;min-height:40px;padding:0 12px;border-radius:12px;border:1px solid rgba(150,110,255,.35);background:rgba(255,255,255,.06);color:#fff;font:600 13px Inter;cursor:pointer}
-.nero-flow-close{position:absolute;top:10px;right:10px;width:32px;height:32px;border:0;border-radius:10px;background:rgba(255,255,255,.08);color:#fff;cursor:pointer}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  .nero-sheet,.nero-log,.nero-card,.nero-pill,.nero-q,.nero-history{background:var(--nero-fallback)}}
 @media(prefers-reduced-motion:reduce){
-  .nero-composer.is-open .nero-sheet,.nero-composer.is-open .nero-field,.nero-composer.is-open .nero-plus,.nero-composer.is-open .nero-mic,.nero-composer.is-open .nero-send,
-  .nero-bubble.is-linked,.nero-suggest.on .nero-bubble::before,.card.nero-next::before,.nero-flow{animation:none}
-  .nero-composer .nero-log{transition:none}
-}
-
-/* Bottom-docked: grows upward with the text, never mid-screen. */
-.nero-composer{justify-content:flex-end}
-.nero-composer .nero-log{min-height:0;max-height:min(46dvh,420px);overscroll-behavior:contain}
-.nero-composer .nero-pills{display:flex;flex-wrap:nowrap;gap:4px;margin-right:auto}
-.nero-composer .nero-pill{min-height:44px;padding:0 10px;font-size:12px;background:transparent;border-color:rgba(150,110,255,.28)}
-.nero-composer.is-compact .nero-pills{display:none}
-.nero-composer .nero-plus{margin-right:0}
-/* Keep primary controls reachable when the conversation tools need their own row. */
-.nero-composer .nero-tools{flex-wrap:wrap;min-width:0}
-.nero-composer .nero-send{margin-left:auto}
-.nero-composer .nero-mic + .nero-send{margin-left:0}
-.nero-composer .nero-mic[hidden] + .nero-send{margin-left:auto}
-.nero-composer.is-compact .nero-tools{flex-wrap:nowrap}
-.nero-suggest{min-width:0;flex-shrink:0;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:none}
-.nero-bubble{flex-shrink:0;max-width:min(240px,85vw);overflow-wrap:anywhere;min-height:44px}
-.nero-composer button:focus-visible{outline:2px solid #fff;outline-offset:2px}
-@media(max-width:560px){
-  .nero-composer .nero-pills{order:-1;flex:1 0 100%;flex-wrap:wrap}
-  .nero-composer .nero-pill{flex:1;min-width:0;padding:0 7px}
-  .nero-composer .nero-mic{margin-left:auto}
-  .nero-composer.is-compact .nero-mic{margin-left:0}
-}
+  .nero-composer,.nero-bubble,.nero-sheet,.nero-card,.nero-log{transition:none;animation:none}
+  .nero-composer.is-open,.nero-composer.is-scrolling{transform:translate(-50%,0)}
+  .nero-card.is-stream .nero-body,.nero-caret{animation:none}.nero-log{scroll-behavior:auto}}
+@media(max-width:560px){.nero-sheet{border-radius:22px;padding:12px;min-height:114px}.nero-pills{gap:4px}.nero-pill{padding:0 9px}}
+@media(max-height:500px){.nero-sheet{padding:12px;min-height:114px}.nero-composer .nero-log{max-height:24dvh}}

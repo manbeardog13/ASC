@@ -1,0 +1,36 @@
+/* Locate uses the existing ASC tokens and form geometry. Scope stays on this page. */
+.locate-page .flow{max-width:920px;padding:10px 0 4px}
+.locate-page .flow-head{margin:0 4px 18px}
+.locate-page .flow-head .k{font:var(--type-kicker);letter-spacing:.09em}
+.locate-page .flow-head h1{font:var(--type-page);margin-top:7px}
+.locate-page .flow-card{padding:20px}
+.locate-search{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:12px}
+.locate-field{display:flex;flex-direction:column;gap:9px;min-width:0}
+.locate-field .label{font:500 12px/1.4 Inter,system-ui,sans-serif;color:var(--muted)}
+.locate-field input{width:100%;min-width:0;min-height:48px;border-radius:14px;border:1px solid var(--line);
+  padding:10px 14px;background:var(--panel-2);color:var(--ink);font:400 16px/1.5 Inter,system-ui,sans-serif;
+  appearance:none;-webkit-appearance:none}
+.locate-page .btn{display:inline-flex;align-items:center;justify-content:center;min-height:48px;min-width:48px;
+  border-radius:14px;border:1px solid var(--line);padding:0 20px;background:var(--panel-2);color:var(--ink);
+  font:600 13px/1.3 Inter,system-ui,sans-serif;cursor:pointer}
+.locate-page .btn-primary{background:var(--lava);color:#17110e;border-color:transparent;box-shadow:0 3px 12px -7px var(--lava)}
+.locate-page .btn:disabled{opacity:.5;cursor:default}
+.locate-field input:focus-visible,.locate-page .btn:focus-visible,.locate-page .flow-hit:focus-visible{
+  outline:2px solid var(--lava-ink);outline-offset:3px}
+.locate-feedback{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px}
+.locate-status{margin:0;color:var(--muted);font:500 13px/1.5 Inter,system-ui,sans-serif}
+.locate-status[data-state="error"]{color:var(--lava-ink)}
+.locate-feedback:has(.locate-status[hidden]):has(.locate-retry[hidden]){display:none}
+.locate-page [hidden]{display:none!important}
+.locate-page .flow-list{gap:8px;margin-top:16px}
+.locate-page .flow-hit{min-height:62px;padding:12px 14px;gap:6px;overflow-wrap:anywhere;transition:border-color 140ms ease}
+.locate-page .flow-hit:hover{border-color:var(--lava-ring)}
+.locate-page .flow-hit b{font:600 14px/1.4 Inter,system-ui,sans-serif}
+.locate-page .flow-hit small{font:500 12px/1.5 Inter,system-ui,sans-serif}
+@media(max-width:560px){
+  .locate-page .flow-card{padding:16px}
+  .locate-search{gap:10px;grid-template-columns:minmax(0,1fr)}
+  .locate-submit{width:100%}
+  .locate-feedback{align-items:flex-start;flex-direction:column}
+}
+@media(prefers-reduced-motion:reduce){.locate-page .flow-hit{transition:none}}

@@ -304,6 +304,52 @@ export async function listStorageSets() {
   return data ?? [];
 }
 
+// The warehouse needs the whole authorized inventory, not PostgREST's first
+// default-limited page. Keep the older list APIs stable for their consumers.
+async function allWarehouseRows(readPage, doing, { key = "id", missingIsUnavailable = false } = {}) {
+  const rows = [];
+  let cursor = null;
+  for (;;) {
+    const { data, error } = await readPage(cursor);
+    if (missingIsUnavailable && relationMissing(error)) return null;
+    if (error) throw fail(error, doing);
+    if (!Array.isArray(data)) throw new Error(`Couldn't ${doing}: the server returned an incomplete inventory page.`);
+    if (!data.length) return rows;
+    // Continue after short pages too: a project may configure a limit below
+    // our requested 1000 rows. An empty page is the only completion signal.
+    for (const row of data) {
+      if (!row || typeof row[key] !== "string" || !row[key] || (cursor !== null && row[key] <= cursor)) {
+        throw new Error(`Couldn't ${doing}: inventory IDs were missing, repeated or out of order. Refresh and try again.`);
+      }
+      cursor = row[key];
+      rows.push(row);
+    }
+  }
+}
+
+export async function listWarehouseInventory() {
+  const readStartedAt = new Date().toISOString();
+  const [sets, locations] = await Promise.all([
+    allWarehouseRows(cursor => querySetList(cols => {
+      // Real per-tire IDs improve identity; listStorageSets intentionally keeps
+      // its existing shape. quantity remains the authoritative number of tires.
+      let query = supabase.from("storage_sets").select(cols.replace("tires ( size", "tires ( id, size"))
+        .is("deleted_at", null).order("id", { ascending: true }).limit(1000);
+      if (cursor !== null) query = query.gt("id", cursor);
+      return query;
+    }), "load the complete warehouse inventory"),
+    allWarehouseRows(cursor => {
+      let query = supabase.from("locations").select("id, warehouse, zone, rack, shelf, slot, status")
+        .order("id", { ascending: true }).limit(1000);
+      if (cursor !== null) query = query.gt("id", cursor);
+      return query;
+    }, "load all warehouse locations"),
+  ]);
+  // A multi-request refresh is not a transaction snapshot. These bounds let
+  // the UI describe when it synchronized without claiming continuous realtime.
+  return { sets, locations, readStartedAt, readCompletedAt: new Date().toISOString() };
+}
+
 export async function loadStorageSet(publicCode) {
   const { data, error } = await supabase.from("storage_sets")
     .select(`*, vehicle:vehicles ( *, customer:customers ( * ) ), tires ( * ), photos ( id, path, caption, created_at )`)
@@ -721,7 +767,7 @@ export async function recentMovements(limit = 6) {
 // Seats the first-run tour reads so it can name a zone that still has room.
 export async function listLocationSeats() {
   const { data, error } = await supabase.from("locations")
-    .select("warehouse, zone, rack, shelf, slot, status");
+    .select("id, warehouse, zone, rack, shelf, slot, status");
   if (relationMissing(error)) return [];
   if (error) throw fail(error, "list slots");
   return data ?? [];
@@ -964,14 +1010,32 @@ export const WAREHOUSE_EDIT_ROLES = ["admin", "manager", "employee", "reception"
 export function canEditWarehouse(role) { return WAREHOUSE_EDIT_ROLES.includes(role); }
 
 export async function listWarehouseLayout() {
-  const areas = await supabase.from("warehouse_areas").select("id, warehouse, zone, name, width, depth, unit, updated_at").eq("warehouse", "main");
-  if (relationMissing(areas.error)) return { available: false, areas: [], positions: [] };
-  if (areas.error) throw fail(areas.error, "load warehouse areas");
-  if (!areas.data?.length) return { available: true, areas: [], positions: [] };
-  const positions = await supabase.from("warehouse_rack_positions").select("id, area_id, rack, x, z, capacity, updated_at").in("area_id", areas.data.map(area => area.id));
-  if (relationMissing(positions.error)) return { available: false, areas: [], positions: [] };
-  if (positions.error) throw fail(positions.error, "load rack positions");
-  return { available: true, areas: areas.data ?? [], positions: positions.data ?? [] };
+  const unavailable = { available: false, areas: [], positions: [] };
+  const areas = await allWarehouseRows(cursor => {
+    let query = supabase.from("warehouse_areas").select("id, warehouse, zone, name, width, depth, unit, updated_at")
+      .eq("warehouse", "main").order("id", { ascending: true }).limit(1000);
+    if (cursor !== null) query = query.gt("id", cursor);
+    return query;
+  }, "load warehouse areas", { missingIsUnavailable: true });
+  if (areas === null) return unavailable;
+  if (areas.some(area => area.warehouse !== "main")) throw new Error("The shared layout included an area from another warehouse. Refresh and try again.");
+  const positions = [], seen = new Set();
+  // Bound the IN-filter URL independently of the server's row-page limit.
+  for (let offset = 0; offset < areas.length; offset += 100) {
+    const ids = areas.slice(offset, offset + 100).map(area => area.id), allowed = new Set(ids);
+    const batch = await allWarehouseRows(cursor => {
+      let query = supabase.from("warehouse_rack_positions").select("id, area_id, rack, x, z, capacity, updated_at")
+        .in("area_id", ids).order("id", { ascending: true }).limit(1000);
+      if (cursor !== null) query = query.gt("id", cursor);
+      return query;
+    }, "load rack positions", { missingIsUnavailable: true });
+    if (batch === null) return unavailable;
+    for (const position of batch) {
+      if (!allowed.has(position.area_id) || seen.has(position.id)) throw new Error("The shared rack layout changed while loading. Refresh and try again.");
+      seen.add(position.id); positions.push(position);
+    }
+  }
+  return { available: true, areas, positions };
 }
 
 export async function createWarehouseArea({ zone, name, width, depth, unit, warehouse = "main" }) {
@@ -997,5 +1061,61 @@ export async function moveRackPosition({ from_area_id, to_area_id, rack, x, z })
   const { data, error } = await supabase.from("warehouse_rack_positions")
     .update({ area_id: to_area_id, x, z }).eq("area_id", from_area_id).eq("rack", rack).select("id").single();
   if (error) throw fail(error, "move rack position");
+  return data;
+}
+
+// Physical rooms bind to shared operator areas; this never edits operational
+// locations, customer records, storage sets, tires or rack positions.
+const WAREHOUSE_SPACE_IDS = new Set([
+  "house-ground", "house-platform", "house-attic", "attic-parts", "attic-racks", "triangular-store",
+]);
+const SPACE_BINDING_COLUMNS = "warehouse, space_id, area_id, created_by, created_at, updated_at";
+
+function checkSpaceBindingKey(warehouse, space_id) {
+  if (typeof warehouse !== "string" || !warehouse.trim()) throw new Error("Choose a warehouse.");
+  if (space_id !== undefined && !WAREHOUSE_SPACE_IDS.has(space_id)) throw new Error("Choose a supported storage space.");
+}
+
+function spaceBindingError(error, doing) {
+  if (relationMissing(error)) {
+    const unavailable = new Error("Shared building bindings are not available. The new migration requires approval before use.");
+    unavailable.code = "warehouse_space_bindings_unavailable";
+    return unavailable;
+  }
+  return fail(error, doing);
+}
+
+export async function listWarehouseSpaceBindings(warehouse = "main") {
+  checkSpaceBindingKey(warehouse);
+  const bindings = await allWarehouseRows(cursor => {
+    let query = supabase.from("warehouse_space_bindings").select(SPACE_BINDING_COLUMNS)
+      .eq("warehouse", warehouse).order("space_id", { ascending: true }).limit(1000);
+    if (cursor !== null) query = query.gt("space_id", cursor);
+    return query;
+  }, "load shared building bindings", { key: "space_id", missingIsUnavailable: true });
+  if (bindings === null) return { available: false, bindings: [] };
+  if (bindings.some(binding => binding.warehouse !== warehouse)) throw new Error("The building bindings included another warehouse. Refresh and try again.");
+  return { available: true, bindings };
+}
+
+export async function saveWarehouseSpaceBinding({ warehouse = "main", space_id, area_id }) {
+  checkSpaceBindingKey(warehouse, space_id);
+  if (!WAREHOUSE_SPACE_IDS.has(space_id)) throw new Error("Choose a supported storage space.");
+  if (typeof area_id !== "string" || !area_id.trim()) throw new Error("Choose a shared warehouse area.");
+  const { data, error } = await supabase.from("warehouse_space_bindings")
+    .upsert({ warehouse, space_id, area_id }, { onConflict: "warehouse,space_id" })
+    .select(SPACE_BINDING_COLUMNS).single();
+  if (error) throw spaceBindingError(error, "save shared building binding");
+  if (!data) throw new Error("The building binding was not saved. Refresh the shared layout and try again.");
+  return data;
+}
+
+export async function deleteWarehouseSpaceBinding({ warehouse = "main", space_id }) {
+  checkSpaceBindingKey(warehouse, space_id);
+  if (!WAREHOUSE_SPACE_IDS.has(space_id)) throw new Error("Choose a supported storage space.");
+  const { data, error } = await supabase.from("warehouse_space_bindings")
+    .delete().eq("warehouse", warehouse).eq("space_id", space_id).select(SPACE_BINDING_COLUMNS).single();
+  if (error) throw spaceBindingError(error, "remove shared building binding");
+  if (!data) throw new Error("The building binding was not removed. Refresh the shared layout and try again.");
   return data;
 }

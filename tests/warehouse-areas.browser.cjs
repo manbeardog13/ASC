@@ -25,12 +25,15 @@ const server=http.createServer((req,res)=>{const url=new URL(req.url,'http://loc
  const rel=decodeURIComponent(url.pathname).replace(/^\/ASC\//,'');const file=path.resolve(root,rel.endsWith('/')?rel+'index.html':rel);if(!file.startsWith(root+path.sep)){res.writeHead(403).end();return;}fs.readFile(file,(e,b)=>{if(e){res.writeHead(404).end();return;}res.setHeader('Content-Type',mime[path.extname(file)]||'application/octet-stream');res.end(b);});});
 const synthetic=`const session={user:{id:'synthetic-ui-test'},expires_at:Math.floor(Date.now()/1000)+3600};`;
 const auth=synthetic+`export const supabase={auth:{getSession:async()=>({data:{session},error:null}),onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}})}};`;
-const db=synthetic+`window.__dbWrites=window.__dbWrites||[];const seats=[{warehouse:'main',zone:'SYN',rack:'01',shelf:'1',slot:'01',status:'free'},{warehouse:'main',zone:'SYN',rack:'02',shelf:'1',slot:'01',status:'free'},{warehouse:'main',zone:'B2',rack:'K1',shelf:'1',slot:'01',status:'free'}];
+const db=synthetic+`window.__dbWrites=window.__dbWrites||[];const seats=[{id:'location-syn-1',warehouse:'main',zone:'SYN',rack:'01',shelf:'1',slot:'01',status:'free'},{id:'location-syn-2',warehouse:'main',zone:'SYN',rack:'02',shelf:'1',slot:'01',status:'free'},{id:'location-b2-1',warehouse:'main',zone:'B2',rack:'K1',shelf:'1',slot:'01',status:'free'}];
 const api=async(p,b)=>{const r=await fetch('/__stub/'+p,{method:b?'POST':'GET',body:b?JSON.stringify(b):undefined});const j=await r.json();if(!r.ok)throw new Error(j.error||'stub error');return j;};
 export const getSession=async()=>session;export const loadMyProfile=async()=>({full_name:'UI test',role:window.__role||'employee'});
 export const canEditWarehouse=(r)=>['admin','manager','employee','reception'].includes(r);
 export const countLocations=async()=>seats.length;export const listLocationSeats=async()=>{if(window.__seatsFail)throw Error('Synthetic location outage');return seats.map(r=>({...r}));};
-export const findLocationByQr=async(q)=>q==='QR-SYN-01-1-01'?{zone:'syn',rack:'01',shelf:'1',slot:'01',qr_code:q}:null;
+const inventorySets=[{id:'synthetic-set-1',public_code:'ASC-SYN-1',location_id:'location-syn-1',zone:'SYN',rack:'01',shelf:'1',slot:'01',quantity:4,status:'in_storage',vehicle:{id:'synthetic-vehicle',plate:'SYN-ONLY',customer:{id:'synthetic-customer',name:'Synthetic Customer'}},tires:[]}];
+export const listWarehouseInventory=async()=>({sets:inventorySets,locations:await listLocationSeats(),readCompletedAt:new Date().toISOString()});
+export const listWarehouseSpaceBindings=async()=>({available:false,bindings:[]});
+export const findLocationByQr=async(q)=>q==='QR-SYN-01-1-01'?{warehouse:'main',zone:'syn',rack:'01',shelf:'1',slot:'01',qr_code:q}:null;
 export const loadStorageSet=async(c)=>c==='ASC-SYN-1'?{public_code:c,zone:'SYN',rack:'01',shelf:'1',slot:'01'}:null;
 export const listWarehouseLayout=async()=>window.__sharedOff?{available:false,areas:[],positions:[]}:api('layout');
 export const createWarehouseArea=async(r)=>api('area',r);export const deleteWarehouseArea=async(id)=>api('delarea',{id});
@@ -99,7 +102,7 @@ try{
    assert.deepEqual(store.areas.map(a=>a.zone),['SYN']);assert.deepEqual(store.positions.map(p=>[p.rack,p.x]),[['01',-1]]);
    // Device 2: a fresh browser sees the uploaded layout, then adds an area that device 1 picks up
    const d2=await device({width:1440});await d2.page.open();
-   await d2.page.waitForFunction(()=>document.querySelectorAll('#areas [data-area]').length===1);
+   await d2.page.waitForFunction(()=>document.querySelectorAll('#areas [data-area]').length===1);assert.equal(await d2.page.locator('#area-code').innerText(),'SVA','remote selected area deletion must return to overview');assert.equal(await d2.page.locator('#placement-card').isVisible(),false,'removed area must cancel placement');
    await d2.page.open('?zone=SYN&rack=01');await d2.page.waitForFunction(()=>/SYN-01/.test(document.getElementById('inspector')?.textContent||''));
    await d2.page.locator('#add-area-button').click();await d2.page.waitForSelector('#area-form');
    await d2.page.locator('#area-zone').fill('b2');await d2.page.locator('input[name="unit"][value="m"]').check();await d2.page.locator('#area-width').fill('5');await d2.page.locator('#area-depth').fill('3');await d2.page.locator('#save-area').click();
@@ -108,12 +111,12 @@ try{
    await page.sync();await page.waitForFunction(()=>document.querySelectorAll('#areas [data-area]').length===2);
    assert.ok((await page.saved()).areas.some(a=>a.id==='B2'&&a.remoteId),'device 1 received device 2 area');
    // device 1 removes the empty shared area via the app dialog; device 2 sees it go
-   await page.locator('#areas [data-area="B2"]').evaluate(n=>n.click());await page.waitForSelector('#remove-area-button:not([hidden])');
+   await page.locator('#areas [data-area="B2"]').evaluate(n=>n.click());await page.locator('#view-plan').click();await d2.page.locator('#view-plan').click();await d2.page.locator('#place-button').click();await page.waitForSelector('#remove-area-button:not([hidden])');
    let nativeDialog=false;page.on('dialog',d=>{nativeDialog=true;d.dismiss();});
    await page.locator('#remove-area-button').click();await page.waitForSelector('#remove-area-confirm');await page.locator('#remove-area-confirm').click();
    await page.waitForFunction(()=>document.querySelectorAll('#areas [data-area]').length===1);assert.equal(nativeDialog,false);
-   assert.deepEqual(store.areas.map(a=>a.zone),['SYN']);
-   await d2.page.sync();await d2.page.waitForFunction(()=>document.querySelectorAll('#areas [data-area]').length===1);
+   assert.deepEqual(store.areas.map(a=>a.zone),['SYN']);assert.equal(await page.locator('#area-code').innerText(),'SVA','deleting the selected plan area must return to overview');
+   await d2.page.sync();await d2.page.waitForFunction(()=>document.querySelectorAll('#areas [data-area]').length===1);assert.equal(await d2.page.locator('#area-code').innerText(),'SVA','remote selected area deletion must return to overview');assert.equal(await d2.page.locator('#placement-card').isVisible(),false,'removed area must cancel placement');
    await noAuthInStorage(d2.page);assert.deepEqual(d2.errors,[]);await d2.context.close();
    report.cases.push({case:'two devices share layout via backend',passed:true});
   }
@@ -129,7 +132,7 @@ try{
   const {context,page,errors}=await device({sharedOff:true,seed:legacy});await page.open();
   assert.equal(await page.locator('#download-raw').isVisible(),false);assert.ok(await page.locator('#empty-state').isVisible());
   await page.locator('#add-area-empty').click();await page.locator('#area-zone').fill('SYN');await page.locator('input[name="unit"][value="m"]').check();await page.locator('#area-width').fill('4');await page.locator('#area-depth').fill('4');await page.locator('#save-area').click();
-  await page.waitForFunction(()=>document.getElementById('area-code').textContent==='SYN');assert.equal((await page.saved()).revision,3);
+  await page.waitForFunction(()=>document.getElementById('area-code').textContent==='SYN');assert.equal((await page.saved()).revision,3);await page.locator('#view-plan').click();await page.locator('#remove-area-button').click();await page.locator('#remove-area-confirm').click();await page.waitForFunction(()=>document.getElementById('area-code').textContent==='SVA');assert.equal((await page.saved()).areas.length,0,'local plan deletion stays saved and usable');
   assert.deepEqual(errors,[]);report.cases.push({case:'legacy v2 state',passed:true});await context.close();}
  // ---- Corrupt areas: warned, raw kept, downloadable, never overwritten by sync
  {const corrupt=JSON.stringify({version:1,revision:4,areas:'broken',stacks:[],tires:[],history:[]});

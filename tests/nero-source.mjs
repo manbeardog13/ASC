@@ -77,7 +77,10 @@ test('chat history is owner-scoped and the composer queues without tokens', () =
   assert.match(composer, /prefers-reduced-motion|is-stream/);
   assert.match(composer, /function startVoice/);
   assert.match(composer, /new SR\(\)/);
-  assert.match(read('app/composer.css'), /backdrop-filter:blur\(22px\) saturate\(180%\)/);
+  // Appearance is checked in the browser (neutral transparency, blur and contrast),
+  // while this source guard only requires the shared glass token and safe fallback.
+  assert.match(read('app/composer.css'), /backdrop-filter:var\(--nero-frost\)/);
+  assert.match(read('app/composer.css'), /@supports not.*backdrop-filter/);
   assert.match(read('app/composer.css'), /prefers-reduced-motion:reduce/);
   assert.match(read('app/agent-config.js'), /BUILDER_RELAY_URL = ""/);
 });

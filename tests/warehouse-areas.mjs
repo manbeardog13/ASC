@@ -154,9 +154,9 @@ test('legacy pre-area v2 state loads, and corrupt areas are reported, not droppe
   assert.equal(validateState({ ...emptyState(), areas: 'nope' }).valid, false);
 });
 
-test('no DB writes from map files; shared-map writes only hit the two new tables', async () => {
+test('no DB writes from map files; shared-map writes only hit dedicated warehouse tables', async () => {
   const fs = await import('node:fs');
-  for (const rel of ['../app/warehouse-preview/app.js', '../app/warehouse-preview/model.js', '../app/warehouse-preview/scene.js', '../js/mapPin.js', '../app/live-locations.js']) {
+  for (const rel of ['../app/warehouse-preview/app.js', '../app/warehouse-preview/model.js', '../app/warehouse-preview/scene.js', '../app/warehouse-preview/live-inventory.js', '../app/warehouse-preview/inventory-ui.js', '../app/warehouse-preview/building.js', '../js/mapPin.js', '../app/live-locations.js']) {
     const src = fs.readFileSync(new URL(rel, import.meta.url), 'utf8');
     // Array.from()/controls.update() are fine; table access and write calls are not.
     assert.doesNotMatch(src, /supabase|\.from\(\s*["'`]|\.insert\(|\.upsert\(|\.delete\(|\.update\(\s*\{|\.rpc\(/, rel);
@@ -168,7 +168,7 @@ test('no DB writes from map files; shared-map writes only hit the two new tables
   assert.ok(section.length > 100);
   const tables = [...section.matchAll(/\.from\("([^"]+)"\)/g)].map(m => m[1]);
   assert.ok(tables.length >= 5);
-  assert.deepEqual([...new Set(tables)].sort(), ['warehouse_areas', 'warehouse_rack_positions']);
+  assert.deepEqual([...new Set(tables)].sort(), ['warehouse_areas', 'warehouse_rack_positions', 'warehouse_space_bindings']);
   assert.doesNotMatch(section, /\.rpc\(/);
 });
 
