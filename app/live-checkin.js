@@ -424,11 +424,12 @@ async function showPlaceStep(code, formData) {
         phone: formData.customer && formData.customer.phone,
         plate: formData.vehicle && formData.vehicle.plate,
       });
-      if (!slot) { showToast(t('flow.noSlot')); return; }
+      if (!slot) { note.textContent = ''; showToast(t('flow.noSlot')); return; }
       const copy = suggestionNote(slot, locationLabel(slot));
       note.textContent = t(copy.key, copy.vars);
       place.href = 'place.html?set=' + encodeURIComponent(code) + (slot.qr_code ? '&slot=' + encodeURIComponent(slot.qr_code) : '');
     } catch (error) {
+      note.textContent = '';
       showToast(error.message || t('flow.migration'));
     }
   });
@@ -442,6 +443,10 @@ async function showPlaceStep(code, formData) {
   record.textContent = t('flow.openRecord');
   actions.append(print, suggest, place, record);
   panel.append(title, lead, note, actions);
+  // Plate-first intake: propose the best free slot straight away (no extra tap);
+  // the button stays to ask for another suggestion.
+  note.textContent = t('flow.suggesting');
+  suggest.click();
   if (window.ASCQR && window.qrcode) print.click();
 }
 
