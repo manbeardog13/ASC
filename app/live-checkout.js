@@ -112,7 +112,7 @@ function doUndo() {
 }
 // A departed page must not commit an unconfirmed local intention later.
 window.addEventListener("pagehide", () => { stopUndoWindow(); released = false; });
-window.addEventListener("pageshow", () => { if (!releasing) render(); });
+window.addEventListener("pageshow", event => { if (event.persisted && !releasing) render(); });
 
 // --- Inline slide-to-release / press-and-hold control ---------------------
 // Pointer drag past SLIDE_THRESHOLD or Enter/Space held for HOLD_MS commits.
@@ -322,7 +322,14 @@ function render() {
     root.append(actions);
     const errorAlert = buildErrorAlert();
     if (errorAlert) root.append(errorAlert);
-    scanText("flow-reader", onScan);
+    const startScanner = () => scanText("flow-reader", onScan, () => {
+      if (!reader.isConnected) return;
+      // Keep typed/photo lookup available without re-rendering and restarting
+      // the failed camera in a loop. Retry is an explicit operator action.
+      reader.replaceChildren(el("p", { role: "alert" }, t("flow.camera")),
+        button(t("checkout.retry"), "btn ghost", () => { reader.replaceChildren(); startScanner(); }));
+    });
+    startScanner();
     return;
   }
 

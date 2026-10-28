@@ -99,6 +99,26 @@ async function slideThumb(page){
       await page.waitForSelector('#release-control');
     };
 
+    for (const failure of ['reject','throw']) {
+      errors=[];
+      await page.goto(origin+'/ASC/app/checkout.html');
+      await page.evaluate(mode=>{
+        window.ASCQR.scanInto=()=>{window.__scans++;if(mode==='throw')throw new Error('Synthetic camera constructor failure');return Promise.reject(new Error('Synthetic camera start failure'));};
+        window.dispatchEvent(new PageTransitionEvent('pageshow',{persisted:true}));
+      },failure);
+      await page.locator('#flow-reader [role="alert"]').waitFor();
+      await test('camera '+failure+' stays inline with manual lookup and explicit retry',async()=>{
+        assert.deepEqual(errors,[]);
+        assert.ok(await page.locator('#typed-code').isVisible());
+        const count=await page.evaluate(()=>window.__scans);
+        await page.waitForTimeout(100);
+        assert.equal(await page.evaluate(()=>window.__scans),count,'failure does not auto-retry');
+        await page.locator('#flow-reader button').click();
+        assert.equal(await page.evaluate(()=>window.__scans),count+1);
+        assert.deepEqual(errors,[]);
+      });
+    }
+
     // --- 1) Skeleton reserves height before data arrives --------------------
     // The `_defer=1` URL marker (consumed by the stubbed loadStorageSet) parks
     // the lookup so the skeleton stays visible long enough to be measured.
