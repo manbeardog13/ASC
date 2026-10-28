@@ -120,24 +120,20 @@ async function slideThumb(page){
     await open();
     await slideThumb(page);
     await page.waitForSelector('.release-done');
-    await test('slide-to-release commits checkout and shows the undo window',async()=>{
+    await test('slide-to-release schedules checkout without freeing the slot',async()=>{
       assert.deepEqual(errors,[]);
       const writes=await page.evaluate(()=>window.__writes);
-      assert.equal(writes.length,1);
-      assert.equal(writes[0].kind,'checkout');
-      assert.equal(writes[0].publicCode,'ASC-FIRST');
+      assert.equal(writes.length,0,'no write during cancellable grace period');
       assert.ok(await page.locator('#release-undo').isVisible());
-      assert.ok(await page.locator('#release-open').isVisible());
+      assert.equal(await page.locator('#release-open').count(),0,'no early navigation during pending release');
     });
 
     // --- 3) Undo rolls the checkout back and keeps the user on the page ------
     await page.locator('#release-undo').click();
     await page.waitForSelector('#release-control');
-    await test('undo calls undoCheckout and returns to the slider',async()=>{
+    await test('undo cancels locally and returns to the slider',async()=>{
       const writes=await page.evaluate(()=>window.__writes);
-      assert.equal(writes.length,2);
-      assert.equal(writes[1].kind,'undo');
-      assert.equal(writes[1].publicCode,'ASC-FIRST');
+      assert.equal(writes.length,0,'Undo must never issue an inverse write');
       // Still on checkout.html — no navigation.
       assert.ok(page.url().includes('/checkout.html'));
     });
@@ -149,10 +145,9 @@ async function slideThumb(page){
     await page.waitForTimeout(720);
     await page.keyboard.up('Enter');
     await page.waitForSelector('.release-done');
-    await test('press-and-hold Enter for 600ms commits the release',async()=>{
+    await test('press-and-hold Enter for 600ms schedules release',async()=>{
       const writes=await page.evaluate(()=>window.__writes);
-      assert.equal(writes.length,1);
-      assert.equal(writes[0].kind,'checkout');
+      assert.equal(writes.length,0,'keyboard release uses the same cancellable grace period');
     });
 
     // --- 5) Short Enter press does NOT commit --------------------------------
@@ -183,12 +178,31 @@ async function slideThumb(page){
     });
     await page.locator('#release-retry').click();
     await page.waitForSelector('.release-done');
-    await test('retry after error reaches the success state',async()=>{
+    await test('retry after error offers a fresh cancellation window',async()=>{
       const writes=await page.evaluate(()=>window.__writes);
-      assert.equal(writes.length,2);
+      assert.equal(writes.length,1,'retry is pending until its grace period ends');
       assert.ok(await page.locator('#release-undo').isVisible());
     });
 
+    await page.clock.install();
+    await open();
+    await page.evaluate(()=>{window.__deferRelease=true});
+    await slideThumb(page);
+    await page.clock.fastForward(8001);
+    await page.waitForFunction(()=>typeof window.__finishRelease==='function');
+    await test('expiry dispatches exactly one checkout and holds navigation until success',async()=>{
+      assert.equal(await page.evaluate(()=>window.__writes.length),1);
+      assert.ok(page.url().includes('checkout.html'));
+      assert.equal(await page.locator('#release-control').getAttribute('aria-disabled'),'true');
+      await page.evaluate(()=>window.__finishRelease());
+      await page.waitForURL('**/set-detail.html?code=ASC-FIRST');
+    });
+    await open();await slideThumb(page);
+    await page.evaluate(()=>window.dispatchEvent(new PageTransitionEvent('pagehide')));
+    await page.clock.fastForward(9000);
+    await test('departed page never commits a pending release',async()=>{
+      assert.equal(await page.evaluate(()=>window.__writes.length),0);
+    });
     report.pageErrors=errors;
     await context.close();
   }finally{

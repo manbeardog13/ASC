@@ -1,4 +1,4 @@
-import { loadStorageSet, checkoutSet, undoCheckout, locationLabel } from "../js/db.js";
+import { loadStorageSet, checkoutSet, locationLabel } from "../js/db.js";
 import { t, toast, el, button, field, input, queryParam, scanText, photoFallback, whereText } from "./flow-ui.js";
 import { bootOnboarding } from "./onboarding.js";
 
@@ -52,17 +52,25 @@ async function loadSet(code) {
   }
 }
 
-async function doRelease() {
+// The grace window precedes the authoritative mutation. Undo cancels local intent;
+// it never resurrects a freed slot that another worker may already have occupied.
+function doRelease() {
   if (!setRow || releasing || released) return;
-  releasing = true;
   clearReleaseError();
+  released = true;
+  startUndoWindow();
+  render();
+}
+
+async function commitRelease() {
+  if (!setRow || !released || releasing) return;
+  stopUndoWindow();
+  released = false;
+  releasing = true;
   render();
   try {
     await checkoutSet({ setId: setRow.id, publicCode: setRow.public_code });
-    released = true;
-    releasing = false;
-    startUndoWindow();
-    render();
+    goToSetDetail();
   } catch (error) {
     releasing = false;
     setReleaseError(error.message || t("checkout.error"));
@@ -74,7 +82,7 @@ function startUndoWindow() {
   undoRemaining = UNDO_SECONDS;
   undoTimerId = window.setTimeout(() => {
     stopUndoWindow();
-    goToSetDetail();
+    void commitRelease();
   }, UNDO_SECONDS * 1000);
   undoCountdownId = window.setInterval(() => {
     undoRemaining = Math.max(0, undoRemaining - 1);
@@ -93,20 +101,18 @@ function goToSetDetail() {
   location.href = "set-detail.html?code=" + encodeURIComponent(setRow.public_code);
 }
 
-async function doUndo() {
-  if (!setRow || !released) return;
+function doUndo() {
+  if (!released || releasing) return;
   stopUndoWindow();
-  try {
-    await undoCheckout({ setId: setRow.id, publicCode: setRow.public_code });
-    released = false;
-    releasing = false;
-    releaseError = "";
-    toast(t("checkout.undoDone"));
-    render();
-  } catch (error) {
-    setReleaseError(error.message || t("checkout.undoFailed"));
-  }
+  released = false;
+  releaseError = "";
+  toast(t("checkout.undoDone"));
+  render();
+  document.getElementById("release-control")?.focus();
 }
+// A departed page must not commit an unconfirmed local intention later.
+window.addEventListener("pagehide", () => { stopUndoWindow(); released = false; });
+window.addEventListener("pageshow", () => { if (!releasing) render(); });
 
 // --- Inline slide-to-release / press-and-hold control ---------------------
 // Pointer drag past SLIDE_THRESHOLD or Enter/Space held for HOLD_MS commits.
@@ -192,7 +198,7 @@ function buildReleaseControl() {
   function endPointer(e) {
     if (!active) return;
     try { thumb.releasePointerCapture(e.pointerId); } catch { /* ignore */ }
-    if (progress >= SLIDE_THRESHOLD) commit();
+    if (e.type !== "pointercancel" && progress >= SLIDE_THRESHOLD) commit();
     else reset();
   }
   thumb.addEventListener("pointerup", endPointer);
@@ -289,9 +295,7 @@ function buildReleasedPanel() {
   const actions = el("div", { class: "release-done__actions" });
   const undo = button(t("checkout.undoCount", { n: UNDO_SECONDS }), "release-done__undo", doUndo);
   undo.id = "release-undo";
-  const open = button(t("checkout.open"), "release-done__open", () => { stopUndoWindow(); goToSetDetail(); });
-  open.id = "release-open";
-  actions.append(undo, open);
+  actions.append(undo);
   panel.append(actions);
   return panel;
 }
@@ -342,6 +346,3 @@ function render() {
 const initial = queryParam("set");
 if (initial) { loadingSet = true; render(); loadSet(initial); }
 else render();
-
-// Expose for the browser smoke test; harmless no-op otherwise.
-window.__ascCheckoutRelease = doRelease;
