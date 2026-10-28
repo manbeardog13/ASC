@@ -38,6 +38,7 @@ jobs:
         run: |
           npm install --prefix "$RUNNER_TEMP/asc-browser-tests" --no-save --package-lock=false playwright@1.62.1
           export NODE_PATH="$RUNNER_TEMP/asc-browser-tests/node_modules"
+          node tests/host-mode.mjs
           node tests/composer.browser.cjs
           node tests/platform.browser.cjs
           node tests/placement.browser.cjs

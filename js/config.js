@@ -17,6 +17,8 @@
 //                         FALLBACK_BASE_URL is used if that can't be resolved.
 // ============================================================================
 
+import { HOST_MODE } from "./host-mode.js";
+
 export const FALLBACK_BASE_URL = "https://manbeardog13.github.io/ASC/";
 
 // <base>/js/config.js → <base>/ ; only http(s) pages, otherwise the fallback.
@@ -28,7 +30,7 @@ export function resolveBaseUrl(moduleUrl, fallback = FALLBACK_BASE_URL) {
   } catch (e) { return fallback; }
 }
 
-export const config = {
+const DIRECT = {
   SUPABASE_URL:      "https://ilnqhlrvchuvpjgptjfx.supabase.co",
   SUPABASE_ANON_KEY: "sb_publishable_wLI8c19MvSw871n9wWSsyw_YpKHnkBA",
   APP_BASE_URL:      resolveBaseUrl(import.meta.url),
@@ -37,6 +39,25 @@ export const config = {
   // Supabase secrets. Do not put a public function URL here.
   BUILDER_RELAY_URL: "",
 };
+
+// Nero-hosted mode: data calls go to Nero Summit's backend (/ASC/api, same origin) with the
+// Nero Summit session; ASC's own Supabase project and login are no longer used by the browser.
+// The session key must match the Nero Summit login's supabase-js session (NERO docs/tenants/CONTRACT.md §5).
+export const NERO = Object.freeze({
+  API_PATH: "api",
+  ANON_KEY: "sb_publishable_pYw_KxX1v98YGTZM31tL3Q_kFsTVefP",
+  STORAGE_KEY: "sb-ryueshiunqobrluuuhyp-auth-token",
+  LOGIN_URL: "/?next=%2FASC%2F",
+});
+
+export function buildConfig(mode, moduleUrl, direct = DIRECT) {
+  if (mode !== "nero") return { ...direct, HOST_MODE: "direct" };
+  const api = new URL(NERO.API_PATH, new URL("../", moduleUrl)).href.replace(/\/$/, "");
+  return { ...direct, HOST_MODE: "nero", SUPABASE_URL: api, SUPABASE_ANON_KEY: NERO.ANON_KEY,
+           STORAGE_KEY: NERO.STORAGE_KEY, LOGIN_URL: NERO.LOGIN_URL };
+}
+
+export const config = buildConfig(HOST_MODE, import.meta.url);
 
 // Returns true once the placeholders above have been replaced with real values.
 export function isConfigured() {

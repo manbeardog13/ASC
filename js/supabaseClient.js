@@ -30,6 +30,7 @@ export const supabase = isConfigured()
         persistSession: true,
         autoRefreshToken: true,
         lock: passThroughLock,
+        ...(config.HOST_MODE === "nero" ? { storageKey: config.STORAGE_KEY, detectSessionInUrl: false } : {}),
       },
     })
   : null;
