@@ -26,6 +26,7 @@
   zaprimi/preuzmi only). LIVE: live-users.js (end of body) fills real accounts,
   invites and roles from Supabase via ../js/db.js — no mock people render.
 -->
+<link rel="stylesheet" href="tokens.css">
 <link rel="stylesheet" href="app.css">
 <style>
 /* ---- Users-page-specific layout only (shared rules live in app.css) ---- */
@@ -98,9 +99,9 @@ html.dark .btn{background:rgba(244,245,247,.05)}
   background:var(--panel-2);border:1px solid var(--hairline);transition:background 380ms var(--smooth),transform 150ms var(--snap),opacity 300ms var(--smooth)}
 html.dark .u-row{background:rgba(244,245,247,.04)}
 .u-row.self{border-color:var(--lava-ring);background:var(--lava-tint)}
-html.dark .u-row.self{background:rgba(255,78,27,.10)}
+html.dark .u-row.self{background:rgba(225,6,0,.10)}
 .uav{width:42px;height:42px;border-radius:50%;flex:none;display:grid;place-items:center;font:650 14px Inter;color:#fff;
-  background:radial-gradient(circle at 32% 30%,var(--lava-2),var(--lava) 62%,#d6390c);box-shadow:0 6px 16px rgba(255,78,27,.32)}
+  background:radial-gradient(circle at 32% 30%,var(--lava-2),var(--lava) 62%,#d6390c);box-shadow:0 6px 16px rgba(225,6,0,.32)}
 .uav.user{background:linear-gradient(160deg,color-mix(in srgb,var(--gun) 84%,#fff),var(--gun));box-shadow:0 6px 16px rgba(2,3,5,.24);color:var(--on-stage)}
 .u-body{flex:1 1 190px;min-width:0}
 .u-toprow{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
@@ -116,7 +117,7 @@ html.dark .u-row.self{background:rgba(255,78,27,.10)}
 
 /* status badges */
 .tag{font:700 9.5px Inter;letter-spacing:.05em;text-transform:uppercase;padding:3px 8px;border-radius:999px;display:inline-flex;align-items:center;gap:4px}
-.tag-owner{background:rgba(255,78,27,.15);color:var(--lava-ink)}
+.tag-owner{background:rgba(225,6,0,.15);color:var(--lava-ink)}
 .tag-you{background:rgba(46,47,49,.13);color:var(--gun)} html.dark .tag-you{background:rgba(244,245,247,.11);color:#c9ccd2}
 .tag-pending{background:rgba(99,103,111,.16);color:var(--muted)}
 
@@ -124,7 +125,7 @@ html.dark .u-row.self{background:rgba(255,78,27,.10)}
 .appr{display:flex;flex-direction:column;gap:10px}
 .appr-row{display:flex;align-items:flex-start;gap:13px;flex-wrap:wrap;padding:14px;border-radius:16px;
   background:var(--panel-2);border:1px dashed var(--lava-ring);transition:opacity 320ms var(--smooth),transform 150ms var(--snap),background 380ms var(--smooth)}
-html.dark .appr-row{background:rgba(255,78,27,.06)}
+html.dark .appr-row{background:rgba(225,6,0,.06)}
 .appr-actions{display:flex;gap:8px;flex-wrap:wrap;width:100%;margin-top:4px}
 
 /* row exit animation */
