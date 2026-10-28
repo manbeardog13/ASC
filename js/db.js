@@ -681,6 +681,30 @@ export async function checkoutSet({ setId = null, publicCode = null } = {}) {
   throw rpcFail(error, "check the set out");
 }
 
+// Mirror of checkoutSet: puts the status back to in_storage and records the
+// restoration in set_movements like checkoutSet does. Prefer the server-side
+// RPC when present (keeps slot re-occupation atomic); otherwise fall back to
+// the same table-update pattern checkoutSet uses, plus a best-effort movement
+// log entry so the audit still shows the undo.
+export async function undoCheckout({ setId = null, publicCode = null } = {}) {
+  if (!setId && !publicCode) throw new Error("Missing identifier for undo.");
+  const { data, error } = await supabase.rpc("undo_checkout", {
+    set_id: setId, public_code: publicCode,
+  });
+  if (!error) return data;
+  if (rpcMissing(error) && setId) {
+    await applySetPatch(setId, { status: "in_storage", picked_up_at: null });
+    const { error: moveErr } = await supabase.from("set_movements").insert({
+      set_id: setId, action: "in", from_location_id: null, to_location_id: null,
+    });
+    if (moveErr && !relationMissing(moveErr)) {
+      console.warn("undoCheckout: movement log skipped:", moveErr.message);
+    }
+    return { ok: true, fallback: true, public_code: publicCode };
+  }
+  throw rpcFail(error, "undo the checkout");
+}
+
 export async function suggestFreeSlot(warehouse = "main", who = {}) {
   const args = { warehouse };
   if (who && who.customerId) args.customer_id = who.customerId;

@@ -41,6 +41,7 @@ jobs:
           node tests/composer.browser.cjs
           node tests/platform.browser.cjs
           node tests/placement.browser.cjs
+          node tests/checkout-release.browser.cjs
           node tests/warehouse-integrity.browser.cjs
           node tests/composer-history.browser.cjs
           node tests/composer-async.browser.cjs
