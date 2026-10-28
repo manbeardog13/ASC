@@ -243,7 +243,7 @@ function animate(){
 (async () => {
   if (/\/login\.html$/.test(location.pathname)) return;
   const doc = document, root = doc.documentElement;
-  const {navigationIcons:I,renderAppNavigation,applyNavAccess,syncThemeButton,installWarehouseMenuReturn,navLabel}=await import('./navigation.js');
+  const {navigationIcons:I,renderAppNavigation,applyNavAccess,syncThemeButton,installWarehouseMenuReturn,navLabel,searchKey,searchText}=await import('./navigation.js');
   const here = location.pathname.split('/').pop() || 'dashboard.html';
   const whPages = ['recycle.html', 'locate.html', 'locations.html', 'place.html', 'checkout.html'];
   const whOpen = whPages.includes(here) ||
@@ -255,7 +255,7 @@ function animate(){
     '<div class="sb-head"><span class="sb-eyebrow">ASC sustav</span>' +
       '<button class="sb-collapse" type="button" aria-label="Suzi izbornik"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 6l-6 6 6 6"/></svg></button></div>' +
     '<form class="sb-search" role="search"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg>' +
-      '<input type="search" placeholder="Traži…" aria-label="Pretraga" autocomplete="off"></form>' +
+      '<input type="search" enterkeyhint="search" placeholder="' + searchText().ph + '" aria-label="' + searchText().label + '" aria-keyshortcuts="Meta+K Control+K /" autocomplete="off"><kbd class="sb-kbd" title="' + searchText().hint + '">' + searchKey() + '</kbd></form>' +
     '<nav class="sb-nav" aria-label="' + navLabel() + '">' + renderAppNavigation({warehouseOpen:whOpen}) + '</nav>' +
     '<div class="sb-foot"><button class="sb-user" type="button" aria-haspopup="menu">' +
       '<span class="sb-ava" id="sbAva">…<span class="dot"></span></span>' +
@@ -386,6 +386,17 @@ function animate(){
   });
   doc.addEventListener('asc:theme', syncTheme);
   applyNavAccess(aside, null);
+  // Global search: Cmd/Ctrl+K or "/" from anywhere opens the sidebar search.
+  doc.addEventListener('keydown', (e) => {
+    const typing = e.target && (e.target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName));
+    const combo = (e.key === 'k' || e.key === 'K') && (e.metaKey || e.ctrlKey) && !e.altKey && !e.shiftKey;
+    if (!combo && !(e.key === '/' && !typing && !e.metaKey && !e.ctrlKey && !e.altKey)) return;
+    e.preventDefault();
+    if (root.getAttribute('data-side') === 'rail') root.removeAttribute('data-side');
+    if (mobileMenu.matches) setMenuOpen(true, { restoreFocus: true });
+    const input = sbs.querySelector('input');
+    requestAnimationFrame(() => { input.focus({ preventScroll: true }); input.select(); });
+  });
   installWarehouseMenuReturn(()=>{
     group.classList.add('open');
     group.querySelector('button').setAttribute('aria-expanded','true');

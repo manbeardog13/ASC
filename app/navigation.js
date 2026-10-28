@@ -65,6 +65,9 @@ export function renderAppNavigation({warehouseOpen=false, currentPath=location.p
 // Admin-only rows stay in the DOM (so link counts stay stable) but are hidden
 // until the signed-in role is admin or manager. Unknown role fails closed.
 export const navLabel = () => t('nav.main');
+const MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent || '');
+export const searchKey = () => (MAC ? '⌘K' : 'Ctrl K');
+export const searchText = () => ({ ph: t('search.ph'), label: t('search.label'), hint: t('search.hint', { key: searchKey() }) });
 
 export function applyNavAccess(root, role) {
   if (!root) return;
