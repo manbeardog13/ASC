@@ -306,6 +306,11 @@ if(sat>=59){d.classList.add('island');d.style.setProperty('--isl-y',(sat-48)+'px
   // this whole decision; the card is only revealed (S.done → lift) when the user
   // actually needs it. Recovery / invite links land with type=recovery in the hash.
   const S = window.ASCSplash;
+  // Where to land after sign-in: the page that sent us here (same app only), else the board.
+  const dest = () => {
+    let r = null; try { r = sessionStorage.getItem('asc.return'); sessionStorage.removeItem('asc.return'); } catch (e) {}
+    return r && /^[a-z-]+(\/index)?\.html(\?[^#]*)?$|^warehouse-preview\/(index\.html)?(\?[^#]*)?$/.test(r) && !/^login\.html/.test(r) ? r : 'dashboard.html';
+  };
   const hash = new URLSearchParams(location.hash.slice(1));
   if (hash.get('type') === 'recovery') { setMode('recover'); S.done(); }
   else if (hash.get('error')) {
@@ -325,9 +330,9 @@ if(sat>=59){d.classList.add('island');d.style.setProperty('--isl-y',(sat-48)+'px
         getSession().then((s) => { if (s) res(s); }).catch(() => {});
       }),
       new Promise((res) => setTimeout(res, 4000, null)),
-    ]).then((s) => { if (s) S.handoff('dashboard.html'); else S.done(); });
+    ]).then((s) => { if (s) S.handoff(dest()); else S.done(); });
   } else {
-    getSession().then((s) => { s ? S.handoff('dashboard.html') : S.done(); }).catch(() => S.done());
+    getSession().then((s) => { s ? S.handoff(dest()) : S.done(); }).catch(() => S.done());
   }
 
   function setMode(next) {
@@ -379,18 +384,18 @@ if(sat>=59){d.classList.add('island');d.style.setProperty('--isl-y',(sat-48)+'px
       if (mode === 'signin') {
         await signIn(email, password);
         try { localStorage.setItem(REMEMBER, email); } catch (e2) {}
-        S.bloom(() => S.handoff('dashboard.html'));    // cover, then swap under the opaque surface
+        S.bloom(() => S.handoff(dest()));    // cover, then swap under the opaque surface
       } else if (mode === 'signup') {
         const { needsConfirm } = await signUp(email, password, name);
         if (needsConfirm) { setMode('signin'); say('Račun napravljen — provjeri email za potvrdu, pa se prijavi.', 'ok'); }
-        else S.bloom(() => S.handoff('dashboard.html'));
+        else S.bloom(() => S.handoff(dest()));
       } else if (mode === 'reset') {
         await sendPasswordReset(email);
         setMode('signin'); say('Link za reset poslan na ' + email + '.', 'ok');
       } else if (mode === 'recover') {
         await updatePassword(password);
         say('Lozinka spremljena — prijavljujem te…', 'ok');
-        setTimeout(() => S.bloom(() => S.handoff('dashboard.html')), 700);
+        setTimeout(() => S.bloom(() => S.handoff(dest())), 700);
       }
     } catch (err) {
       say(err.message || 'Nešto je pošlo po zlu — pokušaj ponovno.', 'err');

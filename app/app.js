@@ -68,7 +68,14 @@
         document.documentElement.style.visibility = '';
         Promise.race([window.ascLiveFirst || Promise.resolve(), new Promise((r) => setTimeout(r, 1200))])
           .then(() => { if (!sessionEnding && authEpoch === revealEpoch) S.done(); });
-      } else S.bloom(() => S.handoff('login.html'));   // re-cover first: even a watchdog-spent splash bounces under the surface
+      } else {
+        // Remember where the user was going (e.g. a scanned label), so sign-in lands there.
+        try {
+          const rel = location.pathname.split('/app/').pop() + location.search;
+          if (/^[a-z-]+(\/index)?\.html(\?[^#]*)?$|^warehouse-preview\/(index\.html)?(\?[^#]*)?$/.test(rel) && !/^login\.html/.test(rel)) sessionStorage.setItem('asc.return', rel);
+        } catch (e) {}
+        S.bloom(() => S.handoff('login.html'));
+      }   // re-cover first: even a watchdog-spent splash bounces under the surface
     })
     .catch(leaveSession);  // A failed session check must never reveal a previous user's page.
   // Sign-out: the menu drawer's "Odjava" ends the REAL Supabase session, then → login
