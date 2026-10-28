@@ -1,0 +1,38 @@
+{
+  "results": [
+    {
+      "name": "real renderer -> QR decode -> printable PDF",
+      "status": "passed"
+    },
+    {
+      "name": "missing QR encoder cannot open the print gate",
+      "status": "passed"
+    },
+    {
+      "name": "print exception stays failed",
+      "status": "passed"
+    },
+    {
+      "name": "missing afterprint stays unconfirmed",
+      "status": "passed"
+    },
+    {
+      "name": "retry after failed bridge print does not complete",
+      "status": "passed"
+    },
+    {
+      "name": "system confirmation remains explicit (en)",
+      "status": "passed"
+    },
+    {
+      "name": "system confirmation remains explicit (hr)",
+      "status": "passed"
+    },
+    {
+      "name": "test print requires confirmation and never completes check-in",
+      "status": "passed"
+    }
+  ],
+  "physicalPrint": "UNVERIFIED",
+  "liveBridge": "UNVERIFIED"
+}
