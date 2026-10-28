@@ -236,7 +236,7 @@ function animate(){
 (async () => {
   if (/\/login\.html$/.test(location.pathname)) return;
   const doc = document, root = doc.documentElement;
-  const {navigationIcons:I,renderAppNavigation,applyNavAccess,syncThemeButton,installWarehouseMenuReturn}=await import('./navigation.js');
+  const {navigationIcons:I,renderAppNavigation,applyNavAccess,syncThemeButton,installWarehouseMenuReturn,navLabel}=await import('./navigation.js');
   const here = location.pathname.split('/').pop() || 'dashboard.html';
   const whPages = ['recycle.html', 'locate.html', 'locations.html', 'place.html', 'checkout.html'];
   const whOpen = whPages.includes(here) ||
@@ -249,7 +249,7 @@ function animate(){
       '<button class="sb-collapse" type="button" aria-label="Suzi izbornik"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 6l-6 6 6 6"/></svg></button></div>' +
     '<form class="sb-search" role="search"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg>' +
       '<input type="search" placeholder="Traži…" aria-label="Pretraga" autocomplete="off"></form>' +
-    '<nav class="sb-nav" aria-label="Glavna navigacija">' + renderAppNavigation({warehouseOpen:whOpen}) + '</nav>' +
+    '<nav class="sb-nav" aria-label="' + navLabel() + '">' + renderAppNavigation({warehouseOpen:whOpen}) + '</nav>' +
     '<div class="sb-foot"><button class="sb-user" type="button" aria-haspopup="menu">' +
       '<span class="sb-ava" id="sbAva">…<span class="dot"></span></span>' +
       '<span class="sb-uid"><b id="sbName">—</b><span id="sbRole">—</span></span>' +
@@ -271,8 +271,11 @@ function animate(){
   if (MOD[here]) root.setAttribute('data-module', MOD[here]);
 
   // rail mode hides group children — surface the active domain on the parent
+  if (['scan','reminders','workshop','users'].includes(MOD[here] || '')) {
+    const m = aside.querySelector('.sb-group[data-group="more"] > button.sb-item'); if (m) m.classList.add('kid-on');
+  }
   if ((MOD[here] || '') === 'warehouse') {
-    const p = aside.querySelector('.sb-group > button.sb-item'); if (p) p.classList.add('kid-on');
+    const p = aside.querySelector('.sb-group[data-group="warehouse"] > button.sb-item'); if (p) p.classList.add('kid-on');
   }
 
   // collapse rail (desktop) — persisted
@@ -300,13 +303,13 @@ function animate(){
   });
 
   // expandable parent
-  const group = aside.querySelector('.sb-group');
-  group.querySelector('button.sb-item').addEventListener('click', () => {
-    const open = group.classList.toggle('open');
-    group.querySelector('button').setAttribute('aria-expanded', String(open));
-    group.querySelector('.sb-group-kids').inert=!open;
-    try { localStorage.setItem('asc.side.wh', open ? '1' : '0'); } catch (e) {}
-  });
+  const group = aside.querySelector('.sb-group[data-group="warehouse"]');
+  aside.querySelectorAll('.sb-group').forEach((g) => g.querySelector('button.sb-item').addEventListener('click', () => {
+    const open = g.classList.toggle('open');
+    g.querySelector('button').setAttribute('aria-expanded', String(open));
+    g.querySelector('.sb-group-kids').inert=!open;
+    if (g === group) { try { localStorage.setItem('asc.side.wh', open ? '1' : '0'); } catch (e) {} }
+  }));
 
   // mobile: hamburger in the header + scrim close
   const top = doc.querySelector('.top');

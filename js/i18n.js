@@ -60,6 +60,9 @@ const DICT = {
     // chrome / nav
     "nav.home": "Home", "nav.checkin": "Check in", "nav.scan": "Scan",
     "nav.warehouse": "Warehouse", "nav.customers": "Customers", "nav.users": "Users",
+    "nav.board": "Board", "nav.more": "More", "nav.spatial": "Spatial view", "nav.locate": "Find", "nav.places": "Places",
+    "nav.bin": "Bin", "nav.checkout": "Release", "nav.reminders": "Reminders", "nav.workshop": "Workshop",
+    "nav.manage": "Management", "nav.themeDark": "Dark theme", "nav.themeLight": "Light theme", "nav.main": "Main navigation",
     "menu.users": "Users", "menu.reminders": "Pickup reminders", "menu.recycle": "Recycle bin", "menu.export": "Export CSV",
     "menu.signedInAs": "Signed in · {role}", "menu.signout": "Sign out",
     "menu.workshop": "Workshop mode",
@@ -379,6 +382,9 @@ const DICT = {
   hr: {
     "nav.home": "Početna", "nav.checkin": "Zaprimi", "nav.scan": "Skeniraj",
     "nav.warehouse": "Skladište", "nav.customers": "Kupci", "nav.users": "Korisnici",
+    "nav.board": "Ploča", "nav.more": "Više", "nav.spatial": "Prostorni pregled", "nav.locate": "Pronađi", "nav.places": "Mjesta",
+    "nav.bin": "Košarica", "nav.checkout": "Preuzmi", "nav.reminders": "Podsjetnici", "nav.workshop": "Radionica",
+    "nav.manage": "Upravljanje", "nav.themeDark": "Tamna tema", "nav.themeLight": "Svijetla tema", "nav.main": "Glavna navigacija",
     "menu.users": "Korisnici", "menu.reminders": "Podsjetnici za preuzimanje", "menu.recycle": "Koš za smeće", "menu.export": "Izvezi CSV",
     "menu.signedInAs": "Prijavljeni · {role}", "menu.signout": "Odjava",
     "menu.workshop": "Radionica",

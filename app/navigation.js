@@ -1,3 +1,4 @@
+import { t } from '../js/i18n.js';
 export const navigationIcons = {
     home: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.2 10.6L12 4l7.8 6.6"/><path d="M5.8 9.4V19a2 2 0 002 2h8.4a2 2 0 002-2V9.4"/></svg>',
     plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5.4v13.2M5.4 12h13.2"/></svg>',
@@ -33,31 +34,38 @@ export function renderAppNavigation({warehouseOpen=false, currentPath=location.p
     const active=currentPath===path || (href==='warehouse-preview/index.html' && currentPath===new URL('warehouse-preview/',APP_ROOT).pathname);
     return '<a class="sb-item'+(kid?' sb-kid':'')+(active?' on':'')+'" data-m="'+m+'"'+(admin?' data-admin="1"':'')+' href="'+path+'"'+(active?' aria-current="page"':'')+' title="'+label+'">'+icon+'<span class="t">'+label+'</span></a>';
   };
+  const group=(key,label,icon,open,kids)=>
+    '<div class="sb-group' + (open ? ' open' : '') + '" data-group="' + key + '">' +
+      '<button class="sb-item" type="button" data-m="' + key + '" aria-expanded="' + open + '">' + icon + '<span class="t">' + label + '</span>' + I.chev + '</button>' +
+      '<div class="sb-group-kids"' + (open ? '' : ' inert') + '><div>' + kids + '</div></div></div>';
+  const here=pageFile(currentPath);
+  const moreOpen=['scan.html','reminders.html','workshop.html','users.html'].includes(here);
+  // Five top-level destinations: Board, Check in, Warehouse, Customers, More.
   return (
-      item('dashboard', 'dashboard.html', I.home, 'Ploča') +
-      item('checkin', 'checkin.html', I.plus, 'Zaprimi') +
-      item('scan', 'scan.html', I.scan, 'Skeniraj') +
-      '<div class="sb-group' + (whOpen ? ' open' : '') + '">' +
-        '<button class="sb-item" type="button" data-m="warehouse" aria-expanded="' + whOpen + '">' + I.pin + '<span class="t">Skladište</span>' + I.chev + '</button>' +
-        '<div class="sb-group-kids"'+(whOpen?'':' inert')+'><div>' +
-          item('warehouse', 'warehouse-preview/index.html', I.map, 'Prostorni pregled', true) +
-          item('locate', 'locate.html', I.pin, 'Pronađi', true) +
-          item('locations', 'locations.html', I.spark, 'Mjesta', true) +
-          item('warehouse', 'recycle.html', I.bin, 'Košarica', true) +
-        '</div></div></div>' +
-      item('customers', 'customers.html', I.people, 'Kupci') +
+      item('dashboard', 'dashboard.html', I.home, t('nav.board')) +
+      item('checkin', 'checkin.html', I.plus, t('nav.checkin')) +
+      group('warehouse', t('nav.warehouse'), I.pin, whOpen,
+          item('warehouse', 'warehouse-preview/index.html', I.map, t('nav.spatial'), true) +
+          item('locate', 'locate.html', I.pin, t('nav.locate'), true) +
+          item('warehouse', 'checkout.html', I.out, t('nav.checkout'), true) +
+          item('locations', 'locations.html', I.spark, t('nav.places'), true) +
+          item('warehouse', 'recycle.html', I.bin, t('nav.bin'), true)) +
+      item('customers', 'customers.html', I.people, t('nav.customers')) +
       // Offers slot — the offers page inserts its item here. Not a link.
       '<div class="sb-slot" data-nav-slot="offers" hidden></div>' +
-      item('reminders', 'reminders.html', I.bell, 'Podsjetnici') +
-      item('workshop', 'workshop.html', I.wrench, 'Radionica') +
-      '<div class="sb-div" data-admin="1"></div><div class="sb-eyebrow2" data-admin="1">Upravljanje</div>' +
-      item('users', 'users.html', I.users, 'Korisnici', false, true) +
-      '<button class="sb-item sb-theme" type="button" id="sbTheme" aria-pressed="false">' + I.theme + '<span class="t">Tamna tema</span></button>'
+      group('more', t('nav.more'), I.menu, moreOpen,
+          item('scan', 'scan.html', I.scan, t('nav.scan'), true) +
+          item('reminders', 'reminders.html', I.bell, t('nav.reminders'), true) +
+          item('workshop', 'workshop.html', I.wrench, t('nav.workshop'), true) +
+          item('users', 'users.html', I.users, t('nav.users'), true, true)) +
+      '<button class="sb-item sb-theme" type="button" id="sbTheme" aria-pressed="false">' + I.theme + '<span class="t">' + t('nav.themeDark') + '</span></button>'
   );
 }
 
 // Admin-only rows stay in the DOM (so link counts stay stable) but are hidden
 // until the signed-in role is admin or manager. Unknown role fails closed.
+export const navLabel = () => t('nav.main');
+
 export function applyNavAccess(root, role) {
   if (!root) return;
   const admin = role === 'admin' || role === 'manager';
@@ -70,7 +78,7 @@ export function syncThemeButton(button) {
   button.setAttribute('aria-pressed', String(dark));
   button.classList.toggle('on', dark);
   const label = button.querySelector('.t');
-  if (label) label.textContent = dark ? 'Svijetla tema' : 'Tamna tema';
+  if (label) label.textContent = dark ? t('nav.themeLight') : t('nav.themeDark');
 }
 
 // Preserve the source entry, so native Back/swipe restores its menu without
