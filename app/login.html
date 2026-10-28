@@ -137,6 +137,10 @@ body>main{width:min(412px,100%);min-width:0;flex:none}
 .auth-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
 .auth-logo{height:26px;width:auto;filter:drop-shadow(0 3px 8px rgba(225,6,0,.28))}
 /* iOS sliding theme switch — 60% scale, spring thumb, lava micro-glow on move */
+.auth-lang{margin-left:auto;margin-right:8px;min-width:44px;height:28px;padding:0 10px;border-radius:999px;border:1px solid var(--line,rgba(0,0,0,.09));background:transparent;color:var(--ink-2,#3a3c40);font:600 12px/1 Inter,system-ui,sans-serif;letter-spacing:.04em;cursor:pointer;transition:background 120ms cubic-bezier(.2,.8,.2,1),color 120ms cubic-bezier(.2,.8,.2,1)}
+.auth-lang:hover{background:rgba(2,3,5,.05);color:var(--ink,#0a0c11)}
+html.dark .auth-lang{color:#d6d8dc;border-color:rgba(244,245,247,.14)}
+.auth-lang:focus-visible{outline:2px solid var(--brand,#e10600);outline-offset:2px}
 .auth-theme{position:relative;width:38px;height:22px;border-radius:999px;border:0;cursor:pointer;flex:none;
   background:var(--line);transition:background 320ms var(--smooth);
   box-shadow:inset 0 1px 2px rgba(2,3,5,.14)}
@@ -227,6 +231,7 @@ if(sat>=59){d.classList.add('island');d.style.setProperty('--isl-y',(sat-48)+'px
   <div class="auth-card">
     <div class="auth-top">
       <img class="auth-logo" src="assets/logo.png" alt="ASC — Auto servisni centar">
+      <button class="auth-lang" id="lang" type="button"></button>
       <button class="auth-theme" id="theme" type="button" aria-label="Tema"><i></i></button>
     </div>
     <h1 class="auth-title" id="title">Dobrodošli natrag</h1>
@@ -264,6 +269,7 @@ if(sat>=59){d.classList.add('island');d.style.setProperty('--isl-y',(sat-48)+'px
 <script type="module">
   import { supabase, isConfigured } from '../js/supabaseClient.js';
   import { getSession, signIn, signUp, sendPasswordReset, updatePassword } from '../js/db.js';
+  import { t, lang, setLang } from '../js/i18n.js';
 
   const $ = (id) => document.getElementById(id);
   const form = $('form'), msg = $('msg'), submit = $('submit'), title = $('title'), sub = $('sub'), switchBtn = $('switch');
@@ -272,6 +278,17 @@ if(sat>=59){d.classList.add('island');d.style.setProperty('--isl-y',(sat-48)+'px
   const say = (text, kind) => { msg.textContent = text || ''; msg.className = 'auth-msg' + (kind ? ' ' + kind : ''); };
   const busy = (on) => { submit.disabled = on; $('google').disabled = on; };
   const REMEMBER = 'asc.rememberEmail';
+  // One language at a time: HR default, EN on request; the toggle names the other language.
+  const applyStatic = () => {
+    document.documentElement.lang = lang();
+    $('google').lastChild.textContent = ' ' + t('au.google') + ' ';
+    $('divider').textContent = t('au.or'); $('forgot').textContent = t('au.forgot');
+    $('first').placeholder = t('au.firstName'); $('last').placeholder = t('au.lastName');
+    $('eye').setAttribute('aria-label', t('au.show')); $('theme').setAttribute('aria-label', t('au.theme'));
+    $('lang').textContent = lang() === 'hr' ? 'EN' : 'HR'; $('lang').setAttribute('aria-label', t('au.langLabel'));
+  };
+  $('lang').addEventListener('click', () => { setLang(lang() === 'hr' ? 'en' : 'hr'); applyStatic(); setMode(mode); });
+  applyStatic(); setMode(mode);
 
   // Theme toggle (login-scoped, persisted; the app reads asc.theme too).
   $('theme').addEventListener('click', () => {
@@ -297,7 +314,7 @@ if(sat>=59){d.classList.add('island');d.style.setProperty('--isl-y',(sat-48)+'px
     const p = $('password'); p.type = p.type === 'password' ? 'text' : 'password';
   });
 
-  if (!isConfigured()) { say('Aplikacija još nije povezana s bazom (config.js).', 'err'); busy(true); }
+  if (!isConfigured()) { say(t('au.noConfig'), 'err'); busy(true); }
 
   // Prefill the last email used.
   try { const s = localStorage.getItem(REMEMBER); if (s) $('email').value = s; } catch (e) {}
@@ -317,7 +334,7 @@ if(sat>=59){d.classList.add('island');d.style.setProperty('--isl-y',(sat-48)+'px
     // OAuth bounced back with an error — surface it on the card, clean the hash.
     // (URLSearchParams already percent-decoded the value; decoding again throws
     // URIError on a literal '%' and would kill the whole module.)
-    say((hash.get('error_description') || 'Google prijava nije uspjela.').replace(/\+/g, ' '), 'err');
+    say((hash.get('error_description') || t('au.googleFail')).replace(/\+/g, ' '), 'err');
     history.replaceState(null, '', location.pathname);
     S.done();
   } else if (S.mode === 'oauth') {
@@ -339,10 +356,10 @@ if(sat>=59){d.classList.add('island');d.style.setProperty('--isl-y',(sat-48)+'px
     mode = next;
     document.body.className = next === 'signin' ? '' : next;
     const map = {
-      signin:  { t: 'Dobrodošli natrag', s: 'Hotel za gume · Dubrovnik', btn: 'Prijavi se',      pass: 'Lozinka' },
-      signup:  { t: 'Novi račun',         s: 'Napravi svoj ASC račun',    btn: 'Napravi račun',   pass: 'Lozinka' },
-      reset:   { t: 'Reset lozinke',      s: 'Poslat ćemo ti link',       btn: 'Pošalji link',    pass: 'Lozinka' },
-      recover: { t: 'Nova lozinka',       s: 'Postavi novu lozinku',      btn: 'Spremi lozinku',  pass: 'Nova lozinka' },
+      signin:  { t: t('au.welcome'), s: t('au.place'),  btn: t('au.signin'),   pass: t('au.pass') },
+      signup:  { t: t('au.newT'),    s: t('au.newS'),   btn: t('au.newBtn'),   pass: t('au.pass') },
+      reset:   { t: t('au.resetT'),  s: t('au.resetS'), btn: t('au.resetBtn'), pass: t('au.pass') },
+      recover: { t: t('au.recT'),    s: t('au.recS'),   btn: t('au.recBtn'),   pass: t('au.newPass') },
     }[next];
     title.textContent = map.t; sub.textContent = map.s;
     submit.firstChild.textContent = map.btn + ' ';
@@ -350,8 +367,8 @@ if(sat>=59){d.classList.add('island');d.style.setProperty('--isl-y',(sat-48)+'px
     $('password').autocomplete = next === 'signin' ? 'current-password' : 'new-password';
     $('password').required = next !== 'reset';
     $('email').required = next !== 'recover';
-    switchBtn.textContent = next === 'signin' ? 'Napravi račun' : 'Imaš račun? Prijavi se';
-    $('switchRow').firstChild.textContent = next === 'signin' ? 'Prvi put? ' : ' ';
+    switchBtn.textContent = next === 'signin' ? t('au.newBtn') : t('au.haveAcc');
+    $('switchRow').firstChild.textContent = next === 'signin' ? t('au.first') : ' ';
     say('');
   }
 
@@ -370,7 +387,7 @@ if(sat>=59){d.classList.add('island');d.style.setProperty('--isl-y',(sat-48)+'px
     const { error } = await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo } });
     if (error) {
       S.abort();
-      say(/not enabled|provider/i.test(error.message) ? 'Google prijava još nije uključena u Supabase.' : error.message, 'err');
+      say(/not enabled|provider/i.test(error.message) ? t('au.googleOff') : error.message, 'err');
       busy(false);
     }
   });
@@ -387,18 +404,18 @@ if(sat>=59){d.classList.add('island');d.style.setProperty('--isl-y',(sat-48)+'px
         S.bloom(() => S.handoff(dest()));    // cover, then swap under the opaque surface
       } else if (mode === 'signup') {
         const { needsConfirm } = await signUp(email, password, name);
-        if (needsConfirm) { setMode('signin'); say('Račun napravljen — provjeri email za potvrdu, pa se prijavi.', 'ok'); }
+        if (needsConfirm) { setMode('signin'); say(t('au.created'), 'ok'); }
         else S.bloom(() => S.handoff(dest()));
       } else if (mode === 'reset') {
         await sendPasswordReset(email);
-        setMode('signin'); say('Link za reset poslan na ' + email + '.', 'ok');
+        setMode('signin'); say(t('au.resetSent', { email }), 'ok');
       } else if (mode === 'recover') {
         await updatePassword(password);
-        say('Lozinka spremljena — prijavljujem te…', 'ok');
+        say(t('au.saved'), 'ok');
         setTimeout(() => S.bloom(() => S.handoff(dest())), 700);
       }
     } catch (err) {
-      say(err.message || 'Nešto je pošlo po zlu — pokušaj ponovno.', 'err');
+      say(err.message || t('au.oops'), 'err');
     } finally { busy(false); }
   });
 </script>

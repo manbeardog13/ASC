@@ -243,7 +243,7 @@ function animate(){
 (async () => {
   if (/\/login\.html$/.test(location.pathname)) return;
   const doc = document, root = doc.documentElement;
-  const {navigationIcons:I,renderAppNavigation,applyNavAccess,syncThemeButton,installWarehouseMenuReturn,navLabel,searchKey,searchText}=await import('./navigation.js');
+  const {navigationIcons:I,renderAppNavigation,applyNavAccess,syncThemeButton,installWarehouseMenuReturn,navLabel,searchKey,searchText,installLangButton}=await import('./navigation.js');
   const here = location.pathname.split('/').pop() || 'dashboard.html';
   const whPages = ['recycle.html', 'locate.html', 'locations.html', 'place.html', 'checkout.html'];
   const whOpen = whPages.includes(here) ||
@@ -385,6 +385,7 @@ function animate(){
     else { window.ASCTheme?.toggle(); syncTheme(); }
   });
   doc.addEventListener('asc:theme', syncTheme);
+  installLangButton(aside.querySelector('#sbLang'));
   applyNavAccess(aside, null);
   // Global search: Cmd/Ctrl+K or "/" from anywhere opens the sidebar search.
   doc.addEventListener('keydown', (e) => {

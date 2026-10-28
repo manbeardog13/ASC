@@ -1,4 +1,4 @@
-import { renderAppNavigation, applyNavAccess, syncThemeButton } from '../navigation.js';
+import { renderAppNavigation, applyNavAccess, syncThemeButton, installLangButton } from '../navigation.js';
 import { saveOperation, LocalSaveError } from './persistence.js';
 import { parseCroatianIntent, searchLocations, customerLabel } from './journey.js';
 import { createTour } from './tour.js';
@@ -36,6 +36,7 @@ let canEdit=false;
 loadMyProfile().then((profile)=>{applyNavAccess($('asc-navigation'), profile?.role);canEdit=canEditWarehouse(profile?.role);if(!disposed){render();void syncShared();}}).catch(()=>{});
 syncThemeButton($('sbTheme'));
 $('sbTheme')?.addEventListener('click', ()=>{ window.ASCTheme?.toggle(); syncThemeButton($('sbTheme')); });
+installLangButton($('sbLang'));
 const appWarehouseGroup=$('asc-navigation').querySelector('.sb-group');
 appWarehouseGroup.querySelector('button').onclick=()=>{const open=appWarehouseGroup.classList.toggle('open');appWarehouseGroup.querySelector('button').setAttribute('aria-expanded',String(open));appWarehouseGroup.querySelector('.sb-group-kids').inert=!open;};
 for (const [id,name] of Object.entries({'menu-button':'menu','house-icon':'home','search-icon':'search','voice-button':'mic','scan-icon':'scan','zoom-in':'plus','zoom-out':'minus','camera-reset':'focus','place-icon':'plus','list-icon':'list'})) $(id).innerHTML=icon(name);
