@@ -21,6 +21,9 @@ and the vendored QR encoder/decoder, and exports a synthetic A4 PDF and screensh
 to `out/assistant-tests/label-render/` (or `ASC_TEST_OUTPUT`). Its print calls and
 bridge responses are simulated. It checks missing QR generation, print exceptions,
 missing `afterprint`, retries, EN/HR confirmation, and test-print isolation.
+It also injects a rejected system-print Promise for both label and test prints,
+then verifies enabled controls, an actual retry, explicit confirmation, and no
+unhandled rejection or premature check-in completion.
 The PDF is digital evidence only: physical print and scanning a real label in ASC
 remain **UNVERIFIED**. The fixture uses `asc.invalid`, never a customer record.
 

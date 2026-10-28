@@ -61,7 +61,7 @@
     },
     {
       "path": "README.md",
-      "sha256": "d8b632840a2bbc9d57d95addaa303bbf5ad78536f2dbbf817b337c9acb5e40b9"
+      "sha256": "fdff8dfcd177bf0216a54c6941853b7b115f8c5088c58859dffbba71ea35dd71"
     },
     {
       "path": "scenarios.json",
@@ -82,5 +82,6 @@
   ],
   "physicalPrint": "UNVERIFIED",
   "liveScan": "UNVERIFIED",
-  "labelStock": "UNKNOWN"
+  "labelStock": "UNKNOWN",
+  "sourceCommit": "6984d358d0771bdc3b60a76306005dc176a951ab"
 }

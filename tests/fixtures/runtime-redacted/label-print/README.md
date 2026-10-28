@@ -1,9 +1,11 @@
 # Synthetic label print evidence
 
 **Verified fact:** captured on 2026-10-28 from the real `app/qr.js` label renderer,
-with synthetic fields and all browser requests intercepted. Base: ASC `main`
+with synthetic fields and all browser requests intercepted. Capture source:
+`6984d358d0771bdc3b60a76306005dc176a951ab`. Base: ASC `main`
 `39bc6cc6b0cfdbdc19caf10040d914d33fc9229e`. Source hashes and artifact hashes are
-in `manifest.json`; these are author-side mechanical checks, not independent review.
+in `manifest.json`; source hashes refer to that capture commit, not later print-state
+corrections. These are author-side mechanical checks, not independent review.
 
 - [Printable PDF](synthetic-label.pdf): A4 with 10 mm margins, one page.
 - [Mobile render](synthetic-label-mobile.png): 390 × 844, reduced motion.
@@ -67,3 +69,20 @@ Croatian label-sheet chrome and season names remain unchanged.
 the operator prints a real label, photographs it and scans it in ASC. Record that separate
 physical result and actual stock/printer settings. Never treat the PDF, simulated
 confirmation or a browser screenshot as physical evidence.
+
+## Print rejection correction
+
+**Verified fact:** a follow-up fault-injection test on the capture implementation
+made `afterprint` listener registration throw, rejecting the actual system-print
+Promise. Both label and test attempts remained in `printing`. The correction
+catches the rejection as `failed` and releases `busy` in `finally`. The same tests
+then verify enabled controls, an actual retry, explicit confirmation, preserved
+test-print isolation, and zero unhandled rejections.
+
+**Verified fact:** on the correction, `node tests/label-render.browser.cjs` returned
+`label-render: 10 scenarios passed; physical print UNVERIFIED`, and
+`node tests/label-print.browser.cjs` returned `label-print: 5 scenarios passed`.
+The i18n checks again returned `19 passed, 0 failed` and
+`i18n-guard: clean — 15 UI files, no hardcoded text nodes.` The full unit result
+above belongs to the original capture; that suite was not rerun for this scoped
+correction. The captured PDF and image bytes remain unchanged.

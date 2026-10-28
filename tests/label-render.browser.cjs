@@ -102,6 +102,46 @@ async function closeSheet(p) {
       assert.equal(await state(), 'failed');
       assert.equal(await p.locator('#done').textContent(), '');
     });
+    for (const isTest of [false, true]) {
+      await scenario(`system helper rejection releases busy (${isTest ? 'test' : 'label'})`, {}, async ({ p, state }) => {
+        // Event registration is outside systemPrint's renderer/print catches:
+        // throwing here rejects its actual Promise before any print job starts.
+        await p.evaluate(() => {
+          const add = window.addEventListener;
+          window.unhandledPrintRejections = 0;
+          add.call(window, 'unhandledrejection', event => {
+            window.unhandledPrintRejections++; event.preventDefault();
+          });
+          window.addEventListener = function (type, ...args) {
+            if (type === 'afterprint') {
+              window.addEventListener = add;
+              throw new Error('synthetic afterprint registration failure');
+            }
+            return add.call(this, type, ...args);
+          };
+        });
+        await p.locator(isTest ? '.lp-row .ghost' : '.lp-row .btn-primary').click();
+        await closeSheet(p);
+        assert.equal(await state(), 'failed');
+        assert.equal(await p.locator('#done').textContent(), '');
+        assert.equal(await p.evaluate(() => window.printCalls), 0);
+        for (const selector of ['.lp-select', '.lp-row .ghost', '.lp-row .btn-primary']) {
+          assert.equal(await p.locator(selector).isEnabled(), true);
+        }
+        // A retry must really reach the helper again, then require confirmation.
+        await p.locator('.lp-actions .btn').click();
+        assert.equal(await state(), 'printing');
+        assert.equal(await p.evaluate(() => window.printCalls), 1);
+        await p.evaluate(() => dispatchEvent(new Event('afterprint')));
+        await closeSheet(p);
+        assert.equal(await state(), 'confirm');
+        assert.equal(await p.locator('#done').textContent(), '');
+        await p.locator('.lp-actions .btn-primary').click();
+        assert.equal(await state(), isTest ? 'testOk' : 'done');
+        assert.equal(await p.locator('#done').textContent(), isTest ? '' : 'printed');
+        assert.equal(await p.evaluate(() => window.unhandledPrintRejections), 0);
+      });
+    }
     await scenario('missing afterprint stays unconfirmed', {}, async ({ p, state }) => {
       await p.clock.install();
       await p.locator('.lp-row .btn-primary').click();

@@ -115,11 +115,17 @@ export function mountLabelPrint(host, { code, label, onComplete }) {
   async function print(isTest) {
     if (busy || completed) return;
     busy = true;
-    const printer = select.value || SYSTEM;
-    try { localStorage.setItem(siteKey(), printer); } catch (e) {}
-    setState('printing');
-    const result = printer === SYSTEM ? await systemPrint(isTest ? 'TEST' : code, label) : await bridgePrint(printer, isTest ? 'TEST' : code, label, isTest);
-    busy = false;
+    let result;
+    try {
+      const printer = select.value || SYSTEM;
+      try { localStorage.setItem(siteKey(), printer); } catch (e) {}
+      setState('printing');
+      result = printer === SYSTEM ? await systemPrint(isTest ? 'TEST' : code, label) : await bridgePrint(printer, isTest ? 'TEST' : code, label, isTest);
+    } catch (e) {
+      result = 'failed';
+    } finally {
+      busy = false;
+    }
     if (isTest) { setState(result === 'printed' ? 'testOk' : result, undefined, true); return; }
     setState(result);
     if (result === 'printed') complete('printed');
