@@ -17,6 +17,7 @@ import {
 } from '../js/db.js';
 import { t } from '../js/i18n.js';
 import { intakeReturn, placementNeedsSlots, suggestionNote } from '../js/firstRun.js';
+import { mountLabelPrint } from './label-print.js';
 import { slotBlock } from './slot-block.js';
 import { bootOnboarding } from './onboarding.js';
 // db.js's createStorageSet persists the location via store.rememberLocation →
@@ -391,24 +392,20 @@ async function showPlaceStep(code, formData) {
   lead.textContent = t('flow.saved', { code });
   const actions = document.createElement('div');
   actions.className = 'flow-actions';
-  const print = document.createElement('button');
-  print.type = 'button';
-  print.className = 'btn';
-  print.textContent = t('flow.print');
-  print.addEventListener('click', () => {
-    if (window.ASCQR) window.ASCQR.printSticker(code, {
-      who: formData.customer.name,
-      plate: formData.vehicle.plate,
-      season: formData.set.season,
-    });
-  });
+  // Printing the QR label is mandatory: the next steps unlock once it printed
+  // (or the user explicitly retried after a printer problem).
+  const printHost = document.createElement('div');
+  const gated = [];
+  const gate = (el) => { el.setAttribute('aria-disabled', 'true'); el.classList.add('is-gated'); el.title = t('print.gate'); gated.push(el); };
+  const blockGated = (e) => { if (e.currentTarget.getAttribute('aria-disabled') === 'true') e.preventDefault(); };
+  const label = { who: formData.customer.name, plate: formData.vehicle.plate, season: formData.set.season };
+  const startPrint = () => mountLabelPrint(printHost, { code, label, onComplete: () => gated.forEach((el) => { el.removeAttribute('aria-disabled'); el.classList.remove('is-gated'); el.removeAttribute('title'); }) });
   let slotCount = null;
   try { slotCount = await countLocations(); }
   catch (error) { showToast(error.message || t('flow.migration')); }
   if (placementNeedsSlots(slotCount)) {
-    actions.append(print);
-    panel.append(title, lead, actions, slotBlock('empty', intakeReturn(code)));
-    if (window.ASCQR && window.qrcode) print.click();
+    panel.append(title, lead, printHost, actions, slotBlock('empty', intakeReturn(code)));
+    startPrint();
     return;
   }
   const suggest = document.createElement('button');
@@ -441,13 +438,14 @@ async function showPlaceStep(code, formData) {
   record.className = 'btn ghost';
   record.href = 'set-detail.html?code=' + encodeURIComponent(code);
   record.textContent = t('flow.openRecord');
-  actions.append(print, suggest, place, record);
-  panel.append(title, lead, note, actions);
+  [place, record].forEach((el) => { gate(el); el.addEventListener('click', blockGated); });
+  actions.append(suggest, place, record);
+  panel.append(title, lead, printHost, note, actions);
   // Plate-first intake: propose the best free slot straight away (no extra tap);
   // the button stays to ask for another suggestion.
   note.textContent = t('flow.suggesting');
   suggest.click();
-  if (window.ASCQR && window.qrcode) print.click();
+  startPrint();
 }
 
 function installWizard() {
