@@ -59,13 +59,17 @@ export function whereText(loc) {
   return loc.qr_code ? (place ? `${place} · ${loc.qr_code}` : loc.qr_code) : place;
 }
 
-export function scanText(hostId, onText) {
+export function scanText(hostId, onText, onError = () => toast(t("flow.camera"))) {
   const host = document.getElementById(hostId);
   if (!host || !window.ASCQR) {
-    toast(t("flow.camera"));
+    onError();
     return;
   }
-  window.ASCQR.scanInto(hostId, (_code, text) => onText(String(text || "")), () => toast(t("flow.camera")));
+  try {
+    Promise.resolve(window.ASCQR.scanInto(hostId, (_code, text) => onText(String(text || "")), onError)).catch(onError);
+  } catch {
+    onError();
+  }
 }
 
 export function photoFallback(onText) {
