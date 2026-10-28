@@ -107,10 +107,12 @@ export function scan(src) {
 // ---- runner (only when executed directly, not when imported by the self-test) ----
 function main() {
   const ROOT = join(fileURLToPath(new URL(".", import.meta.url)), "..");
-  const viewsDir = join(ROOT, "js", "views");
+  // The legacy js/views SPA is retired; guard the shared UI helpers and the
+  // live app flow modules that build text with t().
+  const appDir = join(ROOT, "app");
   const files = [
     join(ROOT, "js", "ui.js"),
-    ...readdirSync(viewsDir).filter((f) => f.endsWith(".js")).map((f) => join(viewsDir, f)),
+    ...readdirSync(appDir).filter((f) => /^(flow-ui|live-[a-z-]+)\.js$/.test(f)).map((f) => join(appDir, f)),
   ];
   const leaks = [];
   for (const file of files) {

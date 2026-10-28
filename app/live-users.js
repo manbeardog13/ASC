@@ -10,6 +10,7 @@ import {
   inviteUser, setUserRole, removeUser, updateUserName,
   isAdminRole, isOwnerEmail,
 } from '../js/db.js';
+import { t } from '../js/i18n.js';
 
 const ROLES = ['admin', 'manager', 'employee', 'reception', 'readonly'];
 const ROLE_LABEL = {
@@ -88,14 +89,14 @@ function memberRowHtml(row, meId) {
   // The owner account is protected server-side — surface that immutability by
   // replacing its controls with the locked note (same treatment as the mock).
   const body = owner
-    ? `<div class="u-locked">${CHECK_SVG}Vlasnički račun ne može se ukloniti ni mijenjati.</div>`
+    ? `<div class="u-locked">${CHECK_SVG}${t('users.ownerLocked')}</div>`
     : '';
   const actions = owner ? '' : `
     <div class="u-actions">
       ${roleSelectHtml(row, self)}
       <span class="spacer"></span>
-      <button class="btn btn-sm" data-edit data-id="${id}">${EDIT_SVG} Uredi</button>
-      ${self ? '' : `<button class="btn btn-danger btn-sm" data-remove data-id="${id}">${TRASH_SVG} Ukloni</button>`}
+      <button class="btn btn-sm" data-edit data-id="${id}">${EDIT_SVG} ${t('users.edit')}</button>
+      ${self ? '' : `<button class="btn btn-danger btn-sm" data-remove data-id="${id}">${TRASH_SVG} ${t('users.remove')}</button>`}
     </div>`;
   return `<div class="u-row${self || owner ? ' self' : ''}" data-user>
     <span class="uav${admin || owner ? '' : ' user'}">${esc(initials(row.full_name || displayEmail(row)))}</span>
@@ -121,9 +122,9 @@ function apprRowHtml(row) {
       <div class="u-mail">${esc(displayEmail(row))}</div>
     </div>
     <div class="appr-actions">
-      <button class="btn btn-primary btn-sm" data-approve="employee" data-id="${id}">Odobri kao korisnika</button>
-      <button class="btn btn-sm" data-approve="admin" data-id="${id}">Odobri kao administratora</button>
-      <button class="btn btn-ghost btn-sm" data-reject data-id="${id}">Odbij</button>
+      <button class="btn btn-primary btn-sm" data-approve="employee" data-id="${id}">${t('users.approveUser')}</button>
+      <button class="btn btn-sm" data-approve="admin" data-id="${id}">${t('users.approveAdmin')}</button>
+      <button class="btn btn-ghost btn-sm" data-reject data-id="${id}">${t('users.reject')}</button>
     </div>
   </div>`;
 }
