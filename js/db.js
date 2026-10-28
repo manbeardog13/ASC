@@ -32,7 +32,14 @@ export async function getSession() {
 export function onAuthChange(callback) {
   return supabase.auth.onAuthStateChange((event, session) => callback(event, session));
 }
+// Nero-hosted: sign-in, Google and password reset belong to the Nero Summit login.
+function toNeroLogin() {
+  if (config.HOST_MODE !== "nero") return false;
+  location.assign(config.LOGIN_URL);
+  return true;
+}
 export async function signIn(email, password) {
+  if (toNeroLogin()) return;
   const { error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) {
     throw new Error(/Invalid login credentials/.test(error.message)
@@ -46,12 +53,14 @@ export async function signOut() {
 // Email a password-reset link. The link returns to the app with type=recovery,
 // which app.js routes to the "set your password" screen.
 export async function sendPasswordReset(email) {
+  if (toNeroLogin()) return;
   const { error } = await supabase.auth.resetPasswordForEmail((email || "").trim(), { redirectTo: config.APP_BASE_URL });
   if (error) throw new Error(error.message);
 }
 // Google OAuth. Requires the Google provider enabled in Supabase (Auth →
 // Providers) and the app URL listed under Auth → URL Configuration.
 export async function signInWithGoogle() {
+  if (toNeroLogin()) return;
   const { error } = await supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo: config.APP_BASE_URL } });
   if (error) {
     throw new Error(/not enabled|unsupported provider|provider/i.test(error.message)
