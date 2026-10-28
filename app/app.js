@@ -10,6 +10,9 @@
    This file re-reads the same key and wires the interactive toggle + animations.
    ========================================================================= */
 
+// Detail navigation is optional presentation; failed loading keeps ordinary links.
+import('./detail-overlay.js').catch(() => {});
+
 // ---- Live staging gate: every app/ page requires a real Supabase session -----
 // (The mock preview/ demo has no gate.) Hide the page until the check resolves so
 // no mock data flashes before we know who's here; on no session → the login page.
