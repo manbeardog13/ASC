@@ -1140,3 +1140,16 @@ html.dark input:-webkit-autofill{-webkit-box-shadow:0 0 0 1000px var(--panel-2) 
 .sb-burger,.top .mode{font-family:Inter,system-ui,sans-serif}
 
 .sb-lang-k{width:20px;height:20px;flex:none;display:inline-grid;place-items:center;font:700 10px/1 Inter,system-ui,sans-serif;letter-spacing:.02em;border:1.5px solid currentColor;border-radius:6px}
+
+/* Details stay over the originating list without shifting its layout. */
+html.detail-overlay-open { overflow: hidden; }
+.detail-overlay { box-sizing:border-box; width:100%; max-width:none; height:90dvh; max-height:90dvh; margin:auto 0 0; padding:0; border:1px solid var(--line); border-radius:20px 20px 0 0; background:var(--bg); color:var(--ink); overflow:hidden; }
+.detail-overlay::backdrop { background:rgb(0 0 0 / .45); }
+.detail-overlay[open] { display:flex; flex-direction:column; }
+.detail-overlay-close { flex:none; align-self:flex-end; min-width:44px; min-height:44px; margin:8px max(12px,env(safe-area-inset-right)) 8px 12px; padding:8px 16px; border:1px solid var(--line); border-radius:12px; background:var(--panel); color:var(--ink); font:inherit; }
+.detail-overlay-close:focus-visible { outline:2px solid var(--brand); outline-offset:2px; }
+.detail-overlay-frame { flex:1; min-height:0; width:100%; border:0; background:var(--bg); }
+.detail-embedded :is(.sidebar,.topbar,.nero-mark,.sd-back) { display:none!important; }
+.detail-embedded body { padding-left:0!important; }
+.detail-embedded .wrap { margin-inline:auto; padding-inline:16px; }
+@media(min-width:1024px) { .detail-overlay { width:min(700px,60vw); height:100dvh; max-height:100dvh; margin:0 0 0 auto; border-radius:20px 0 0 20px; } }

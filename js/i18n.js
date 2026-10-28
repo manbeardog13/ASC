@@ -57,6 +57,8 @@ export function noun(n, key) { return (NOUNS[key][current] || NOUNS[key].en)(n);
 
 const DICT = {
   en: {
+    "overlay.detail": "Record details",
+    "overlay.close": "Close details",
     // chrome / nav
     "nav.home": "Home", "nav.checkin": "Check in", "nav.scan": "Scan",
     "nav.warehouse": "Warehouse", "nav.customers": "Customers", "nav.users": "Users",
@@ -420,6 +422,8 @@ const DICT = {
     "tour.zone.body": "Zone {zone} has open seats. Check the tires in there.",
   },
   hr: {
+    "overlay.detail": "Podaci zapisa",
+    "overlay.close": "Zatvori podatke",
     "nav.home": "Početna", "nav.checkin": "Zaprimi", "nav.scan": "Skeniraj",
     "nav.warehouse": "Skladište", "nav.customers": "Kupci", "nav.users": "Korisnici",
     "nav.board": "Ploča", "nav.more": "Više", "nav.spatial": "Prostorni pregled", "nav.locate": "Pronađi", "nav.places": "Mjesta",
