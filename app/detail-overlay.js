@@ -6,15 +6,15 @@ const appRoot = new URL('./', import.meta.url);
 const key = 'ascDetailOverlay';
 const embedded = window.parent !== window && new URL(location.href).searchParams.get('overlay') === '1';
 
-  const eligible = href => {
-    const url = new URL(href, location.href);
-    if (url.origin !== appRoot.origin) return null;
-    const file = url.pathname.slice(appRoot.pathname.length);
-    if (!url.pathname.startsWith(appRoot.pathname)) return null;
-    if (file === 'set-detail.html' && url.searchParams.get('code')) return url;
-    if (file === 'customers.html' && (url.searchParams.get('id') || url.searchParams.get('c'))) return url;
-    return null;
-  };
+const eligible = href => {
+  const url = new URL(href, location.href);
+  if (url.origin !== appRoot.origin) return null;
+  if (!url.pathname.startsWith(appRoot.pathname)) return null;
+  const file = url.pathname.slice(appRoot.pathname.length);
+  if (file === 'set-detail.html' && url.searchParams.get('code')) return url;
+  if (file === 'customers.html' && (url.searchParams.get('id') || url.searchParams.get('c'))) return url;
+  return null;
+};
 
 if (embedded) {
   document.documentElement.classList.add('detail-embedded');
@@ -27,10 +27,15 @@ if (embedded) {
   });
   document.addEventListener('keydown', event => {
     if (event.key === 'Escape' && !event.defaultPrevented) {
+      // Capture the inner surface before its own Escape handler removes it.
+      // One key press belongs to the innermost surface, never both levels.
+      const inner = [...document.querySelectorAll('dialog[open], [role="dialog"], [role="menu"]')]
+        .some(element => !element.hidden && element.getClientRects().length > 0 && getComputedStyle(element).visibility !== 'hidden');
+      if (inner) return;
       event.preventDefault();
       window.parent.postMessage({ type: 'asc:close-detail' }, location.origin);
     }
-  });
+  }, true);
 } else if (typeof HTMLDialogElement !== 'undefined') {
   let dialog = null;
   let origin = null;

@@ -2,6 +2,9 @@ const { chromium }=require('playwright');
 const assert=require('node:assert/strict');
 const fs=require('node:fs');const path=require('node:path');const http=require('node:http');
 const root=path.resolve(__dirname,'..');
+const detailSource=fs.readFileSync(path.join(root,'app/set-detail.html'),'utf8');
+const menuWiring=detailSource.slice(detailSource.indexOf('  // Options menu:'),detailSource.indexOf('  // Move panel:'));
+assert.ok(menuWiring.includes("e.key === 'Escape'"));
 const server=http.createServer((req,res)=>{
   const url=new URL(req.url,'http://localhost');
   if(url.pathname.endsWith('.html')){
@@ -29,6 +32,22 @@ const server=http.createServer((req,res)=>{
       assert.deepEqual(await page.locator('body > main').boundingBox(),before,'underlying list does not shift');
       const box=await page.locator('dialog').boundingBox();
       if(width>=1024)assert.ok(box.x>0);else assert.equal(box.x,0);
+      const child=page.frameLocator('iframe');
+      await child.getByRole('button',{name:'Action fixture'}).waitFor();
+      // Install the real detail page's menu wiring after the overlay listener,
+      // matching the review's ordering regression rather than a mock close.
+      await page.frames()[1].evaluate(wiring=>{
+        const controls=document.createElement('div');
+        controls.innerHTML='<button id="sdMenu" aria-expanded="false">Options</button><div id="sdMenuPop" role="menu" hidden><button role="menuitem">Print</button></div>';
+        document.body.append(controls);
+        Function(wiring)();
+      },menuWiring);
+      await child.locator('#sdMenu').click();
+      assert.equal(await child.locator('#sdMenuPop').isVisible(),true);
+      await page.keyboard.press('Escape');
+      await child.locator('#sdMenuPop').waitFor({state:'hidden'});
+      assert.equal(await page.locator('dialog[open]').count(),1,'inner menu consumes the first Escape');
+      assert.ok(page.url().endsWith('set-detail.html?code=ASC-FIXTURE'));
       await page.frameLocator('iframe').getByRole('button',{name:'Action fixture'}).focus();
       await page.keyboard.press('Escape');await page.locator('dialog').waitFor({state:'detached'});
       assert.ok(page.url().endsWith('dashboard.html'));
