@@ -45,6 +45,7 @@ jobs:
           node tests/composer-history.browser.cjs
           node tests/composer-async.browser.cjs
           node tests/dashboard-agent.browser.cjs
+          node tests/label-print.browser.cjs
       - name: Warehouse areas, shared layouts and recovery regression
         env:
           CHROMIUM_PATH: ${{ steps.chrome.outputs.chrome-path }}

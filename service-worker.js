@@ -3,7 +3,7 @@
    same-origin files (so deploys show up right away), cache fallback when
    offline. Live data always comes from Supabase online. */
 const CACHE_PREFIX = "asc-tirehotel-";
-const CACHE = CACHE_PREFIX + "v112-retire-legacy-spa";
+const CACHE = CACHE_PREFIX + "v113-label-printing";
 // Cross-origin dependencies the app cannot boot (or scan) without. Same-origin
 // files are precached below; these are runtime-cached network-first so an
 // offline cold boot doesn't die on the supabase-js ESM import.
@@ -49,6 +49,7 @@ const SHELL = [
   "./js/seasonPlan.js",
   "./app/live-dashboard.js",
   "./app/live-checkin.js",
+  "./app/label-print.js",
   "./app/live-set-detail.js",
   "./app/live-scan.js",
   "./app/live-customers.js",

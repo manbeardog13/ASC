@@ -26,3 +26,15 @@
 .slot-block .btn-primary{background:linear-gradient(135deg,#8b5cf6,#e040d0);color:#fff;border-color:transparent}
 .who-hits{display:flex;flex-direction:column;gap:6px;margin-top:8px}
 .who-hits button{text-align:left}
+
+/* Label printing (brief 07) */
+.lp{display:grid;gap:12px;padding:16px;border-radius:12px;border:1px solid var(--line);background:var(--panel-2)}
+.lp-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.lp-select{flex:1 1 220px;min-height:44px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:0 12px;font:inherit}
+.lp-select:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+.lp-status{margin:0;min-height:1.5em;color:var(--ink-2)}
+.lp[data-state="none"] .lp-status,.lp[data-state="offline"] .lp-status,.lp[data-state="failed"] .lp-status{color:var(--brand-ink)}
+.lp[data-state="printed"],.lp[data-state="done"]{border-color:var(--green-ink,#1c894a)}
+.lp-actions{display:flex;flex-wrap:wrap;gap:8px}
+.lp-actions:empty{display:none}
+.is-gated{opacity:.45;cursor:not-allowed}
