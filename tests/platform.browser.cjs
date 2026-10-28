@@ -7,6 +7,11 @@ async function navigation(browser){
       const p=h.page;
       await p.goto('http://asc.test/app/customers.html');
       await p.waitForSelector('.side');
+      if(width===1440){ // global search shortcut focuses the sidebar search
+        await p.keyboard.press('Control+K');
+        await p.waitForFunction(()=>document.activeElement&&document.activeElement.matches('.sb-search input'),null,{timeout:5000});
+        await p.evaluate(()=>document.activeElement.blur());
+      }
       if(width<=1020){
         assert.equal(await p.locator('.side').evaluate(e=>e.inert),true,'Closed mobile navigation must be inert');
         await p.locator('.sb-burger').click();
