@@ -9,6 +9,13 @@ import { compressImage } from "./images.js";
 import { isOnline, enqueue, initOffline, replay } from "./offline.js";
 import { rememberLocation } from "./store.js";
 
+// Advisory activity never changes whether a business operation succeeded.
+export async function recordActivity(input) {
+  try { const { emitActivity } = await import('./activity-events.js'); return await emitActivity(supabase, input); }
+  catch { return { recorded: false, reason: 'unavailable' }; }
+}
+let activityUser = null;
+
 // Turn a Supabase error into a sentence an employee could read.
 function fail(error, doing) {
   const message = error?.message || String(error);
@@ -30,7 +37,15 @@ export async function getSession() {
   return data.session;
 }
 export function onAuthChange(callback) {
-  return supabase.auth.onAuthStateChange((event, session) => callback(event, session));
+  return supabase.auth.onAuthStateChange((event, session) => {
+    const id = session?.user?.id || null;
+    if (event === 'SIGNED_IN' && id && id !== activityUser) {
+      // Leave the auth callback before asking the client for its session.
+      setTimeout(() => { void recordActivity({ kind: 'login', entity: 'session', entity_id: id, expectedActor: id }); }, 0);
+    }
+    if (['SIGNED_IN', 'INITIAL_SESSION', 'SIGNED_OUT'].includes(event)) activityUser = id;
+    callback(event, session);
+  });
 }
 export async function signIn(email, password) {
   const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -568,6 +583,7 @@ export async function createStorageSet(form) {
     throw e;
   }
 
+  void recordActivity({ kind: 'checkin', entity: 'set', entity_id: set.id, payload: { customer_id: customer.id, outcome: 'ok' } });
   rememberLocation(form.set);
   return set.public_code;
 }
@@ -664,6 +680,7 @@ export async function moveSet({ setId = null, publicCode = null, locationId = nu
     set_id: setId, public_code: publicCode, location_id: locationId, qr_code: qrCode,
   });
   if (error) throw rpcFail(error, "move the set");
+  void recordActivity({ kind: "move", entity: "set", entity_id: setId || publicCode, payload: { location_id: locationId, outcome: "ok" } });
   return data;
 }
 
@@ -673,9 +690,10 @@ export async function checkoutSet({ setId = null, publicCode = null } = {}) {
   const { data, error } = await supabase.rpc("checkout_set", {
     set_id: setId, public_code: publicCode,
   });
-  if (!error) return data;
+  if (!error) { void recordActivity({ kind: "checkout", entity: "set", entity_id: setId || publicCode, payload: { outcome: "ok" } }); return data; }
   if (rpcMissing(error) && setId) {
     await changeStatus(setId, "checked_out");
+    void recordActivity({ kind: "checkout", entity: "set", entity_id: setId, payload: { outcome: "ok" } });
     return { ok: true, fallback: true, public_code: publicCode };
   }
   throw rpcFail(error, "check the set out");

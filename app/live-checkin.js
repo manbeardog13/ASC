@@ -393,7 +393,7 @@ async function showPlaceStep(code, formData) {
   const actions = document.createElement('div');
   actions.className = 'flow-actions';
   // Printing the QR label is mandatory: the next steps unlock once it printed
-  // (or the user explicitly retried after a printer problem).
+  // or the operator confirmed a successful system print.
   const printHost = document.createElement('div');
   const gated = [];
   const gate = (el) => { el.setAttribute('aria-disabled', 'true'); el.classList.add('is-gated'); el.title = t('print.gate'); gated.push(el); };

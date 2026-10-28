@@ -7,6 +7,8 @@ const page=`<!doctype html><html lang="hr"><head><meta charset="utf-8"><link rel
 async function run(browser,{bridge,printers,printOk,name}){
   const ctx=await browser.newContext({viewport:{width:390,height:700}});const p=await ctx.newPage();
   await ctx.route('**/*',async r=>{const u=new URL(r.request().url());
+    if(u.origin!=='http://asc.test')return r.abort();
+    if(u.pathname==='/js/db.js')return r.fulfill({contentType:'text/javascript',body:'export async function recordActivity(){return {recorded:true,id: "fixture"}}'});
     if(u.pathname==='/t.html')return r.fulfill({contentType:'text/html',body:page});
     if(u.pathname==='/bridge/printers')return printers==='down'?r.abort():r.fulfill({contentType:'application/json',body:JSON.stringify({printers})});
     if(u.pathname==='/bridge/print')return r.fulfill({status:printOk?200:422,contentType:'application/json',body:JSON.stringify({ok:!!printOk})});
@@ -21,9 +23,9 @@ async function run(browser,{bridge,printers,printOk,name}){
   let r=await run(browser,{});assert.equal(await r.state(),'readySystem');await r.shot('ready');
   await r.p.click('.lp-row .btn-primary');await r.p.waitForFunction(()=>document.querySelector('.lp').dataset.state==='confirm');await r.shot('confirm');
   assert.equal(await r.p.textContent('#done'),'');await r.p.click('.lp-actions .btn-primary');assert.equal(await r.p.textContent('#done'),'printed');await r.ctx.close();
-  // 2) bridge down -> offline + retry completes as retried
+  // 2) bridge down -> offline + retry stays gated until a successful print
   r=await run(browser,{bridge:'/bridge',printers:'down'});assert.equal(await r.state(),'offline');await r.shot('offline');
-  await r.p.click('.lp-actions .btn');assert.equal(await r.p.textContent('#done'),'retried');await r.ctx.close();
+  await r.p.click('.lp-actions .btn');assert.equal(await r.p.textContent('#done'),'');await r.ctx.close();
   // 3) bridge up, no printers -> none
   r=await run(browser,{bridge:'/bridge',printers:[]});assert.equal(await r.state(),'none');await r.shot('none');await r.ctx.close();
   // 4) bridge printer, print fails -> failed; remembered per site
