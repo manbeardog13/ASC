@@ -1,4 +1,5 @@
 import { t, lang, setLang } from '../js/i18n.js';
+export { applyTenantAccess, loadTenantRole } from '../js/tenantRole.js';
 export const navigationIcons = {
     home: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.2 10.6L12 4l7.8 6.6"/><path d="M5.8 9.4V19a2 2 0 002 2h8.4a2 2 0 002-2V9.4"/></svg>',
     plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5.4v13.2M5.4 12h13.2"/></svg>',
@@ -58,6 +59,8 @@ export function renderAppNavigation({warehouseOpen=false, currentPath=location.p
           item('reminders', 'reminders.html', I.bell, t('nav.reminders'), true) +
           item('workshop', 'workshop.html', I.wrench, t('nav.workshop'), true) +
           item('users', 'users.html', I.users, t('nav.users'), true, true)) +
+      // Nero Summit People page (tenant_admin only, a UI hint; the server enforces access).
+      '<a class="sb-item" data-m="people" data-tenant-admin="1" hidden href="https://app.nerosummit.com/tenant/?t=asc" title="' + t('nav.people') + '">' + I.people + '<span class="t">' + t('nav.people') + '</span></a>' +
       '<button class="sb-item sb-theme" type="button" id="sbTheme" aria-pressed="false">' + I.theme + '<span class="t">' + t('nav.themeDark') + '</span></button>'+
       '<button class="sb-item sb-lang" type="button" id="sbLang" lang="' + (lang() === 'hr' ? 'en' : 'hr') + '" aria-label="' + t('au.langLabel') + '"><span class="sb-lang-k" aria-hidden="true">' + (lang() === 'hr' ? 'EN' : 'HR') + '</span><span class="t">' + t('au.lang') + '</span></button>'
   );
