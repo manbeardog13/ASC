@@ -97,8 +97,10 @@ export function listenOnce({ onInterim } = {}) {
 // Hold-to-speak needs different mechanics than tap-to-talk: CONTINUOUS
 // recognition that accumulates finals for as long as the button is held, and a
 // release() that FINALIZES (stop, never abort — the whole point is committing
-// what was said). Returns { done, release }: `done` resolves with the full
-// transcript once the recognizer drains after release (or on silence timeout).
+// what was said). A pause or a dropped speech-service socket ends the engine
+// early; while the button is still held the same session starts again and keeps
+// the words already heard. Returns { done, release }: `done` resolves with the
+// full transcript once the recognizer drains after release.
 export function listenHold({ onInterim } = {}) {
   if (!SR || listenOnce._active) return null;
   const rec = new SR();
@@ -109,6 +111,11 @@ export function listenHold({ onInterim } = {}) {
 
   let finalText = "";
   let settled = false;
+  let holding = true;
+  let discard = false;
+  let sawNetwork = false;
+  let networkDrops = 0;
+  let hops = 0;
   let settleFn = null;
   const done = new Promise((resolve, reject) => {
     settleFn = { resolve, reject };
@@ -116,8 +123,33 @@ export function listenHold({ onInterim } = {}) {
   const settle = (ok, val) => {
     if (settled) return;
     settled = true;
+    holding = false;
     if (listenOnce._active === rec) listenOnce._active = null;
     ok ? settleFn.resolve(val) : settleFn.reject(val);
+  };
+  // Chrome ends a continuous recognizer on a pause (no-speech) or when the
+  // speech-service socket drops (network), then fires onend. While the button
+  // is still held, start the same session again and keep the words already heard.
+  const arm = () => {
+    if (settled) return;
+    if (!holding) { settle(true, discard ? "" : finalText.trim()); return; }
+    const network = rec._ascNetwork === true;
+    rec._ascNetwork = false;
+    if (network) networkDrops += 1;
+    hops += 1;
+    // A pause must not end the hold. A dead speech socket gets a few retries,
+    // then we stop so a broken engine cannot loop.
+    if (networkDrops >= 6 || hops >= 20) {
+      if (!finalText.trim() && sawNetwork) settle(false, new Error(t("voice.error")));
+      else settle(true, finalText.trim());
+      return;
+    }
+    setTimeout(() => {
+      if (settled) return;
+      if (!holding) { settle(true, discard ? "" : finalText.trim()); return; }
+      try { rec.start(); }
+      catch { settle(true, finalText.trim()); }
+    }, 150);
   };
 
   rec.onresult = (e) => {
@@ -130,19 +162,32 @@ export function listenHold({ onInterim } = {}) {
     if (onInterim) onInterim((finalText + interim).trim());
   };
   rec.onerror = (e) => {
-    if (e.error === "no-speech" || e.error === "aborted") return settle(true, finalText.trim());
     if (e.error === "not-allowed" || e.error === "service-not-allowed") {
-      return settle(false, new Error(t("voice.micDenied")));
+      holding = false;
+      settle(false, new Error(t("voice.micDenied")));
+      return;
     }
-    settle(false, new Error(t("voice.error")));
+    if (e.error === "network") { sawNetwork = true; rec._ascNetwork = true; }
+    // no-speech, aborted and network continue in onend.
   };
-  rec.onend = () => settle(true, finalText.trim());
+  rec.onend = () => arm();
+  rec._ascHold = {
+    release() {
+      holding = false;
+      try { rec.stop(); } catch { settle(true, finalText.trim()); }
+    },
+    discard() {
+      discard = true;
+      holding = false;
+      try { rec.abort(); } catch { settle(true, ""); }
+    },
+  };
 
   try { rec.start(); } catch { return null; }
   listenOnce._active = rec;
   return {
     done,
-    release() { try { rec.stop(); } catch { /* already stopped */ } },
+    release() { rec._ascHold.release(); },
   };
 }
 
@@ -150,12 +195,16 @@ export function isListening() {
   return Boolean(listenOnce._active);
 }
 export function stopListening() {
-  try { listenOnce._active?.stop(); } catch { /* already stopped */ }
+  const rec = listenOnce._active;
+  if (rec?._ascHold) { rec._ascHold.release(); return; }
+  try { rec?.stop(); } catch { /* already stopped */ }
 }
 // abort() discards whatever was heard (stop() would FINALIZE it) — this is
 // what "skip" needs: never commit audio the user is trying to throw away.
 export function abortListening() {
-  try { listenOnce._active?.abort(); } catch { /* already stopped */ }
+  const rec = listenOnce._active;
+  if (rec?._ascHold) { rec._ascHold.discard(); return; }
+  try { rec?.abort(); } catch { /* already stopped */ }
 }
 
 // ---- Normalizers ----------------------------------------------------------------
