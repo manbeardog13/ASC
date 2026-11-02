@@ -21,9 +21,9 @@ async function run(browser,{bridge,printers,printOk,name}){
   let r=await run(browser,{});assert.equal(await r.state(),'readySystem');await r.shot('ready');
   await r.p.click('.lp-row .btn-primary');await r.p.waitForFunction(()=>document.querySelector('.lp').dataset.state==='confirm');await r.shot('confirm');
   assert.equal(await r.p.textContent('#done'),'');await r.p.click('.lp-actions .btn-primary');assert.equal(await r.p.textContent('#done'),'printed');await r.ctx.close();
-  // 2) bridge down -> offline + retry completes as retried
+  // 2) bridge down -> offline + retry stays gated
   r=await run(browser,{bridge:'/bridge',printers:'down'});assert.equal(await r.state(),'offline');await r.shot('offline');
-  await r.p.click('.lp-actions .btn');assert.equal(await r.p.textContent('#done'),'retried');await r.ctx.close();
+  await r.p.click('.lp-actions .btn');assert.equal(await r.p.textContent('#done'),'');await r.ctx.close();
   // 3) bridge up, no printers -> none
   r=await run(browser,{bridge:'/bridge',printers:[]});assert.equal(await r.state(),'none');await r.shot('none');await r.ctx.close();
   // 4) bridge printer, print fails -> failed; remembered per site

@@ -172,7 +172,11 @@
       season: data.season || reg.season || '',
       loc: data.loc || data.location || reg.loc || ''
     };
-    var qrMarkup = svg(code, 8) || ('<div style="font:900 20px monospace">' + esc(code) + '</div>');
+    // A text-only fallback is not a scannable label. Let mandatory printing
+    // remain failed when the QR encoder is unavailable or cannot render.
+    var qrMarkup;
+    try { qrMarkup = svg(code, 8); } catch (e) { return false; }
+    if (!qrMarkup) return false;
     var season = SEASON[set.season] || set.season || '';
     var shape = String(stickerPref('asc.stickerShape', 'rounded')).replace(/[^a-z]/g, '') || 'rounded';
     var showOwner = stickerPref('asc.stickerOwner', '1') !== '0';

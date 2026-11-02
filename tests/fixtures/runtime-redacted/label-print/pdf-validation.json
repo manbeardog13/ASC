@@ -1,0 +1,18 @@
+{
+  "pageCount": 1,
+  "pagePoints": [
+    0,
+    0,
+    595.91998,
+    842.88
+  ],
+  "renderedPixels": [
+    1192,
+    1686
+  ],
+  "text": "ASC   ZIMSKE  ASC-2099-0000  SYNTHETIC TEST ONLY  DEMO · NOT A VEHICLE  LOKACIJA  TEST AREA  Skenirajte kamerom telefona · ASC-2099-0000",
+  "decodedPayload": "https://asc.invalid/app/set-detail.html?code=ASC-2099-0000&k=N68K",
+  "physicalPrint": "UNVERIFIED",
+  "scanInLiveASC": "UNVERIFIED",
+  "labelStockDimensions": "UNKNOWN"
+}

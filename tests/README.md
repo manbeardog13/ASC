@@ -9,6 +9,24 @@ Pure Node checks (Node 22.13+; the VM flag is required for mocked dynamic import
 node --experimental-vm-modules --test tests/*.mjs
 ```
 
+Label evidence (no HTTP server or live print bridge):
+
+```sh
+node tests/label-print.browser.cjs
+node tests/label-render.browser.cjs
+```
+
+`label-render.browser.cjs` intercepts every request, loads the real label renderer
+and the vendored QR encoder/decoder, and exports a synthetic A4 PDF and screenshots
+to `out/assistant-tests/label-render/` (or `ASC_TEST_OUTPUT`). Its print calls and
+bridge responses are simulated. It checks missing QR generation, print exceptions,
+missing `afterprint`, retries, EN/HR confirmation, and test-print isolation.
+It also injects a rejected system-print Promise for both label and test prints,
+then verifies enabled controls, an actual retry, explicit confirmation, and no
+unhandled rejection or premature check-in completion.
+The PDF is digital evidence only: physical print and scanning a real label in ASC
+remain **UNVERIFIED**. The fixture uses `asc.invalid`, never a customer record.
+
 Browser checks require Playwright and an installed Chromium. They serve this
 checkout on loopback and intercept external requests. Set `CHROMIUM_PATH` when
 Chromium is not at `/usr/bin/chromium`. Reports and synthetic screenshots go to
