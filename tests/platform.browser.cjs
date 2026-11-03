@@ -7,12 +7,24 @@ async function navigation(browser){
     const h=await pageFor(browser,{width});
     try{
       const p=h.page;
+      await h.context.addInitScript(()=>localStorage.setItem('asc.profile',JSON.stringify({name:'Previous account',role:'Administrator'})));
       await p.goto('http://asc.test/app/customers.html');
       await p.waitForSelector('.side');
       if(width===1440){ // global search shortcut focuses the sidebar search
         await p.keyboard.press('Control+K');
         await p.waitForFunction(()=>document.activeElement&&document.activeElement.matches('.sb-search input'),null,{timeout:5000});
         await p.evaluate(()=>document.activeElement.blur());
+        await p.locator('.sb-collapse').click();
+        await p.locator('.sb-group[data-group="warehouse"] > button').click();
+        assert.equal(await p.locator('html').getAttribute('data-side'),null,'Warehouse can be opened from the collapsed rail');
+        await p.getByRole('link',{name:'Obilazak skladišta'}).waitFor({state:'visible'});
+        await p.locator('.sb-user').click();
+        await p.keyboard.press('ArrowDown');
+        await p.keyboard.press('ArrowDown');
+        await p.keyboard.press('Enter');
+        assert.equal(await p.locator('.md-panel[data-panel=options]').isVisible(),true,'Settings opens its own panel');
+        await p.keyboard.press('Escape');
+        assert.equal(await p.locator('.sb-user').evaluate(el=>document.activeElement===el),true);
       }
       if(width<=1020){
         assert.equal(await p.locator('.side').evaluate(e=>e.inert),true,'Closed mobile navigation must be inert');
@@ -33,7 +45,19 @@ async function navigation(browser){
         await p.locator('.acct-pop [data-act=profile]').click();
         await p.waitForFunction(()=>!document.querySelector('.menu-drawer').inert);
         assert.equal(await p.locator('main').evaluate(e=>e.inert),true,'Profile drawer must retain background isolation');
+        await p.waitForFunction(()=>document.getElementById('mp-name').value==='UI Audit');
+        assert.equal(await p.locator('#mp-role').evaluate(e=>e.readOnly),true);
+        assert.equal(await p.evaluate(()=>localStorage.getItem('asc.profile')),null);
+        if(width===390){
+          await p.locator('#mp-name').fill('Novi Operater');
+          await p.getByRole('button',{name:'Spremi ime'}).click();
+          await p.waitForFunction(()=>document.getElementById('sbName').textContent==='Novi Operater');
+        }
         await p.locator('.md-close').click();
+        assert.equal(await p.locator('.sb-burger').evaluate(el=>el===document.activeElement),true);
+        await p.locator('.sb-burger').click();
+        await p.getByRole('button',{name:'Zatvori izbornik'}).click();
+        assert.equal(await p.locator('.side').evaluate(el=>el.inert),true);
         await p.setViewportSize({width:1440,height:844});
         await p.waitForFunction(()=>!document.querySelector('.side').inert);
       }else{
@@ -67,7 +91,19 @@ async function authentication(browser){
     try{
       const p=h.page;
       await p.goto('http://asc.test/app/login.html'+(type==='recover'?'#type=recovery':''));
-      if(type==='reset'){await p.locator('#forgot').click();await p.locator('#email').fill('ui@example.invalid');}
+      if(type==='reset'){
+        await p.evaluate(async () => {
+          const {supabase} = await import('/js/supabaseClient.js');
+          supabase.auth.signInWithOAuth = async () => { throw new Error('Synthetic transport failure'); };
+        });
+        await p.locator('#google').click();
+        await p.waitForFunction(() => document.querySelector('#msg').textContent === 'Google prijava nije uspjela.');
+        assert.equal(await p.locator('#submit').isEnabled(), true);
+        await p.locator('#forgot').click();
+        assert.equal(await p.locator('#forgot').innerText(),'Natrag na prijavu');
+        assert.equal(await p.locator('#email').getAttribute('aria-label'),'E-mail adresa');
+        await p.locator('#email').fill('ui@example.invalid');
+      }
       else await p.locator('#password').fill('new-synthetic-password');
       assert.equal(await p.locator('#form').evaluate(e=>e.checkValidity()),true,`Hidden fields must not block ${type}`);
       await p.locator('#submit').click();
@@ -218,8 +254,108 @@ async function locate(browser){
   }
   console.log('PASS locate: ASC styling at390/1440, complete inventory search, loading/error/retry, record preservation, keyboard result navigation');
 }
+async function operationalFeedback(browser) {
+  for (const width of [320, 1440]) {
+    const h = await pageFor(browser, { width });
+    try {
+      const p = h.page;
+      await h.context.route(url => url.pathname === '/js/db.js' && !url.search, route => route.fulfill({
+        contentType: 'text/javascript',
+        body: `export * from '/js/db.js?fixture';
+          const unavailable = async () => { throw new Error('Synthetic service failure'); };
+          export { unavailable as listRecycleBin, unavailable as listUsers };
+          export const listCustomers = async () => location.search === '?sample=1'
+            ? [{id:'c1', name:'Pokusni kupac', vehicles:[{make:'Vozilo', plate:'TEST42', storage_sets:[{public_code:'ASC-2026-0042',season:'winter'}]}]}]
+            : unavailable();
+          export const listStorageSets = async () => {
+            if (location.pathname.endsWith('workshop.html')) return unavailable();
+            return [{id:'one',public_code:'ASC-TEST',status:'in_storage',expected_out_date:'2025-01-01'}];
+          };
+          export const markReminded = async () => {
+            window.attempts = (window.attempts || 0) + 1;
+            if (window.attempts === 1) return unavailable();
+            return {queued:false};
+          };`,
+      }));
+      for (const [file, title] of [['customers','Kupci nisu učitani'], ['recycle','Koš nije učitan.'], ['workshop','Podaci za radionicu nisu učitani.'], ['users','Popis članova nije učitan']]) {
+        await p.goto('http://asc.test/app/' + file + '.html');
+        await p.getByText(title, {exact:false}).first().waitFor({state:'visible'});
+        const retry = p.getByRole('link', {name:'Pokušaj ponovno'});
+        assert.ok((await retry.getAttribute('href')).endsWith(file+'.html'));
+        assert.ok(await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth), file+' overflows');
+      }
+      await p.goto('http://asc.test/app/customers.html?sample=1');
+      await p.locator('.disc-cust > .disc-head').click();
+      await p.locator('.disc-car > .disc-head').click();
+      await p.locator('[data-sticker]').click();
+      await p.locator('.sticker-modal .sm-qr svg').waitFor();
+      assert.equal(await p.locator('.sm-who').innerText(), 'Pokusni kupac');
+      assert.match(await p.locator('.sm-sub').innerText(), /TEST42/);
+      await p.keyboard.press('Escape');
+      await p.locator('.sticker-modal').waitFor({state:'detached'});
+      await p.goto('http://asc.test/app/reminders.html');
+      const pending = p.locator('[data-sec=overdue] [data-remind]');
+      await pending.click();
+      await p.waitForFunction(() => document.querySelector('#toastMsg').textContent.includes('Neuspjelo: 1'));
+      assert.equal(await pending.isVisible(), true, 'Failed write must leave the reminder actionable');
+      p.once('dialog', dialog => dialog.dismiss());
+      await p.locator('.rem-stage .cta').click();
+      assert.equal(await p.evaluate(() => window.attempts), 1, 'Cancel must not mark any customer');
+      await pending.click();
+      await p.waitForFunction(() => !document.querySelector('[data-sec=overdue] .rr'));
+      await p.locator('.rem-rested summary').click();
+      assert.equal(await p.locator('.rem-rested .rr-code').innerText(), 'ASC-TEST');
+      assert.equal(await p.locator('.rem-stage .cta').isVisible(), false);
+      assert.deepEqual(h.errors, []);
+    } finally { await h.context.close(); }
+  }
+  console.log('PASS staff feedback: truthful customer, bin, workshop and user errors, confirmed reminder writes, bulk cancellation, 320/1440px');
+}
+async function staffWorkflowAccess(browser) {
+  for (const [route, role] of [['checkin','readonly'],['locations','unknown'],['place','failed'],['checkout','changed']]) {
+    const h = await pageFor(browser, {width:390, theme:'dark'});
+    try {
+      await h.context.addInitScript(role => {
+        window.__staffProfile = async () => {
+          if (role === 'failed') throw Error('Synthetic unavailable profile');
+          return {id:role === 'changed' ? 'different-user' : 'ui-audit', role:role === 'changed' ? 'admin' : role};
+        };
+      }, role);
+      const loads = [];
+      h.page.on('request', req => { if (req.url().endsWith('/live-'+route+'.js')) loads.push(req.url()); });
+      await h.page.goto('http://asc.test/app/'+route+'.html');
+      const panel = h.page.locator('.workflow-gate');
+      await panel.waitFor();
+      assert.match(await panel.innerText(), role === 'failed' || role === 'changed' ? /Ovlasti nisu provjerene/ : /Pristup na čekanju/);
+      assert.equal(await h.page.locator('main form:visible').count(), 0);
+      assert.equal(await panel.getByRole('link',{name:'Ploča'}).getAttribute('href'), 'dashboard.html');
+      assert.deepEqual(loads, [], 'Denied workflow must not request its scanner, inventory or mutation module');
+      assert.deepEqual(h.errors, []);
+    } finally { await h.context.close(); }
+  }
+  const h = await pageFor(browser, {width:1440,theme:'light'});
+  try {
+    await h.context.addInitScript(() => {
+      window.__staffProfile = () => new Promise(resolve => {
+        (window.__releaseStaff ||= []).push(() => resolve({id:'ui-audit',role:'reception',onboarded_at:'2026-01-01'}));
+      });
+    });
+    await h.page.goto('http://asc.test/app/locations.html?zone=A',{waitUntil:'commit'});
+    await h.page.waitForFunction(() => window.__releaseStaff?.length > 0);
+    assert.equal(await h.page.locator('#loc-zone').count(), 0);
+    await h.page.evaluate(() => {
+      window.__staffProfile = async () => ({id:'ui-audit',role:'reception',onboarded_at:'2026-01-01'});
+      window.__releaseStaff.forEach(release => release());
+    });
+    await h.page.locator('#loc-zone').waitFor();
+    assert.equal(await h.page.locator('#loc-zone').inputValue(), 'A');
+    assert.equal(await h.page.locator('.workflow-gate').count(), 0);
+    assert.deepEqual(h.errors, []);
+  } finally { await h.context.close(); }
+  console.log('PASS staff workflow access: four routes fail closed, deferred profile prevents early scanner or form start, reception resumes normal work');
+}
 (async()=>{
   const browser=await start();
-  try{await navigation(browser);await authentication(browser);await intakeAndIntroduction(browser);await locate(browser);}
+  try{await navigation(browser);await authentication(browser);await intakeAndIntroduction(browser);await locate(browser);await operationalFeedback(browser);await staffWorkflowAccess(browser);}
   finally{await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

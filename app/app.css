@@ -401,7 +401,7 @@ html[data-side="rail"] .sb-user{justify-content:center;padding:8px 0}
 .acct-item.danger{color:var(--lava-ink)}
 .acct-div{height:1px;background:var(--line);margin:5px 8px}
 /* mobile: hamburger + overlay */
-.sb-burger{display:none}
+.sb-burger,.sb-dismiss{display:none}
 .side-scrim{position:fixed;inset:0;z-index:114;background:rgba(6,7,10,.45);opacity:0;visibility:hidden;
   transition:opacity .28s var(--smooth),visibility .28s;-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)}
 @media(max-width:1020px){
@@ -412,6 +412,9 @@ html[data-side="rail"] .sb-user{justify-content:center;padding:8px 0}
   .side{padding-left:max(10px,env(safe-area-inset-left,0px))}
   html.side-open .side-scrim{opacity:1;visibility:visible}
   .sb-collapse{display:none}
+  .sb-dismiss{display:grid;place-items:center;width:44px;height:44px;border:0;border-radius:50%;background:var(--panel);color:var(--ink);cursor:pointer}
+  .acct-item,.md-tab{min-height:44px}
+  .md-close{min-width:44px;min-height:44px}
   .sb-burger{display:grid;place-items:center;width:48px;height:48px;border:0;border-radius:14px;cursor:pointer;
     background:var(--panel);color:var(--ink);flex:none;transition:transform 140ms var(--snap)}
   .sb-burger:active{transform:scale(.92)}
@@ -1128,7 +1131,7 @@ html.has-composer [data-nero-move]{display:none!important}
 .sb-kid{min-height:34px}
 .sb-div{margin:8px 10px}
 .sb-eyebrow2{padding:10px 12px 4px}
-@media(max-width:1020px){.sb-item{min-height:44px}.sb-kid{min-height:40px}}
+@media(max-width:1020px){.sb-item,.sb-kid{min-height:44px}}
 
 /* Inputs: one ASC field style everywhere (from .md-field), never white, autofill included. */
 :where(input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]):not([type=color]),select,textarea):not(.nero-input){
@@ -1157,3 +1160,11 @@ html.detail-overlay-open { overflow: hidden; }
 .detail-embedded body { padding-left:0!important; }
 .detail-embedded .wrap { margin-inline:auto; padding-inline:16px; }
 @media(min-width:1024px) { .detail-overlay { width:min(700px,60vw); height:100dvh; max-height:100dvh; margin:0 0 0 auto; border-radius:20px 0 0 20px; } }
+
+@media(prefers-reduced-motion:reduce){
+  .side :is(button,a):is(:hover,:active),.sb-burger:active,.md-close:active{transform:none}
+  .menu-scrim,.menu-drawer,.side-scrim,.side,.acct-pop{transition:none!important;animation:none!important}
+}
+
+.sb-item[hidden],.md-link[hidden],.md-ava-btn[hidden]{display:none}
+.md-avatar img{display:block;width:100%;height:100%;object-fit:cover;border-radius:50%}

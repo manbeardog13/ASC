@@ -57,6 +57,11 @@ async function themes(browser) {
 async function entry(browser) {
   const h = await contextFor(browser);
   try {
+    // Sample the documented animation phase at a fixed elapsed time,
+    // independently of Chromium scheduling other browser suites.
+    const start = new Date('2030-01-01T09:00:00Z');
+    await h.page.clock.install({ time: start });
+    await h.page.clock.pauseAt(new Date(start.getTime() + 1000));
     await h.page.goto('http://asc.test/app/dashboard.html');
     assert.equal(await h.page.evaluate(() => ASCSplash.mode), 'cold');
     assert.equal(await h.page.locator('#splash').isVisible(), true);
@@ -65,7 +70,7 @@ async function entry(browser) {
     await h.page.keyboard.press('Shift+Tab');
     assert.equal(await h.page.locator('.asc-entry-skip').evaluate(el=>el===document.activeElement),true,'Keyboard focus cannot reach covered business controls during the intro');
     await h.page.evaluate(() => ASCSplash.done());
-    await h.page.waitForTimeout(1500);
+    await h.page.clock.runFor(1500);
     assert.equal(await h.page.locator('#splash').isVisible(), true, 'The full final second of the slow approach is retained on a fast auth response');
     const frame = await h.page.locator('.sp-core').evaluate(el => {
       const c = getComputedStyle(el);
@@ -76,6 +81,7 @@ async function entry(browser) {
     const output = path.join(repo, 'out/brand-tests');
     fs.mkdirSync(output, { recursive: true });
     await h.page.screenshot({ path: path.join(output, 'asc-entry-desktop.png') });
+    await h.page.clock.runFor(1000);
     await h.page.waitForFunction(() => document.querySelector('#splash').hidden);
     assert.equal(await h.page.evaluate(() => sessionStorage.getItem('asc.splash.warm')), '1');
     assert.equal(await h.page.locator('img.logo').count(), 1, 'The original clickable logo element is retained');

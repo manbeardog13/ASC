@@ -28,7 +28,8 @@ const session=${session};
 export const supabase={auth:{getSession:async()=>({data:{session},error:null}),onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}}),signInWithPassword:async()=>({}),signOut:async()=>{},updateUser:async()=>({})}};`;
 const dbOverrides = {
   getSession: 'export const getSession=async()=>session;',
-  loadMyProfile: 'export const loadMyProfile=async()=>({full_name:"Smoke",role:"employee",email:"smoke@example.com",onboarded_at:null});',
+  canEditWarehouse: "export const canEditWarehouse=role=>['admin','manager','employee','reception'].includes(role);",
+  loadMyProfile: 'export const loadMyProfile=async()=>({id:"smoke",full_name:"Smoke",role:"employee",email:"smoke@example.com",onboarded_at:null});',
   createStorageSet: 'export const createStorageSet=async()=>"ASC-2026-0099";',
   countLocations: 'export const countLocations=async()=>location.pathname.endsWith("/place.html")?1:0;',
   listLocationSeats: `export const listLocationSeats=async()=>{
@@ -103,7 +104,7 @@ const pages = [
   ['/app/locate.html', 'Pronađi komplet', '() => Boolean(document.querySelector("#flow-root input"))'],
   ['/app/locations.html', 'Naljepnice mjesta', '() => Boolean(document.getElementById("loc-zone"))'],
   ['/app/locations.html?return=' + encodeURIComponent('checkin.html?place=ASC-2026-0099'), 'Natrag na zaprimanje', '() => { const a=document.getElementById("back-to-intake"); return Boolean(a && a.getAttribute("href")==="checkin.html?place=ASC-2026-0099"); }'],
-  ['/app/warehouse-preview/index.html', 'Prostorni pregled', '() => document.querySelectorAll("#asc-navigation a").length===12'],
+  ['/app/warehouse-preview/index.html', 'Prostorni pregled', '() => document.querySelectorAll("#asc-navigation a").length===13 && Boolean(document.querySelector(\'#asc-navigation a[href*="spatial-studio/index.html?guide=1"]\'))'],
 ];
 
 function which(name) {

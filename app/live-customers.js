@@ -65,16 +65,18 @@ function normalize(rows) {
 }
 
 // ---- Row builders (same DOM the page has always drawn) ----------------------
-function setRow(s) {
+function setRow(s, vehicle, customerName) {
   return '<div class="set-row">'
     + '<a class="set-open" href="set-detail.html?code=' + encodeURIComponent(s.public_code) + '"><span class="code">' + esc(s.public_code) + '</span>'
     + '<span class="set-tags">' + statusChip(s.status) + seasonChip(s.season) + '</span></a>'
-    + '<button class="set-sticker" type="button" data-sticker="' + esc(s.public_code) + '" title="Generiraj naljepnicu" aria-label="Generiraj naljepnicu za ' + esc(s.public_code) + '">' + QRI + '</button>'
+    + '<button class="set-sticker" type="button" data-sticker="' + esc(s.public_code) + '"'
+    + ' data-who="' + esc(customerName) + '" data-vehicle="' + esc(vehicle.label !== vehicle.plate ? vehicle.label : '') + '"'
+    + ' data-plate="' + esc(vehicle.plate) + '" data-season="' + esc(s.season) + '" title="Generiraj naljepnicu" aria-label="Generiraj naljepnicu za ' + esc(s.public_code) + '">' + QRI + '</button>'
     + '</div>';
 }
-function carDisc(v) {
+function carDisc(v, customerName) {
   const n = v.sets.length;
-  const body = n ? v.sets.map(setRow).join('') : '<div ' + MUTED_LINE + '>Nema kompleta</div>';
+  const body = n ? v.sets.map(set => setRow(set, v, customerName)).join('') : '<div ' + MUTED_LINE + '>Nema kompleta</div>';
   return '<div class="disc disc-car" data-open="false">'
     + '<button class="disc-head" type="button" aria-expanded="false"><span class="disc-ico" aria-hidden="true">' + CAR + '</span>'
     + '<span class="disc-titles"><span>' + esc(v.label) + '</span>' + (v.plate ? '<small>' + esc(v.plate) + '</small>' : '') + '</span>'
@@ -89,7 +91,7 @@ function contactRow(c) {
 }
 function custDisc(c) {
   const nV = c.vehicles.length, nS = c.setCount;
-  const cars = nV ? c.vehicles.map(carDisc).join('') : '<div ' + MUTED_LINE + '>Nema vozila</div>';
+  const cars = nV ? c.vehicles.map(vehicle => carDisc(vehicle, c.name)).join('') : '<div ' + MUTED_LINE + '>Nema vozila</div>';
   return '<div class="disc disc-cust" data-open="false" data-id="' + esc(c.id) + '" data-name="' + esc(c.name.toLowerCase()) + '">'
     + '<button class="disc-head" type="button" aria-expanded="false"><span class="disc-ico" aria-hidden="true">' + esc(initials(c.name)) + '</span>'
     + '<span class="disc-titles"><span>' + esc(c.name) + '</span><small>' + nV + ' ' + pluralV(nV) + ' · ' + nS + ' ' + setsNoun(nS) + '</small></span>'
@@ -175,7 +177,8 @@ if (listEl) listEl.addEventListener('click', (e) => {
   if (!btn) return;
   e.preventDefault(); e.stopPropagation();
   const code = btn.getAttribute('data-sticker');
-  if (window.ASCQR && !window.ASCQR.printSticker(code)) alert('Dopustite skočne prozore za ispis naljepnice.');
+  if (!window.ASCQR?.printSticker(code, btn.dataset)) alert('QR oznaka nije spremna. Ponovno učitajte stranicu pa pokušajte ispis.');
+
 });
 
 // The gate in app.js races this against a 1200ms cap before revealing the page,
@@ -191,7 +194,9 @@ window.ascLiveFirst = new Promise((r) => { liveFirstDone = r; });
   try {
     rows = await listCustomers();
   } catch (e) {
-    console.warn('[live] customers data failed — keeping the empty-state skeleton:', e);
+    console.warn('[live] customers data failed:', e);
+    q('.chero .cap').textContent = 'Podaci nisu dostupni';
+    listEl.innerHTML = '<div class="cempty" role="status"><h4>Kupci nisu učitani</h4><p>Provjerite vezu pa ponovno otvorite popis.</p><a class="go" href="customers.html">Pokušaj ponovno</a></div>';
     liveFirstDone();
     return;
   }

@@ -30,13 +30,14 @@ function pageFile(pathname) {
 export function renderAppNavigation({warehouseOpen=false, currentPath=location.pathname}={}) {
   const I=navigationIcons, whOpen=warehouseOpen;
   const item=(m,href,icon,label,kid,admin)=>{
-    const path=new URL(href,APP_ROOT).pathname;
+    const target=new URL(href,APP_ROOT);
+    const path=target.pathname;
     const active=currentPath===path || (href==='warehouse-preview/index.html' && currentPath===new URL('warehouse-preview/',APP_ROOT).pathname);
-    return '<a class="sb-item'+(kid?' sb-kid':'')+(active?' on':'')+'" data-m="'+m+'"'+(admin?' data-admin="1"':'')+' href="'+path+'"'+(active?' aria-current="page"':'')+' title="'+label+'">'+icon+'<span class="t">'+label+'</span></a>';
+    return '<a class="sb-item'+(kid?' sb-kid':'')+(active?' on':'')+'" data-m="'+m+'"'+(admin?' data-admin="1" hidden':'')+' href="'+path+target.search+'"'+(active?' aria-current="page"':'')+' title="'+label+'">'+icon+'<span class="t">'+label+'</span></a>';
   };
   const group=(key,label,icon,open,kids)=>
     '<div class="sb-group' + (open ? ' open' : '') + '" data-group="' + key + '">' +
-      '<button class="sb-item" type="button" data-m="' + key + '" aria-expanded="' + open + '">' + icon + '<span class="t">' + label + '</span>' + I.chev + '</button>' +
+      '<button class="sb-item" type="button" data-m="' + key + '" title="' + label + '" aria-label="' + label + '" aria-expanded="' + open + '">' + icon + '<span class="t">' + label + '</span>' + I.chev + '</button>' +
       '<div class="sb-group-kids"' + (open ? '' : ' inert') + '><div>' + kids + '</div></div></div>';
   const here=pageFile(currentPath);
   const moreOpen=['scan.html','reminders.html','workshop.html','users.html'].includes(here);
@@ -46,6 +47,7 @@ export function renderAppNavigation({warehouseOpen=false, currentPath=location.p
       item('checkin', 'checkin.html', I.plus, t('nav.checkin')) +
       group('warehouse', t('nav.warehouse'), I.pin, whOpen,
           item('warehouse', 'warehouse-preview/index.html', I.map, t('nav.spatial'), true) +
+          item('warehouse', 'spatial-studio/index.html?guide=1', I.map, t('nav.tour'), true) +
           item('locate', 'locate.html', I.pin, t('nav.locate'), true) +
           item('warehouse', 'checkout.html', I.out, t('nav.checkout'), true) +
           item('locations', 'locations.html', I.spark, t('nav.places'), true) +

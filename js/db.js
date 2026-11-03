@@ -80,7 +80,7 @@ export async function signUp(email, password, fullName) {
   // With email confirmation on, no session is returned until the user confirms.
   return { needsConfirm: !data.session };
 }
-export async function loadMyProfile() {
+export async function loadMyProfile({ verifyAccess = false } = {}) {
   const session = await getSession();
   if (!session) return null;
   const base = "id, email, full_name, role, avatar_url";
@@ -90,6 +90,13 @@ export async function loadMyProfile() {
   if (error && /onboarded_at/i.test(error.message || "")) {
     const retry = await supabase.from("profiles").select(base).eq("id", session.user.id).maybeSingle();
     data = retry.data ? { ...retry.data, onboarding_unavailable: true } : null;
+    error = retry.error;
+  }
+  // Permission checks must distinguish a failed read from a pending account
+  // and never update profile metadata as a side effect.
+  if (verifyAccess) {
+    if (error) throw fail(error, "verify staff access");
+    return data ?? { id: session.user.id, role: "readonly" };
   }
   // Google sign-ins carry the person's name in auth metadata while the profiles
   // row starts empty — adopt it so greetings and the agent know who this is,
@@ -811,15 +818,31 @@ export async function createLocations(rows) {
     throw new Error("Locations are not switched on yet. Apply the locations migration, then try again.");
   }
   if (inserted.error) throw fail(inserted.error, "create the slots");
-  const warehouse = payload[0].warehouse;
-  const zone = payload[0].zone;
-  const listed = await supabase.from("locations")
-    .select("id, warehouse, zone, rack, shelf, slot, qr_code, status")
-    .eq("warehouse", warehouse)
-    .eq("zone", zone);
-  if (listed.error) return inserted.data ?? [];
-  const want = new Set(payload.map((row) => [row.rack, row.shelf, row.slot].join("\0")));
-  return (listed.data ?? []).filter((row) => want.has([row.rack, row.shelf, row.slot].join("\0")));
+  // Existing rows are omitted from an ignoreDuplicates response. A complete
+  // batch must include their real QR codes too, even past PostgREST's page cap.
+  const rowKey = row => JSON.stringify([row.warehouse, row.zone, row.rack, row.shelf, row.slot]);
+  const requested = new Map(payload.map(row => [rowKey(row), row]));
+  const verified = new Map((inserted.data || []).map(row => [rowKey(row), row]));
+  const zones = new Map();
+  for (const [key, row] of requested) {
+    if (!verified.has(key)) zones.set(JSON.stringify([row.warehouse, row.zone]), row);
+  }
+  for (const { warehouse, zone } of zones.values()) {
+    const listed = await allWarehouseRows(cursor => {
+      let query = supabase.from("locations")
+        .select("id, warehouse, zone, rack, shelf, slot, qr_code, status")
+        .eq("warehouse", warehouse).eq("zone", zone).order("id").limit(1000);
+      if (cursor !== null) query = query.gt("id", cursor);
+      return query;
+    }, "verify the slot labels");
+    for (const row of listed) {
+      const key = rowKey(row);
+      if (requested.has(key)) verified.set(key, row);
+    }
+  }
+  const labels = Array.from(requested.keys(), key => verified.get(key));
+  if (labels.some(row => !row?.qr_code)) throw new Error("Nisu potvrđene sve QR naljepnice.");
+  return labels;
 }
 
 export function locationLabel(loc) {

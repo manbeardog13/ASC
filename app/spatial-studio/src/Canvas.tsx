@@ -23,7 +23,10 @@ import {
   type RackShape,
   type Room,
 } from "./canvas-geometry";
+import { createWalker, type Walker } from "./walk-space";
+import { WalkCamera, WalkControls, WalkMarker } from "./WalkControls";
 import "./canvas.css";
+type Building = ReturnType<typeof geometry.createBuilding>;
 export type CanvasProps = {
   spaceId: string;
   width: number;
@@ -34,7 +37,7 @@ export type CanvasProps = {
   placing: boolean;
   onSelect: (id: string) => void;
   onPlace: (x: number, z: number) => void;
-  mode?: "3d" | "plan";
+  mode?: "3d" | "plan" | "walk";
 };
 export type CanvasRack = RackShape;
 type Item = { rack: RackShape; pos: T.Vector3; dim: boolean };
@@ -146,21 +149,20 @@ function Rig({
   return null;
 }
 function Architecture({
+  building,
   id,
   placing,
   onPick,
   wallBounds,
 }: {
+  building: Building;
   id: string;
   placing: boolean;
   onPick: (x: number, z: number) => void;
   wallBounds: React.RefObject<T.Box3[]>;
 }) {
-  const building = useMemo(() => geometry.createBuilding(T), []);
   const { invalidate, raycaster } = useThree();
   useLayoutEffect(() => {
-    building.setView(id);
-    building.setCutaway("review");
     building.root.updateWorldMatrix(true, true);
     const boxes: T.Box3[] = [];
     building.root.traverseVisible((o) => {
@@ -170,7 +172,6 @@ function Architecture({
     wallBounds.current = boxes;
     invalidate();
   }, [building, id, wallBounds, invalidate]);
-  useEffect(() => () => building.dispose(), [building]);
   const pick = (ev: ThreeEvent<MouseEvent>) => {
     if (!placing || ev.delta > 5) return;
     const hits = raycaster.intersectObjects(
@@ -265,6 +266,8 @@ function Batch({
 }
 function Stage(
   p: CanvasProps & {
+    building: Building;
+    walker: Walker | null;
     room: Room;
     onUnavailable: () => void;
     warn: (s: string) => void;
@@ -272,7 +275,37 @@ function Stage(
 ) {
   const { room } = p;
   const wallBounds = useRef<T.Box3[]>([]);
-  const { gl } = useThree();
+  const { gl, invalidate } = useThree();
+  // A faint grid on the existing pick surfaces makes movement legible on the
+  // bare schematics. Voids and shelves keep their actual silhouettes.
+  useLayoutEffect(() => {
+    if (!p.walker) return;
+    const lines = new T.ShaderMaterial({
+      transparent: true, depthWrite: false, side: T.DoubleSide,
+      vertexShader: `varying vec2 plan;
+        void main() {
+          vec4 world = modelMatrix * vec4(position, 1.);
+          plan = world.xz;
+          gl_Position = projectionMatrix * viewMatrix * world;
+        }`,
+      fragmentShader: `varying vec2 plan;
+        void main() {
+          vec2 w = max(fwidth(plan), vec2(.0001));
+          vec2 grid = abs(fract(plan + .5) - .5) / w;
+          float edge = 1. - min(min(grid.x, grid.y), 1.);
+          float fade = 1. - smoothstep(.04, .22, max(w.x, w.y));
+          gl_FragColor = vec4(.16,.20,.19,.13 * edge * fade);
+        }`,
+    });
+    const surfaces = p.building.targets.filter(t => t.userData.spaceId === p.spaceId);
+    const original = surfaces.map(t => t.material);
+    for (const surface of surfaces) surface.material = lines;
+    invalidate();
+    return () => {
+      surfaces.forEach((surface,i) => {surface.material = original[i]});
+      lines.dispose();
+    };
+  }, [p.walker, p.building, p.spaceId, invalidate]);
   useEffect(() => {
     const lost = (e: Event) => {
       e.preventDefault();
@@ -310,25 +343,43 @@ function Stage(
       p.onPlace(local.x, local.z);
     } else p.warn("Odaberite slobodan dio čvrstog poda.");
   };
+  const walk = !!p.walker;
+  const span = Math.max(room.width,room.depth) * 0.65;
+  const sunTarget = useMemo(() => {
+    const target = new T.Object3D();
+    if (walk) target.position.set(room.x,room.y,room.z);
+    return target;
+  }, [room,walk]);
   return (
     <>
-      <color attach="background" args={["#111719"]} />
-      <ambientLight intensity={1.3} />
-      <hemisphereLight args={["#e4ecf4", "#707376", 1.7]} />
+      <color attach="background" args={[walk ? "#333e42" : "#111719"]} />
+      {walk && <fog attach="fog" args={["#647171", 14, 58]} />}
+      <ambientLight intensity={walk ? 0.39 : 1.3} />
+      <hemisphereLight args={["#e4ecf4", walk ? "#645950" : "#707376", walk ? 0.95 : 1.7]} />
+      <primitive object={sunTarget} />
       <directionalLight
         position={[room.x + 8, room.y + 15, room.z + 11]}
-        intensity={2.6}
+        target={sunTarget}
+        intensity={walk ? 1.85 : 2.6}
+        color={walk ? "#ffecd4" : "#ffffff"}
+        castShadow={walk}
+        shadow-mapSize-width={1024} shadow-mapSize-height={1024}
+        shadow-camera-left={-span} shadow-camera-right={span}
+        shadow-camera-top={span} shadow-camera-bottom={-span}
+        shadow-camera-near={0.1} shadow-camera-far={65}
+        shadow-normalBias={0.025} shadow-bias={-0.0002}
       />
       <directionalLight
         position={[room.x - 7, room.y + 8, room.z - 7]}
         color="#a2c9ff"
-        intensity={1.1}
+        intensity={walk ? 0.36 : 1.1}
       />
       <gridHelper
         args={[90, 90, "#526264", "#303c3c"]}
         position={[room.x, room.y - 0.24, room.z]}
       />
       <Architecture
+        building={p.building}
         id={p.spaceId}
         wallBounds={wallBounds}
         placing={p.placing}
@@ -361,11 +412,12 @@ function Stage(
           </mesh>
         </group>
       )}
-      <Rig room={room} selected={selected} wallBounds={wallBounds} />
+      {p.walker ? <WalkCamera room={room} walker={p.walker} /> :
+        <Rig room={room} selected={selected} wallBounds={wallBounds} />}
     </>
   );
 }
-function Plan(p: CanvasProps & { room: Room; warn: (s: string) => void }) {
+function Plan(p: CanvasProps & { room: Room; walker?: Walker | null; warn: (s: string) => void }) {
   const s = p.room,
     hw = s.width / 2,
     hd = s.depth / 2,
@@ -473,6 +525,7 @@ function Plan(p: CanvasProps & { room: Room; warn: (s: string) => void }) {
           </g>
         );
       })}
+      {p.walker?.pose && <WalkMarker walker={p.walker} />}
     </svg>
   );
 }
@@ -493,10 +546,29 @@ class Boundary extends React.Component<
 }
 export default function WarehouseCanvas(p: CanvasProps) {
   const [failed, setFailed] = useState(false),
-    [chosen, choose] = useState<"3d" | "plan">("3d"),
+    [chosen, choose] = useState<"3d" | "plan" | "walk">("3d"),
     [message, warn] = useState("");
   const architecture = geometry.getSpace(p.spaceId);
   const room = architecture || operatorPlan(p.spaceId, p);
+  const host = useRef<HTMLDivElement>(null);
+  const requested = p.mode || chosen;
+  const walking = requested === "walk" && !!architecture;
+  const wantsBuilding = !!architecture && requested !== "plan";
+  const building = useMemo(() => {
+    if (!wantsBuilding) return null;
+    const model = geometry.createBuilding(T);
+    model.setView(p.spaceId);
+    model.setCutaway(walking ? "closed" : "review");
+    return model;
+  }, [p.spaceId, wantsBuilding, walking]);
+  useEffect(() => () => building?.dispose(), [building]);
+  const rackPoints = useMemo(() => !architecture ? [] : p.racks.map(r => ({
+    x: r.x * architecture.width / p.width, z: r.z * architecture.depth / p.depth,
+  })), [architecture, p.width, p.depth, p.racks]);
+  const walker = useMemo(() => walking && building && architecture ?
+    createWalker(architecture, building.root, rackPoints) : null,
+    [walking, building, architecture]);
+  useLayoutEffect(() => { if (walker) walker.racks = rackPoints; }, [walker, rackPoints]);
   useEffect(() => {
     warn("");
   }, [p.spaceId, p.placing]);
@@ -507,24 +579,31 @@ export default function WarehouseCanvas(p: CanvasProps) {
         Geometrija ovog prostora nije povezana.
       </div>
     );
-  const plan = !architecture || (p.mode || chosen) === "plan" || failed;
+  const plan = !building || failed || (walking && !walker?.pose);
+  const target = walker && p.racks.find(r => r.id === p.selectedId && supported(p.spaceId, p, r.x, r.z));
+  const destination = target ? {label: target.label, x: target.x*room.width/p.width, z: target.z*room.depth/p.depth} : undefined;
   return (
-    <div className={"asc-spatial-canvas" + (p.placing ? " placing" : "")}>
+    <div ref={host} role={walking ? "group" : undefined}
+      aria-label={walking ? "Obilazak prostora. Kretanje strelicama, pogled povlačenjem." : undefined}
+      tabIndex={walking ? 0 : undefined}
+      className={"asc-spatial-canvas" + (p.placing ? " placing" : "") + (walking ? " walking" : "")}>
       {plan ? (
-        <Plan {...p} room={room} warn={warn} />
+        <Plan {...p} room={room} walker={walker} warn={warn} />
       ) : (
         <Boundary onFailure={unavailable}>
           <Scene
+            shadows={walking ? "percentage" : false}
             dpr={[1, 1.6]}
             frameloop="demand"
             gl={{ antialias: true, powerPreference: "low-power" }}
             camera={{ fov: 46, near: 0.07, far: 800 }}
-            fallback={<Plan {...p} room={room} warn={warn} />}
+            fallback={<Plan {...p} room={room} walker={walker} warn={warn} />}
           >
-            <Stage {...p} room={room} onUnavailable={unavailable} warn={warn} />
+            <Stage {...p} room={room} building={building!} walker={walker} onUnavailable={unavailable} warn={warn} />
           </Scene>
         </Boundary>
       )}
+      {walker && <WalkControls walker={walker} host={host} destination={destination} />}
       {!p.mode && (
         <div
           className="asc-map-switch"
@@ -533,15 +612,17 @@ export default function WarehouseCanvas(p: CanvasProps) {
         >
           <button
             type="button"
-            aria-pressed={!plan}
+            aria-pressed={!plan && !walking}
             disabled={failed || !architecture}
             onClick={() => choose("3d")}
           >
             3D
           </button>
+          <button type="button" disabled={!architecture} aria-pressed={walking}
+            onClick={() => choose("walk")}>Obilazak</button>
           <button
             type="button"
-            aria-pressed={plan}
+            aria-pressed={plan && !walking}
             onClick={() => choose("plan")}
           >
             Tlocrt
@@ -553,9 +634,9 @@ export default function WarehouseCanvas(p: CanvasProps) {
           {message || (!architecture ? "Tlocrt prema unesenim dimenzijama prostora" : "3D nije dostupan · prikazan je tlocrt")}
         </div>
       )}
-      <span className="asc-map-compass" aria-hidden="true">
+      {!walking && <span className="asc-map-compass" aria-hidden="true">
         {plan ? "↑ S" : "◇"} <span>{plan ? "TLOCRT" : "AKSONOMETRIJA"}</span>
-      </span>
+      </span>}
     </div>
   );
 }

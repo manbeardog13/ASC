@@ -1,5 +1,5 @@
 import { loadStorageSet, placeSet, moveSet, suggestFreeSlot, locationLabel, findLocationByQr, countLocations } from "../js/db.js";
-import { t, toast, el, button, field, input, queryParam, slotFromHash, whereText, scanText, photoFallback } from "./flow-ui.js";
+import { t, toast, el, button, field, input, queryParam, slotFromHash, whereText, startFlowCamera, photoFallback } from "./flow-ui.js";
 import { placeReturn, placementNeedsSlots, unknownSlotScan, suggestionNote } from "../js/firstRun.js";
 import { slotBlock } from "./slot-block.js";
 import { bootOnboarding } from "./onboarding.js";
@@ -10,6 +10,7 @@ let slotQr = slotFromHash();
 let unknown = false;
 let noSlots = false;
 let nearLabel = "";
+let slotLabel = "";
 let confirming = false;
 let setRequest = 0, slotRequest = 0, selectionRevision = 0;
 let setLoading = false, slotLoading = false;
@@ -53,7 +54,11 @@ async function loadSet(code) {
   } catch (error) {
     if (request !== setRequest) return;
     toast(error.message || t("flow.notFound"));
-    if (!root.childElementCount) render();
+    setRow = null;
+    slotQr = "";
+    nearLabel = "";
+    unknown = false;
+    render();
   } finally {
     if (request === setRequest) { setLoading = false; syncConfirm(); }
   }
@@ -75,9 +80,16 @@ async function acceptSlot(qr) {
     }
     unknown = false;
     slotQr = known.qr_code || qr;
+    slotLabel = locationLabel(known) || slotQr;
     return true;
   } catch (error) {
-    if (request === slotRequest && setVersion === setRequest) throw error;
+    if (request === slotRequest && setVersion === setRequest) {
+      slotQr = "";
+      nearLabel = "";
+      unknown = false;
+      if (setRow) render();
+      throw error;
+    }
     return false;
   } finally {
     if (request === slotRequest) { slotLoading = false; syncConfirm(); }
@@ -132,9 +144,10 @@ async function suggest() {
   try {
     const slot = await suggestFreeSlot("main", customerOf(setRow));
     if (request !== slotRequest || setVersion !== setRequest) return;
-    if (!slot) { toast(t("flow.noSlot")); return; }
+    if (!slot) { slotQr = ""; nearLabel = ""; render(); toast(t("flow.noSlot")); return; }
     unknown = false;
     slotQr = slot.qr_code || "";
+    slotLabel = locationLabel(slot) || slotQr;
     nearLabel = slot.near_label || "";
     const copy = suggestionNote(slot, locationLabel(slot));
     toast(t(copy.key, copy.vars));
@@ -163,22 +176,23 @@ function render() {
   root.replaceChildren();
   root.append(el("p", { class: "lead" }, setRow ? summary(setRow) : t("flow.scanSet")));
   const reader = el("div", { id: "flow-reader", class: "flow-reader" });
-  root.append(reader);
+  if (!noSlots) root.append(reader);
   const typed = input({ id: "typed-code", placeholder: t("flow.typeCode"), autocomplete: "off" });
+  typed.enterKeyHint = "search";
+  typed.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); onScan(typed.value); } });
   root.append(field(t("flow.typeCode"), typed));
   const actions = el("div", { class: "flow-actions" });
   actions.append(button(t("flow.lookup"), "btn", () => onScan(typed.value)));
   actions.append(photoFallback(onScan));
-  if (!setRow) actions.append(button(t("flow.suggest"), "btn ghost", suggest));
   root.append(actions);
-  if (!noSlots) scanText("flow-reader", onScan);
+  if (!noSlots) startFlowCamera(reader, onScan);
   if (setRow && (noSlots || unknown)) {
     root.append(slotBlock(unknown && !noSlots ? "unknown" : "empty", placeReturn(setRow.public_code)));
     return;
   }
   if (setRow) {
     const note = el("p", { class: "flow-note", id: "place-suggest" }, slotQr
-      ? (nearLabel ? t("flow.suggestedNear", { where: nearLabel }) : `${t("flow.where")}: ${slotQr}`)
+      ? [`${t("flow.where")}: ${slotLabel || slotQr}`, nearLabel && t("flow.suggestedNear", { where: nearLabel })].filter(Boolean).join(" · ")
       : t("flow.scanSlot"));
     root.append(note);
     const placeActions = el("div", { class: "flow-actions" });

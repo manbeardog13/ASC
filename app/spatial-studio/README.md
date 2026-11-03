@@ -8,7 +8,9 @@ Run `npm ci`, `npm test`, and `npm run build` in this folder (Node 24). The buil
 
 ## Operator flows
 
-- Use the space picker to change room. Switch between 3D and the floor plan, or collapse the inventory panel for a larger drawing.
+- Use the space picker to change room. Choose **Obilazak** for an eye-level walk with arrow keys or touch controls, **3D** for a cutaway, and **Tlocrt** for the plan. The six rooms can be explored individually. Their connections are unsurveyed.
+- Open **Vodič** for six short steps from labelling a physical location and tyre set to verifying placement and finding it again. The guide opens the actual staff tools.
+- Choose **Pronađi u prostoru** on a stored set to highlight its confirmed rack. A set without a mapped rack remains unplaced on the floor plan.
 - Search the visible list by rack, plate, owner, size or set code. Command/Ctrl+K searches across available records and room names. A selected rack focuses the camera and opens its set list.
 - A USB scanner completes its input with Enter. Both current and historic ASC codes are recognized. Camera scanning uses the existing ASC scanner. No scanned URL is followed directly.
 - Occupancy uses actual mapped quantities and rack capacity. Unknown quantities remain unknown. The “Bez stupca” tab exposes unplaced sets from any area.

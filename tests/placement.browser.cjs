@@ -7,7 +7,7 @@ const server=http.createServer((req,res)=>{let file=path.resolve(root,decodeURIC
 const db=`
 export const loadMyProfile=async()=>({role:'employee',onboarded_at:'2026-01-01'});
 export const markOnboarded=async()=>{};export const listLocationSeats=async()=>[];export const countLocations=async()=>3;
-export const loadStorageSet=async code=>{const row={id:code,public_code:code,vehicle:{customer:{id:'fixture-customer'}}};if(window.__deferSets)return new Promise(resolve=>{window.__setPending ||= {};window.__setPending[code]=()=>resolve(row)});return row};
+export const loadStorageSet=async code=>{if(window.__rejectSet)throw new Error('Synthetic set lookup failure');const row={id:code,public_code:code,vehicle:{customer:{id:'fixture-customer'}}};if(window.__deferSets)return new Promise(resolve=>{window.__setPending ||= {};window.__setPending[code]=()=>resolve(row)});return row};
 export const findLocationByQr=async qr=>{if(window.__rejectLookup)throw new Error('Synthetic lookup failure');if(window.__deferLookup)return new Promise(resolve=>{window.__finishLookup=()=>resolve({qr_code:qr})});if(window.__deferSlots)return new Promise(resolve=>{window.__slotPending ||= {};window.__slotPending[qr]=()=>resolve({qr_code:qr})});return qr==='LOC-UNKNOWN'?null:{qr_code:qr}};
 export const placeSet=async args=>{window.__writes.push(args);if(window.__deferWrite)return new Promise(resolve=>{window.__finishWrite=()=>resolve({location:{}})});return {location:{}}};export const moveSet=placeSet;
 export const locationLabel=()=>'';
@@ -15,9 +15,26 @@ export const suggestFreeSlot=async()=>{const slot={qr_code:'LOC-NEAR',near_label
 
 const qr=`window.ASCQR={normalize:raw=>raw.startsWith('ASC-')?raw:null,extractCode:raw=>raw.startsWith('ASC-')?raw:null,extractSlot:raw=>raw.startsWith('LOC-')?raw:null,scanInto:()=>{window.__scans=(window.__scans||0)+1},scanFile:async()=>{},stopScan:async()=>{}};window.__writes=[];`;
 async function test(name,fn){try{report.cases.push({name,passed:true,...await fn()});}catch(error){report.cases.push({name,passed:false,error:error.message});}}
-(async()=>{await new Promise(r=>server.listen(0,'127.0.0.1',r));const origin='http://127.0.0.1:'+server.address().port;const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||(fs.existsSync('/usr/bin/chromium')?'/usr/bin/chromium':chromium.executablePath()),args:['--no-sandbox'],headless:true});try{const context=await browser.newContext({viewport:{width:390,height:844},serviceWorkers:'block'});await context.route('**/*',route=>{const u=new URL(route.request().url());if(u.origin!==origin)return route.abort();if(u.pathname.endsWith('/js/db.js'))return route.fulfill({contentType:'text/javascript',body:db});if(u.pathname.endsWith('/app/qr.js'))return route.fulfill({contentType:'text/javascript',body:qr});if(['/app/app.js','/app/composer.js'].some(v=>u.pathname.endsWith(v)))return route.fulfill({contentType:'text/javascript',body:''});return route.continue();});const page=await context.newPage();let errors=[];page.on('pageerror',e=>errors.push(e.message));
+(async()=>{await new Promise(r=>server.listen(0,'127.0.0.1',r));const origin='http://127.0.0.1:'+server.address().port;const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||(fs.existsSync('/usr/bin/chromium')?'/usr/bin/chromium':chromium.executablePath()),args:['--no-sandbox'],headless:true});try{const context=await browser.newContext({viewport:{width:390,height:844},serviceWorkers:'block'});await context.route('**/*',route=>{const u=new URL(route.request().url());if(u.origin!==origin)return route.abort();if(u.pathname.endsWith('/js/db.js'))return route.fulfill({contentType:'text/javascript',body:db});if(u.pathname.endsWith('/app/qr.js'))return route.fulfill({contentType:'text/javascript',body:qr});if(u.pathname.endsWith('/app/app.js'))return route.fulfill({contentType:'text/javascript',body:'window.ascStaffWorkflowReady=Promise.resolve(true)'});if(['/app/composer.js'].some(v=>u.pathname.endsWith(v)))return route.fulfill({contentType:'text/javascript',body:''});return route.continue();});const page=await context.newPage();let errors=[];page.on('pageerror',e=>errors.push(e.message));
 const open=async()=>{errors=[];await page.goto(origin+'/ASC/app/place.html?set=ASC-FIRST&slot=LOC-FIRST');await page.waitForSelector('#place-suggest');};
 const scan=async text=>{await page.locator('#typed-code').fill(text);await page.locator('.flow-actions').first().locator('button').first().click();};
+await open();
+await page.evaluate(()=>window.__rejectLookup=true);
+await page.locator('#typed-code').fill('LOC-FAILED');
+await page.locator('#typed-code').press('Enter');
+await page.waitForFunction(()=>document.getElementById('toastMsg').textContent.includes('Synthetic lookup failure'));
+await test('a failed manual rescan cannot place into the previous slot',async()=>{
+  assert.equal(await page.locator('#place-confirm').isDisabled(),true);
+  assert.doesNotMatch(await page.locator('#place-suggest').innerText(),/LOC-FIRST/);
+});
+await page.evaluate(()=>window.__rejectSet=true);
+await page.locator('#typed-code').fill('ASC-FAILED');
+await page.locator('#typed-code').press('Enter');
+await page.waitForFunction(()=>document.getElementById('toastMsg').textContent.includes('Synthetic set lookup failure'));
+await test('a failed set lookup removes the previous set and never writes',async()=>{
+  assert.equal(await page.locator('#place-confirm').count(),0);
+  assert.deepEqual(await page.evaluate(()=>window.__writes),[]);
+});
 await open();await page.evaluate(()=>window.__rejectLookup=true);await page.locator('.flow-actions').last().locator('button').last().click();await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
 await test('lookup errors report feedback without unhandled rejection',async()=>{assert.deepEqual(errors,[]);assert.match(await page.locator('#toastMsg').textContent(),/Synthetic lookup failure/);assert.equal(await page.locator('.flow-actions').last().locator('button').last().isDisabled(),false);});
 await open();await page.locator('.flow-actions').last().locator('button').first().click();await page.waitForFunction(()=>document.getElementById('place-suggest').textContent.includes('Old-near-label'));await scan('LOC-MANUAL');await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));

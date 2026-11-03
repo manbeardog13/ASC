@@ -26,6 +26,7 @@ export type Room = {
 type Area = { width: number; depth: number };
 export const geometry = original as {
   getSpace: (id: string) => Room | null;
+  hasBuildingFloor: (id: string, x: number, z: number, radius: number) => boolean;
   mapAreaPoint: (
     id: string,
     a: Area,
@@ -69,7 +70,7 @@ export function isPlaceable(
   a: Area,
   x: number,
   z: number,
-  racks: readonly RackShape[],
+  racks: readonly Pick<RackShape, "x" | "z">[],
 ) {
   return (
     supported(id, a, x, z) &&

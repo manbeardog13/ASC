@@ -55,6 +55,8 @@ async function referenceLayout(){
     return {compact:document.querySelector('#neroComposer').classList.contains('is-compact'),sheet:rect('.nero-sheet'),input:rect('.nero-input'),plus:rect('.nero-plus'),mic:rect('.nero-mic'),send:rect('.nero-send'),tools:rect('.nero-tools')};
    });
    assert.equal(m.compact,true,'Measure the untouched browsing state');
+   assert.equal(await p.locator('.asc-stock-strip, .asc-tyre-stream, html.has-stock-strip').count(),0,'No rotating admission strip or reserved bottom space');
+   assert.equal(await p.evaluate(()=>performance.getEntriesByType('resource').some(entry=>/stock-strip/.test(entry.name))),false,'The dock must not load the removed inventory feed');
    for(const name of ['plus','mic','send']){
     const b=m[name];
     assert.equal(b.visible,true,`${name} must be visible before focusing at ${width}`);

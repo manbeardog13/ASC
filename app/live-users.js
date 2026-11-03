@@ -33,6 +33,7 @@ function toast(msg) {
   if (toastNode) toastNode.remove();
   toastNode = document.createElement('div');
   toastNode.className = 'toast';
+  toastNode.setAttribute('role', 'status');
   toastNode.textContent = msg;
   document.body.appendChild(toastNode);
   requestAnimationFrame(() => toastNode.classList.add('show'));
@@ -74,7 +75,7 @@ function roleSelectHtml(row, disabled) {
   const opts = ROLES.map((r) =>
     `<option value="${r}"${r === current ? ' selected' : ''}>${ROLE_LABEL[r]}</option>`).join('');
   const dis = disabled ? ' disabled title="Vlastitu ulogu ne možete mijenjati."' : '';
-  return `<select class="role-select" data-id="${esc(String(row.id))}" aria-label="Uloga"${dis}>${opts}</select>`;
+  return `<select class="role-select" data-id="${esc(String(row.id))}" aria-label="Uloga — ${esc(displayName(row))}"${dis}>${opts}</select>`;
 }
 
 function memberRowHtml(row, meId) {
@@ -141,16 +142,22 @@ function showCard(el) { if (el) el.style.display = ''; }
 function renderAdminOnly() {
   hideCard(q('#addForm') && q('#addForm').closest('.card'));
   hideCard(q('#awaitCard'));
+  hideCard(q('.card.dark'));
   const list = q('.ulist');
   if (list) list.innerHTML = stateRowHtml('Samo administratori', 'Upravljanje korisnicima dostupno je administratorima.');
 }
 
 function renderError() {
   const list = q('.ulist');
-  if (list) list.innerHTML = stateRowHtml('Nije moguće učitati', 'Provjerite vezu i pokušajte ponovno.');
+  state.rows.clear();
+  hideCard(q('#awaitCard'));
+  hideCard(q('.card.dark'));
+  setBadge('#teamCount', '—');
+  if (list) list.innerHTML = stateRowHtml('Popis članova nije učitan', 'Provjerite vezu i pokušajte ponovno.') + '<a class="btn btn-sm" href="users.html">Pokušaj ponovno</a>';
 }
 
 function render(users, pending) {
+  showCard(q('.card.dark'));
   const meId = state.me && state.me.id;
   const withOwner = (users || []).map((u) => ({ ...u, is_owner: isOwnerRow(u) }));
   const approvals = withOwner.filter((u) => u.role === 'readonly' && !u.is_owner);
@@ -201,15 +208,15 @@ function render(users, pending) {
 async function refresh() {
   const admin = !!(state.me && isAdminRole(state.me.role));
   if (!admin) { renderAdminOnly(); return; }
-  let users;
+  showCard(q('#inviteCard'));
+  let users, pending;
   try {
-    users = await listUsers();
+    [users, pending] = await Promise.all([listUsers(), listPendingUsers()]);
   } catch (e) {
     console.warn('[live] users load failed — keeping calm state:', e);
     renderError();
     return;
   }
-  const pending = await listPendingUsers().catch(() => []);
   render(users, pending);
 }
 
@@ -348,6 +355,7 @@ window.ascLiveFirst = new Promise((r) => { liveFirstDone = r; });
   const session = await getSession().catch(() => null);
   if (!session) { liveFirstDone(); return; }   // the gate handles the redirect
   state.me = await loadMyProfile().catch(() => null);
+  if (!state.me) { renderError(); liveFirstDone(); return; }
   wireEvents();
   await refresh();
   liveFirstDone();

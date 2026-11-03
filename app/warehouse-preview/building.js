@@ -207,7 +207,7 @@ export function createBuilding(THREE, options={}) {
   roof(a,[[-12.2,ay+2.2,-14.2],[-8.6,ay+4.4,-14.2],[-8.6,ay+4.4,18.2],[-12.2,ay+2.2,18.2]],'Zapadna krovna kosina A');
   for(let z=-13;z<18;z+=2.2)roofStructure.push(beam(a,[-12.05,ay+2.23,z],[-8.65,ay+4.34,z],.09,m.woodDark));
   function shelving(parent,x,z,y,width=2.15,depth=.85,height=2.1,rotation=0,white=false){
-    const p=new THREE.Group();p.position.set(x,y,z);p.rotation.y=rotation;parent.add(p);const steel=white?m.white:m.dark;
+    const p=new THREE.Group();p.userData.shelving=true;p.position.set(x,y,z);p.rotation.y=rotation;parent.add(p);const steel=white?m.white:m.dark;
     for(const px of [-width/2,width/2])for(const pz of [-depth/2,depth/2])box(p,px,height/2,pz,.06,height,.06,steel,'Stup regala');
     for(let i=0;i<4;i++){const sy=.12+i*(height-.18)/3;for(const pz of [-depth/2,depth/2])box(p,0,sy,pz,width,.075,.06,white?m.white:m.orange,'Poprečni nosač');if(white)box(p,0,sy-.035,0,width,.035,depth,m.white,'Bijela polica');}
     if(!white){beam(p,[-width/2,.15,depth/2],[width/2,height-.1,depth/2],.028,steel);}
@@ -228,7 +228,7 @@ export function createBuilding(THREE, options={}) {
   const deck=box(b,deckX,deckY-.06,deckZ,deckW,.12,deckD,m.wood,'Platforma · drveni pod',true);deck.userData={kind:'raised-deck',spaceId:'attic-racks',unmeasured:true};
   for(let x=rackDeck.west+.1;x<rackDeck.east-.05;x+=.3)box(b,x,deckY-.003,deckZ,.012,.006,deckD,m.woodDark,'Spoj dasaka');
   const platformHit=new THREE.Mesh(keep(new THREE.PlaneGeometry(deckW,deckD)),pickMaterial);platformHit.rotation.x=-Math.PI/2;platformHit.position.set(deckX,deckY,deckZ);platformHit.userData={kind:'platform-hit',spaceId:'attic-racks',roomId:'attic-racks',inventory:false};b.add(platformHit);targets.push(platformHit);
-  const rack=(bank,x,z,y,width,depth,rotation)=>{const p=shelving(b,x,z,y,width,depth,2.15,rotation,false);p.name=`B · ${bank} rack`;p.userData={kind:'rack',bank,spaceId:'attic-racks',inventory:false};};
+  const rack=(bank,x,z,y,width,depth,rotation)=>{const p=shelving(b,x,z,y,width,depth,2.15,rotation,false);p.name=`B · ${bank} rack`;Object.assign(p.userData,{kind:'rack',bank,spaceId:'attic-racks',inventory:false});};
   for(const z of [1.45,3.05])for(const x of [2.1,4.5,6.9])rack('rear',x,z,by,2.3,.85,0);
   for(const x of [2.85,8.45])for(const z of [5.3,7.7])rack('side',x,z,deckY,2.3,.85,Math.PI/2);
   for(const x of [2.4,3.5,6.0,7.1])rack('front',x,14.5,by,4.25,.82,Math.PI/2);

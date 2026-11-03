@@ -1,5 +1,5 @@
 import { loadStorageSet, checkoutSet, locationLabel } from "../js/db.js";
-import { t, toast, el, button, field, input, queryParam, scanText, photoFallback, whereText } from "./flow-ui.js";
+import { t, toast, el, button, field, input, queryParam, startFlowCamera, photoFallback, whereText } from "./flow-ui.js";
 import { bootOnboarding } from "./onboarding.js";
 
 bootOnboarding();
@@ -10,6 +10,7 @@ const HOLD_MS = 600;
 const SLIDE_THRESHOLD = 0.86;
 
 let setRow = null;
+let lookupRevision = 0;
 let loadingSet = false;
 let releasing = false;
 let released = false;
@@ -23,6 +24,7 @@ function reduceMotion() {
 }
 
 function onScan(text) {
+  if (released || releasing || setRow) return;
   const code = window.ASCQR ? (window.ASCQR.extractCode(text) || window.ASCQR.normalize(text, true)) : String(text || "").trim();
   if (!code) { setReleaseError(t("flow.notFound")); return; }
   loadSet(code);
@@ -39,14 +41,20 @@ function clearReleaseError() {
 }
 
 async function loadSet(code) {
+  const revision = ++lookupRevision;
   loadingSet = true;
   releaseError = "";
   render();
   try {
-    setRow = await loadStorageSet(code);
+    const row = await loadStorageSet(code);
+    if (revision !== lookupRevision) return;
+    setRow = row;
+    window.ASCQR?.stopScan?.();
     loadingSet = false;
     render();
   } catch (error) {
+    if (revision !== lookupRevision) return;
+    setRow = null;
     loadingSet = false;
     setReleaseError(error.message || t("flow.notFound"));
   }
@@ -315,6 +323,8 @@ function render() {
     const reader = el("div", { id: "flow-reader", class: "flow-reader" });
     root.append(reader);
     const typed = input({ id: "typed-code", placeholder: t("flow.typeCode"), autocomplete: "off" });
+    typed.enterKeyHint = "search";
+    typed.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); onScan(typed.value); } });
     root.append(field(t("flow.typeCode"), typed));
     const actions = el("div", { class: "flow-actions" });
     actions.append(button(t("flow.lookup"), "btn btn-primary", () => onScan(typed.value)));
@@ -322,14 +332,7 @@ function render() {
     root.append(actions);
     const errorAlert = buildErrorAlert();
     if (errorAlert) root.append(errorAlert);
-    const startScanner = () => scanText("flow-reader", onScan, () => {
-      if (!reader.isConnected) return;
-      // Keep typed/photo lookup available without re-rendering and restarting
-      // the failed camera in a loop. Retry is an explicit operator action.
-      reader.replaceChildren(el("p", { role: "alert" }, t("flow.camera")),
-        button(t("checkout.retry"), "btn ghost", () => { reader.replaceChildren(); startScanner(); }));
-    });
-    startScanner();
+    startFlowCamera(reader, onScan);
     return;
   }
 
@@ -341,9 +344,20 @@ function render() {
     return;
   }
 
+  const change = button(t("flow.searchAnother"), "btn ghost", () => {
+    setRow = null;
+    releaseError = "";
+    render();
+    document.getElementById("typed-code")?.focus();
+  });
+  if (setRow.status === "checked_out") {
+    root.append(el("p", { class: "flow-note", role: "status" }, t("flow.setCollected")), change);
+    return;
+  }
   root.append(buildReleaseControl());
   const hint = el("p", { class: "release-slider__kbd" }, t("checkout.holdHint"));
   root.append(hint);
+  if (!releasing) root.append(change);
 
   const errorAlert = buildErrorAlert();
   if (errorAlert) root.append(errorAlert);

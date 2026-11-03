@@ -133,6 +133,7 @@ html.dark .appr-row{background:rgba(225,6,0,.06)}
 /* row exit animation */
 .row-out{opacity:0;transform:translateX(10px);pointer-events:none}
 
+.spills .spill{cursor:default;transform:none}
 /* toast */
 .toast{position:fixed;left:50%;bottom:calc(26px + env(safe-area-inset-bottom,0px));transform:translate(-50%,12px);
   z-index:80;background:var(--gun);color:#f4f5f7;font:600 13px Inter;padding:11px 18px;border-radius:16px;
@@ -176,13 +177,13 @@ html.dark .toast{background:#26272b;border:1px solid var(--line)}
         <div class="csub" style="color:var(--on-stage-2)">Aktivnih računa i pozivnica u sustavu.</div>
         <div class="space" style="flex:1;min-height:10px"></div>
         <div class="spills">
-          <button type="button" class="spill"><b data-count="0">0</b><span>Članovi</span></button>
-          <button type="button" class="spill"><b data-count="0">0</b><span>Administratori</span></button>
-          <button type="button" class="spill"><b data-count="0">0</b><span>Čekaju</span></button>
+          <div class="spill"><b data-count="0">0</b><span>Članovi</span></div>
+          <div class="spill"><b data-count="0">0</b><span>Administratori</span></div>
+          <div class="spill"><b data-count="0">0</b><span>Čekaju</span></div>
         </div>
       </div>
 
-      <div class="card reveal" style="animation-delay:190ms">
+      <div class="card reveal" id="inviteCard" style="animation-delay:190ms;display:none">
         <span class="tab-tl">novi</span>
         <h3>
           <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5.4v13.2M5.4 12h13.2"/></svg>

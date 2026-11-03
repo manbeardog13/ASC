@@ -90,3 +90,20 @@
   color: #c0cbce;
   background: #151c1d;
 }
+.asc-spatial-canvas.walking:focus-visible {outline:2px solid #bdd0c9;outline-offset:-3px}
+.asc-spatial-canvas.walking :is(canvas,.asc-map-plan) {touch-action:none;cursor:grab}
+.asc-spatial-canvas.walking :is(canvas,.asc-map-plan):active {cursor:grabbing}
+.asc-walk-hud {position:absolute;inset:auto 12px 12px;display:flex;align-items:flex-end;justify-content:space-between;gap:8px;pointer-events:none}
+.asc-walk-hint,.asc-walk-pad {background:#11191ded;border:1px solid #ffffff35;border-radius:9px;color:#eff4f2;box-shadow:0 2px 7px #0003}
+.asc-walk-hint {font:11px/1.4 system-ui;padding:6px 9px;max-width:16rem}
+.asc-walk-pad {display:flex;pointer-events:auto;padding:2px;gap:1px;flex-shrink:0}
+.asc-walk-pad button {display:grid;place-items:center;width:44px;min-height:44px;border:0;background:transparent;color:#f3f5f4;border-radius:6px;touch-action:none;user-select:none;-webkit-user-select:none}
+.asc-walk-pad button:active,.asc-walk-pad button:hover {background:#ffffff18}
+.walking .asc-map-status {bottom:68px}
+@media(max-width:600px) {.asc-walk-hud{inset:auto 7px 7px}.asc-walk-hint{padding:4px 7px}.asc-walk-hint span{display:none}}
+.asc-walk-destination {display:flex;align-items:center;gap:8px;padding:5px 9px;min-width:0;border:1px solid #a1c5b85c;border-radius:8px;background:#192421f5;color:#e5f6ee}
+.asc-walk-destination svg {flex:none}
+.asc-walk-destination span {min-width:0}
+.asc-walk-destination small,.asc-walk-destination strong {display:block;line-height:1.25}
+.asc-walk-destination small {font-size:10px;color:#b5cfc3}
+.asc-walk-destination strong {font-size:13px;font-weight:550;overflow-wrap:anywhere}

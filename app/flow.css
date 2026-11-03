@@ -27,6 +27,40 @@
 .who-hits{display:flex;flex-direction:column;gap:6px;margin-top:8px}
 .who-hits button{text-align:left}
 
+
+/* Staff task controls share the dashboard's surfaces and native touch geometry. */
+.flow .field{display:grid;gap:6px;min-width:0}
+.flow .field .label{color:var(--ink-2);font:550 13px/1.35 Inter,system-ui,sans-serif}
+.flow .field input{width:100%;min-width:0;min-height:46px;appearance:none;border:1px solid var(--line);
+  border-radius:12px;background:var(--panel-2);color:var(--ink);padding:10px 13px;font:400 16px/1.4 Inter,system-ui,sans-serif}
+.flow .field input::placeholder{color:var(--muted)}
+.flow .btn{display:inline-flex;align-items:center;justify-content:center;min-width:0;min-height:46px;
+  padding:10px 16px;appearance:none;border:1px solid var(--line);border-radius:12px;background:var(--panel-2);
+  color:var(--ink);font:600 14px/1.35 Inter,system-ui,sans-serif;text-decoration:none;text-align:center;cursor:pointer}
+.flow .btn-primary{color:white;background:#8d2129;border-color:transparent}
+.flow .btn:disabled{opacity:.55;cursor:default}
+.flow :is(.btn,input):focus-visible{outline:2px solid var(--ink);outline-offset:3px}
+.flow .location-fields{display:grid;gap:14px;border:0;padding:0;margin:0;min-width:0}
+.flow .flow-note:empty,.flow .flow-actions:empty{display:none}
+.flow .flow-reader:has([role="alert"]){min-height:0;padding:14px;background:var(--panel-2);color:var(--ink-2);
+  font:500 14px/1.5 Inter,system-ui,sans-serif;border:1px solid var(--line)}
+.flow-reader [role="alert"]+.btn{margin-top:8px}
+.flow #back-to-intake{margin-bottom:14px}
+.flow .release-slider__kbd{margin-bottom:10px}
+@media(min-width:355px){
+  .flow .location-fields{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .flow .location-fields>.field:first-child{grid-column:1/-1}
+}
+
+/* Slot batches scroll from the first label and print on whole label boundaries. */
+.sm-scroll-slots{display:block}
+.slot-labels{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),264px));
+  justify-content:center;align-content:start;gap:12px}
+.slot-labels .sm-label{min-width:0;width:100%;break-inside:avoid}
+.slot-labels .sm-qr{width:min(200px,100%);height:auto;aspect-ratio:1}
+.slot-labels .sm-code,.slot-labels .sm-loc{overflow-wrap:anywhere}
+@media print{.slot-labels{grid-template-columns:repeat(2,minmax(0,1fr));gap:4mm}}
+
 /* Label printing (brief 07) */
 .lp{display:grid;gap:12px;padding:16px;border-radius:12px;border:1px solid var(--line);background:var(--panel-2)}
 .lp-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
@@ -111,3 +145,7 @@ html.dark .release-done__open{background:var(--brand-hi,#ff2a1f)}
     animation:none!important;transition:none!important}
   .release-done__open:hover,.release-done__undo:hover{transform:none}
 }
+
+.workflow-gate{padding:clamp(22px,5vw,42px);background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:20px}
+.workflow-gate h1{margin:0;font-size:clamp(21px,4vw,30px)}
+.workflow-gate p{margin:.6rem 0 1.2rem;color:var(--muted);line-height:1.5}

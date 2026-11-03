@@ -27,7 +27,7 @@ const synthetic=`const session={user:{id:'synthetic-ui-test'},expires_at:Math.fl
 const auth=synthetic+`export const supabase={auth:{getSession:async()=>({data:{session},error:null}),onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}})}};`;
 const db=synthetic+`window.__dbWrites=window.__dbWrites||[];const seats=[{id:'location-syn-1',warehouse:'main',zone:'SYN',rack:'01',shelf:'1',slot:'01',status:'free'},{id:'location-syn-2',warehouse:'main',zone:'SYN',rack:'02',shelf:'1',slot:'01',status:'free'},{id:'location-b2-1',warehouse:'main',zone:'B2',rack:'K1',shelf:'1',slot:'01',status:'free'}];
 const api=async(p,b)=>{const r=await fetch('/__stub/'+p,{method:b?'POST':'GET',body:b?JSON.stringify(b):undefined});const j=await r.json();if(!r.ok)throw new Error(j.error||'stub error');return j;};
-export const getSession=async()=>session;export const loadMyProfile=async()=>({full_name:'UI test',role:window.__role||'employee'});
+export const getSession=async()=>session;export const loadMyProfile=async()=>({id:session.user.id,full_name:'UI test',role:window.__role||'employee',onboarded_at:'2026-01-01'});
 export const canEditWarehouse=(r)=>['admin','manager','employee','reception'].includes(r);
 export const countLocations=async()=>seats.length;export const listLocationSeats=async()=>{if(window.__seatsFail)throw Error('Synthetic location outage');return seats.map(r=>({...r}));};
 const inventorySets=[{id:'synthetic-set-1',public_code:'ASC-SYN-1',location_id:'location-syn-1',zone:'SYN',rack:'01',shelf:'1',slot:'01',quantity:4,status:'in_storage',vehicle:{id:'synthetic-vehicle',plate:'SYN-ONLY',customer:{id:'synthetic-customer',name:'Synthetic Customer'}},tires:[]}];
@@ -144,10 +144,16 @@ try{
   assert.deepEqual(errors,[]);report.cases.push({case:'corrupt areas kept + warned',passed:true});await context.close();}
  // ---- Locations page: one map link per zone in the batch
  {const {context,page}=await device();await page.goto(origin+'/ASC/app/locations.html');await page.waitForSelector('#loc-zone');
+  assert.equal(await page.locator('.flow-actions button[type=submit]').isDisabled(),true);
+  assert.ok((await page.locator('#loc-zone').boundingBox()).height >= 44);
   await page.locator('#loc-zone').fill('A');await page.locator('#loc-racks').fill('1');await page.locator('#loc-shelves').fill('1');await page.locator('#loc-slots').fill('1');
   await page.evaluate(()=>{window.ASCQR=null;document.querySelector('.flow-actions .btn-primary').click();});
   await page.waitForSelector('[data-open-on-map="B"]');
   assert.deepEqual(await page.locator('[data-open-on-map]').evaluateAll(n=>n.map(a=>a.getAttribute('href'))),['warehouse-preview/index.html?zone=A','warehouse-preview/index.html?zone=B']);
+  const writeCount=await page.evaluate(()=>window.__dbWrites.length);
+  assert.match(await page.locator('#flow-root').innerText(), /Mjesta su spremljena/);
+  await page.locator('#flow-root').getByRole('button',{name:'Ispiši naljepnice mjesta'}).click();
+  assert.equal(await page.evaluate(()=>window.__dbWrites.length),writeCount,'retrying labels cannot write locations');
   report.cases.push({case:'locations multi-zone links',passed:true});await context.close();}
  // A logical area can come first, but no unavailable rack can be saved.
  {const {context,page,errors}=await device({sharedOff:true});await context.addInitScript(()=>{window.__seatsFail=true;});await page.open();

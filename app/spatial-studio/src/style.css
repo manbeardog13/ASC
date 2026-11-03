@@ -6,3 +6,65 @@ main{padding:clamp(18px,3.3vw,50px) clamp(18px,3vw,52px) 10px}.sectionhead{displ
 dialog{color:var(--ink);background:#111416;border:1px solid #414649;border-radius:15px;width:min(470px,calc(100vw - 28px));padding:0;max-height:85dvh;overflow:auto;box-shadow:0 18px 90px #000b;margin:auto}dialog::backdrop{background:#0009;backdrop-filter:blur(4px)}.dialog-body{padding:23px}.dialog-body h2{font-size:25px;letter-spacing:-.045em;font-weight:500;margin-top:5px}.dialog-body>p{margin:14px 0}.room-list{margin:15px 0 0}.room-list button{width:100%;text-align:left;min-height:48px;padding:8px 6px;border-bottom:1px solid var(--line)}.room-list button:hover,.room-list button[aria-current=true],.data-row:hover{background:#ffffff08}.room-list button>small{color:#b47581;font:11px var(--mono);margin-right:10px}.cmdfield{margin-top:18px}.issue{border-top:1px solid #38393a;padding:10px 0;font-size:12px}.issue button{text-decoration:underline}.has-composer .studio footer{padding-bottom:20px}
 @media(min-width:1600px){.intelligence{padding:28px}.panel-heading{margin-bottom:28px}.workspace{height:66vh}}
 @media(max-width:820px){.topbar{height:57px;gap:12px}.top-actions{gap:11px}.command{min-width:40px}.command span,.command kbd,.top-btn span,.brandsplit,.brandtext{display:none}.sectionhead{align-items:flex-start;flex-direction:column;margin-bottom:16px}.room-button{align-self:flex-start}.workspace{grid-template-columns:minmax(0,1fr);height:auto}.workspace.collapsed{grid-template-columns:minmax(0,1fr)}.viewport{height:clamp(350px,54dvh,600px)}.view-head,.view-foot{padding:10px 14px}.view-foot h2{font-size:19px}.intelligence{border-left:0;border-top:1px solid var(--line);padding:16px}.panel-heading{margin-bottom:15px}.list{max-height:32dvh}.collapsed .panel-heading{margin:0}.collapsed .panel-heading>div{display:block}.collapsed .intelligence{padding:10px 16px}.collapsed .panel-heading .eyebrow{display:none}.collapsed .panel-heading h2{font-size:16px}.metrics{margin-bottom:10px}.panel-foot{margin-top:10px}.room-button,.topbar button,.tabs button,.icon-btn,.primary,.sub-link{min-height:44px}.command{border:0;background:none}.workspace .asc-spatial-canvas{min-height:0}.studio main{padding-bottom:max(10px,env(safe-area-inset-bottom))}}
+
+
+@media (pointer:coarse), (max-width:820px) {
+  .switch button { min-width:44px; min-height:44px; }
+  .topbar .command,.topbar .top-btn { min-width:44px; }
+}
+@media (max-width:400px) {
+  .view-head { flex-wrap:wrap; }
+  .view-head .switch { margin-left:auto; }
+}
+@media (prefers-reduced-motion:no-preference) {
+  dialog[open] .dialog-body { animation:studio-disclose 160ms ease-out both; }
+  .switch button,.data-row,.room-list button { transition:background-color 140ms ease-out; }
+  @keyframes studio-disclose { from { opacity:0; transform:translateY(4px); } }
+}
+
+.editbox .coordinate-entry{border-block:1px solid var(--line);padding:0 2px 4px}
+.coordinate-entry summary{cursor:pointer;min-height:44px;align-content:center;font-size:.875rem}
+.coordinate-entry>div{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding-bottom:8px}
+.coordinate-entry input{width:100%;box-sizing:border-box}
+
+/* The map remains a dark inspection surface in both workshop themes. */
+:root:not(.dark) {
+  color-scheme:light;
+  --bg:#edf0f5;
+  --paper:#fcfcfd;
+  --line:#cbd1d8;
+  --ink:#171d22;
+  --muted:#48545e;
+  --sub:#54616c;
+  --green:#176841;
+  --amber:#825606;
+  --red:#a4283a;
+  --chrome-hover:#e6eaf0;
+}
+:root:not(.dark) :is(.top-btn,.health,.brandtext,.sub-link,.empty strong,.data-row) {color:var(--ink)}
+:root:not(.dark) :is(.eyebrow,footer) {color:var(--sub)}
+:root:not(.dark) .brandsplit {background:var(--line)}
+:root:not(.dark) .brandmark img {filter:grayscale(1) brightness(.48)}
+:root:not(.dark) :is(.command,.selection,.editbox input,.editbox select) {background:#e8ecf0;color:var(--ink)}
+:root:not(.dark) :is(.room-button,.command,.workspace,.filter,.cmdfield,.issue) {border-color:var(--line)}
+:root:not(.dark) :is(.command,.room-button,.intelligence .icon-btn,.dialog-body .icon-btn):hover,
+:root:not(.dark) :is(.room-list button,.data-row):hover,
+:root:not(.dark) .room-list [aria-current=true] {background:var(--chrome-hover)}
+:root:not(.dark) :is(.intelligence,.dialog-body) .icon-btn {color:var(--ink);border-color:var(--line)}
+:root:not(.dark) :is(.empty svg,.room-button em) {color:var(--muted)}
+:root:not(.dark) :is(.tabs button[aria-pressed=true],.action-link,.notice,.room-list button>small) {color:#862338}
+:root:not(.dark) .guide-steps button[aria-current] span {color:#fff}
+:root:not(.dark) .fillbar {background:#d7dce2}
+:root:not(.dark) dialog {background:var(--paper);border-color:var(--line);box-shadow:0 18px 68px #16243538}
+:root:not(.dark) dialog::backdrop {background:#18212b62}
+:root:not(.dark) :focus-visible {outline-color:#942b43}
+:root:not(.dark) :is(.filter,.cmdfield):focus-within {border-color:#942b43}
+:root:not(.dark) .viewport {
+  color-scheme:dark;
+  color:#f6f6f4;
+  --ink:#f6f6f4;
+  --muted:#a5abad;
+  --sub:#8b9397;
+}
+:root:not(.dark) .viewport .view-code {color:#becccc}
+:root:not(.dark) .viewport :focus-visible {outline-color:#f4bac2}

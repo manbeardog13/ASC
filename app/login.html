@@ -166,6 +166,7 @@ if(sat>=59){d.classList.add('island');d.style.setProperty('--isl-y',(sat-48)+'px
 <script type="module">
   import { supabase, isConfigured } from '../js/supabaseClient.js';
   import { getSession, signIn, signUp, sendPasswordReset, updatePassword } from '../js/db.js';
+  import { safeLoginReturn } from '../js/firstRun.js';
   import { t, lang, setLang } from '../js/i18n.js';
 
   const $ = (id) => document.getElementById(id);
@@ -180,8 +181,12 @@ if(sat>=59){d.classList.add('island');d.style.setProperty('--isl-y',(sat-48)+'px
     document.documentElement.lang = lang();
     $('google').lastChild.textContent = ' ' + t('au.google') + ' ';
     $('divider').textContent = t('au.or'); $('forgot').textContent = t('au.forgot');
-    $('first').placeholder = t('au.firstName'); $('last').placeholder = t('au.lastName');
-    $('eye').setAttribute('aria-label', t('au.show')); $('theme').setAttribute('aria-label', t('au.theme'));
+    for (const [id, key] of [['first', 'au.firstName'], ['last', 'au.lastName'], ['email', 'login.email']]) {
+      $(id).placeholder = t(key);
+      $(id).setAttribute('aria-label', t(key));
+    }
+    $('eye').setAttribute('aria-label', t($('password').type === 'password' ? 'login.showPw' : 'login.hidePw'));
+    $('theme').setAttribute('aria-label', t('au.theme'));
     $('lang').textContent = lang() === 'hr' ? 'EN' : 'HR'; $('lang').setAttribute('aria-label', t('au.langLabel'));
   };
   $('lang').addEventListener('click', () => { setLang(lang() === 'hr' ? 'en' : 'hr'); applyStatic(); setMode(mode); });
@@ -209,6 +214,7 @@ if(sat>=59){d.classList.add('island');d.style.setProperty('--isl-y',(sat-48)+'px
   // Show / hide password
   $('eye').addEventListener('click', () => {
     const p = $('password'); p.type = p.type === 'password' ? 'text' : 'password';
+    $('eye').setAttribute('aria-label', t(p.type === 'password' ? 'login.showPw' : 'login.hidePw'));
   });
 
   if (!isConfigured()) { say(t('au.noConfig'), 'err'); busy(true); }
@@ -223,7 +229,7 @@ if(sat>=59){d.classList.add('island');d.style.setProperty('--isl-y',(sat-48)+'px
   // Where to land after sign-in: the page that sent us here (same app only), else the board.
   const dest = () => {
     let r = null; try { r = sessionStorage.getItem('asc.return'); sessionStorage.removeItem('asc.return'); } catch (e) {}
-    return r && /^[a-z-]+(\/index)?\.html(\?[^#]*)?$|^warehouse-preview\/(index\.html)?(\?[^#]*)?$/.test(r) && !/^login\.html/.test(r) ? r : 'dashboard.html';
+    return safeLoginReturn(r) || 'dashboard.html';
   };
   const hash = new URLSearchParams(location.hash.slice(1));
   if (hash.get('type') === 'recovery') { setMode('recover'); S.done(); }
@@ -261,6 +267,10 @@ if(sat>=59){d.classList.add('island');d.style.setProperty('--isl-y',(sat-48)+'px
     title.textContent = map.t; sub.textContent = map.s;
     submit.firstChild.textContent = map.btn + ' ';
     $('password').placeholder = map.pass;
+    $('password').setAttribute('aria-label', map.pass);
+    $('forgot').textContent = next === 'reset' ? t('au.back') : t('au.forgot');
+    $('password').disabled = next === 'reset';
+    $('email').disabled = next === 'recover';
     $('password').autocomplete = next === 'signin' ? 'current-password' : 'new-password';
     $('password').required = next !== 'reset';
     $('email').required = next !== 'recover';
@@ -269,8 +279,14 @@ if(sat>=59){d.classList.add('island');d.style.setProperty('--isl-y',(sat-48)+'px
     say('');
   }
 
-  switchBtn.addEventListener('click', () => setMode(mode === 'signup' ? 'signin' : 'signup'));
-  $('forgot').addEventListener('click', () => setMode(mode === 'reset' ? 'signin' : 'reset'));
+  switchBtn.addEventListener('click', () => {
+    setMode(mode === 'signup' ? 'signin' : 'signup');
+    $(mode === 'signup' ? 'first' : 'email').focus();
+  });
+  $('forgot').addEventListener('click', () => {
+    setMode(mode === 'reset' ? 'signin' : 'reset');
+    $('email').focus();
+  });
 
   // Continue with Google — return to THIS staging app (not the mock root).
   // bloom() BEFORE signInWithOAuth: the library assigns location itself, so the
@@ -281,10 +297,12 @@ if(sat>=59){d.classList.add('island');d.style.setProperty('--isl-y',(sat-48)+'px
     say(''); busy(true);
     S.bloom();
     const redirectTo = location.href.split('#')[0].split('?')[0];
-    const { error } = await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo } });
-    if (error) {
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo } });
+      if (error) throw error;
+    } catch (error) {
       S.abort();
-      say(/not enabled|provider/i.test(error.message) ? t('au.googleOff') : error.message, 'err');
+      say(t(/not enabled|unsupported provider/i.test(error?.message || '') ? 'au.googleOff' : 'au.googleFail'), 'err');
       busy(false);
     }
   });

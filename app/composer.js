@@ -24,7 +24,6 @@
   css.rel = 'stylesheet';
   css.href = new URL('composer.css', base).href;
   document.head.appendChild(css);
-  ensure('stock-strip.js', true);
   ensure('concierge.js', true);
   ensure('agent-config.js', false);
   ensure('qr.js', false);

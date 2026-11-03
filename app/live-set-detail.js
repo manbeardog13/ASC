@@ -111,6 +111,18 @@ function renderActions(s) {
 
 function renderLocation(s) {
   const vals = [s.zone, s.rack, s.shelf, s.slot];
+  const mapLink = document.getElementById('findSetOnMap');
+  if (mapLink) {
+    const stored = ['in_storage', 'reserved'].includes(s.status) && !s.picked_up_at && !s.deleted_at;
+    const hasAddress = Boolean(s.location_id || (s.zone && s.rack));
+    if (stored && hasAddress && s.public_code) {
+      mapLink.href = 'spatial-studio/index.html?find=' + encodeURIComponent(s.public_code);
+      show(mapLink, true);
+    } else {
+      mapLink.removeAttribute('href');
+      show(mapLink, false);
+    }
+  }
   // blocks: [0] main display, [1] "Iz" move preview ([2] is the live "U" preview)
   qa('.loc-block').slice(0, 2).forEach((block) => {
     qa('.loc-cell', block).forEach((cell, i) => {
