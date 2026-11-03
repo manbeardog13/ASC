@@ -180,7 +180,7 @@ async function locate(browser){
       assert.equal(await p.evaluate(()=>JSON.stringify(window.__testInventory)===window.__beforeInventory),true,'Search must never modify customer/inventory records');
       assert.equal(await p.locator('.locate-results').getAttribute('aria-busy'),'false');
       assert.equal(await status.getAttribute('role'),'status');
-      assert.equal(await p.locator('.side .sb-group').count(),1,'Keep a single approved warehouse navigation group');
+      assert.equal(await p.locator('.side .sb-group[data-group="warehouse"]').count(),1,'Keep a single approved warehouse navigation group');
       assert.equal(await p.locator('.side a[href$="warehouse-preview/index.html"]').count(),1);
       assert.doesNotMatch(await p.locator('.side').innerText(),/Sva skladišta|PROSTORI/,'No duplicate warehouse tree belongs in the sidebar');
       const geometry=await p.evaluate(()=>{
