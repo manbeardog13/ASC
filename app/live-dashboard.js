@@ -8,8 +8,6 @@ import { getSession, loadMyProfile, healthStats, countsByStatus, listStorageSets
 import { decodePlan, daysUntil } from '../js/seasonPlan.js';
 import { bootOnboarding } from './onboarding.js';
 
-const SEASON_LABEL = { winter: 'Zimske', summer: 'Ljetne', all_season: 'Cjelogodišnje' };
-const SEASON_CLASS = { winter: 'win', summer: '', all_season: 'all' };
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const q = (s, r = document) => r.querySelector(s);
 const qa = (s, r = document) => [...r.querySelectorAll(s)];
@@ -21,7 +19,6 @@ function greeting() {
 function initials(name) {
   return (String(name || '').trim().split(/\s+/).map((w) => w[0]).filter(Boolean).slice(0, 2).join('') || 'ASC').toUpperCase();
 }
-function code4(code) { const m = String(code || '').match(/(\d{3,4})\s*$/); return m ? m[1] : (code || ''); }
 function daysBadge(dateStr) {
   const d = new Date(dateStr); d.setHours(0, 0, 0, 0);
   const today = new Date(); today.setHours(0, 0, 0, 0);
@@ -108,45 +105,6 @@ bootOnboarding();
   setNum(spills[0], health.todayCheckIns);
   setNum(spills[1], health.todayPickups);
   setNum(spills[2], upcoming.length);
-
-  // ---- Recent stream: newest sets fill the real slides (keep the tire photos as decoration) ----
-  const recent = [...sets].sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at)).slice(0, 6);
-  const realSlides = qa('.stream-track .slide:not([aria-hidden])');
-  realSlides.forEach((slide, i) => {
-    const s = recent[i];
-    if (!s) { slide.style.display = 'none'; return; }
-    slide.style.display = ''; slide.dataset.code = s.public_code;
-    const svg = s.public_code && window.ASCQR?.svg(s.public_code, 3);
-    if (svg) { const sticker=document.createElement('span'); sticker.className='qr-sticker'; sticker.innerHTML=svg; slide.querySelector('.thumb')?.append(sticker); }
-    slide.setAttribute('href', 'set-detail.html?code=' + encodeURIComponent(s.public_code));
-    const tab = q('.tab-tl', slide); if (tab) tab.textContent = code4(s.public_code);
-    const who = q('.meta .who', slide); if (who) who.textContent = s.vehicle?.customer?.name || 'Kupac';
-    const chip = q('.meta .chip', slide);
-    if (chip) { chip.textContent = SEASON_LABEL[s.season] || s.season || ''; chip.className = 'chip ' + (SEASON_CLASS[s.season] || ''); }
-  });
-  // Mirror the real slides into the duplicate track (marquee needs 2 identical halves).
-  const dupSlides = qa('.stream-track .slide[aria-hidden]');
-  dupSlides.forEach((slide, i) => {
-    const src = realSlides[i];
-    if (!src || src.style.display === 'none') { slide.style.display = 'none'; return; }
-    slide.style.display = ''; slide.dataset.code = src.dataset.code;
-    const qr = src.querySelector('.qr-sticker'); if(qr) slide.querySelector('.thumb')?.append(qr.cloneNode(true));
-    slide.setAttribute('href', src.getAttribute('href'));
-    const tab = q('.tab-tl', slide), stab = q('.tab-tl', src); if (tab && stab) tab.textContent = stab.textContent;
-    const who = q('.meta .who', slide), swho = q('.meta .who', src); if (who && swho) who.textContent = swho.textContent;
-    const chip = q('.meta .chip', slide), schip = q('.meta .chip', src); if (chip && schip) { chip.textContent = schip.textContent; chip.className = schip.className; }
-  });
-  // Empty warehouse: the marquee has nothing to show — one calm line instead.
-  if (!recent.length) {
-    const track = q('.stream-track');
-    if (track && track.parentElement) {
-      track.style.display = 'none';
-      const empty = document.createElement('p');
-      empty.textContent = 'Još nema kompleta — zaprimi prvi.';
-      empty.style.cssText = 'margin:18px 4px;font:500 13px Inter;color:var(--muted)';
-      track.parentElement.appendChild(empty);
-    }
-  }
 
   // ---- "Po sezoni" occupancy: real season split of everything in the house ----
   const active = sets.filter((s) => s.status !== 'checked_out');

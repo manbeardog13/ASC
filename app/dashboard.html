@@ -20,7 +20,7 @@
   Shared design system lives in app.css + app.js (v6 "Hanssen"): tokens, glass
   shell, header, notched corner tabs, stage hero, action cards, card surfaces,
   slider, iOS dock, theme toggle + count-up animations. Only the dashboard's own
-  layout grids (.hero / .trio / .recent header) stay inline below. Dedicated
+  layout grids (.hero / .trio) stay inline below. Dedicated
   imagery: zaprimi.jpg (green) = check-in, preuzmi.jpg (red) = pickup — used ONLY
   there. Numbers are placeholders.
 -->
@@ -64,31 +64,6 @@ html.splashing .greet{animation-play-state:paused}
 .trio{display:grid;grid-template-columns:1fr 1fr 1fr;gap:var(--gap);margin-top:var(--gap)}
 @media(max-width:900px){ .trio{grid-template-columns:1fr} }
 
-/* Recent-sets section header (the .slider/.slide/.chip cards live in app.css) */
-.recent{margin-top:var(--gap)}
-.recent .head{display:flex;align-items:baseline;justify-content:space-between;margin:0 4px 10px}
-.recent .head h3{font:600 15px Sora}
-.recent .head .live{display:inline-flex;align-items:center;gap:6px;font:600 10.5px Inter;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
-.recent .head .live .ld{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 7px 1px rgba(47,191,91,.6);animation:breathe 2.2s ease-in-out infinite}
-/* Live stream marquee — seamless (dup track + translateX(-50%) with per-card
-   margins), constant linear speed, GPU transform, edge-fade masks. */
-.stream{position:relative;overflow:hidden;padding:2px 0 8px;
-  -webkit-mask-image:linear-gradient(90deg,transparent,#000 5%,#000 95%,transparent);
-          mask-image:linear-gradient(90deg,transparent,#000 5%,#000 95%,transparent)}
-.stream-track{display:flex;width:max-content;will-change:transform;animation:streamMove 34s linear infinite}
-.stream-track .slide{flex:0 0 auto;position:relative;margin-right:12px}
-@keyframes streamMove{to{transform:translateX(-50%)}}
-@media(any-hover:hover){ .stream:hover .stream-track{animation-play-state:paused} }
-@media(prefers-reduced-motion:reduce){ .stream-track{animation:none} .stream{overflow-x:auto;-webkit-mask-image:none;mask-image:none} }
-/* Each streamed set shows its acquisition photo with the printed QR label stuck
-   on it; the set number rides in a notched corner tab (top-left). */
-.stream .slide .thumb{position:relative}
-.stream .qr-sticker{position:absolute;right:8px;bottom:8px;z-index:2;background:#fbfbfb;padding:4px;border-radius:6px;transform:rotate(-5deg);box-shadow:0 4px 12px -3px rgba(0,0,0,.55);border:1px solid rgba(0,0,0,.06);cursor:pointer;transition:transform 160ms var(--snap),box-shadow 200ms var(--snap)}
-@media(any-hover:hover){ .stream .qr-sticker:hover{transform:rotate(-5deg) scale(1.12);box-shadow:0 8px 18px -4px rgba(0,0,0,.6)} }
-.stream .qr-sticker:active{transform:rotate(-5deg) scale(.96)}
-.stream .qr-sticker svg{display:block;width:38px;height:38px;image-rendering:pixelated;border-radius:2px}
-.stream .slide .tab-tl{font-size:10px;padding:5px 9px 6px}
-
 /* One compact assistant surface; operational shortcuts are always reachable. */
 .agent-shell {position:relative;align-self:start}
 .hero .agent-shell {grid-column:1;grid-row:3}
@@ -115,7 +90,7 @@ html.has-composer #agentCard .text-bubble{display:none}
    applied by JS to the other cards so every notch reveals the TRUE background
    instead of a painted --tab-surf patch (kills the corner "leakage"). The JS
    measures each tab, moves it to an overlay, and masks its card. Top-left tabs
-   only for now; the animated stream slides keep the painted notch. ===== */
+   only for now. ===== */
 .notch-cut{--r:14px;
   -webkit-mask:
     linear-gradient(#000,#000),
@@ -351,43 +326,12 @@ if(sat>=59){d.classList.add('island');d.style.setProperty('--isl-y',(sat-48)+'px
     </div>
   </section>
 
-  <!-- RECENT — a live right-to-left stream. Newest auto-prepends and stays 24 h.
-       Two identical copies + translateX(-50%) with per-card margins = seamless. -->
-  <section class="recent reveal" style="animation-delay:350ms">
-    <div class="head"><h3>Nedavno</h3><span class="live"><span class="ld"></span>uživo · 24 h</span></div>
-    <div class="stream" aria-label="Nedavno zaprimljeni setovi — stream uživo">
-      <div class="stream-track" id="streamTrack">
-        <a class="slide" style="display:none"><span class="tab-tl"></span><span class="thumb" style="background-image:url('assets/set-1.jpg')"></span><div class="meta"><div class="who"></div><span class="chip"></span></div></a>
-        <a class="slide" style="display:none"><span class="tab-tl"></span><span class="thumb" style="background-image:url('assets/set-2.jpg')"></span><div class="meta"><div class="who"></div><span class="chip"></span></div></a>
-        <a class="slide" style="display:none"><span class="tab-tl"></span><span class="thumb" style="background-image:url('assets/set-3.jpg')"></span><div class="meta"><div class="who"></div><span class="chip"></span></div></a>
-        <a class="slide" style="display:none"><span class="tab-tl"></span><span class="thumb" style="background-image:url('assets/set-4.jpg')"></span><div class="meta"><div class="who"></div><span class="chip"></span></div></a>
-        <a class="slide" style="display:none"><span class="tab-tl"></span><span class="thumb" style="background-image:url('assets/set-5.jpg')"></span><div class="meta"><div class="who"></div><span class="chip"></span></div></a>
-        <a class="slide" style="display:none"><span class="tab-tl"></span><span class="thumb" style="background-image:url('assets/set-6.jpg')"></span><div class="meta"><div class="who"></div><span class="chip"></span></div></a>
-        <a class="slide" aria-hidden="true" tabindex="-1" style="display:none"><span class="tab-tl"></span><span class="thumb" style="background-image:url('assets/set-1.jpg')"></span><div class="meta"><div class="who"></div><span class="chip"></span></div></a>
-        <a class="slide" aria-hidden="true" tabindex="-1" style="display:none"><span class="tab-tl"></span><span class="thumb" style="background-image:url('assets/set-2.jpg')"></span><div class="meta"><div class="who"></div><span class="chip"></span></div></a>
-        <a class="slide" aria-hidden="true" tabindex="-1" style="display:none"><span class="tab-tl"></span><span class="thumb" style="background-image:url('assets/set-3.jpg')"></span><div class="meta"><div class="who"></div><span class="chip"></span></div></a>
-        <a class="slide" aria-hidden="true" tabindex="-1" style="display:none"><span class="tab-tl"></span><span class="thumb" style="background-image:url('assets/set-4.jpg')"></span><div class="meta"><div class="who"></div><span class="chip"></span></div></a>
-        <a class="slide" aria-hidden="true" tabindex="-1" style="display:none"><span class="tab-tl"></span><span class="thumb" style="background-image:url('assets/set-5.jpg')"></span><div class="meta"><div class="who"></div><span class="chip"></span></div></a>
-        <a class="slide" aria-hidden="true" tabindex="-1" style="display:none"><span class="tab-tl"></span><span class="thumb" style="background-image:url('assets/set-6.jpg')"></span><div class="meta"><div class="who"></div><span class="chip"></span></div></a>
-      </div>
-    </div>
-  </section>
 </main>
 
 
 <script src="app.js"></script>
-<script src="warehouse-preview/vendor/qrcode.js"></script>
 <script src="qr.js"></script>
 <script>
-/* Click a QR sticker → print a real sticker instantly (capture phase beats the
-   slide's own navigation). The set code is the slide's corner number. */
-document.addEventListener('click', function(e){
-  var st = e.target.closest('.qr-sticker'); if(!st) return;
-  e.preventDefault(); e.stopPropagation();
-  var code = st.closest('.slide')?.dataset.code;
-  if (code && window.ASCQR && !ASCQR.printSticker(code)) alert('Dopustite skočne prozore za ispis naljepnice.');
-}, true);
-
 /* The stage card is no longer just statistics — every stat is clickable. The
    headline count opens the whole database (customers → cars → sets); the meter
    opens saved customer records; each spill jumps to today's relevant screen. */
@@ -484,12 +428,12 @@ document.addEventListener('click', function(e){
      other cards' notches, so each corner reveals the true background instead of a
      painted --tab-surf patch (kills the "leakage"). Each top-left tab moves to an
      overlay in its (relative) container; the card is masked; positions re-sync on
-     resize / font load. Skips the agent card (already cut) and the animated stream. */
+     resize / font load. Skips the separate assistant panel. */
   (() => {
     const items = [];
     document.querySelectorAll('.tab-tl').forEach((tab) => {
       const card = tab.parentElement;
-      if (!card || card.id === 'agentCard' || card.closest('.stream-track')) return;
+      if (!card || card.id === 'agentCard') return;
       const container = card.parentElement;
       if (getComputedStyle(container).position === 'static') container.style.position = 'relative';
       tab.classList.add('notch-cut-tab');
@@ -565,7 +509,7 @@ document.addEventListener('click', function(e){
     });
   })();
 </script>
-<!-- LIVE: override the mock numbers/stream/reminders with real Supabase data. -->
+<!-- Load the dashboard inventory totals and recent movements. -->
 <script src="layout-edit.js" defer></script>
 <script type="module" src="live-dashboard.js"></script>
 <p class="nero-mark">Powered by <a href="https://nerosummit.com">Nero Summit</a></p>

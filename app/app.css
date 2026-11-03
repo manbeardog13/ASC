@@ -253,16 +253,6 @@ html.dark .obar .bar{background:rgba(244,245,247,.10)}
 .mini .pl{margin-left:auto;font:600 11px Inter;color:var(--on-stage-2);flex:none}
 .mini.overdue time{color:var(--lava-2);font-weight:700}
 
-/* ============================== Slider cards ============================ */
-.slider{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;padding:2px 4px 8px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
-.slider::-webkit-scrollbar{display:none}
-.slide{flex:0 0 auto;width:164px;scroll-snap-align:start;border-radius:18px;overflow:hidden;background:var(--panel);text-decoration:none;color:var(--ink);box-shadow:var(--shadow-card);transition:transform 160ms var(--snap),box-shadow 220ms var(--snap)}
-@media(any-hover:hover){ .slide:hover{transform:translateY(-3px);box-shadow:0 18px 36px -16px rgba(2,3,5,.5)} }
-.slide:active{transform:scale(.98);transition-duration:90ms}
-.slide .thumb{display:block;height:100px;background-size:cover;background-position:center}
-.slide .meta{padding:11px 12px 13px}
-.slide .code{font:700 12.5px Inter}
-.slide .who{font:500 12px Inter;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .chip{display:inline-flex;align-items:center;margin-top:8px;padding:3px 9px;border-radius:999px;font:600 10.5px Inter;background:var(--lava-tint);color:var(--lava-ink)}
 .chip.win{background:rgba(46,47,49,.12);color:var(--gun)} html.dark .chip.win{background:rgba(244,245,247,.10);color:#c9ccd2}
 .chip.all{background:rgba(99,103,111,.16);color:var(--muted)}

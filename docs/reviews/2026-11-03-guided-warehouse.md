@@ -24,7 +24,7 @@ The earlier route sweep opened 19 URLs signed in and signed out. The combined re
 
 ## Combined design and performance pass
 
-The light default uses a warm pearl background, petrol controls, and a black ASC mark with a red underglow. The staff sidebar groups five primary destinations and puts the role-gated People directory under More. In the dashboard, three working warehouse queries replace timed sales prompts. The stock strip and its inventory subscription are removed. The Studio loads 3D assets on demand and keeps the renderer when switching rooms. A focused login field follows the visual viewport in the simulated short-screen keyboard cases.
+The light default uses a warm pearl background, petrol controls, and a black ASC mark with a red underglow. The staff sidebar groups five primary destinations and puts the role-gated People directory under More. In the dashboard, three working warehouse queries replace timed sales prompts. The global stock strip, its inventory subscription and the separate dashboard tyre-photo carousel are removed. Verified movements remain in the dashboard activity list. The Studio loads 3D assets on demand and keeps the renderer when switching rooms. A focused login field follows the visual viewport in the simulated short-screen keyboard cases.
 
 From the staff menu, More → Warehouse guide opens the six tasks. The guided tour is accessible from the guide header and inside Studio. The host-aware return link goes to Tenants when ASC is mounted under the Nero app.
 

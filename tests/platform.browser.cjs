@@ -395,12 +395,35 @@ async function operationalFeedback(browser) {
             if (location.pathname.endsWith('workshop.html')) return unavailable();
             return [{id:'one',public_code:'ASC-TEST',status:'in_storage',expected_out_date:'2025-01-01'}];
           };
+          export const recentMovements = async () => [
+            {action:'move',created_at:'2026-10-20T10:00:00Z',storage_sets:{public_code:'ASC-TEST'}},
+            {action:'in',created_at:'2026-10-19T10:00:00Z',storage_sets:{public_code:'ASC-TEST'}},
+          ];
           export const markReminded = async () => {
             window.attempts = (window.attempts || 0) + 1;
             if (window.attempts === 1) return unavailable();
             return {queued:false};
           };`,
       }));
+      const photoRequests = [];
+      const trackPhotos = request => {
+        if (/\/assets\/(?:set-\d+\.jpg|asc-tyres-original\.png)$/.test(new URL(request.url()).pathname)) {
+          photoRequests.push(request.url());
+        }
+      };
+      p.on('request', trackPhotos);
+      await p.goto('http://asc.test/app/dashboard.html');
+      await p.locator('.dash-overview summary').click();
+      const movements = p.locator('#gMovesList li');
+      await movements.filter({hasText:'Premještaj'}).waitFor({state:'visible'});
+      assert.deepEqual(await movements.locator('b').allTextContents(), ['ASC-TEST', 'ASC-TEST']);
+      assert.deepEqual(await movements.locator('span').allTextContents(), ['Premještaj', 'Ulaz']);
+      assert.ok((await movements.locator('time').allTextContents()).every(Boolean));
+      assert.equal(await p.locator('.stream-track, .asc-stock-strip, .asc-tyre-stream, [aria-roledescription="carousel"]').count(), 0,
+        'A loaded dashboard must not render a rotating inventory feed');
+      assert.deepEqual(photoRequests, [], 'Inventory must not request decorative carousel photos');
+      p.off('request', trackPhotos);
+
       for (const [file, title] of [['customers','Kupci nisu učitani'], ['recycle','Koš nije učitan.'], ['workshop','Podaci za radionicu nisu učitani.'], ['users','Popis članova nije učitan']]) {
         await p.goto('http://asc.test/app/' + file + '.html');
         await p.getByText(title, {exact:false}).first().waitFor({state:'visible'});
