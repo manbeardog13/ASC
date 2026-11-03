@@ -1,4 +1,4 @@
-import { renderAppNavigation, applyNavAccess, syncThemeButton, installLangButton } from '../navigation.js';
+import { renderAppNavigation, applyNavAccess, applyTenantAccess, loadTenantRole, syncThemeButton, installLangButton } from '../navigation.js';
 import { saveOperation, LocalSaveError } from './persistence.js';
 import { parseCroatianIntent, searchLocations, customerLabel } from './journey.js';
 import { createTour } from './tour.js';
@@ -31,7 +31,7 @@ const paths = {
 };
 const icon = (name,size=19) => `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.55" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name]||paths.stack}</svg>`;
 $('asc-navigation').innerHTML=renderAppNavigation({warehouseOpen:true});
-applyNavAccess($('asc-navigation'), null);
+applyNavAccess($('asc-navigation'), null);applyTenantAccess($('asc-navigation'), null);loadTenantRole().then((r)=>applyTenantAccess($('asc-navigation'), r)).catch(()=>{});
 let canEdit=false;
 loadMyProfile().then((profile)=>{applyNavAccess($('asc-navigation'), profile?.role);canEdit=canEditWarehouse(profile?.role);if(!disposed){render();void syncShared();}}).catch(()=>{});
 syncThemeButton($('sbTheme'));
