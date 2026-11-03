@@ -149,8 +149,9 @@ html.has-composer body{padding-bottom:calc(var(--nero-stack,146px) + 24px + env(
 @media(max-width:560px){.nero-sheet{border-radius:22px;padding:12px;min-height:114px}.nero-pills{gap:4px}.nero-pill{padding:0 9px}}
 @media(max-height:500px){.nero-sheet{padding:12px;min-height:114px}.nero-composer .nero-log{max-height:24dvh}}
 
-.nero-tools .nero-suggest{flex:1 1 0%;min-width:0;margin:0;padding:0;justify-content:safe flex-start;gap:4px;scrollbar-width:none}
-.nero-tools .nero-bubble{transform:none;background:transparent;border-radius:0;padding:0 8px}
+.nero-tools .nero-suggest{flex:1 1 0%;min-width:0;margin:0;padding:0;justify-content:flex-start;gap:4px;scrollbar-width:none}
+.nero-tools .nero-bubble{transform:none;background:transparent;border-radius:0;padding:0 8px;touch-action:pan-x pan-y}
+.nero-tools .nero-bubble.is-linked{touch-action:pan-y}
 .nero-tools .nero-bubble::before{border-color:transparent;background:transparent}
 .nero-tools .nero-bubble:focus-visible{outline:1px solid var(--nero-focus);outline-offset:-2px}
 .nero-input::placeholder{transition:opacity 180ms ease}

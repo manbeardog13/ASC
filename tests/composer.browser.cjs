@@ -157,10 +157,14 @@ async function neutralGlassAndSuggestions(){
     const style=await p.locator('.nero-sheet').evaluate(el=>{const s=getComputedStyle(el);return{color:s.backgroundColor,blur:s.backdropFilter};});
     const channels=style.color.match(/[\d.]+/g).map(Number);
     assert.ok(Math.max(...channels.slice(0,3))-Math.min(...channels.slice(0,3))<=10,'Glass must be neutral, without a purple fill');
-    assert.ok(channels[3]>=.3&&channels[3]<=.65,'Glass must transmit the backdrop instead of becoming an opaque bar');
+    assert.ok(channels[3]>0&&channels[3]<=.12,'Clear glass must transmit at least 88% of the backdrop in either theme');
     assert.match(style.blur,/blur\([1-9]/,'Frost must actually blur the page behind the sheet');
     const row=await p.locator('.nero-suggest').boundingBox();
     assert.ok(row.height<=44.1,'Suggestions must fit one horizontal touch row');
+    const plus=await p.locator('.nero-plus').boundingBox(), mic=await p.locator('.nero-mic').boundingBox();
+    assert.ok(row.width>0 && row.x>=plus.x+plus.width && row.x+row.width<=mic.x && Math.abs(row.y-mic.y)<1,'Suggestions stay inside the composer between the plus and microphone');
+    const send=await p.locator('.nero-send').evaluate(el=>({fill:getComputedStyle(el).backgroundColor,arrow:getComputedStyle(el).color}));
+    assert.deepEqual(send,{fill:'rgb(114, 31, 43)',arrow:'rgb(255, 255, 255)'},'The send button keeps its dark red finish and white arrow');
     const buttons=await p.locator('.nero-bubble').evaluateAll(nodes=>nodes.map(el=>{
      const r=el.getBoundingClientRect(),s=getComputedStyle(el,'::before');
      return{height:r.height,y:r.y,visualHeight:r.height-parseFloat(s.top)-parseFloat(s.bottom),whiteSpace:getComputedStyle(el).whiteSpace};
@@ -170,6 +174,9 @@ async function neutralGlassAndSuggestions(){
    }
    await p.locator('.nero-suggest').getByRole('button',{name:'Spremi podatke kupca',exact:true}).click();
    assert.equal(await p.evaluate(()=>window.__suggestionClicks),1,'Suggestions must execute their original page action');
+   await p.getByRole('main').getByRole('button',{name:'Ispiši oznaku novog seta',exact:true}).evaluate(el=>el.addEventListener('click',()=>window.__lastSuggestionClicked=true));
+   await p.locator('.nero-suggest').getByRole('button',{name:'Ispiši oznaku novog seta',exact:true}).click();
+   assert.equal(await p.evaluate(()=>window.__lastSuggestionClicked),true,'The last action must remain reachable when suggestions overflow');
    assert.deepEqual(h.errors,[]);
   }finally{await h.close();}
  }

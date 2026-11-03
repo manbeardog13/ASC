@@ -60,6 +60,7 @@ jobs:
           node tests/warehouse-live-app.browser.cjs
           node tests/warehouse-scene.browser.cjs
           node tests/warehouse-review.browser.cjs
+          node tests/spatial-studio.browser.cjs
       - name: Retain synthetic browser evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -70,5 +71,6 @@ jobs:
             out/brand-tests/
             out/composer-tests/
             out/locate-tests/
+            out/spatial-studio-tests/
           if-no-files-found: ignore
           retention-days: 7
