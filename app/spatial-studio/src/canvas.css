@@ -1,0 +1,92 @@
+.asc-spatial-canvas {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 240px;
+  isolation: isolate;
+  background: radial-gradient(ellipse at 47% 45%, #1a2629, #111718 78%);
+  overflow: hidden;
+}
+.asc-map-plan {
+  width: 100%;
+  height: 100%;
+  display: block;
+  max-height: 100%;
+}
+.asc-map-plan [role="button"] {
+  cursor: pointer;
+}
+.asc-map-plan [role="button"]:focus-visible {
+  outline: none;
+  filter: drop-shadow(0 0 0.13px #fff);
+}
+.asc-map-switch,
+.asc-map-status,
+.asc-map-compass {
+  position: absolute;
+  z-index: 1;
+}
+.asc-map-switch {
+  top: 14px;
+  right: 16px;
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid #ffffff26;
+  background: #11191de6;
+  border-radius: 8px;
+}
+.asc-map-switch button {
+  min-height: 34px;
+  border: 0;
+  padding: 0 12px;
+  color: #99abae;
+  background: transparent;
+  font: 600 11px/1 system-ui;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.asc-map-switch button[aria-pressed="true"] {
+  color: white;
+  background: #29383d;
+}
+.asc-map-switch button:focus-visible {
+  outline: 2px solid #a1e5cf;
+}
+.asc-map-status {
+  left: 50%;
+  bottom: 44px;
+  transform: translateX(-50%);
+  color: #dce5e2;
+  background: #11191df0;
+  padding: 7px 11px;
+  border-radius: 6px;
+  font: 12px system-ui;
+  white-space: normal;
+  max-width: 90%;
+}
+.asc-map-compass {
+  left: 18px;
+  bottom: 15px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #afc8c4;
+  font: 12px monospace;
+  pointer-events: none;
+}
+.asc-map-compass span {
+  font: 600 9px system-ui;
+  letter-spacing: 0.15em;
+  color: #94a9a7;
+}
+.asc-spatial-canvas.placing :is(canvas, svg) {
+  cursor: crosshair;
+}
+.asc-map-error {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  color: #c0cbce;
+  background: #151c1d;
+}

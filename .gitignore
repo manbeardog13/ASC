@@ -7,6 +7,8 @@ Thumbs.db
 
 # Node (only if you later add tooling — not needed for the app itself)
 node_modules/
+__pycache__/
+*.py[cod]
 
 # Backup working directory produced by scripts/backup.sh in CI
 out/

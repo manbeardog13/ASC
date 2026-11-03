@@ -1,5 +1,5 @@
-/* Nero on every page, the dashboard included. Compact glass pill while browsing,
-   expanded only while someone is typing. Push-to-talk, history, attachments,
+/* Nero on every page, the dashboard included. Two-row glass composer while browsing,
+   conversation controls revealed while typing. Push-to-talk, history, attachments,
    and the admin tailnet relay live here. */
 (function () {
   'use strict';
@@ -24,6 +24,7 @@
   css.rel = 'stylesheet';
   css.href = new URL('composer.css', base).href;
   document.head.appendChild(css);
+  ensure('stock-strip.js', true);
   ensure('concierge.js', true);
   ensure('agent-config.js', false);
   ensure('qr.js', false);
@@ -45,14 +46,16 @@
       '<div class="nero-files" hidden></div>' +
       '<textarea class="nero-input" rows="1" enterkeyhint="send" placeholder="Pitaj Nero…" aria-label="Pitaj Nero"></textarea>' +
       '<div class="nero-tools">' +
-        '<button class="nero-plus" type="button" aria-label="Priloži">+</button>' +
+        '<button class="nero-plus" type="button" aria-label="Priloži" title="Priloži sliku ili PDF">' +
+          '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5.4v13.2M5.4 12h13.2"/></svg>' +
+        '</button>' +
         '<input class="nero-file" type="file" accept="image/*,application/pdf" hidden>' +
         '<span class="nero-rec" hidden role="status">Slušam…</span>' +
         '<button class="nero-mic" type="button" hidden aria-label="Govori Nero" aria-pressed="false">' +
           '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M6 11a6 6 0 0012 0M12 17v3"/></svg>' +
         '</button>' +
-        '<button class="nero-send" type="submit" aria-label="Pošalji">' +
-          '<svg class="nero-go" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6"/></svg>' +
+        '<button class="nero-send" type="submit" aria-label="Pošalji" title="Pošalji poruku">' +
+          '<svg class="nero-go" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6"/></svg>' +
           '<svg class="nero-stop" viewBox="0 0 24 24" width="12" height="12" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2" fill="currentColor"/></svg>' +
         '</button>' +
       '</div>' +
@@ -60,7 +63,7 @@
     '<div class="nero-pills">' +
       '<button class="nero-pill" type="button" data-act="new">Novi razgovor</button>' +
       '<button class="nero-pill" type="button" data-act="history">Povijest</button>' +
-      '<button class="nero-pill" type="button" data-act="relay" hidden aria-pressed="false" aria-label="Send to Toni &amp; Nero">Toni &amp; Nero</button>' +
+      '<button class="nero-pill" type="button" data-act="relay" hidden aria-pressed="false" aria-label="Pošalji u Toni &amp; Nero">Toni &amp; Nero</button>' +
     '</div>' +
     '<div class="nero-history" hidden></div>';
   // Docked inside the page column, after the content — never floating over it.
@@ -83,7 +86,7 @@
   suggest.className = 'nero-suggest';
   suggest.setAttribute('aria-label', 'Prijedlozi');
   suggest.inert = true;
-  root.insertBefore(suggest, root.querySelector('.nero-sheet'));
+  root.querySelector('.nero-plus').insertAdjacentElement('afterend', suggest);
   var shellEl = document.querySelector('main.shell') || document.querySelector('.shell');
   if (shellEl && !document.querySelector('.nero-mark')) {
     var mark = document.createElement('p');
@@ -92,9 +95,10 @@
     shellEl.insertAdjacentElement('afterend', mark);
   }
 
-  // Conversation controls live inside the sheet's tool row — nothing below the composer.
-  root.querySelector('.nero-tools').insertBefore(root.querySelector('.nero-pills'), root.querySelector('.nero-mic'));
-  root.insertBefore(root.querySelector('.nero-history'), suggest);
+  // Keep the reference's primary row clear: attachments left, dictation/send right.
+  // Existing conversation controls remain available above the sheet while editing.
+  root.insertBefore(root.querySelector('.nero-pills'), root.querySelector('.nero-sheet'));
+  root.insertBefore(root.querySelector('.nero-history'), root.querySelector('.nero-sheet'));
   // Docked to the bottom edge; on phones it rides the on-screen keyboard.
   function dock() {
     var vv = window.visualViewport;
@@ -105,10 +109,27 @@
   if (window.visualViewport) { visualViewport.addEventListener('resize', dock); visualViewport.addEventListener('scroll', dock); }
   dock();
   var input = root.querySelector('.nero-input');
+  var nextHint=0, fadeTimer=0;
+  function hintChoices(){
+    var h=[];
+    if(document.querySelector('#place-button:not([hidden]):not(:disabled)'))h.push('Odaberi prostor za novi stupac…');
+    if(document.querySelector('#loc-zone'))h.push('Pripremi mjesta i QR oznake…');
+    if(document.querySelector('#area-code'))h.push('Pronađi komplet po regalu…');
+    if(document.querySelector('a[href$="checkin.html"]:not([hidden]):not([aria-disabled="true"])'))h.push('Kako zaprimiti novi komplet?');
+    h.push('Pronađi gume po registraciji…','Kako otvoriti komplet pomoću QR oznake?');return h;
+  }
+  function idleHint(){return !document.hidden && !input.value && !root.contains(document.activeElement) && !root.classList.contains('is-busy') && !root.classList.contains('is-open');}
+  input.placeholder=hintChoices()[0];
+  setInterval(function(){
+    if(!idleHint() || matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+    input.classList.add('changing-hint');clearTimeout(fadeTimer);
+    fadeTimer=setTimeout(function(){if(idleHint()){var hints=hintChoices();input.placeholder=hints[++nextHint%hints.length];}input.classList.remove('changing-hint');},180);
+  },5600);
+  input.addEventListener('focus',function(){clearTimeout(fadeTimer);input.classList.remove('changing-hint');});
   var log = root.querySelector('.nero-log');
   var queueBox = root.querySelector('.nero-queue');
   var connectBox = root.querySelector('.nero-connect');
-  connectBox.textContent = 'Connect to Tailscale to reach Toni & Nero';
+  connectBox.textContent = 'Poveži se na Tailscale za razgovor s Toni & Nero.';
   var filesBox = root.querySelector('.nero-files');
   var fileInput = root.querySelector('.nero-file');
   var send = root.querySelector('.nero-send');
@@ -176,7 +197,44 @@
     } catch (e) { return ''; }
   }
 
+  // The two shallow concave upper corners use ASC's existing arched notch
+  // language. One shared path clips the real glass and draws its fine rim;
+  // it never paints an opaque patch over the page behind the composer.
+  var sheet = root.querySelector('.nero-sheet');
+  var outline = null;
+  var outlineSize = '';
+  function fitOutline() {
+    if (!window.CSS || !CSS.supports('clip-path', 'path("M0 0H1V1Z")')) return;
+    var bounds = sheet.getBoundingClientRect();
+    var width = bounds.width, height = bounds.height;
+    var radius = parseFloat(getComputedStyle(sheet).borderBottomLeftRadius) || 24;
+    var size = [width, height, radius].join(':');
+    if (!width || !height || size === outlineSize) return;
+    outlineSize = size;
+    var shape = 'M30 0 H' + (width - 30) +
+      ' Q' + (width - 24) + ' 0 ' + (width - 24) + ' 6' +
+      ' Q' + (width - 24) + ' 12 ' + (width - 18) + ' 12' +
+      ' H' + (width - 6) + ' Q' + width + ' 12 ' + width + ' 18' +
+      ' V' + (height - radius) + ' Q' + width + ' ' + height + ' ' + (width - radius) + ' ' + height +
+      ' H' + radius + ' Q0 ' + height + ' 0 ' + (height - radius) +
+      ' V18 Q0 12 6 12 H18 Q24 12 24 6 Q24 0 30 0 Z';
+    if (!outline) {
+      outline = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      outline.classList.add('nero-outline');
+      // CSS is loaded asynchronously; keep the SVG out of layout immediately.
+      outline.style.cssText = 'position:absolute;pointer-events:none';
+      outline.setAttribute('aria-hidden', 'true');
+      outline.setAttribute('focusable', 'false');
+      outline.appendChild(document.createElementNS('http://www.w3.org/2000/svg', 'path'));
+      sheet.prepend(outline);
+    }
+    outline.setAttribute('viewBox', '0 0 ' + width + ' ' + height);
+    outline.firstChild.setAttribute('d', shape);
+    sheet.style.clipPath = 'path("' + shape + '")';
+    sheet.classList.add('has-asc-outline');
+  }
   function fit() {
+    fitOutline();
     var foot = document.querySelector('.nero-mark') || document.querySelector('.spatial-footer');
     var h = foot ? Math.ceil(foot.getBoundingClientRect().height) : 36;
     root.style.setProperty('--nero-foot', Math.max(36, h) + 'px');
@@ -278,6 +336,7 @@
     busy = on;
     root.classList.toggle('is-busy', on);
     send.setAttribute('aria-label', on ? 'Stani' : 'Pošalji');
+    send.setAttribute('title', on ? 'Zaustavi odgovor' : 'Pošalji poruku');
   }
   function stopRequest() {
     requestGeneration += 1;
@@ -371,7 +430,7 @@
     if (!items || !items.length) { queueBox.hidden = true; fit(); return; }
     queueBox.hidden = false;
     items.forEach(function (item) {
-      var waiting = relayUrl() ? 'queued, sends when Tailscale reconnects' : 'Poruka čeka vezu.';
+      var waiting = relayUrl() ? 'čeka ponovno povezivanje s Tailscaleom' : 'Poruka čeka vezu.';
       var row = document.createElement('div');
       row.className = 'nero-q';
       row.innerHTML = '<span>' + esc(item.text.slice(0, 80)) + ' — ' + waiting + '</span>' +
@@ -501,11 +560,11 @@
     postBuilder(item).then(function (outcome) {
       if (request !== requestGeneration) return;
       setBusy(false);
-      if (outcome === 'ok') { showConnect(false); mark('sent to Toni & Nero'); return; }
+      if (outcome === 'ok') { showConnect(false); mark('Poslano u Toni & Nero.'); return; }
       if (outcome === 'http') { mark('Toni & Nero nisu primili poruku.'); return; }
       if (outcome === 'unconfigured') { mark('Toni & Nero još nisu spojeni.'); return; }
       if (relayUrl()) showConnect(true);
-      mark(relayUrl() ? 'queued, sends when Tailscale reconnects' : 'Poruka čeka vezu.');
+      mark(relayUrl() ? 'čeka ponovno povezivanje s Tailscaleom' : 'Poruka čeka vezu.');
       if (!q) return;
       return q.enqueue(item).then(function () { refreshQueue(); arm(0); });
     }).catch(function () { if (request === requestGeneration) setBusy(false); });
@@ -1054,6 +1113,39 @@
   // plays a short recoil wave and the bubbles fade 1.2s later.
   var reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
   var active = null, fadeTimer = 0, scrollTimer = 0;
+  var observedCard = null, suggestionFrame = 0;
+  var actionObserver = typeof MutationObserver === 'function' ? new MutationObserver(queueSuggestionRefresh) : null;
+  function availableAction(el) {
+    if (!el || !el.isConnected || el.matches(':disabled') || el.getAttribute('aria-disabled') === 'true' || el.closest('[inert],[hidden]')) return false;
+    // Explicitly moved secondary actions are hidden in the page on purpose.
+    return el.hasAttribute('data-nero-move') || (el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden');
+  }
+  function queueSuggestionRefresh() {
+    if (suggestionFrame) return;
+    suggestionFrame = requestAnimationFrame(function () {
+      suggestionFrame = 0;
+      if (!active || !active.isConnected) return;
+      var next = actionsOf(active), current = [].slice.call(suggest.querySelectorAll('.nero-bubble:not(.is-linked)'));
+      var staleLink = [].some.call(suggest.querySelectorAll('.nero-bubble.is-linked'), function (b) { return !availableAction(b._act && b._act.el); });
+      if (!staleLink && next.length === current.length && next.every(function (a, i) { return current[i]._act.el === a.el && current[i]._act.text === a.text; })) return;
+      var focused = document.activeElement && document.activeElement.closest('.nero-bubble');
+      var focusedAction = focused && focused._act && focused._act.el;
+      showSuggest(active);
+      if (focusedAction) {
+        var replacement = [].find.call(suggest.querySelectorAll('.nero-bubble'), function (b) { return b._act.el === focusedAction; });
+        (replacement || input).focus({ preventScroll: true });
+      }
+    });
+  }
+  function watchActions(card) {
+    if (actionObserver) actionObserver.disconnect();
+    if (observedCard) { observedCard.removeEventListener('input', queueSuggestionRefresh); observedCard.removeEventListener('change', queueSuggestionRefresh); }
+    observedCard = card;
+    if (!card) return;
+    if (actionObserver) actionObserver.observe(card, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['href', 'disabled', 'hidden', 'aria-disabled', 'aria-label'] });
+    card.addEventListener('input', queueSuggestionRefresh);
+    card.addEventListener('change', queueSuggestionRefresh);
+  }
   function accentOf(card) {
     var cs = getComputedStyle(card);
     var v = cs.getPropertyValue('--acc').trim() || getComputedStyle(document.documentElement).getPropertyValue('--acc').trim();
@@ -1070,17 +1162,17 @@
     var moved = [].slice.call(card.querySelectorAll('a[href][data-nero-move], button[data-nero-move]:not([disabled])'))
       .concat([].filter.call(document.querySelectorAll('a[href][data-nero-move], button[data-nero-move]:not([disabled])'), function (el) { return !el.closest('.card'); }));
     moved.forEach(function (el) {
-      var t = labelOf(el); if (out.length >= 3 || !t || seen[t]) return;
+      var t = labelOf(el); if (out.length >= 3 || !availableAction(el) || !t || seen[t]) return;
       seen[t] = 1; out.push({ el: el, text: t });
     });
     [].forEach.call(card.querySelectorAll('a[href], button:not([disabled])'), function (el) {
-      if (out.length >= 3 || el.closest('.nero-composer') || el.offsetParent === null) return;
+      if (out.length >= 3 || !availableAction(el) || el.closest('.nero-composer') || el.offsetParent === null) return;
       var t = labelOf(el); if (!t || t.length < 2 || seen[t]) return;
       seen[t] = 1; out.push({ el: el, text: t });
     });
     // Forms: offer the next empty field as the step to take.
     if (out.length < 3) [].forEach.call(card.querySelectorAll('input:not([type=hidden]), select, textarea'), function (el) {
-      if (out.length >= 3 || el.value || el.offsetParent === null || el.closest('.nero-composer')) return;
+      if (out.length >= 3 || !availableAction(el) || el.value || el.offsetParent === null || el.closest('.nero-composer')) return;
       var lab = (el.labels && el.labels[0] && el.labels[0].textContent) || el.getAttribute('aria-label') || el.placeholder || '';
       lab = lab.replace(/\s+/g, ' ').trim().slice(0, 28);
       if (!lab || seen[lab]) return;
@@ -1090,6 +1182,9 @@
   }
   var lastCard = null;
   function runAction(a) {
+    // A query or realtime refresh may replace a record between pointerdown and click.
+    // Never navigate through a detached, disabled or no-longer-available control.
+    if (!a || !availableAction(a.el)) { queueSuggestionRefresh(); return; }
     if (/^(INPUT|SELECT|TEXTAREA)$/.test(a.el.tagName)) { a.el.scrollIntoView({ block: 'center', behavior: reduce ? 'auto' : 'smooth' }); a.el.focus({ preventScroll: true }); }
     else { a.el.focus({ preventScroll: true }); a.el.click(); }
   }
@@ -1172,6 +1267,7 @@
     card.classList.add('nero-merged');
     root.classList.add('is-merged');
     showSuggest(card);
+    watchActions(card);
   }
   function disengage(card) {
     card.classList.remove('nero-merged');
@@ -1181,7 +1277,11 @@
       card.classList.remove('nero-recoil'); void card.offsetWidth; card.classList.add('nero-recoil');
       setTimeout(function () { card.classList.remove('nero-recoil'); }, 450);
     }
-    if (active === card) { active = null; root.classList.remove('is-merged'); }
+    if (active === card) { active = null; root.classList.remove('is-merged'); watchActions(null); }
+    // Disengagement can follow a result-list replacement in the same frame.
+    // Remove stale record shortcuts immediately, even during the quiet fade.
+    suggest.querySelectorAll('.nero-bubble').forEach(function (b) { if (!availableAction(b._act && b._act.el)) b.remove(); });
+    if (!suggest.children.length) { suggest.classList.remove('on'); suggest.inert = true; }
     clearTimeout(fadeTimer);
     fadeTimer = setTimeout(function () { if (!active) { suggest.classList.remove('on'); suggest.inert = true; ripple(); } }, 1200);
   }
@@ -1213,7 +1313,10 @@
     if (!root.contains(document.activeElement)) maybeCollapse();
   }, { passive: true });
   addEventListener('resize', fit);
-  if ('ResizeObserver' in window) new ResizeObserver(fit).observe(root);
+  var fitFrame = 0;
+  if ('ResizeObserver' in window) new ResizeObserver(function () {
+    if (!fitFrame) fitFrame = requestAnimationFrame(function () { fitFrame = 0; fit(); });
+  }).observe(root);
   fit();
 
   libs().then(function (lib) {

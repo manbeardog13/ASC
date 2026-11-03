@@ -56,7 +56,7 @@ const back = returnLink();
 if (back) root.append(back);
 root.append(el("p", { class: "lead" }, t("flow.rangeHint")));
 root.append(labeled("flow.warehouse", "loc-wh", "main", "main"));
-root.append(labeled("flow.zone", "loc-zone", "", "A"));
+root.append(labeled("flow.zone", "loc-zone", new URLSearchParams(location.search).get("zone") || "", "A"));
 root.append(labeled("flow.racks", "loc-racks", "", "01-04"));
 root.append(labeled("flow.shelves", "loc-shelves", "", "1-3"));
 root.append(labeled("flow.slots", "loc-slots", "", "01-08"));

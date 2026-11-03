@@ -108,7 +108,7 @@ const reduce = matchMedia('(prefers-reduced-motion:reduce)').matches;
 try {
   if (!window.ASCTheme) {
     const stored = localStorage.getItem('asc.theme');
-    const dark = stored === 'dark' || (stored !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches);
+    const dark = stored !== 'light';
     root.classList.toggle('dark', dark);
   }
 } catch(e){}
@@ -224,6 +224,7 @@ if (modeBtn) modeBtn.addEventListener('click', () => {
 // Animated count-up + bar/meter fill (instant when reduced motion).
 function animate(){
   document.querySelectorAll('[data-count]').forEach(el => {
+    if (el.dataset.count === '') return;
     const target = +el.dataset.count;
     if (reduce || target === 0){ el.textContent = target; return; }
     const dur = 900, t0 = performance.now();

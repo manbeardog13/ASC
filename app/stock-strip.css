@@ -1,0 +1,49 @@
+.asc-stock-strip .asc-tyre-stream{--asc-stream-card:280px;color:var(--ink);width:100%;min-width:0;max-height:88px;font-family:Inter,system-ui,sans-serif}
+.asc-stock-strip .asc-stream-heading{height:20px;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 4px;font-size:10px;font-weight:600;line-height:16px;letter-spacing:.01em}
+.asc-stock-strip .asc-stream-demo{font-size:9px;font-weight:400;color:var(--muted)}
+.asc-stock-strip .asc-stream-row{display:flex;align-items:center;gap:6px;min-width:0;height:64px}
+.asc-stock-strip .asc-stream-viewport{flex:1;min-width:0;height:64px;overflow:hidden;-webkit-mask-image:linear-gradient(90deg,transparent,#000 10px,#000 calc(100% - 10px),transparent);mask-image:linear-gradient(90deg,transparent,#000 10px,#000 calc(100% - 10px),transparent)}
+.asc-stock-strip .asc-stream-track{display:flex;width:max-content;height:64px;animation:ascSetStream 34s linear infinite;will-change:transform}
+.asc-stock-strip .asc-stream-group{display:flex;align-items:center;gap:8px;flex:0 0 auto;list-style:none;margin:0;padding:0 8px 0 0;height:64px}
+.asc-stock-strip .asc-stream-item{flex:0 0 var(--asc-stream-card);width:var(--asc-stream-card);height:62px;margin:0;padding:0;list-style:none}
+.asc-stock-strip button.asc-stream-card{box-sizing:border-box;display:flex;align-items:center;gap:9px;width:100%;height:62px;min-height:62px;margin:0;padding:4px 10px 4px 6px;border:1px solid color-mix(in srgb,var(--line) 78%,transparent);border-radius:12px;background:color-mix(in srgb,var(--panel-2) 52%,transparent);color:var(--ink);text-align:left;cursor:pointer;overflow:hidden;box-shadow:none;transition:background 160ms ease,border-color 160ms ease}
+.asc-stock-strip button.asc-stream-card:hover{background:color-mix(in srgb,var(--panel-2) 82%,transparent);border-color:var(--line)}
+.asc-stock-strip button.asc-stream-card:focus-visible{outline:2px solid var(--sel-ink);outline-offset:-3px}
+.asc-stock-strip .asc-stream-tyres{display:flex;justify-content:flex-end;align-items:center;gap:0;width:90px;flex:0 0 90px;height:54px;pointer-events:none;filter:drop-shadow(0 3px 2px rgb(0 0 0 / .18))}
+.asc-stock-strip .asc-stream-tyres svg{display:block;width:23px;height:53px;flex:0 0 23px;margin:0 0 0 -1px}
+.asc-stock-strip .asc-stream-info{display:flex;flex-direction:column;justify-content:center;gap:3px;min-width:0;flex:1}
+.asc-stock-strip .asc-stream-info>*{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.asc-stock-strip .asc-stream-name{font-size:11px;font-weight:600;line-height:14px;color:var(--ink)}
+.asc-stock-strip .asc-stream-detail{font-size:9px;line-height:12px;color:var(--ink-2)}
+.asc-stock-strip .asc-stream-location{font-size:9px;line-height:12px;color:var(--muted)}
+.asc-stock-strip button.asc-stream-pause{display:flex;align-items:center;justify-content:center;flex:0 0 44px;width:44px;height:44px;min-height:44px;border:0;border-radius:50%;padding:0;background:transparent;color:var(--ink-2);cursor:pointer;transition:background 160ms ease}
+.asc-stock-strip button.asc-stream-pause:hover{background:color-mix(in srgb,var(--panel-2) 80%,transparent)}
+.asc-stock-strip .asc-stream-pause svg{display:block;width:17px;height:17px}
+.asc-stock-strip .asc-tyre-stream.is-paused .asc-stream-track,.asc-stock-strip .asc-stream-viewport:focus-within .asc-stream-track{animation-play-state:paused}
+.asc-stock-strip .asc-stream-viewport:focus-within{-webkit-mask-image:none;mask-image:none}
+.asc-stock-strip .asc-stream-empty{display:flex;align-items:center;height:64px;margin:0;padding:0 10px;font-size:11px;color:var(--muted)}
+.asc-stock-strip .asc-tyre-stream.is-empty .asc-stream-viewport{-webkit-mask-image:none;mask-image:none}
+.asc-stock-strip .asc-tyre-stream.is-reduced .asc-stream-track{animation:none;will-change:auto;transform:none}
+.asc-stock-strip .asc-tyre-stream.is-reduced .asc-stream-viewport{overflow-x:auto;-webkit-mask-image:none;mask-image:none;scrollbar-width:thin}
+.asc-stock-strip .asc-tyre-stream.is-reduced .asc-stream-track>.asc-stream-group[aria-hidden="true"]{display:none}
+@keyframes ascSetStream{to{transform:translateX(-50%)}}
+@media(any-hover:hover){.asc-stock-strip .asc-stream-viewport:hover .asc-stream-track{animation-play-state:paused}}
+@media(max-width:640px){.asc-stock-strip .asc-tyre-stream{--asc-stream-card:244px}.asc-stock-strip .asc-stream-tyres{width:80px;flex-basis:80px}.asc-stock-strip .asc-stream-tyres svg{width:21px;flex-basis:21px;height:50px}.asc-stock-strip button.asc-stream-card{gap:7px;padding-right:8px}}
+@media(prefers-reduced-motion:reduce){.asc-stock-strip .asc-stream-track{animation:none;will-change:auto;transform:none}.asc-stock-strip .asc-stream-viewport{overflow-x:auto;-webkit-mask-image:none;mask-image:none;scrollbar-width:thin}.asc-stock-strip .asc-stream-track>.asc-stream-group[aria-hidden="true"]{display:none}.asc-stock-strip button.asc-stream-card,.asc-stock-strip button.asc-stream-pause{transition:none}}
+/* Original photo artwork, cropped in CSS to its first tyre, without the mock QR. */
+.asc-stock-strip .asc-stream-tyres{width:112px;flex-basis:112px;justify-content:center;gap:0}
+.asc-stock-strip .asc-original-tyre{display:block;width:28px;height:37px;flex:0 0 28px;background:url('assets/asc-tyres-original.png') -8px -5px / 128px 41.37px no-repeat}
+@media(max-width:640px){.asc-stock-strip .asc-stream-tyres{width:112px;flex-basis:112px}}
+
+.asc-stock-strip[hidden],.asc-stock-strip [hidden]{display:none!important}
+.asc-stock-strip{--ink:var(--nero-ink);--ink-2:var(--nero-ink);--muted:var(--nero-muted);--line:var(--nero-rim);--panel-2:var(--nero-fallback);--sel-ink:var(--nero-focus);position:fixed;bottom:calc(18px + env(safe-area-inset-bottom,0px));width:min(492px,calc(100% - 24px));left:50%;transform:translateX(-50%);z-index:48}
+.asc-stock-strip .asc-stream-heading{position:absolute;overflow:hidden;clip-path:inset(50%);width:1px;height:1px}
+.asc-stock-strip .asc-stream-card{backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
+html.has-stock-strip .nero-composer{bottom:calc(88px + var(--kb,0px) + env(safe-area-inset-bottom,0px))}
+html.has-stock-strip.is-typing .asc-stock-strip,html:has(dialog[open]) .asc-stock-strip,html[data-preview-state="locked"] .asc-stock-strip{display:none}
+html.has-stock-strip.is-typing .nero-composer{bottom:calc(36px + var(--kb,0px) + env(safe-area-inset-bottom,0px))}
+@media(min-width:1021px){html.has-side .asc-stock-strip{left:calc((100% + var(--sbw,260px) + 22px)/2)}}
+@media print{.asc-stock-strip{display:none}}
+html.has-stock-strip:not(.is-typing){scroll-padding-bottom:calc(var(--nero-stack,146px) + 80px + env(safe-area-inset-bottom,0px))}
+html.has-stock-strip:not(.is-typing) body{padding-bottom:calc(var(--nero-stack,146px) + 80px + env(safe-area-inset-bottom,0px))}
+@media(max-height:520px){html.has-stock-strip .nero-composer{bottom:calc(25px + var(--kb,0px) + env(safe-area-inset-bottom,0px))}.asc-stock-strip{position:static;transform:none;margin:12px auto}}

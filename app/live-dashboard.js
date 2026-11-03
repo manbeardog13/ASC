@@ -88,11 +88,14 @@ bootOnboarding();
       recentMovements(5).catch(() => null),
     ]);
   } catch (e) {
-    console.warn('[live] dashboard data failed — keeping placeholder markup:', e);
+    console.warn('[live] dashboard data unavailable:', e);
+    const cap = q('.stage .cap'); if(cap) cap.textContent = 'Evidencija nije dostupna. Ponovno učitajte stranicu.';
+    const connection = q('.hstat .g'); if(connection) connection.textContent = 'Nije dostupno';
     liveFirstDone();
     return;
   }
 
+  const connection = q('.hstat .g'); if(connection) connection.textContent = 'Povezano';
   // ---- Hero: real inventory + caption + activity spills ----
   setNum(q('.hero-num [data-count]'), health.inventory);
   const cap = q('.stage .cap');
@@ -112,6 +115,9 @@ bootOnboarding();
   realSlides.forEach((slide, i) => {
     const s = recent[i];
     if (!s) { slide.style.display = 'none'; return; }
+    slide.style.display = ''; slide.dataset.code = s.public_code;
+    const svg = s.public_code && window.ASCQR?.svg(s.public_code, 3);
+    if (svg) { const sticker=document.createElement('span'); sticker.className='qr-sticker'; sticker.innerHTML=svg; slide.querySelector('.thumb')?.append(sticker); }
     slide.setAttribute('href', 'set-detail.html?code=' + encodeURIComponent(s.public_code));
     const tab = q('.tab-tl', slide); if (tab) tab.textContent = code4(s.public_code);
     const who = q('.meta .who', slide); if (who) who.textContent = s.vehicle?.customer?.name || 'Kupac';
@@ -123,6 +129,8 @@ bootOnboarding();
   dupSlides.forEach((slide, i) => {
     const src = realSlides[i];
     if (!src || src.style.display === 'none') { slide.style.display = 'none'; return; }
+    slide.style.display = ''; slide.dataset.code = src.dataset.code;
+    const qr = src.querySelector('.qr-sticker'); if(qr) slide.querySelector('.thumb')?.append(qr.cloneNode(true));
     slide.setAttribute('href', src.getAttribute('href'));
     const tab = q('.tab-tl', slide), stab = q('.tab-tl', src); if (tab && stab) tab.textContent = stab.textContent;
     const who = q('.meta .who', slide), swho = q('.meta .who', src); if (who && swho) who.textContent = swho.textContent;
@@ -173,6 +181,7 @@ bootOnboarding();
       const s = dueSoon[i];
       if (!s) { mini.style.display = 'none'; return; }
       const overdue = new Date(s.expected_out_date) < new Date(new Date().toDateString());
+      mini.style.display='';
       mini.className = 'mini' + (overdue ? ' overdue' : '');
       mini.setAttribute('href', 'set-detail.html?code=' + encodeURIComponent(s.public_code));
       const t = q('time', mini); if (t) t.textContent = daysBadge(s.expected_out_date);
