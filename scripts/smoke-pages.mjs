@@ -104,7 +104,14 @@ const pages = [
   ['/app/locate.html', 'Pronađi komplet', '() => Boolean(document.querySelector("#flow-root input"))'],
   ['/app/locations.html', 'Naljepnice mjesta', '() => Boolean(document.getElementById("loc-zone"))'],
   ['/app/locations.html?return=' + encodeURIComponent('checkin.html?place=ASC-2026-0099'), 'Natrag na zaprimanje', '() => { const a=document.getElementById("back-to-intake"); return Boolean(a && a.getAttribute("href")==="checkin.html?place=ASC-2026-0099"); }'],
-  ['/app/warehouse-preview/index.html', 'Prostorni pregled', '() => document.querySelectorAll("#asc-navigation a").length===13 && Boolean(document.querySelector(\'#asc-navigation a[href*="spatial-studio/index.html?guide=1"]\'))'],
+  ['/app/warehouse-preview/index.html', 'Prostorni pregled', `() => {
+    const links = [...document.querySelectorAll('#asc-navigation a')];
+    return ['warehouse-preview/index.html', 'spatial-studio/index.html', 'guide.html'].every(path =>
+      links.filter(link => link.pathname.endsWith('/app/' + path)).length === 1);
+  }`],
+  ['/app/guide.html', 'Od prijema do police.', `() =>
+    Boolean(document.querySelector('a[href="spatial-studio/index.html?guide=1"]')) &&
+    document.querySelectorAll('#guide-steps a').length === 6`],
 ];
 
 function which(name) {

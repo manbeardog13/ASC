@@ -20,7 +20,13 @@ The release target is the ASC tenant under `https://app.nerosummit.com/ASC/`. Th
 | Reminders, recycling, workshop and team management | Failed reads remain distinguishable from empty lists. Staff must confirm bulk contact recording. Failed writes leave records actionable. Restricted accounts see an explanation. |
 | Shared composer and page bottom | No admission ticker, background stock subscription or extra space for the removed strip. Keyboard focus can reach the last page action. |
 
-The route sweep opened all 19 HTML entry URLs at 390 and 1440 CSS pixels, then repeated all 19 signed out. The checks looked for document overflow, unnamed visible controls, failing local requests and uncaught JavaScript exceptions. Additional suites exercised 320-pixel layouts, tablet navigation, zoom, reduced motion, explicitly selected themes, scanner failure, offline states and access revocation.
+The earlier route sweep opened 19 URLs signed in and signed out. The combined release added the warehouse guide. Its final sweep covered 17 rendered screens and three redirect URLs at 390 and 1440 CSS pixels. All six guide destinations were checked through sign-in and return. The checks looked for document overflow, unnamed visible controls, failing local requests and uncaught JavaScript exceptions. Additional suites exercised 320-pixel layouts, tablet navigation, zoom, reduced motion, explicitly selected themes, scanner failure, offline states and access revocation.
+
+## Combined design and performance pass
+
+The light default uses a warm pearl background, petrol controls, and a black ASC mark with a red underglow. The staff sidebar groups five primary destinations and puts the role-gated People directory under More. In the dashboard, three working warehouse queries replace timed sales prompts. The stock strip and its inventory subscription are removed. The Studio loads 3D assets on demand and keeps the renderer when switching rooms. A focused login field follows the visual viewport in the simulated short-screen keyboard cases.
+
+From the staff menu, More → Warehouse guide opens the six tasks. The guided tour is accessible from the guide header and inside Studio. The host-aware return link goes to Tenants when ASC is mounted under the Nero app.
 
 ## Verification boundary
 
