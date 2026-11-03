@@ -6,6 +6,7 @@
 <title>ASC — Koš za smeće</title>
 <meta name="theme-color" content="#edf0f5">
 <script src="theme-boot.js"></script>
+<script src="asc-brand.js"></script>
 <script>try{if(sessionStorage.getItem('asc.splash.warm')==='1'&&document.referrer&&new URL(document.referrer).origin===location.origin){document.documentElement.classList.add('warm-nav');}}catch(e){}</script>
 <link rel="icon" href="assets/favicon-32.png" sizes="32x32">
 <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
@@ -13,9 +14,6 @@
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;650;700;800&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
 <!--
   ASC recycle bin — live page. Shared design system in app.css + app.js
   (v6 "Hanssen"): tokens, glass shell, header, notched corner tabs, card surface,
@@ -28,6 +26,7 @@
 -->
 <link rel="stylesheet" href="tokens.css">
 <link rel="stylesheet" href="app.css">
+<link rel="stylesheet" href="asc-brand.css">
 <style>
 /* ---- Recycle-page-specific layout only (shared rules live in app.css) ------ */
 
@@ -139,13 +138,14 @@
       Koš za smeće <span class="count-badge" id="binCount" data-count="0" style="display:none">0</span>
     </h3>
 
+    <p id="binStatus" role="status">Učitavanje obrisanih kompleta…</p>
     <div class="rec-list" id="binList">
       <!-- Rows come from live-recycle.js (real Supabase data). With an empty
            database this list stays empty and the calm state below is all the
            user sees — no mock content ever ships to the customer. -->
     </div>
 
-    <div class="rec-empty on" id="binEmpty">
+    <div class="rec-empty" id="binEmpty">
       <span class="ei"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9.5 7V5.4A1.4 1.4 0 0110.9 4h2.2A1.4 1.4 0 0114.5 5.4V7M6 7l.9 12.1A1.9 1.9 0 008.8 21h6.4a1.9 1.9 0 001.9-1.9L18 7"/></svg></span>
       <h4>Koš je prazan</h4>
       <p>Ovdje se pojavljuju obrisani kompleti kako bi se pogreške lako ispravile.</p>

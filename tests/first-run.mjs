@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { hasLocale } from "../js/i18n.js";
 import {
-  TOUR_KEYS, TOUR_STEPS, safeAppReturn, intakeReturn, placeReturn,
+  TOUR_KEYS, TOUR_STEPS, safeAppReturn, safeLoginReturn, intakeReturn, placeReturn,
   locationsHref, placementNeedsSlots, unknownSlotScan, tourTarget, tourSteps, suggestionNote,
 } from "../js/firstRun.js";
 
@@ -24,6 +24,19 @@ test("return hops stay inside intake and placement", () => {
   assert.equal(locationsHref("https://evil.example"), "locations.html");
   assert.equal(intakeReturn("ASC-2026-0099"), "checkin.html?place=ASC-2026-0099");
   assert.equal(placeReturn("ASC-2026-0003"), "place.html?set=ASC-2026-0003");
+});
+
+test("sign-in returns to the scanned slot or guide without retaining OAuth fragments or external URLs", () => {
+  const slot = "place.html?set=ASC-2026-0003#/slot/LOC-ABCDEF123456";
+  const guide = "spatial-studio/index.html?guide=1&room=attic";
+  assert.equal(safeLoginReturn(slot), slot);
+  assert.equal(safeLoginReturn(guide), guide);
+  assert.equal(safeLoginReturn("place.html#/slot/LOC-ABCD-INVALID"), "place.html");
+  assert.equal(safeLoginReturn("place.html#/slot/LOC-ABCDEF123456#test"), "place.html");
+  assert.equal(safeLoginReturn("customers.html#access_token=secret"), "customers.html");
+  for (const path of ["https://example.invalid", "//example.invalid", "../index.html", "login.html?return=place.html"]) {
+    assert.equal(safeLoginReturn(path), "");
+  }
 });
 
 test("with no shop preference the tour names the first free zone", () => {

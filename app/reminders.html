@@ -6,6 +6,7 @@
 <title>ASC — Podsjetnici</title>
 <meta name="theme-color" content="#edf0f5">
 <script src="theme-boot.js"></script>
+<script src="asc-brand.js"></script>
 <script>try{if(sessionStorage.getItem('asc.splash.warm')==='1'&&document.referrer&&new URL(document.referrer).origin===location.origin){document.documentElement.classList.add('warm-nav');}}catch(e){}</script>
 <link rel="icon" href="assets/favicon-32.png" sizes="32x32">
 <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
@@ -13,9 +14,6 @@
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;650;700;800&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
 <!--
   ASC pickup reminders — CLEAN-ROOM PREVIEW (isolated). Same v6 "Hanssen"
   design system as dashboard.html: shared tokens, glass shell, header, notched
@@ -29,6 +27,7 @@
 -->
 <link rel="stylesheet" href="tokens.css">
 <link rel="stylesheet" href="app.css">
+<link rel="stylesheet" href="asc-brand.css">
 <style>
 /* ---- Reminders-page-specific layout only (shared rules live in app.css) ---- */
 
@@ -59,7 +58,6 @@ html.dark .rem-sec .count-badge.win{background:rgba(244,245,247,.16);color:#f4f5
 .rem-sec .count-badge.mut{background:var(--muted)}
 
 /* Live data: [hidden] toggles must beat the display rules in app.css */
-.rem-stage .cta[hidden],.rem-brief[hidden],.rem-sec[hidden]{display:none}
 
 /* Empty state — the only card when nothing is due */
 .rem-empty h3{margin-bottom:6px}
@@ -130,10 +128,15 @@ html.dark .rem-sec .count-badge.win{background:rgba(244,245,247,.16);color:#f4f5
   font:600 12.5px Inter;box-shadow:0 12px 30px -10px rgba(2,3,5,.5);
   opacity:0;pointer-events:none;transition:opacity 220ms var(--smooth),transform 220ms var(--smooth)}
 .rem-toast.show{opacity:1;transform:translate(-50%,0)}
-.rem-toast svg{width:16px;height:16px}
 @media(min-width:1021px){ .rem-toast{bottom:26px} }
-.rr.leaving{opacity:0;transform:translateX(14px);transition:opacity 300ms var(--smooth),transform 300ms var(--smooth)}
-@media(prefers-reduced-motion:reduce){ .rr.leaving{transition:none} }
+@media(prefers-reduced-motion:no-preference){
+  .rr-rest{animation:rem-arrive 200ms var(--smooth)}
+  @keyframes rem-arrive{from{opacity:.55;transform:translateY(4px)}}
+}
+.rem-stage .cta{cursor:pointer;font-family:inherit}
+.rem-empty [hidden],.rem-stage .cta[hidden],.rem-brief[hidden],.rem-sec[hidden]{display:none!important}
+.rem-stage .spill{cursor:default;transform:none}
+
 </style>
 </head>
 <body>
@@ -157,28 +160,29 @@ html.dark .rem-sec .count-badge.win{background:rgba(244,245,247,.16);color:#f4f5
     <span class="photo" aria-hidden="true"></span>
     <span class="scrim" aria-hidden="true"></span>
     <span class="k">Jutarnji pregled · preuzimanja</span>
-    <div class="hero-num"><span data-count="0">0</span><em>za podsjetiti</em></div>
+    <div class="hero-num"><span>—</span><em>za podsjetiti</em></div>
     <div class="cap">—</div>
     <div class="meter"><i data-w="0"></i></div>
     <div class="space"></div>
     <div class="spills">
-      <button type="button" class="spill"><b data-count="0">0</b><span>Kasni</span></button>
-      <button type="button" class="spill"><b data-count="0">0</b><span>Danas</span></button>
-      <button type="button" class="spill"><b data-count="0">0</b><span>Ovaj tjedan</span></button>
+      <div class="spill"><b>—</b><span>Kasni</span></div>
+      <div class="spill"><b>—</b><span>Danas</span></div>
+      <div class="spill"><b>—</b><span>Ovaj tjedan</span></div>
     </div>
-    <a class="cta" href="#"><span class="dot"></span>Podsjeti sve preostale</a>
+    <button class="cta" type="button" hidden><span class="dot"></span>Označi preostale kao podsjećene</button>
     <span class="tab-corner">Dubrovnik</span>
   </section>
 
-  <p class="rem-brief"><span class="dot"></span>Podsjetnici za danas: 0</p>
+  <p class="rem-brief" hidden><span class="dot"></span></p>
 
   <div class="rem-sections">
 
     <!-- EMPTY STATE — the live module shows this (and only this) when nothing is due -->
     <section class="card rem-sec rem-empty reveal" data-sec="empty" style="animation-delay:150ms">
       <span class="tab-tl">podsjetnici</span>
-      <h3>Nema podsjetnika</h3>
-      <p class="rem-empty-sub">Podsjetnici stižu s očekivanim preuzimanjima.</p>
+      <h3>Učitavanje podsjetnika…</h3>
+      <p class="rem-empty-sub"></p>
+      <a class="ract" href="reminders.html" hidden data-retry>Pokušaj ponovno</a>
     </section>
 
     <!-- KASNI (overdue) — owns the lava accent -->
@@ -216,7 +220,7 @@ html.dark .rem-sec .count-badge.win{background:rgba(244,245,247,.16);color:#f4f5
     </section>
 
     <!-- VEĆ PODSJEĆENO (already reminded) — collapsed -->
-    <details class="card rem-sec rem-rested reveal" data-sec="rested" style="animation-delay:270ms">
+    <details class="card rem-sec rem-rested reveal" data-sec="rested" hidden style="animation-delay:270ms">
       <summary>Već podsjećeno <span class="count-badge" data-count="0">0</span>
         <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
       </summary>
@@ -229,71 +233,12 @@ html.dark .rem-sec .count-badge.win{background:rgba(244,245,247,.16);color:#f4f5
 </main>
 
 <div class="rem-toast" id="toast" role="status" aria-live="polite">
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
   <span id="toastMsg"></span>
 </div>
 
 
 <script src="app.js"></script>
-<script>
-/* ---- Reminders interactions: mark-reminded fades a row into "Već podsjećeno" ---- */
-(function(){
-  const reduce = matchMedia('(prefers-reduced-motion:reduce)').matches;
-  const rested = document.querySelector('.rem-rested');
-  const restedList = rested && rested.querySelector('.rr-list');
-  const restedBadge = rested && rested.querySelector('.count-badge');
-  const toast = document.getElementById('toast');
-  const toastMsg = document.getElementById('toastMsg');
-  let toastTimer;
 
-  function showToast(msg){
-    toastMsg.textContent = msg;
-    toast.classList.add('show');
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => toast.classList.remove('show'), 2200);
-  }
-  function bump(badge, delta){
-    if (!badge) return;
-    badge.textContent = Math.max(0, (parseInt(badge.textContent, 10) || 0) + delta);
-  }
-  function toRested(row){
-    row.classList.remove('rr-overdue','rr-today');
-    row.classList.add('rr-rest');
-    const btn = row.querySelector('[data-remind]');
-    if (btn){
-      btn.classList.add('again');
-      btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4.5 4.5L19 7"/></svg>Podsjećeno — označi ponovno';
-    }
-    const meta = row.querySelector('.rr-meta');
-    if (meta && !meta.querySelector('.rr-ok')){
-      const ok = document.createElement('span');
-      ok.className = 'rr-ok';
-      ok.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4.5 4.5L19 7"/></svg>podsjećeno upravo';
-      meta.appendChild(ok);
-    }
-    restedList.appendChild(row);
-    row.classList.remove('leaving');
-  }
-
-  document.addEventListener('click', (e) => {
-    const btn = e.target.closest('[data-remind]');
-    if (!btn) return;
-    const row = btn.closest('.rr');
-    if (!row || !restedList) return;
-    // Rows already in "Već podsjećeno" just re-acknowledge the tap.
-    if (row.closest('.rem-rested')){ showToast('Ponovno podsjećeno'); return; }
-    const sec = row.closest('.rem-sec');
-    const badge = sec && sec.querySelector('.count-badge');
-    row.classList.add('leaving');
-    const done = () => { bump(badge, -1); bump(restedBadge, +1); toRested(row); };
-    if (reduce){ done(); } else { setTimeout(done, 300); }
-    showToast('Označeno kao podsjećeno');
-  });
-
-  const cta = document.querySelector('.rem-stage .cta');
-  if (cta){ cta.addEventListener('click', (e) => { e.preventDefault(); showToast('Podsjetnici poslani preostalima'); }); }
-})();
-</script>
 <script type="module" src="live-reminders.js"></script>
 <p class="nero-mark">Powered by <a href="https://nerosummit.com">Nero Summit</a></p>
 </body>

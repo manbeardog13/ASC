@@ -170,11 +170,19 @@ window.ascLiveFirst = new Promise((r) => { liveFirstDone = r; });
   try {
     sets = await listRecycleBin();
   } catch (e) {
-    console.warn('[live] recycle bin failed — keeping the empty state:', e);
+    console.warn('[live] recycle bin failed:', e);
+    const status = document.getElementById('binStatus');
+    status.textContent = 'Koš nije učitan. ';
+    const retry = document.createElement('a');
+    retry.href = 'recycle.html';
+    retry.textContent = 'Pokušaj ponovno';
+    status.append(retry);
     liveFirstDone();
     return;
   }
 
+  document.getElementById('binStatus').hidden = true;
+  if (empty) empty.classList.toggle('on', sets.length === 0);
   if (list && sets.length) {
     list.innerHTML = sets.map(rowHtml).join('');
     if (empty) empty.classList.remove('on');

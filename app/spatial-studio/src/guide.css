@@ -1,0 +1,19 @@
+.studio-room-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.guide-trigger{display:inline-flex;align-items:center;gap:7px;min-height:44px;padding:0 12px;border:1px solid var(--line);border-radius:9px;color:var(--ink);font-size:12px}
+.guide-trigger:hover,.guide-trigger:focus-visible{background:var(--paper)}
+.guide-location{display:flex;align-items:center;gap:7px;color:var(--muted);font-size:12px;margin-top:12px}
+.guide-steps{display:flex;gap:3px;margin:10px 0 18px}
+.guide-steps button{flex:1;min-width:0;min-height:44px;padding:0;display:grid;place-items:center;border-bottom:2px solid var(--line);color:var(--muted);font:12px var(--mono)}
+.guide-steps button[aria-current]{color:var(--ink);border-color:#d37f8e}
+.guide-steps button[aria-current] span{background:var(--ruby);border-radius:50%;width:24px;height:24px;display:grid;place-items:center}
+.guide-page h3{font-size:clamp(22px,4vw,29px);font-weight:520;letter-spacing:-.045em;margin:8px 0}
+.guide-page h3:focus{outline:none}
+.guide-page p{color:var(--ink);line-height:1.55;font-size:14px}
+.guide-page .guide-check,.guide-page .guide-state{color:var(--muted);font-size:13px}
+.guide-check{border-inline-start:2px solid #8d5862;padding-inline-start:12px;margin:14px 0 18px}
+.guide-actions,.guide-pagination{display:flex;align-items:center;flex-wrap:wrap;gap:10px}
+.guide-actions :is(a,button),.guide-pagination button{min-height:44px}
+.guide-pagination{border-top:1px solid var(--line);padding-top:8px;justify-content:space-between;margin-top:16px}
+@media(prefers-reduced-motion:no-preference){.guide-page{animation:asc-guide-enter .17s ease-out both}@keyframes asc-guide-enter{from{transform:translateY(3px);opacity:.4}to{transform:none;opacity:1}}}
+
+.guide-steps button[aria-current] span{background:#772b38;color:white}.coordinate-entry{margin:10px 0;border-block:1px solid var(--line);padding:8px 0}.coordinate-entry summary{cursor:pointer}.coordinate-entry summary:focus-visible{outline:2px solid var(--ink)}

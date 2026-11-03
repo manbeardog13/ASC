@@ -6,6 +6,7 @@
 <title>ASC — Detalji kompleta</title>
 <meta name="theme-color" content="#edf0f5">
 <script src="theme-boot.js"></script>
+<script src="asc-brand.js"></script>
 <script>try{if(sessionStorage.getItem('asc.splash.warm')==='1'&&document.referrer&&new URL(document.referrer).origin===location.origin){document.documentElement.classList.add('warm-nav');}}catch(e){}</script>
 <link rel="icon" href="assets/favicon-32.png" sizes="32x32">
 <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
@@ -13,9 +14,6 @@
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;650;700;800&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
 <!--
   ASC set-detail — CLEAN-ROOM REBUILD (isolated preview).
   Shared design system lives in app.css + app.js (v6 "Hanssen"): tokens, glass
@@ -30,6 +28,7 @@
 -->
 <link rel="stylesheet" href="tokens.css">
 <link rel="stylesheet" href="app.css">
+<link rel="stylesheet" href="asc-brand.css">
 <style>
 /* ---- set-detail-page-specific layout only (shared rules live in app.css) ---- */
 
@@ -291,6 +290,8 @@ html.dark .tl-item:nth-child(odd){background:rgba(244,245,247,.04)}
         <div class="loc-cell loc-cell-empty"><span class="loc-label">Mjesto</span><span class="loc-value">—</span></div>
       </div>
 
+      <a class="btn btn-ghost" id="findSetOnMap" style="display:none;align-self:flex-start">Pronađi u prostoru</a>
+
       <div class="move-area" id="moveArea" hidden>
         <div class="move-preview">
           <div class="move-col">
@@ -401,7 +402,7 @@ html.dark .tl-item:nth-child(odd){background:rgba(244,245,247,.04)}
 
 
 <script src="app.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
+<script src="warehouse-preview/vendor/qrcode.js"></script>
 <script src="qr.js"></script>
 <script>
 /* Page-local wiring only — count-up/dock/theme come from app.js. */

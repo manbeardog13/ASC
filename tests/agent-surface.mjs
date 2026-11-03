@@ -6,15 +6,14 @@ const dash = readFileSync(new URL('../app/dashboard.html', import.meta.url), 'ut
 const nero = readFileSync(new URL('../nero-design-studio/agent-card.css', import.meta.url), 'utf8');
 const appCss = readFileSync(new URL('../app/app.css', import.meta.url), 'utf8');
 
-test('the purple card is the original shaped window, copied into Nero', () => {
-  assert.match(dash, /@keyframes agAurora/);
-  assert.match(dash, /border-radius:11px/);
-  assert.match(dash, /linear-gradient\(135deg,#8b5cf6,#e040d0\)/);
-  assert.match(dash, /id="agentHook3"/);
+test('ASC shows three direct warehouse questions while the standalone Nero asset keeps its original treatment', () => {
   assert.match(dash, /<section class="agent-card" id="agentCard"/);
+  assert.match(dash, /Upiti o skladištu/);
+  assert.equal((dash.match(/class="qchip" type="button" data-q=/g) || []).length, 3);
+  assert.doesNotMatch(dash, /assets\/agent-hooks\.json|@keyframes agAurora/);
   assert.match(nero, /border-radius:11px/);
   assert.match(nero, /linear-gradient\(135deg,#8b5cf6,#e040d0\)/);
-  assert.match(appCss, /@keyframes aiDrift/);
+  assert.doesNotMatch(appCss, /@keyframes aiDrift/);
   assert.doesNotMatch(dash, /agent-dust|nineDust|#d7bfef/);
   assert.doesNotMatch(appCss, /nine-studio|nineDust/);
   assert.equal(existsSync(new URL('../nine-studio/tenant.js', import.meta.url)), false);

@@ -66,6 +66,16 @@ export function tourSteps(target) {
   return [first, ...TOUR_STEPS.slice(1)];
 }
 
+// Keep staff on the intended in-app page after authentication. Only a real
+// placement label may retain a fragment; OAuth fragments never enter storage.
+export function safeLoginReturn(value) {
+  if (typeof value !== "string" || value.length > 2048 || /[\\\u0000-\u001f]/.test(value)) return "";
+  const [route, hash] = value.split("#", 2);
+  if (!/^(?!login\.html)(?:[a-z-]+(?:\/index)?\.html|warehouse-preview\/)(?:\?[^#]*)?$/.test(route)) return "";
+  return route.startsWith("place.html") && /^\/slot\/LOC-[a-f0-9]{6,32}$/i.test(hash || "") && value === route + "#" + hash
+    ? value : route;
+}
+
 // Only a same-app intake or placement URL may be used as a return hop.
 const RETURN_OK = /^(checkin|place)\.html(?:\?[^#]*)?(?:#.*)?$/;
 

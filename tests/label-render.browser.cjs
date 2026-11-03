@@ -88,6 +88,25 @@ async function closeSheet(p) {
       assert.equal(await p.evaluate(() => window.printCalls), 0);
       fs.writeFileSync(path.join(out, 'qr-roundtrip.json'), JSON.stringify({ provenance: 'synthetic browser test', ...decoded, physicalPrint: 'UNVERIFIED', paperProfile: 'A4, 10 mm margins; actual label stock UNKNOWN' }, null, 2) + '\n');
     });
+    await scenario('warehouse slot labels fit a phone and keep the first and last QR reachable', {}, async ({p}) => {
+      await p.setViewportSize({width:390,height:844});
+      const opened=await p.evaluate(()=>ASCQR.printSlotLabels(Array.from({length:12},(_,i)=>({
+        zone:'A',rack:'01',shelf:'1',slot:String(i+1),qr_code:'LOC-TEST-'+(i+1)
+      }))));
+      assert.equal(opened,true);
+      const fits=await p.locator('.sm-scroll-slots').evaluate(box => {
+        const first=box.querySelector('.sm-label'), qr=first.querySelector('.sm-qr svg');
+        return box.scrollWidth===box.clientWidth && first.getBoundingClientRect().top>=box.getBoundingClientRect().top &&
+          qr.getBoundingClientRect().right<=first.getBoundingClientRect().right;
+      });
+      assert.ok(fits);
+      await p.locator('.slot-labels .sm-label').last().scrollIntoViewIfNeeded();
+      assert.equal(await p.locator('.slot-labels .sm-label').last().locator('.sm-code').innerText(),'LOC-TEST-12');
+      await closeSheet(p);
+      const failed=await p.evaluate(()=>{window.qrcode=null;return ASCQR.printSlotLabels([{qr_code:'LOC-TEST-1'}]);});
+      assert.equal(failed,false);
+      assert.equal(await p.locator('.sticker-modal').count(),0);
+    });
     await scenario('missing QR encoder cannot open the print gate', {}, async ({ p, state }) => {
       await p.evaluate(() => { window.qrcode = undefined; });
       await p.locator('.lp-row .btn-primary').click();

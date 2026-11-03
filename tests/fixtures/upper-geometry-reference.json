@@ -1,0 +1,22 @@
+{
+  "sourceCommit": "190d1edcd64f45a3994e651cf8b8a19ec573fd77",
+  "note": "Owner-corrected upper reference: lower rear racks, middle deck, west passage; unmeasured dimensions.",
+  "rooms": {
+    "attic-parts": {
+      "meshes": 377,
+      "sha256": "b34c35d1888a43025c58b974f250bcbafaa232170ea3a547fe2d0aa090344fa1"
+    },
+    "attic-racks": {
+      "meshes": 241,
+      "sha256": "8acf8eba99ffef4ba91f8de247e0f9821b3d690e28922dfd1b17f46099093872"
+    },
+    "office": {
+      "meshes": 55,
+      "sha256": "a10bf4ba25a96b550a9cbccd28f8f9747679fb82fe518ae7e787ed37c3c7c27f"
+    }
+  },
+  "assembly": {
+    "meshes": 673,
+    "sha256": "29771067f3ff43494f8e479e4ad0c95250e1c505a809d81ccd79c46ea6ade067"
+  }
+}

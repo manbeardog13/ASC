@@ -1,0 +1,25 @@
+# ASC · Prostorni studio
+
+The browser entry is `app/spatial-studio/index.html`. Serve it within the ASC app tree so that existing staff sessions, database adapters, record links, QR scanner and composer keep the correct origin and relative URLs. No new API key is required. The six room schematics are public architecture; inventory requires an ASC staff session and uses the existing database policies.
+
+## Build and verify
+
+Run `npm ci`, `npm test`, and `npm run build` in this folder (Node 24). The build first type-checks the complete TypeScript application, then emits a small UI chunk and a lazy WebGL chunk. Deploy `index.html`, `sync.js` and `assets/` alongside the existing ASC runtime. Do not deploy dependency caches.
+
+## Operator flows
+
+- Use the space picker to change room. Choose **Šetnja** for an eye-level walk with arrow keys or touch controls, **3D** for a cutaway, and **Tlocrt** for the plan. The six rooms can be explored individually. Their connections are unsurveyed.
+- Open **Vodič** for six short steps from labelling a physical location and tyre set to verifying placement and finding it again. The guide opens the actual staff tools.
+- Choose **Pronađi u prostoru** on a stored set to highlight its confirmed rack. A set without a mapped rack remains unplaced on the floor plan.
+- Search the visible list by rack, plate, owner, size or set code. Command/Ctrl+K searches across available records and room names. A selected rack focuses the camera and opens its set list.
+- A USB scanner completes its input with Enter. Both current and historic ASC codes are recognized. Camera scanning uses the existing ASC scanner. No scanned URL is followed directly.
+- Occupancy uses actual mapped quantities and rack capacity. Unknown quantities remain unknown. The “Bez stupca” tab exposes unplaced sets from any area.
+- Register actual location labels first, then use “Dodaj stupac” and click supported floor. Existing rack labels and non-overlapping rack footprints are enforced. No slot coordinates are invented for unassigned inventory.
+- The sync badge exposes pending operations and conflicts. Only rack placement metadata enters the per-operator IndexedDB outbox; customer and set records do not. Database row uniqueness/base timestamps are authoritative. Retries re-check the active session; concurrent writes are not automatically merged into physical locations.
+- The floor model remains schematic until actual surveys and bindings are available. A measured operator area does not certify the associated architecture or establish millimetre accuracy. SKU data is optional; the application does not substitute codes for missing catalog identifiers.
+
+Reduced motion, keyboard search, a narrow-screen layout, a collapsible side panel and an SVG fallback keep the studio usable without WebGL. The Node tests use synthetic fixtures; they do not write to production.
+
+Drag the 3D cutaway to pan, scroll over a corner to zoom there, and right-drag to orbit. On touch, use one finger to pan and two to zoom or rotate. The floor plan supports drag, pinch, cursor-centred zoom and arrow keys. **Centriraj prikaz** restores the room framing.
+
+Choose **Šetnja** to enter a schematic room at eye level. Drag to look around, walk with WASD, or hold the on-screen direction controls. The left/right arrow keys turn. Escape returns to the cutaway. The room selector changes spaces independently of their unconfirmed physical connections. A link with `?view=walk&room=attic-racks` opens that specific walkthrough. A link with `?view=plan` opens the floor plan without loading the 3D renderer.

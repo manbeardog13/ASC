@@ -5,15 +5,6 @@
 // tjedan (next 7 days) / Kasnije, with reminded ones (reminded_at set) in the
 // collapsed "Već podsjećeno" section.
 //
-// One deliberate difference from live-dashboard: the mock rows here ARE fake
-// customers, so they are wiped SYNCHRONOUSLY at module start — before the auth
-// gate ever restores page visibility — and a failed fetch lands on the calm
-// empty state (console.warn '[live] …') instead of keeping fake people around.
-//
-// "Označi podsjećeno" persistence rides the page's EXISTING inline interaction
-// script: the inline handler does the visual move into "Već podsjećeno"; this
-// module writes reminded_at (markReminded → updateStorageSet, offline-queued).
-// ============================================================================
 import { getSession, listStorageSets, markReminded, updateStorageSet } from '../js/db.js';
 import { decodePlan, formatWhen, freeSlotsAfter, busyKeys, mergeNotes, encodePlan, isoDate, inReminderWindow } from '../js/seasonPlan.js';
 
@@ -72,7 +63,7 @@ const secs = {
   rested: q('[data-sec="rested"]'),
   empty: q('[data-sec="empty"]'),
 };
-const heroNum = q('.rem-stage .hero-num [data-count]');
+const heroNum = q('.rem-stage .hero-num span');
 const heroCap = q('.rem-stage .cap');
 const meterBar = q('.rem-stage .meter i');
 const spillNums = qa('.rem-stage .spills .spill b');
@@ -91,10 +82,8 @@ for (const key of ['overdue', 'today', 'week', 'later', 'rested']) {
   if (badge) { badge.dataset.count = '0'; badge.textContent = '0'; }
   sec.hidden = true;
 }
-if (heroNum) { heroNum.dataset.count = '0'; heroNum.textContent = '0'; }
 if (heroCap) heroCap.textContent = '';
 if (meterBar) { meterBar.dataset.w = '0'; meterBar.style.width = '0%'; }
-spillNums.forEach((b) => { b.dataset.count = '0'; b.textContent = '0'; });
 if (cta) cta.hidden = true;
 if (brief) brief.hidden = true;
 if (corner) {
@@ -165,7 +154,11 @@ function showEmpty() {
   for (const key of ['overdue', 'today', 'week', 'later', 'rested']) {
     if (secs[key]) secs[key].hidden = true;
   }
-  if (secs.empty) secs.empty.hidden = false;
+  if (secs.empty) {
+    secs.empty.hidden = false;
+    q('h3', secs.empty).textContent = 'Nema podsjetnika';
+    q('p', secs.empty).textContent = 'Podsjetnici stižu s očekivanim preuzimanjima.';
+  }
   setNum(heroNum, 0);
   if (heroCap) heroCap.textContent = 'Nema zakazanih preuzimanja';
   if (meterBar) { meterBar.dataset.w = '0'; meterBar.style.width = '0%'; }
@@ -174,7 +167,6 @@ function showEmpty() {
   if (brief) brief.hidden = true;
 }
 
-let counts = null;   // { pending, total } — the CTA handler settles the hero from this
 let booked = [];
 
 function render(sets) {
@@ -195,7 +187,6 @@ function render(sets) {
 
   const pending = g.overdue.length + g.today.length + g.week.length + g.later.length;
   const total = pending + g.rested.length;
-  counts = { pending, total };
 
   if (!total) { showEmpty(); return; }
 
@@ -219,26 +210,60 @@ function render(sets) {
   setNum(spillNums[2], g.week.length);
   if (brief) {
     brief.hidden = pending === 0;
-    if (pending > 0) brief.innerHTML = '<span class="dot"></span>Podsjetnici za danas: ' + pending;
+    if (pending > 0) brief.innerHTML = '<span class="dot"></span>Preostali podsjetnici: ' + pending;
   }
   if (cta) cta.hidden = pending === 0;
 }
 
 // ---- Interactions ----------------------------------------------------------
-// Persist "označi podsjećeno". The page's inline script (registered first) does
-// the visual move into "Već podsjećeno"; here we only write reminded_at.
-document.addEventListener('click', (e) => {
-  const btn = e.target.closest('[data-remind]');
-  if (!btn) return;
-  const row = btn.closest('.rr');
-  const id = row && row.dataset.setId;
-  if (!id) return;
-  if (secs.rested) secs.rested.hidden = false;   // the visual move must never land in a hidden card
-  if (row.classList.contains('rr-rest')) {       // re-mark: refresh the "podsjećeno …" stamp
-    const okEl = q('.rr-ok', row);
-    if (okEl) okEl.innerHTML = ICON.ok + 'podsjećeno upravo';
+let saving = false;
+let toastTimer;
+function notify(message) {
+  const toast = q('#toast');
+  q('#toastMsg').textContent = message;
+  toast.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove('show'), 4000);
+}
+
+async function saveReminders(rows) {
+  if (saving || !rows.length) return;
+  saving = true;
+  cta.disabled = true;
+  qa('[data-remind]').forEach(button => { button.disabled = true; });
+  let failed = 0;
+  let queued = 0;
+  try {
+    for (const set of rows) {
+      try {
+        const result = await markReminded(set.id);
+        if (result?.queued) queued++;
+        set.reminded_at = new Date().toISOString();
+      } catch {
+        failed++;
+      }
+    }
+    render(booked);
+    if (failed) notify('Spremljeno: ' + (rows.length - failed - queued) + ' · Čeka sinkronizaciju: ' + queued + ' · Neuspjelo: ' + failed + '. Pokušajte ponovno.');
+    else if (queued) notify('Evidentirano na uređaju. Promjene čekaju sinkronizaciju.');
+    else notify('Podaci o podsjećanju su spremljeni.');
+  } finally {
+    saving = false;
+    cta.disabled = false;
+    qa('[data-remind]').forEach(button => { button.disabled = false; });
   }
-  markReminded(id).catch((err) => console.warn('[live] mark reminded failed:', err));
+}
+
+document.addEventListener('click', async (event) => {
+  const button = event.target.closest('[data-remind]');
+  if (!button || saving) return;
+  const section = button.closest('.rem-sec');
+  const set = booked.find(item => String(item.id) === button.closest('.rr').dataset.setId);
+  if (!set) return;
+  await saveReminders([set]);
+  const next = section.querySelector('[data-remind]') || q('.rem-sec:not([hidden]) [data-remind]') || q('.rem-rested summary');
+  if (next && !next.closest('details:not([open]) .rr-list')) next.focus({preventScroll: true});
+  else q('.rem-rested summary')?.focus({preventScroll: true});
 });
 
 document.addEventListener('click', (e) => {
@@ -273,7 +298,7 @@ document.addEventListener('click', async (e) => {
   if (!plan || Number.isNaN(slot.getTime())) return;
   const notes = mergeNotes(set.notes, encodePlan(plan.kind, slot));
   try {
-    await updateStorageSet(id, {
+    const result = await updateStorageSet(id, {
       notes,
       expected_out_date: isoDate(slot),
       keep_plan: plan.kind,
@@ -282,7 +307,9 @@ document.addEventListener('click', async (e) => {
     set.notes = notes;
     set.expected_out_date = isoDate(slot);
     render(booked);
+    notify(result?.queued ? 'Termin je spremljen na uređaju i čeka sinkronizaciju.' : 'Termin je ažuriran.');
   } catch (err) {
+    notify('Termin nije spremljen. Pokušajte ponovno.');
     console.warn('[live] reschedule failed:', err);
   }
 });
@@ -295,21 +322,22 @@ document.addEventListener('click', (e) => {
   if (code) location.href = 'set-detail.html?code=' + encodeURIComponent(code);
 });
 
-// "Podsjeti sve preostale": click every pending row's own button — the inline
-// script animates each move, the handler above persists each reminded_at —
-// then settle the hero on "everything reminded".
-if (cta) {
-  cta.addEventListener('click', () => {
-    qa('.rem-sec .rr:not(.rr-rest) [data-remind]').forEach((b) => b.click());
-    setNum(heroNum, 0);
-    spillNums.forEach((b) => setNum(b, 0));
-    if (meterBar) { meterBar.dataset.w = '100'; meterBar.style.width = '100%'; }
-    if (heroCap && counts) {
-      heroCap.textContent = '0 kasni · 0 danas · 0 ovaj tjedan · ' + counts.total + ' od ' + counts.total + ' već podsjećeno';
-    }
-    if (brief) brief.hidden = true;
-    cta.hidden = true;
-  });
+// This records calls or messages the operator has already made.
+cta?.addEventListener('click', async () => {
+  if (saving) return;
+  const remaining = booked.filter(set => set.status !== 'checked_out' && set.expected_out_date && !set.reminded_at);
+  if (!remaining.length || !confirm('Potvrđujete da ste kontaktirali sve preostale kupce (' + remaining.length + ')? Ovim se samo bilježi kontakt.')) return;
+  await saveReminders(remaining);
+  if (cta.hidden) q('.rem-rested summary')?.focus({preventScroll: true});
+});
+
+function showUnavailable() {
+  showEmpty();
+  [heroNum, ...spillNums].forEach(el => setNum(el, '—'));
+  heroCap.textContent = 'Podaci nisu dostupni';
+  q('h3', secs.empty).textContent = 'Podsjetnici nisu učitani';
+  q('p', secs.empty).textContent = 'Provjerite vezu pa ponovno učitajte popis.';
+  q('[data-retry]', secs.empty).hidden = false;
 }
 
 // ---- Boot (the gate in app.js races ascLiveFirst before lifting the page) ---
@@ -325,7 +353,7 @@ window.ascLiveFirst = new Promise((r) => { liveFirstDone = r; });
     sets = await listStorageSets();
   } catch (e) {
     console.warn('[live] reminders data failed — showing the empty state:', e);
-    showEmpty();
+    showUnavailable();
     liveFirstDone();
     return;
   }
@@ -333,7 +361,7 @@ window.ascLiveFirst = new Promise((r) => { liveFirstDone = r; });
     render(sets);
   } catch (e) {
     console.warn('[live] reminders render failed — showing the empty state:', e);
-    showEmpty();
+    showUnavailable();
   }
   liveFirstDone();
 })();

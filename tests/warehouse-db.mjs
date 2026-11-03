@@ -4,9 +4,9 @@ import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import { readFile } from 'node:fs/promises';
 const source=await readFile(new URL('../js/db.js',import.meta.url),'utf8');
-async function client(replies=[]){
+async function client(replies=[],session=null){
  const calls=[];
- const supabase={auth:{getSession:async()=>({data:{session:null}}),onAuthStateChange:()=>({})},from(table){
+ const supabase={auth:{getSession:async()=>({data:{session}}),onAuthStateChange:()=>({})},from(table){
   const call={table,steps:[]};calls.push(call);
   const builder=new Proxy({}, {get(_target,method){
    if(method==='then')return(resolve,reject)=>{assert.ok(replies.length,'unexpected database request');return Promise.resolve(replies.shift()).then(resolve,reject);};
@@ -24,11 +24,11 @@ async function client(replies=[]){
 }
 const plain=x=>JSON.parse(JSON.stringify(x));
 test('real map reader scopes areas to main and positions to those area ids',async()=>{
- const c=await client([{data:[{id:'a',warehouse:'main',zone:'SYN'}]},{data:[{id:'p',area_id:'a',rack:'01'}]}]);
+ const c=await client([{data:[{id:'a',warehouse:'main',zone:'SYN'}]},{data:[]},{data:[{id:'p',area_id:'a',rack:'01'}]},{data:[]}]);
  const result=await c.db.listWarehouseLayout();assert.equal(result.available,true);
- assert.deepEqual(c.calls.map(x=>x.table),['warehouse_areas','warehouse_rack_positions']);
- assert.deepEqual(plain(c.calls[0].steps.at(-1)),['eq','warehouse','main']);
- assert.deepEqual(plain(c.calls[1].steps.at(-1)),['in','area_id',['a']]);
+ assert.deepEqual(c.calls.map(x=>x.table),['warehouse_areas','warehouse_areas','warehouse_rack_positions','warehouse_rack_positions']);
+ assert.deepEqual(plain(c.calls[0].steps.find(step=>step[0]==='eq')),['eq','warehouse','main']);
+ assert.deepEqual(plain(c.calls[2].steps.find(step=>step[0]==='in')),['in','area_id',['a']]);
 });
 test('missing migration is distinct from permission or transport failure',async()=>{
  const absent=await client([{error:{code:'42P01',message:'relation missing'}}]);assert.equal((await absent.db.listWarehouseLayout()).available,false);
@@ -50,4 +50,36 @@ test('rack movement returns the stable backend identity and only writes map data
  const c=await client([{data:{id:'p'}}]);const result=await c.db.moveRackPosition({from_area_id:'a',to_area_id:'b',rack:'01',x:1,z:0});
  assert.equal(result.id,'p');assert.equal(c.calls[0].table,'warehouse_rack_positions');
  assert.deepEqual(plain(c.calls[0].steps[0]),['update',{area_id:'b',x:1,z:0}]);
+});
+
+test('slot label reprint verifies every requested row past short server pages',async()=>{
+ const slot=(id,rack)=>({id,warehouse:"main",zone:"A",rack,shelf:"1",slot:"1",qr_code:"LOC-"+id});
+ const a=slot("01","first"),b=slot("02","second"),newRow=slot("03","new");
+ const c=await client([{data:[newRow]},{data:[a]},{data:[b]},{data:[]}]);
+ const labels=await c.db.createLocations([b,newRow,b]);
+ assert.deepEqual(plain(labels).map(row=>row.id),["02","03"]);
+ assert.ok(c.calls[2].steps.some(([method,column,value])=>method==="gt"&&column==="id"&&value==="01"));
+ const missing=await client([{data:[]},{data:[]}]);
+ await assert.rejects(missing.db.createLocations([a]));
+});
+
+test('staff access verification distinguishes an unreadable role and never backfills a profile',async()=>{
+ const session={user:{id:'staff-test',user_metadata:{full_name:'Test'}},expires_at:1999999999};
+ const c=await client([{data:{id:'staff-test',role:'employee',full_name:null}}],session);
+ const profile=await c.db.loadMyProfile({verifyAccess:true});
+ assert.equal(profile.role,'employee');
+ assert.equal(c.calls.length,1);
+ assert.equal(c.calls[0].steps.some(step=>step[0]==='update'),false);
+ const missing=await client([{data:null,error:null}],session);
+ assert.equal((await missing.db.loadMyProfile({verifyAccess:true})).role,'readonly');
+ const offline=await client([{error:{message:'Failed to fetch'}}],session);
+ await assert.rejects(offline.db.loadMyProfile({verifyAccess:true}));
+});
+
+
+test('pending team invitations distinguish an empty list from a failed read', async () => {
+  const empty = await client([{data: []}]);
+  assert.deepEqual(plain(await empty.db.listPendingUsers()), []);
+  const offline = await client([{error: {message: 'Failed to fetch'}}]);
+  await assert.rejects(offline.db.listPendingUsers(), /load pending invitations/);
 });

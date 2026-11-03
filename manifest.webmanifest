@@ -1,13 +1,13 @@
 {
   "name": "ASC",
   "short_name": "ASC",
-  "description": "Index, scan and track customers' tires.",
+  "description": "Zaprimanje, skladištenje i praćenje guma.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "orientation": "portrait",
-  "background_color": "#0d0f13",
-  "theme_color": "#0d0f13",
+  "orientation": "any",
+  "background_color": "#f1eee7",
+  "theme_color": "#f1eee7",
   "icons": [
     { "src": "assets/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
     { "src": "assets/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" },

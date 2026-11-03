@@ -6,12 +6,14 @@
 <title>ASC — Smjesti</title>
 <meta name="theme-color" content="#edf0f5">
 <script src="theme-boot.js"></script>
+<script src="asc-brand.js"></script>
 <link rel="icon" href="assets/favicon-32.png" sizes="32x32">
 <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="stylesheet" href="tokens.css">
 <link rel="stylesheet" href="app.css">
+<link rel="stylesheet" href="asc-brand.css">
 <link rel="stylesheet" href="flow.css">
 </head>
 <body>
@@ -34,7 +36,7 @@
 <script src="app.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script src="qr.js"></script>
-<script type="module" src="live-place.js"></script>
+<script type="module">if (await window.ascStaffWorkflowReady) await import("./live-place.js");</script>
 <p class="nero-mark">Powered by <a href="https://nerosummit.com">Nero Summit</a></p>
 </body>
 </html>

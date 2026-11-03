@@ -35,7 +35,7 @@ test('the builder function checks asc_is_admin and keeps the webhook on the serv
   assert.doesNotMatch(sql, /BUILDER_WEBHOOK/);
   assert.match(composer, /hr-HR/);
   assert.match(composer, /en-US/);
-  assert.match(composer, /sent to Toni & Nero/);
+  assert.match(composer, /Poslano u Toni & Nero/);
   assert.match(composer, /transcribe:\s*true/);
   assert.match(composer, /interimResults/);
   assert.doesNotMatch(composer, /BUILDER_WEBHOOK/);
@@ -72,12 +72,15 @@ test('chat history is owner-scoped and the composer queues without tokens', () =
   assert.match(composer, /Pitaj Nero/);
   assert.match(composer, /pointerdown/);
   assert.match(composer, /is-recording/);
-  assert.match(composer, /queued, sends when Tailscale reconnects/);
-  assert.match(composer, /Connect to Tailscale to reach Toni & Nero/);
+  assert.match(composer, /čeka ponovno povezivanje s Tailscaleom/);
+  assert.match(composer, /Poveži se na Tailscale za razgovor s Toni & Nero/);
   assert.match(composer, /prefers-reduced-motion|is-stream/);
   assert.match(composer, /function startVoice/);
   assert.match(composer, /new SR\(\)/);
-  assert.match(read('app/composer.css'), /backdrop-filter:blur\(22px\) saturate\(180%\)/);
+  // Appearance is checked in the browser (neutral transparency, blur and contrast),
+  // while this source guard only requires the shared glass token and safe fallback.
+  assert.match(read('app/composer.css'), /backdrop-filter:var\(--nero-frost\)/);
+  assert.match(read('app/composer.css'), /@supports not.*backdrop-filter/);
   assert.match(read('app/composer.css'), /prefers-reduced-motion:reduce/);
   assert.match(read('app/agent-config.js'), /BUILDER_RELAY_URL = ""/);
 });

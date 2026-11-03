@@ -10,7 +10,7 @@ const server=http.createServer((req,res)=>{
   if(url.pathname.endsWith('.html')){
     res.setHeader('Content-Type','text/html');
     const list=url.pathname.endsWith('dashboard.html');
-    return res.end(`<html><head><meta name="viewport" content="width=device-width"><link rel="stylesheet" href="/app/app.css"></head><body><main style="min-height:100vh"><h1>${list?'Fixture list':'Fixture detail'}</h1><a id="set" href="/app/set-detail.html?code=ASC-FIXTURE">Set record</a><a id="customer" href="/app/customers.html?id=fixture">Customer record</a><button>Action fixture</button></main><script type="module" src="/app/detail-overlay.js"></script></body></html>`);
+    return res.end(`<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><link rel="stylesheet" href="/app/app.css"></head><body><main style="min-height:100vh"><h1>${list?'Fixture list':'Fixture detail'}</h1><a id="set" href="/app/set-detail.html?code=ASC-FIXTURE">Set record</a><a id="customer" href="/app/customers.html?id=fixture">Customer record</a><a id="map" href="/app/spatial-studio/index.html?find=ASC-FIXTURE">Pronađi u prostoru</a><button>Action fixture</button></main><script type="module" src="/app/detail-overlay.js"></script></body></html>`);
   }
   const file=path.resolve(root,'.'+url.pathname);
   if(!file.startsWith(root+path.sep)||!fs.existsSync(file)||!fs.statSync(file).isFile()){res.statusCode=404;return res.end();}
@@ -58,6 +58,11 @@ const server=http.createServer((req,res)=>{
       await page.goForward();await page.locator('dialog[open]').waitFor();
       await page.reload();assert.equal(await page.locator('dialog').count(),0);
       assert.equal(await page.locator('h1').textContent(),'Fixture detail');
+      await page.goto(origin+'/app/dashboard.html');
+      await page.locator('#set').click();await page.locator('dialog[open]').waitFor();
+      await page.frameLocator('iframe').getByRole('link',{name:'Pronađi u prostoru'}).click();
+      await page.waitForURL('**/app/spatial-studio/index.html?find=ASC-FIXTURE');
+      assert.equal(await page.locator('iframe').count(),0,'The warehouse opens in the full workspace');
       await context.close();
     }
     console.log('PASS: phone/desktop sheet, unchanged list bounds, keyboard, child Escape, focus return, back/forward, refresh full-page');

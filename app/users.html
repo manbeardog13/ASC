@@ -3,9 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>ASC — Korisnici</title>
+<title>ASC — Osobe</title>
 <meta name="theme-color" content="#edf0f5">
 <script src="theme-boot.js"></script>
+<script src="asc-brand.js"></script>
 <script>try{if(sessionStorage.getItem('asc.splash.warm')==='1'&&document.referrer&&new URL(document.referrer).origin===location.origin){document.documentElement.classList.add('warm-nav');}}catch(e){}</script>
 <link rel="icon" href="assets/favicon-32.png" sizes="32x32">
 <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
@@ -13,9 +14,6 @@
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;650;700;800&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
 <!--
   ASC users / access management — isolated preview.
   Shared design system lives in app.css + app.js (v6 "Hanssen"): tokens, glass
@@ -28,6 +26,7 @@
 -->
 <link rel="stylesheet" href="tokens.css">
 <link rel="stylesheet" href="app.css">
+<link rel="stylesheet" href="asc-brand.css">
 <style>
 /* ---- Users-page-specific layout only (shared rules live in app.css) ---- */
 
@@ -38,6 +37,7 @@
 .vhead p{font-size:13px;color:var(--muted);max-width:52ch}
 
 /* two-column team grid (single column on mobile) */
+#invite-card[hidden],#team-summary[hidden]{display:none!important}
 .uwrap{display:grid;gap:var(--gap);align-items:start}
 @media(min-width:820px){ .uwrap{grid-template-columns:1fr 1.18fr} }
 .col{display:flex;flex-direction:column;gap:var(--gap);min-width:0}
@@ -131,6 +131,7 @@ html.dark .appr-row{background:rgba(225,6,0,.06)}
 /* row exit animation */
 .row-out{opacity:0;transform:translateX(10px);pointer-events:none}
 
+.spills .spill{cursor:default;transform:none}
 /* toast */
 .toast{position:fixed;left:50%;bottom:calc(26px + env(safe-area-inset-bottom,0px));transform:translate(-50%,12px);
   z-index:80;background:var(--gun);color:#f4f5f7;font:600 13px Inter;padding:11px 18px;border-radius:16px;
@@ -161,26 +162,26 @@ html.dark .toast{background:#26272b;border:1px solid var(--line)}
 
   <header class="vhead reveal" style="animation-delay:110ms">
     <span class="k">Hotel za gume · Dubrovnik</span>
-    <h1>Korisnici</h1>
+    <h1>Osobe</h1>
     <p>Svi koji imaju pristup ASC-u.</p>
   </header>
 
   <div class="uwrap">
     <!-- LEFT: team overview + add-user form -->
     <div class="col">
-      <div class="card dark reveal" style="animation-delay:150ms">
+      <div class="card dark reveal" id="team-summary" hidden style="animation-delay:150ms">
         <span class="tab-tl">tim</span>
         <h3>Tim <span class="count-badge">0</span></h3>
         <div class="csub" style="color:var(--on-stage-2)">Aktivnih računa i pozivnica u sustavu.</div>
         <div class="space" style="flex:1;min-height:10px"></div>
         <div class="spills">
-          <button type="button" class="spill"><b data-count="0">0</b><span>Članovi</span></button>
-          <button type="button" class="spill"><b data-count="0">0</b><span>Administratori</span></button>
-          <button type="button" class="spill"><b data-count="0">0</b><span>Čekaju</span></button>
+          <div class="spill"><b data-count="0">0</b><span>Članovi</span></div>
+          <div class="spill"><b data-count="0">0</b><span>Administratori</span></div>
+          <div class="spill"><b data-count="0">0</b><span>Čekaju</span></div>
         </div>
       </div>
 
-      <div class="card reveal" style="animation-delay:190ms">
+      <div class="card reveal" id="invite-card" hidden style="animation-delay:190ms">
         <span class="tab-tl">novi</span>
         <h3>
           <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5.4v13.2M5.4 12h13.2"/></svg>

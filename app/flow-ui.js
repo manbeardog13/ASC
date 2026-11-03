@@ -72,11 +72,21 @@ export function scanText(hostId, onText, onError = () => toast(t("flow.camera"))
   }
 }
 
+// A camera failure should leave the manual and photo controls usable.
+export function startFlowCamera(reader, onScan) {
+  const start = () => scanText(reader.id, onScan, () => {
+    if (!reader.isConnected) return;
+    const retry = button(t("checkout.retry"), "btn ghost", () => { reader.replaceChildren(); start(); });
+    reader.replaceChildren(el("p", { role: "alert" }, t("flow.camera")), retry);
+  });
+  start();
+}
+
 export function photoFallback(onText) {
   const file = el("input", { type: "file", accept: "image/*", capture: "environment" });
   file.hidden = true;
-  document.body.appendChild(file);
   const trigger = button(t("scan.takePhoto"), "btn ghost", () => file.click());
+  // Tie the input to its visible trigger so repeated scans do not leak nodes.
   file.addEventListener("change", () => {
     const picked = file.files && file.files[0];
     file.value = "";
@@ -86,5 +96,7 @@ export function photoFallback(onText) {
       onText(text);
     }, () => toast(t("flow.camera")));
   });
-  return trigger;
+  const control = document.createDocumentFragment();
+  control.append(trigger, file);
+  return control;
 }

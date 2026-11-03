@@ -120,10 +120,11 @@ function paint() {
   const query = (input.value || '').trim().toLowerCase();
   if (!query) { paintRest(); return; }
   if (!loaded) { results.innerHTML = ''; count.textContent = ''; return; }
-  const rows = SETS.filter((x) => x.hay.indexOf(query) > -1).slice(0, 8);
+  const matches = SETS.filter((x) => x.hay.includes(query));
+  const rows = matches.slice(0, 8);
   if (rows.length) {
     results.innerHTML = rows.map((x) => row(x.set)).join('');
-    count.textContent = rows.length + ' ' + kompleta(rows.length);
+    count.textContent = matches.length > rows.length ? 'Prvih 8 od ' + matches.length + ' · suzite pretragu' : rows.length + ' ' + kompleta(rows.length);
   } else {
     results.innerHTML = noneRow(ICON_SEARCH, 'Ništa za „' + input.value.trim() + '”');
     count.textContent = 'Ništa za „' + input.value.trim() + '”';
@@ -135,7 +136,7 @@ input.addEventListener('input', paint);
 // A voice/typed command from the global ASC Agent arrives as ?q= — apply it.
 try {
   const qp = new URLSearchParams(location.search).get('q');
-  if (qp) { input.value = qp; setTimeout(() => input.scrollIntoView({ behavior: 'smooth', block: 'center' }), 200); }
+  if (qp) { input.value = qp; setTimeout(() => input.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'center' }), 200); }
 } catch (e) { /* no-op */ }
 
 // Search only reports listening after the browser has started recognition.
@@ -189,9 +190,18 @@ if (mic && !Speech) {
 
   let health, sets;
   try {
-    [health, sets] = await Promise.all([healthStats(), listStorageSets()]);
+    [health, sets] = await Promise.all([healthStats().catch(() => null), listStorageSets()]);
   } catch (e) {
-    console.warn('[live] workshop data failed — keeping placeholder markup:', e);
+    console.warn('[live] workshop data failed:', e);
+    count.textContent = 'Podaci za radionicu nisu učitani.';
+    const retry = document.createElement('a');
+    retry.href = location.href;
+    retry.className = 'ws-none';
+    retry.textContent = 'Pokušaj ponovno';
+    results.replaceChildren(retry);
+    input.disabled = true;
+    if (mic) mic.disabled = true;
+    setNum(document.querySelector('.ws-btn-num span'), '—');
     liveFirstDone();
     return;
   }
