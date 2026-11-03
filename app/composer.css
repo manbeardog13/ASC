@@ -157,3 +157,26 @@ html.has-composer body{padding-bottom:calc(var(--nero-stack,146px) + 24px + env(
 .nero-input::placeholder{transition:opacity 180ms ease}
 .nero-input.changing-hint::placeholder{opacity:0}
 @media(prefers-reduced-motion:reduce){.nero-input::placeholder{transition:none}}
+
+/* The glass may cross a dark photo or a bright drawing. Give the ink its own
+   neutral surface while the two arced shoulders and surrounding glass stay clear. */
+.nero-composer {
+  --nero-underprint: rgba(253,253,250,.86);
+  --nero-field-ink: #263b3e;
+  --nero-field-hint: #415659;
+}
+html.dark .nero-composer {
+  --nero-underprint: rgba(29,49,52,.89);
+  --nero-field-ink: #f5f5ed;
+  --nero-field-hint: #d6e2dc;
+}
+.nero-composer .nero-field {
+  background: var(--nero-underprint); border-radius: 7px;
+}
+.nero-composer .nero-input {
+  padding-inline: 9px; color: var(--nero-field-ink); caret-color: var(--nero-field-ink);
+}
+.nero-composer .nero-input::placeholder {color: var(--nero-field-hint)}
+.nero-composer :is(.nero-plus,.nero-mic:not([aria-pressed="true"])) {
+  background: var(--nero-underprint); color: var(--nero-field-ink);
+}

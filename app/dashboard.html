@@ -15,9 +15,6 @@
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;650;700;800&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
 <!--
   ASC dashboard — CLEAN-ROOM REBUILD v2 (isolated preview).
   Shared design system lives in app.css + app.js (v6 "Hanssen"): tokens, glass
@@ -39,14 +36,21 @@
 .greet{position:relative;z-index:2;margin:10px 0 4px;animation:greetIn 700ms var(--smooth) both}
 @keyframes greetIn{from{opacity:0;transform:translateY(14px)}}
 .greet-line{font:600 clamp(28px,3.4vw,42px)/1.08 Sora;letter-spacing:-.02em;color:var(--on-stage);margin:0}
-.greet-line b{font-weight:700;background:linear-gradient(120deg,var(--lava-2),var(--lava));
-  -webkit-background-clip:text;background-clip:text;color:transparent}
+.greet-line b{font-weight:630;color:#f5d2cc}
 .greet-sub{font:500 13px Inter;color:var(--on-stage-2);margin-top:7px;display:flex;gap:8px;align-items:baseline}
 .greet-sub .greet-dot{opacity:.5}
 #greetClock{font-variant-numeric:tabular-nums}
 html.warm-nav .greet{animation:none}
 html.splashing .greet{animation-play-state:paused}
 
+
+.dash-overview{margin:0 2px 12px;border-bottom:1px solid var(--line)}
+.dash-overview>summary{display:flex;align-items:center;gap:8px;min-height:44px;cursor:pointer;color:var(--ink-2);font:560 13px/1.4 Inter,system-ui,sans-serif;list-style:none}
+.dash-overview>summary::-webkit-details-marker{display:none}
+.dash-overview>summary::after{content:"";width:7px;height:7px;border:solid var(--muted);border-width:0 1.5px 1.5px 0;transform:translateY(-2px) rotate(45deg)}
+.dash-overview[open]>summary::after{transform:translateY(2px) rotate(225deg)}
+.dash-overview>summary:focus-visible{outline:2px solid var(--ink);outline-offset:-2px}
+@media(prefers-reduced-motion:no-preference){.dash-overview>summary::after{transition:transform 140ms ease}}
 
 /* HERO grid: stage spans 2 rows beside two action cards; the AI card sits in a
    3rd row UNDER the stage, inheriting the stage's (column-1) width. */
@@ -346,6 +350,7 @@ if(sat>=59){d.classList.add('island');d.style.setProperty('--isl-y',(sat-48)+'px
     </nav>
   </header>
 
+  <details class="dash-overview"><summary>Stanje skladišta</summary>
   <section class="glance" id="glance" aria-label="Stanje skladišta">
     <article class="card tight">
       <span class="tab-tl">skladište</span>
@@ -382,6 +387,8 @@ if(sat>=59){d.classList.add('island');d.style.setProperty('--isl-y',(sat-48)+'px
       <ul class="moves" id="gMovesList"></ul>
     </article>
   </section>
+
+  </details>
 
   <!-- HERO: stage (spans 2 rows) + two stacked action cards, heights aligned -->
   <section class="hero">

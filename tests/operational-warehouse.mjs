@@ -1,7 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {summarize} from '../app/stock-strip-view.js';
 import {BUILDING_SPACES} from '../app/warehouse-preview/inventory-ui.js';
 import {getSpace,mapAreaPoint} from '../app/warehouse-preview/building.js';
 test('six provisioned rooms use their reviewed schematic geometry and exclude the office and floor voids',()=>{
@@ -13,9 +12,7 @@ test('six provisioned rooms use their reviewed schematic geometry and exclude th
  assert.equal(mapAreaPoint('attic-parts',getSpace('attic-parts'),2,-9,.27),null);
  assert.equal(mapAreaPoint('triangular-store',getSpace('triangular-store'),-2,-3,.27),null);
 });
-test('recent strip includes only active records with real public codes and the configured quantity',()=>{
- const record={public_code:'ASC-2030-0052',status:'in_storage',quantity:3,rack:'R3',zone:'REGALI',vehicle:{plate:'DU 123'},tires:[{size:'205/55 R16'},{size:'205/55 R16'}]};
- const rows=summarize([record,{...record,deleted_at:'2030-05-01'},{...record,status:'checked_out'},{...record,picked_up_at:'2030-05-01'},{...record,public_code:''}]);
- assert.equal(rows.length,1);assert.equal(rows[0].firstTireId,record.public_code);assert.equal(rows[0].count,3);
- assert.deepEqual(rows[0].locations,['REGALI · R3']);assert.equal(rows[0].size,'205/55 R16');
+test('the staff composer does not load a moving inventory strip', () => {
+ const source = readFileSync(new URL('../app/composer.js', import.meta.url), 'utf8');
+ assert.doesNotMatch(source, /stock-strip|createTyreStream/);
 });

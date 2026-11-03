@@ -134,12 +134,16 @@ const stateRowHtml = (title, sub) =>
 
 // ---- Render ----------------------------------------------------------------
 const state = { me: null, rows: new Map() };
+let sessionEnded = false;
 
 function hideCard(el) { if (el) el.style.display = 'none'; }
 function showCard(el) { if (el) el.style.display = ''; }
 
 function renderAdminOnly() {
-  hideCard(q('#addForm') && q('#addForm').closest('.card'));
+  q('#invite-card').hidden = true;
+  q('#team-summary').hidden = true;
+  setBadge('#teamCount', '—');
+  state.rows.clear();
   hideCard(q('#awaitCard'));
   const list = q('.ulist');
   if (list) list.innerHTML = stateRowHtml('Samo administratori', 'Upravljanje korisnicima dostupno je administratorima.');
@@ -206,11 +210,15 @@ async function refresh() {
     users = await listUsers();
   } catch (e) {
     console.warn('[live] users load failed — keeping calm state:', e);
-    renderError();
+    if (!sessionEnded) renderError();
     return;
   }
+  if (sessionEnded) return;
   const pending = await listPendingUsers().catch(() => []);
-  render(users, pending);
+  if (!sessionEnded) {
+    render(users, pending);
+    q('#team-summary').hidden = false;
+  }
 }
 
 // ---- Actions (delegated — rows are re-rendered on every refresh) -------------
@@ -310,6 +318,7 @@ function wireEvents() {
   const form = q('#addForm');
   if (form) form.addEventListener('submit', async (e) => {
     e.preventDefault();
+    if (!isAdminRole(state.me?.role)) return;
     const nameEl = q('#uName'), mailEl = q('#uEmail');
     const name = nameEl ? nameEl.value.trim() : '';
     const email = mailEl ? mailEl.value.trim() : '';
@@ -344,11 +353,34 @@ function wireEvents() {
 let liveFirstDone;
 window.ascLiveFirst = new Promise((r) => { liveFirstDone = r; });
 
+function clearPeople() {
+  sessionEnded = true;
+  state.me = null;
+  renderAdminOnly();
+  q('#addForm').reset();
+  q('.appr').replaceChildren();
+}
+document.addEventListener('asc:sign-out', clearPeople);
+window.addEventListener('pagehide', (event) => {
+  if (event.persisted) clearPeople();
+});
+window.addEventListener('pageshow', (event) => {
+  if (event.persisted) location.reload();
+});
+
+q('.vhead h1').textContent = t('users.title');
+q('.vhead p').textContent = t('users.sub');
+document.title = 'ASC — ' + t('users.title');
 (async () => {
   const session = await getSession().catch(() => null);
   if (!session) { liveFirstDone(); return; }   // the gate handles the redirect
-  state.me = await loadMyProfile().catch(() => null);
-  wireEvents();
+  const profile = await loadMyProfile().catch(() => null);
+  if (sessionEnded) { liveFirstDone(); return; }
+  state.me = profile?.id === session.user.id ? profile : null;
+  if (isAdminRole(state.me?.role)) {
+    q('#invite-card').hidden = false;
+    wireEvents();
+  }
   await refresh();
   liveFirstDone();
 })();

@@ -43,16 +43,15 @@ export async function signIn(email, password) {
 export async function signOut() {
   await supabase.auth.signOut();
 }
-// Email a password-reset link. The link returns to the app with type=recovery,
-// which app.js routes to the "set your password" screen.
+// The mounted login page handles the implicit-flow fragment before routing.
 export async function sendPasswordReset(email) {
-  const { error } = await supabase.auth.resetPasswordForEmail((email || "").trim(), { redirectTo: config.APP_BASE_URL });
+  const { error } = await supabase.auth.resetPasswordForEmail((email || "").trim(), { redirectTo: config.AUTH_RETURN_URL });
   if (error) throw new Error(error.message);
 }
 // Google OAuth. Requires the Google provider enabled in Supabase (Auth →
 // Providers) and the app URL listed under Auth → URL Configuration.
 export async function signInWithGoogle() {
-  const { error } = await supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo: config.APP_BASE_URL } });
+  const { error } = await supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo: config.AUTH_RETURN_URL } });
   if (error) {
     throw new Error(/not enabled|unsupported provider|provider/i.test(error.message)
       ? "Google sign-in isn't enabled yet — turn on the Google provider in Supabase."
@@ -70,7 +69,7 @@ export async function signUp(email, password, fullName) {
     password,
     // Lands in auth metadata; handle_new_user() copies it into the profile so
     // the app knows who this is from the very first session.
-    options: { data: { full_name: (fullName || "").trim() || undefined } },
+    options: { emailRedirectTo: config.AUTH_RETURN_URL, data: { full_name: (fullName || "").trim() || undefined } },
   });
   if (error) {
     throw new Error(/already registered|already exists/i.test(error.message)
@@ -227,7 +226,7 @@ export async function inviteUser({ full_name, email, role }) {
   const clean = (email || "").trim().toLowerCase();
   if (!clean) throw new Error("Email is required.");
   if (isOwnerEmail(clean)) throw new Error("That is the owner account — it already has full access.");
-  const res = await callAdminFn({ action: "invite", email: clean, full_name, role, appUrl: config.APP_BASE_URL });
+  const res = await callAdminFn({ action: "invite", email: clean, full_name, role, appUrl: config.AUTH_RETURN_URL });
   if (res.notDeployed) { await addAllowedUser({ full_name, email: clean, role }); return { mode: "allowlist" }; }
   return { mode: res.data?.status === "exists" ? "exists" : "invited" };
 }

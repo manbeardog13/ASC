@@ -28,10 +28,13 @@ export function resolveBaseUrl(moduleUrl, fallback = FALLBACK_BASE_URL) {
   } catch (e) { return fallback; }
 }
 
+const baseUrl = resolveBaseUrl(import.meta.url);
+
 export const config = {
   SUPABASE_URL:      "https://ilnqhlrvchuvpjgptjfx.supabase.co",
   SUPABASE_ANON_KEY: "sb_publishable_wLI8c19MvSw871n9wWSsyw_YpKHnkBA",
-  APP_BASE_URL:      resolveBaseUrl(import.meta.url),
+  APP_BASE_URL:      baseUrl,
+  AUTH_RETURN_URL:   new URL("app/login.html", baseUrl).href,
   // Optional MagicDNS https name of the NERO-SERVER relay (tailscale serve).
   // Leave empty until that name exists. The webhook URL and key stay in
   // Supabase secrets. Do not put a public function URL here.

@@ -1,24 +1,55 @@
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('warehouse-preview/vendor/inter-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('warehouse-preview/vendor/inter-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Sora';
+  font-style: normal;
+  font-weight: 100 800;
+  font-display: swap;
+  src: url('warehouse-preview/vendor/sora-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Sora';
+  font-style: normal;
+  font-weight: 100 800;
+  font-display: swap;
+  src: url('warehouse-preview/vendor/sora-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
 /* =========================================================================
    ASC design system · v6 "Hanssen" — shared reusable stylesheet
-   Extracted VERBATIM from dashboard.html. Values are locked — do not rewrite.
-   Palette: Cloud Ash #EDF0F5 · Black Core #0a0c11 · Lava Rush #e10600 ·
-   Gunmetal #2E2F31 · green #2fbf5b (online/success only). Inter + Sora.
+   Extracted VERBATIM from dashboard.html. Shared by every staff route.
+   Palette: warm stone, pearl, petrol, and oxblood. Inter + Sora.
    Twin light/dark themes toggled by html.dark.
    ========================================================================= */
 
 /* ============================== Tokens · twin themes ====================== */
 :root{
-  --bg:#eef0f1; --shell:rgba(255,255,255,.44); --shell-solid:rgba(255,255,255,.70);
-  --panel:#f4f4f3; --panel-2:#fdfdfc;
-  --ink:#0a0c11; --ink-2:#3a3c40; --muted:#63676f;
+  --bg:#f1eee7; --shell:#fbfaf5; --shell-solid:#fbfaf5;
+  --panel:#f1f2eb; --panel-2:#fcfbf7;
+  --ink:#1d3439; --ink-2:#354d51; --muted:#52666a;
   --lava:var(--brand); --lava-2:var(--brand-hi); --lava-ink:var(--brand-ink); --lava-tint:var(--brand-tint); --lava-ring:var(--brand-ring);
-  --gun:#2e2f31; --hairline:rgba(28,22,16,.06); --line:rgba(28,22,16,.09);
-  --stage-1:#0b0c0e; --stage-2:#17181b; --on-stage:#f4f5f7; --on-stage-2:rgba(244,245,247,.72); --tab-surf:#f7f9fc;
+  --gun:#2a444a; --hairline:#dde0d7; --line:#cdd4cd;
+  --stage-1:#20444a; --stage-2:#365b62; --on-stage:#fffdf6; --on-stage-2:#dfebe5; --tab-surf:#fcfbf7;
   --rim-top:rgba(255,255,255,.75); --rim:rgba(255,255,255,.42);
   --green:#2fbf5b; --green-ink:#1c894a;
   --smooth:cubic-bezier(.25,1,.5,1); --snap:cubic-bezier(.22,1,.36,1);
-  --shadow-card:0 1px 2px -1px rgba(20,18,15,.10),0 6px 16px -8px rgba(20,18,15,.15),0 20px 40px -22px rgba(20,18,15,.22);
-  --gap:14px; --pad:20px; --radius:22px;
+  --shadow-card:0 2px 10px -8px #26413e55;
+  --gap:14px; --pad:20px; --radius:15px;
   --tap:44px;
   --type-nav:500 13.5px/1.25 Inter,system-ui,sans-serif;
   --type-sub:500 11px/1.35 Inter,system-ui,sans-serif;
@@ -27,12 +58,12 @@
   --type-page:600 clamp(21px,3vw,26px)/1.15 Sora,Inter,system-ui,sans-serif;
 }
 html.dark{
-  --bg:#0a0c11; --shell:rgba(30,32,38,.55); --shell-solid:rgba(30,32,38,.88);
-  --panel:#22242a; --panel-2:#2b2d33;
-  --ink:#f4f5f7; --ink-2:#d6d8dc; --muted:rgba(244,245,247,.62);
+  --bg:#1b3035; --shell:#243b40; --shell-solid:#243b40;
+  --panel:#2c454a; --panel-2:#314d52;
+  --ink:#f6f4ed; --ink-2:#e4ebe5; --muted:#bececa;
   --hairline:rgba(244,245,247,.09); --line:rgba(244,245,247,.12);
-  --lava-ink:var(--brand-ink); --tab-surf:#14161c; --green-ink:#57d484;
-  --stage-1:#0d0f14; --stage-2:#15171d;
+  --lava-ink:var(--brand-ink); --tab-surf:#243b40; --green-ink:#57d484;
+  --stage-1:#1a373d; --stage-2:#355158;
   --rim-top:rgba(255,255,255,.16); --rim:rgba(255,255,255,.08);
   --shadow-card:0 1px 2px -1px rgba(0,0,0,.5),0 8px 20px -10px rgba(0,0,0,.55),0 24px 48px -24px rgba(0,0,0,.62);
 }
@@ -248,10 +279,10 @@ html.dark .obar .bar{background:rgba(244,245,247,.10)}
    Active items are physical controls: panel surface + inset highlight + a 3px
    module-accent bar + accent ink. Collapses to a 72px icon rail (persisted).
    On phones the same component slides in as an overlay from a hamburger. */
-:root{--sbw:248px;
+:root{--sbw:224px;
   --acc:#5C7C9D;--acc-ink:#46617f;          /* slate = system-interactive default */
-  --side:#e9ebee;--lip:#f7f8fa}
-html.dark{--side:#0c0d10;--lip:#14161a;--acc-ink:#9db8d2}
+  --side:#e4e8df;--lip:#fbfaf5}
+html.dark{--side:#20383d;--lip:#243b40;--acc-ink:#9db8d2}
 html[data-side="rail"]{--sbw:72px}
 @media(min-width:1021px){
   html.has-side body{padding-left:calc(30px + var(--sbw) + 22px);padding-right:30px}
@@ -281,6 +312,7 @@ html[data-side="rail"] .sb-collapse{transform:rotate(180deg)}
   mask-image:linear-gradient(180deg,transparent,#000 12px,#000 calc(100% - 12px),transparent)}
 .sb-nav::-webkit-scrollbar{display:none}
 .sb-nav .sb-theme{margin-top:auto}
+.sb-item[hidden]{display:none!important}
 .sb-item{position:relative;display:flex;align-items:center;gap:10px;min-height:40px;
   padding:0 12px;border-radius:12px;text-decoration:none;cursor:pointer;border:0;background:transparent;
   font:var(--type-nav);color:var(--ink-2);text-align:left;width:100%;
@@ -1157,3 +1189,74 @@ html.detail-overlay-open { overflow: hidden; }
 .detail-embedded body { padding-left:0!important; }
 .detail-embedded .wrap { margin-inline:auto; padding-inline:16px; }
 @media(min-width:1024px) { .detail-overlay { width:min(700px,60vw); height:100dvh; max-height:100dvh; margin:0 0 0 auto; border-radius:20px 0 0 20px; } }
+
+/* Matte daylight shell. Dashboard imagery and focused dark surfaces retain depth. */
+.has-side .shell {
+  background: var(--shell-solid);
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 36px -28px #20423c80;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+.has-side .grain {display: none}
+.has-side .canvas {
+  background: linear-gradient(136deg,transparent 30%,#94b0a520 100%);
+}
+.has-side .side {
+  border: 1px solid var(--line);
+  box-shadow: none;
+}
+.has-side .sb-head {padding-bottom: 13px}
+.has-side .sb-eyebrow {
+  font-size: 10px; letter-spacing: .13em; font-weight: 650; color: var(--muted);
+}
+.has-side .sb-eyebrow::before {
+  content: ""; display: inline-block; width: 16px; height: 2px;
+  margin: 0 8px 3px 0; background: var(--brand);
+}
+.has-side .sb-nav {gap: 3px}
+.has-side .sb-item {
+  --acc-ink: var(--ink);
+  position: relative; min-height: 44px; border-radius: 7px;
+  background: transparent; box-shadow: none; font-weight: 500;
+}
+.has-side .sb-item svg {width: 18px; height: 18px; stroke-width: 1.55; color: var(--muted)}
+.has-side .sb-item .t {font-weight: 520}
+.has-side .sb-item.on,.has-side .sb-item.kid-on {
+  background: var(--shell-solid); color: var(--ink); box-shadow: none;
+}
+.has-side .sb-item.on svg,.has-side .sb-item.kid-on svg {color: var(--ink)}
+.has-side .sb-item.on::before {left: 0; width: 2px; background: var(--brand-ink)}
+.has-side .sb-kid {font-size: 13px; padding-left: 32px}
+.has-side .sb-kid .t {font-size: 13px}
+.has-side .sb-search {border: 1px solid var(--line); background: var(--shell-solid); border-radius: 7px; min-height: 44px}
+.has-side .sb-search input {background: transparent !important}
+.has-side .sb-user {box-shadow: none; border-radius: 8px}
+.has-side .sb-ava .dot {animation: none}
+.has-side .sb-item:hover,.has-side .sb-user:hover {box-shadow: none; transform: none; color: var(--ink)}
+.has-side .sb-item:hover {background: var(--panel-2)}
+.has-side .shell>.top {border-bottom: 1px solid var(--line)}
+.has-side .stage .scrim {
+  background: linear-gradient(100deg,#183b40 8%,#20454aeb 32%,#1c424a36 74%),
+    linear-gradient(0deg,#183a41 3%,transparent 55%);
+}
+.has-side .nero-mark,.has-side .nero-mark a {color: var(--muted); text-shadow: none}
+@media(min-width:1021px) {
+  .has-side .side,.has-side .shell {border-radius: 14px}
+  .has-side .shell>.top {border-radius: 14px 14px 0 0}
+}
+@media(prefers-reduced-motion:no-preference) {
+  .has-side .shell,.has-side .reveal {animation-duration: 240ms}
+  .has-side .sb-item {transition: color 120ms ease,background-color 120ms ease,transform 120ms ease}
+  .has-side .sb-item:active {transform: scale(.985)}
+}
+
+.sb-dismiss {display: none}
+@media(max-width:1020px) {
+  .side .sb-dismiss,.side #close-sidebar {
+    flex: none; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 8px;
+    display: grid; place-items: center; background: transparent; color: var(--ink);
+    cursor: pointer;
+  }
+  .side .sb-dismiss:focus-visible,.side #close-sidebar:focus-visible {outline: 2px solid var(--ink)}
+}

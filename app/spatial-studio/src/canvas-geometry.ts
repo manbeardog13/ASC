@@ -26,6 +26,8 @@ export type Room = {
 type Area = { width: number; depth: number };
 export const geometry = original as {
   getSpace: (id: string) => Room | null;
+  getSpaceBounds: (id:string) => {min:number[];max:number[]} | null;
+  hasBuildingFloor: (id: string, x: number, z: number, radius: number) => boolean;
   mapAreaPoint: (
     id: string,
     a: Area,

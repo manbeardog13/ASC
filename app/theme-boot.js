@@ -1,5 +1,5 @@
 /* Blocking head script. Applies the theme before first paint.
-   Stored choice wins. With no choice, ASC opens in dark mode.
+   Stored choice wins. With no choice, ASC opens in daylight.
    Only the theme key is read or written — nothing else. */
 (function () {
   var KEY = 'asc.theme';
@@ -12,13 +12,13 @@
     var choice = stored();
     if (choice === 'dark') return true;
     if (choice === 'light') return false;
-    return true;
+    return false;
   }
   function paint() {
     var dark = darkNow();
     document.documentElement.classList.toggle('dark', dark);
     var meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute('content', dark ? '#0a0c11' : '#edf0f5');
+    if (meta) meta.setAttribute('content', dark ? '#1b3035' : '#f1eee7');
     return dark;
   }
   paint();

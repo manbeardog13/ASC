@@ -62,11 +62,11 @@ async function authentication(browser){
       assert.deepEqual(h.errors,[]);
     }finally{await h.context.close();}
   }
-  for(const type of ['reset','recover']){
+  for(const type of ['reset','recover','invite']){
     const h=await pageFor(browser,{width:390,signedOut:true});
     try{
       const p=h.page;
-      await p.goto('http://asc.test/app/login.html'+(type==='recover'?'#type=recovery':''));
+      await p.goto('http://asc.test/app/login.html'+(type==='recover'?'#type=recovery':type==='invite'?'#type=invite':''));
       if(type==='reset'){await p.locator('#forgot').click();await p.locator('#email').fill('ui@example.invalid');}
       else await p.locator('#password').fill('new-synthetic-password');
       assert.equal(await p.locator('#form').evaluate(e=>e.checkValidity()),true,`Hidden fields must not block ${type}`);
@@ -75,8 +75,76 @@ async function authentication(browser){
       assert.deepEqual(h.errors,[]);
     }finally{await h.context.close();}
   }
+  const unavailable = await pageFor(browser, {width:390, signedOut:true});
+  try {
+    await unavailable.context.route('**/js/supabaseClient.js', route => route.abort());
+    await unavailable.page.goto('http://asc.test/app/login.html');
+    await unavailable.page.waitForFunction(() => document.querySelector('#msg').textContent.includes('Provjerite vezu'));
+    assert.equal(await unavailable.page.locator('#submit').isDisabled(), true);
+    assert.equal(await unavailable.page.locator('#google').isDisabled(), true);
+    assert.equal(await unavailable.page.locator('#form').evaluate(form => form.dispatchEvent(new Event('submit',{cancelable:true}))), false, 'SDK failure cannot submit credential fields to a generic HTML endpoint');
+  } finally { await unavailable.context.close(); }
   console.log('PASS authentication: bounded signup fields, visible confirmation, fresh reset and recovery without hidden-field validation');
 }
+async function keyboardLogin(browser) {
+  for (const [width, height, visibleHeight] of [[390, 844, 308], [844, 390, 136]]) {
+    const h = await pageFor(browser, { width, height, signedOut: true });
+    try {
+      const p = h.page;
+      const out = path.join(__dirname, '../out/login-tests');
+      fs.mkdirSync(out, { recursive: true });
+      const snapshots = Object.create(null);
+      // Desktop automation has no iOS keyboard. Model Safari's independently
+      // shrinking and offset visual viewport while the layout viewport stays put.
+      await h.context.addInitScript(() => {
+        const visual = new EventTarget();
+        Object.assign(visual, { height: innerHeight, offsetTop: 0, scale: 1 });
+        Object.defineProperty(window, 'visualViewport', { value: visual });
+      });
+      await p.goto('http://asc.test/app/login.html?from=studio');
+      await p.locator('#email').waitFor();
+      await p.screenshot({ path: path.join(out, 'login-' + width + '.png') });
+      const showKeyboard = () => p.evaluate(({ height }) => {
+        Object.assign(visualViewport, { height, offsetTop: 18 });
+        visualViewport.dispatchEvent(new Event('resize'));
+      }, { height: visibleHeight });
+      for (const id of ['email', 'password', 'first', 'last']) {
+        if (id === 'first') await p.locator('#switch').click();
+        const field = p.locator('#' + id);
+        await field.focus();
+        await showKeyboard();
+        await field.fill(id === 'email' ? 'operator@example.invalid' : 'Vidljiv unos');
+        await p.waitForFunction(id => {
+          const rect = document.getElementById(id).closest('.fieldx').getBoundingClientRect();
+          return rect.top >= visualViewport.offsetTop + 10 && rect.bottom <= visualViewport.offsetTop + visualViewport.height - 17;
+        }, id);
+        const bounds = await field.boundingBox();
+        assert.ok(bounds.x >= 0 && bounds.x + bounds.width <= width);
+        assert.ok(await field.evaluate(el => parseFloat(getComputedStyle(el).fontSize)) >= 16);
+        assert.equal(await field.evaluate(el => el === document.activeElement), true);
+        snapshots[id] = Math.round(bounds.y);
+      }
+      await p.evaluate(() => {
+        document.activeElement.blur();
+        Object.assign(visualViewport, { height: innerHeight, offsetTop: 0 });
+        visualViewport.dispatchEvent(new Event('resize'));
+      });
+      await p.waitForFunction(() => getComputedStyle(document.body).getPropertyValue('--keyboard-space').trim() === '0px');
+      await p.locator('#switch').click();
+      await p.locator('#forgot').click();
+      assert.match(await p.locator('#forgot').innerText(), /Natrag/);
+      await p.locator('#forgot').click();
+      await p.locator('#email').fill('operator@example.invalid');
+      await p.locator('#password').fill('synthetic-password');
+      await p.evaluate(() => { window.ASCSplash.handoff = target => { window.__handoff = target; }; });
+      await p.locator('#submit').click();
+      await p.waitForFunction(() => window.__handoff === 'spatial-studio/index.html');
+      assert.deepEqual(h.errors, []);
+      console.log('PASS login restored studio route, keyboard field positions at ' + width + 'x' + visibleHeight, snapshots);
+    } finally { await h.context.close(); }
+  }
+}
+
 async function intakeAndIntroduction(browser){
   const intake=await pageFor(browser,{width:320});
   try{
@@ -218,8 +286,48 @@ async function locate(browser){
   }
   console.log('PASS locate: ASC styling at390/1440, complete inventory search, loading/error/retry, record preservation, keyboard result navigation');
 }
+async function people(browser) {
+  for (const role of ['admin', 'manager', 'employee', 'readonly', null]) {
+    const {page, context, errors} = await pageFor(browser, {width: 1440});
+    try {
+      await context.addInitScript((role) => {
+        let resolveProfile;
+        const waiting = new Promise(resolve => { resolveProfile = resolve; });
+        window.__readProfile = () => waiting;
+        window.__releaseProfile = () => resolveProfile(role ? {
+          id: 'ui-audit', role, full_name: 'UI Audit', onboarded_at: '2026-10-15',
+        } : null);
+        sessionStorage.setItem('nero.tenant.session.v1', JSON.stringify({role: 'tenant_admin'}));
+      }, role);
+      await page.goto('http://asc.test/app/users.html');
+      const destination = page.locator('.sb-nav a[data-m="users"]');
+      await destination.waitFor({state: 'attached'});
+      assert.equal(await page.locator('a[href$="users.html"]').count(), 1);
+      assert.equal(await destination.isVisible(), false);
+      assert.equal(await page.locator('#invite-card').isVisible(), false);
+      await page.evaluate(() => window.__releaseProfile());
+      if (role === 'admin' || role === 'manager') {
+        await page.locator('#team-summary').waitFor({state: 'visible'});
+        assert.equal(await destination.isVisible(), true);
+        assert.match(await destination.textContent(), /People|Osobe/);
+        assert.equal(await page.locator('#addForm').isVisible(), true);
+        await page.evaluate(() => document.dispatchEvent(new Event('asc:sign-out')));
+      } else {
+        await page.waitForFunction(() => document.querySelector('.ulist')?.textContent.includes('Samo administratori'));
+        assert.equal(await destination.isVisible(), false);
+      }
+      assert.equal(await page.locator('#invite-card').isVisible(), false);
+      assert.equal(await page.locator('#team-summary').isVisible(), false);
+      assert.equal(await page.locator('.ulist [data-user]').count(), 0);
+      assert.deepEqual(errors, []);
+    } finally {
+      await context.close();
+    }
+  }
+  console.log('PASS People: one working ASC directory, role-gated navigation, pending and unknown profiles fail closed, sign-out clears controls');
+}
 (async()=>{
   const browser=await start();
-  try{await navigation(browser);await authentication(browser);await intakeAndIntroduction(browser);await locate(browser);}
+  try{await navigation(browser);await authentication(browser);await keyboardLogin(browser);await people(browser);await intakeAndIntroduction(browser);await locate(browser);}
   finally{await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

@@ -17,3 +17,7 @@ Run `npm ci`, `npm test`, and `npm run build` in this folder (Node 24). The buil
 - The floor model remains schematic until actual surveys and bindings are available. A measured operator area does not certify the associated architecture or establish millimetre accuracy. SKU data is optional; the application does not substitute codes for missing catalog identifiers.
 
 Reduced motion, keyboard search, a narrow-screen layout, a collapsible side panel and an SVG fallback keep the studio usable without WebGL. The Node tests use synthetic fixtures; they do not write to production.
+
+Drag the 3D cutaway to pan, scroll over a corner to zoom there, and right-drag to orbit. On touch, use one finger to pan and two to zoom or rotate. The floor plan supports drag, pinch, cursor-centred zoom and arrow keys. **Centriraj prikaz** restores the room framing.
+
+Choose **Šetnja** to enter a schematic room at eye level. Drag to look around, walk with WASD, or hold the on-screen direction controls. The left/right arrow keys turn. Escape returns to the cutaway. The room selector changes spaces independently of their unconfirmed physical connections. A link with `?view=walk&room=attic-racks` opens that specific walkthrough. A link with `?view=plan` opens the floor plan without loading the 3D renderer.

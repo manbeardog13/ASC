@@ -24,7 +24,7 @@ const results = el("div", { class: "locate-results", "aria-busy": "true" });
 root.append(form, feedback, results);
 
 function where(row) {
-  return [row.zone, row.rack, row.shelf, row.slot].filter((part) => part != null && part !== "").join(" · ") || "—";
+  return [row.zone, row.rack, row.shelf, row.slot].filter((part) => part != null && part !== "").join(" · ") || t("flow.unassignedLabel");
 }
 
 function say(message, kind = "ready") {
@@ -82,8 +82,8 @@ async function load() {
     rows = inventory.sets;
     state = "ready";
     submit.disabled = false;
-    say("");
-    if (box.value.trim()) run();
+    say(rows.length ? "" : t("flow.noStoredSets"));
+    if (box.value.trim() && rows.length) run();
   } catch (_) {
     state = "error";
     say(t("flow.locateFailed"), "error");

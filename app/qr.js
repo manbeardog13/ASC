@@ -200,16 +200,18 @@
     var code = window.qrcode(0, 'M');
     code.addData(slotLink(qr));
     code.make();
-    return code.createSvgTag({ cellSize: 4, margin: 1, scalable: true });
+    return code.createSvgTag({ cellSize: 4, margin: 16, scalable: true });
   }
   function printSlotLabels(rows) {
     var list = (rows || []).filter(function (row) { return row && row.qr_code; });
-    if (!list.length) return false;
+    if (!list.length || list.length !== rows.length || !window.qrcode) return false;
     var cards = list.map(function (row) {
+      var qrMarkup = slotSvg(row.qr_code);
+      if (!qrMarkup) throw new Error('QR');
       var where = [row.zone, row.rack, row.shelf, row.slot].filter(Boolean).join(' · ');
       return '<div class="sm-label sm-shape-rounded" style="display:inline-block;width:46%;margin:1%;vertical-align:top">' +
         '<div class="sm-top"><span class="sm-brand">ASC</span><span class="sm-season">MJESTO</span></div>' +
-        '<div class="sm-qr">' + (slotSvg(row.qr_code) || esc(row.qr_code)) + '</div>' +
+        '<div class="sm-qr">' + qrMarkup + '</div>' +
         '<div class="sm-code">' + esc(row.qr_code) + '</div>' +
         '<div class="sm-loc"><span class="sm-lk">Lokacija</span>' + esc(where) + '</div>' +
       '</div>';

@@ -42,8 +42,8 @@ async function themes(browser) {
     const h = await contextFor(browser, { ...options, warm: true });
     try {
       await h.page.goto('http://asc.test/app/dashboard.html');
-      const initial = options.theme !== 'light';
-      assert.equal(await h.page.evaluate(() => document.documentElement.classList.contains('dark')), initial, 'Dark is the default, including a light OS; an explicit light choice wins');
+      const initial = options.theme === 'dark';
+      assert.equal(await h.page.evaluate(() => document.documentElement.classList.contains('dark')), initial, 'Daylight opens by default and saved dark mode wins');
       await h.page.evaluate(() => ASCTheme.toggle());
       assert.equal(await h.page.evaluate(() => document.documentElement.classList.contains('dark')), !initial, 'Theme toggle remains usable when storage is denied');
       await h.page.evaluate(() => ASCTheme.toggle());
@@ -51,7 +51,7 @@ async function themes(browser) {
       assert.deepEqual(h.errors, []);
     } finally { await h.context.close(); }
   }
-  console.log('PASS dark default, explicit saved choices, blocked-storage theme toggle');
+  console.log('PASS daylight default, explicit saved choices, blocked-storage theme toggle');
 }
 
 async function entry(browser) {
@@ -64,19 +64,14 @@ async function entry(browser) {
     assert.equal(await h.page.locator('.asc-entry-skip').evaluate(el=>el===document.activeElement),true,'Cold entry routes keyboard users to its visible skip control');
     await h.page.keyboard.press('Shift+Tab');
     assert.equal(await h.page.locator('.asc-entry-skip').evaluate(el=>el===document.activeElement),true,'Keyboard focus cannot reach covered business controls during the intro');
-    await h.page.evaluate(() => ASCSplash.done());
-    await h.page.waitForTimeout(1500);
-    assert.equal(await h.page.locator('#splash').isVisible(), true, 'The full final second of the slow approach is retained on a fast auth response');
-    const frame = await h.page.locator('.sp-core').evaluate(el => {
-      const c = getComputedStyle(el);
-      return { duration: c.animationDuration, easing: c.animationTimingFunction, transform: c.transform };
-    });
-    assert.match(frame.duration, /1s/);
-    assert.match(frame.easing, /cubic-bezier\(0\.08, 0\.8, 0\.16, 1\)/);
     const output = path.join(repo, 'out/brand-tests');
     fs.mkdirSync(output, { recursive: true });
     await h.page.screenshot({ path: path.join(output, 'asc-entry-desktop.png') });
-    await h.page.waitForFunction(() => document.querySelector('#splash').hidden);
+    await h.page.clock.install();
+    await h.page.evaluate(() => ASCSplash.done());
+    assert.equal(await h.page.evaluate(() => document.documentElement.classList.contains('splashing')), false, 'Completed auth immediately releases the page');
+    await h.page.clock.runFor(200);
+    assert.equal(await h.page.locator('#splash').isVisible(), false);
     assert.equal(await h.page.evaluate(() => sessionStorage.getItem('asc.splash.warm')), '1');
     assert.equal(await h.page.locator('img.logo').count(), 1, 'The original clickable logo element is retained');
     assert.equal(await h.page.locator('img.logo').getAttribute('src'), '/app/assets/logo.png', 'The actual ASC silhouette remains the source');
@@ -121,7 +116,7 @@ async function accessibility(browser) {
         assert.equal(await h.page.locator('.asc-brand-frame--entry').evaluate(el => getComputedStyle(el, '::before').animationName), 'none');
         await h.page.evaluate(() => ASCSplash.done());
       } else {
-        await h.page.waitForTimeout(1400);
+        await h.page.waitForTimeout(220);
         await h.page.screenshot({ path: path.join(repo, 'out/brand-tests/asc-entry-phone.png') });
         await skip.click();
         assert.equal(await h.page.locator('#splash').isVisible(), false, 'Touch/click skip dismisses immediately');

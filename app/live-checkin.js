@@ -396,16 +396,20 @@ async function showPlaceStep(code, formData) {
   // (or the user explicitly retried after a printer problem).
   const printHost = document.createElement('div');
   const gated = [];
-  const gate = (el) => { el.setAttribute('aria-disabled', 'true'); el.classList.add('is-gated'); el.title = t('print.gate'); gated.push(el); };
+  let printed = false;
+  const gate = (el) => { if (printed) return; el.setAttribute('aria-disabled', 'true'); el.classList.add('is-gated'); el.title = t('print.gate'); gated.push(el); };
   const blockGated = (e) => { if (e.currentTarget.getAttribute('aria-disabled') === 'true') e.preventDefault(); };
   const label = { who: formData.customer.name, plate: formData.vehicle.plate, season: formData.set.season };
-  const startPrint = () => mountLabelPrint(printHost, { code, label, onComplete: () => gated.forEach((el) => { el.removeAttribute('aria-disabled'); el.classList.remove('is-gated'); el.removeAttribute('title'); }) });
+  panel.append(title, lead, printHost);
+  mountLabelPrint(printHost, { code, label, onComplete: () => {
+    printed = true;
+    gated.forEach(el => { el.removeAttribute('aria-disabled'); el.classList.remove('is-gated'); el.removeAttribute('title'); });
+  } });
   let slotCount = null;
   try { slotCount = await countLocations(); }
   catch (error) { showToast(error.message || t('flow.migration')); }
   if (placementNeedsSlots(slotCount)) {
-    panel.append(title, lead, printHost, actions, slotBlock('empty', intakeReturn(code)));
-    startPrint();
+    panel.append(slotBlock('empty', intakeReturn(code)));
     return;
   }
   const suggest = document.createElement('button');
@@ -415,20 +419,22 @@ async function showPlaceStep(code, formData) {
   const note = document.createElement('p');
   note.className = 'flow-note';
   suggest.addEventListener('click', async () => {
+    suggest.disabled = true;
+    place.href = 'place.html?set=' + encodeURIComponent(code);
     try {
       const slot = await suggestFreeSlot('main', {
         customerId: formData.customer && formData.customer.id,
         phone: formData.customer && formData.customer.phone,
         plate: formData.vehicle && formData.vehicle.plate,
       });
-      if (!slot) { note.textContent = ''; showToast(t('flow.noSlot')); return; }
+      if (!slot) { note.textContent = t('flow.noSlot'); return; }
       const copy = suggestionNote(slot, locationLabel(slot));
       note.textContent = t(copy.key, copy.vars);
       place.href = 'place.html?set=' + encodeURIComponent(code) + (slot.qr_code ? '&slot=' + encodeURIComponent(slot.qr_code) : '');
     } catch (error) {
       note.textContent = '';
       showToast(error.message || t('flow.migration'));
-    }
+    } finally { suggest.disabled = false; }
   });
   const place = document.createElement('a');
   place.className = 'btn btn-primary';
@@ -440,12 +446,11 @@ async function showPlaceStep(code, formData) {
   record.textContent = t('flow.openRecord');
   [place, record].forEach((el) => { gate(el); el.addEventListener('click', blockGated); });
   actions.append(suggest, place, record);
-  panel.append(title, lead, printHost, note, actions);
+  panel.append(note, actions);
   // Plate-first intake: propose the best free slot straight away (no extra tap);
   // the button stays to ask for another suggestion.
   note.textContent = t('flow.suggesting');
   suggest.click();
-  startPrint();
 }
 
 function installWizard() {

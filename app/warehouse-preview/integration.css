@@ -39,3 +39,24 @@ html[data-preview-state="locked"] .side-scrim{display:none}
 #app-menu #building-study-link{display:block;padding:10px 12px;color:var(--ink);font:inherit;font-size:13px;text-decoration:none;border-radius:8px}
 #app-menu #building-study-link:hover{background:var(--wash,rgba(127,127,127,.08))}
 #app-menu #building-study-link:focus-visible{outline:2px solid var(--sel-ink);outline-offset:2px}
+
+/* Same daylight materials as the spatial studio, with an uninterrupted editing stage. */
+.spatial-app .spatial-heading {
+  color: #f5f3eb; background: linear-gradient(115deg,#24474e,#38595a);
+  box-shadow: none; border: 1px solid #36585c; padding: 20px clamp(16px,2vw,26px);
+}
+.spatial-app .spatial-heading .page-title {font-size: clamp(25px,3vw,40px); letter-spacing: -.045em}
+.spatial-app .spatial-heading .eyebrow {color: #dde7df}
+.spatial-app .area-tabs {gap: 4px}
+.spatial-app .area-tabs button {border-radius: 6px; box-shadow: none}
+.spatial-app .area-tabs button.active {background: var(--ink); color: var(--panel); border-color: var(--ink)}
+.spatial-app .scan-button,.spatial-app .button.primary {background: #27515a; color: white; border: 1px solid #27515a; box-shadow: none}
+.spatial-app .spatial-stage {border-radius: 12px; border: 1px solid var(--line); box-shadow: none}
+.spatial-app .search-wrap,.spatial-app .scan-button,.spatial-app .stage-actions .button {border-radius: 7px}
+.spatial-app .stage-toolbar {row-gap: 10px}
+.spatial-app .sb-item[aria-pressed=true] {background: var(--panel-2); color: var(--ink)}
+.spatial-app .stage-header h2 {letter-spacing: -.045em}
+@media(prefers-reduced-motion:no-preference) {
+  .spatial-app :is(.button,.area-tabs button,.view-toggle button,.scan-button) {transition: background-color 120ms ease,transform 120ms ease}
+  .spatial-app :is(.button,.area-tabs button,.view-toggle button,.scan-button):active:not(:disabled) {transform: translateY(1px)}
+}

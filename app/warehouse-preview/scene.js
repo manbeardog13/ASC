@@ -30,7 +30,7 @@ export function createScene(container, callbacks = {}) {
   const canvas = renderer.domElement;
   canvas.className = 'spatial-canvas';
   canvas.setAttribute('aria-label', 'Trodimenzionalni prikaz hotela za gume. Odaberite stupac ili koristite pristupačan popis guma.');
-  canvas.setAttribute('role', 'img');
+  canvas.setAttribute('role','group');canvas.tabIndex=0;
   canvas.style.cssText = 'display:block;width:100%;height:100%;touch-action:none;outline:none;';
   container.appendChild(canvas);
 
@@ -43,12 +43,16 @@ export function createScene(container, callbacks = {}) {
   controls.maxDistance = 85;
   controls.maxPolarAngle = Math.PI * 0.485;
   controls.minPolarAngle = 0.02;
-  controls.screenSpacePanning = true;
+  controls.screenSpacePanning = false;
+  controls.zoomToCursor = true;
+  controls.mouseButtons.LEFT = THREE.MOUSE.PAN;
+  controls.mouseButtons.RIGHT = THREE.MOUSE.ROTATE;
+  controls.listenToKeyEvents(canvas);
   controls.rotateSpeed = 0.6;
   controls.zoomSpeed = 0.85;
   controls.panSpeed = 0.65;
-  controls.touches.ONE = THREE.TOUCH.ROTATE;
-  controls.touches.TWO = THREE.TOUCH.DOLLY_PAN;
+  controls.touches.ONE = THREE.TOUCH.PAN;
+  controls.touches.TWO = THREE.TOUCH.DOLLY_ROTATE;
   const world = new THREE.Group();
   scene.add(world);
   const staticGroup = new THREE.Group();
@@ -540,6 +544,7 @@ export function createScene(container, callbacks = {}) {
     return point ? { x:Math.round(point.x*1000)/1000,z:Math.round(point.z*1000)/1000,areaId } : null;
   }
   function handleDown(event) {
+    canvas.focus({preventScroll:true});
     pointerCount++;
     cancelHold();
     if (pointerCount > 1) { movingPointer = null; lastTouchTap = null; suppressClickUntil = performance.now() + 450; return; }
@@ -564,7 +569,7 @@ export function createScene(container, callbacks = {}) {
     const start = movingPointer; movingPointer = null;
     if (heldPointerId === event.pointerId) { heldPointerId = null; suppressClickUntil = performance.now() + 350; return; }
     if (!start || event.pointerId !== start.id || performance.now() < suppressClickUntil || event.button > 0) return;
-    if (Math.hypot(event.clientX - start.x, event.clientY - start.y) > 7) return;
+    if (start.dragged || Math.hypot(event.clientX - start.x, event.clientY - start.y) > 7) return;
     pointerRay(event);
     if (currentMode !== 'browse') {
       const point = floorPoint(event); if (point) onFloorPick(point); return;
@@ -584,7 +589,7 @@ export function createScene(container, callbacks = {}) {
   function cancelHold() { if (holdTimer) { clearTimeout(holdTimer); holdTimer = 0; } }
   function handleCancel() { cancelHold(); pointerCount = Math.max(0, pointerCount - 1); movingPointer = null; heldPointerId = null; lastTouchTap = null; }
   function handleMove(event) {
-    if (movingPointer && Math.hypot(event.clientX - movingPointer.x, event.clientY - movingPointer.y) > 7) { cancelHold(); lastTouchTap = null; }
+    if (movingPointer && Math.hypot(event.clientX - movingPointer.x, event.clientY - movingPointer.y) > 7) { movingPointer.dragged = true; cancelHold(); lastTouchTap = null; }
     if (currentMode === 'browse' || event.pointerType === 'touch' || pointerCount) return;
     const point = floorPoint(event); if (point) onFloorHover(point);
   }
