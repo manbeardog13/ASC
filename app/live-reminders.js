@@ -261,8 +261,9 @@ document.addEventListener('click', async (event) => {
   const set = booked.find(item => String(item.id) === button.closest('.rr').dataset.setId);
   if (!set) return;
   await saveReminders([set]);
-  const next = section.querySelector('[data-remind]') || q('.rem-sec:not(details):not([hidden]) [data-remind]') || q('.rem-rested summary');
-  next?.focus({preventScroll: true});
+  const next = section.querySelector('[data-remind]') || q('.rem-sec:not([hidden]) [data-remind]') || q('.rem-rested summary');
+  if (next && !next.closest('details:not([open]) .rr-list')) next.focus({preventScroll: true});
+  else q('.rem-rested summary')?.focus({preventScroll: true});
 });
 
 document.addEventListener('click', (e) => {

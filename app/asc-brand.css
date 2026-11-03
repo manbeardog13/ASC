@@ -1,4 +1,5 @@
-/* Uses the alpha of the real ASC artwork, not a substitute wordmark. */
+/* The original silhouette is also shared with the standalone studio. */
+:root { --asc-brand-mask: url("assets/logo.png"); }
 .asc-brand-frame {
   position: relative;
   display: inline-flex;
@@ -18,14 +19,14 @@
 }
 .asc-brand-frame::before {
   z-index: -1;
-  background: #ed292e;
+  background: #aa2435;
   transform: translateY(4px);
   filter: blur(5px);
   opacity: .6;
   animation: asc-red-breathe 6.4s ease-in-out infinite;
 }
 .asc-brand-frame::after {
-  background: linear-gradient(168deg, rgba(255,255,255,.16) 2%, rgba(245,247,255,.55) 23%, rgba(255,255,255,.05) 38%, rgba(220,225,234,.27) 55%, rgba(255,255,255,.025) 66%, rgba(255,255,255,.13) 100%);
+  background: linear-gradient(168deg, rgba(255,255,255,.16) 2%, rgba(245,247,255,.2) 23%, rgba(255,255,255,.05) 38%, rgba(220,225,234,.13) 55%, rgba(255,255,255,.025) 66%, rgba(255,255,255,.13) 100%);
   opacity: .85;
 }
 .asc-brand-frame > img.asc-brandmark {
@@ -51,10 +52,10 @@
   place-items: center;
   visibility: visible;
   overflow: hidden;
-  background: radial-gradient(ellipse 44% 28% at 50% 54%, rgba(67,9,14,.18), transparent 78%), #07080b;
+  background: radial-gradient(ellipse 29% 19% at 50% 55%, #d2bcba45, transparent 78%), var(--bg, #f1eee7);
   opacity: 1;
-  transition: opacity 220ms ease;
-  color: #d7d9df;
+  transition: opacity 160ms ease;
+  color: #304a4f;
   font-family: inherit;
 }
 #splash.asc-entry[hidden] { display: none !important; }
@@ -83,13 +84,13 @@
   background: linear-gradient(168deg, rgba(255,255,255,.03) 4%, rgba(245,247,255,.58) 22%, rgba(255,255,255,.025) 34%, rgba(220,225,234,.24) 56%, rgba(255,255,255,.015) 68%, rgba(255,255,255,.15));
 }
 .splash-cold #splash.asc-entry .sp-core {
-  animation: asc-mark-reveal 1200ms ease-out both, asc-mark-arrival 1000ms cubic-bezier(.08,.8,.16,1) 1200ms both;
+  animation: asc-mark-reveal 200ms ease-out both, asc-mark-arrival 440ms cubic-bezier(.08,.8,.16,1) both;
 }
 @keyframes asc-mark-reveal {
   from { opacity: 0; filter: blur(5px); }
   to { opacity: 1; filter: blur(0); }
 }
-/* Only 1.8% travel in the final second, settling with nonlinear deceleration. */
+/* Only 1.8% travel while sign-in is being checked, settling with nonlinear deceleration. */
 @keyframes asc-mark-arrival {
   from { transform: scale(1); }
   to { transform: scale(1.018); }
@@ -100,10 +101,10 @@
   right: max(24px, env(safe-area-inset-right));
   min-height: 44px;
   padding: 0 16px;
-  border: 1px solid rgba(255,255,255,.14);
+  border: 1px solid var(--line, #a5b3ad);
   border-radius: 24px;
   background: rgba(255,255,255,.025);
-  color: #aeb2bd;
+  color: var(--muted, #4d6368);
   font-family: inherit;
   font-size: 12px;
   font-weight: 500;
@@ -111,7 +112,7 @@
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
-#splash.asc-entry .asc-entry-skip:hover { background: rgba(255,255,255,.06); color: #fff; }
+#splash.asc-entry .asc-entry-skip:hover { background: var(--panel, #e4e8df); color: var(--ink, #1d3439); }
 #splash.asc-entry .asc-entry-skip:focus-visible { outline: 2px solid #e4b66c; outline-offset: 4px; }
 .asc-brand-paused .asc-brand-frame::before,
 .asc-brand-paused #splash.asc-entry .sp-core { animation-play-state: paused; }
@@ -123,3 +124,6 @@
 
 /* The approved graphite artwork needs a neutral edge on dark glass. */
 .asc-brand-frame:not(.asc-brand-frame--entry){filter:drop-shadow(0 -1px .25px rgba(240,244,248,.9)) drop-shadow(.7px 0 .25px rgba(151,165,177,.75)) drop-shadow(-.7px 0 .25px rgba(151,165,177,.75))}
+
+html:not(.dark) .asc-brand-frame:not(.asc-brand-frame--entry) { filter: none; }
+html.dark #splash.asc-entry { background: #233a40; }

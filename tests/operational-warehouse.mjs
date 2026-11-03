@@ -12,3 +12,7 @@ test('six provisioned rooms use their reviewed schematic geometry and exclude th
  assert.equal(mapAreaPoint('attic-parts',getSpace('attic-parts'),2,-9,.27),null);
  assert.equal(mapAreaPoint('triangular-store',getSpace('triangular-store'),-2,-3,.27),null);
 });
+test('the staff composer does not load a moving inventory strip', () => {
+ const source = readFileSync(new URL('../app/composer.js', import.meta.url), 'utf8');
+ assert.doesNotMatch(source, /stock-strip|createTyreStream/);
+});

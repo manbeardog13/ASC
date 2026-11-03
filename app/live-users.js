@@ -135,14 +135,17 @@ const stateRowHtml = (title, sub) =>
 
 // ---- Render ----------------------------------------------------------------
 const state = { me: null, rows: new Map() };
+let sessionEnded = false;
 
 function hideCard(el) { if (el) el.style.display = 'none'; }
 function showCard(el) { if (el) el.style.display = ''; }
 
 function renderAdminOnly() {
-  hideCard(q('#addForm') && q('#addForm').closest('.card'));
+  q('#invite-card').hidden = true;
+  q('#team-summary').hidden = true;
+  setBadge('#teamCount', '—');
+  state.rows.clear();
   hideCard(q('#awaitCard'));
-  hideCard(q('.card.dark'));
   const list = q('.ulist');
   if (list) list.innerHTML = stateRowHtml('Samo administratori', 'Upravljanje korisnicima dostupno je administratorima.');
 }
@@ -151,13 +154,12 @@ function renderError() {
   const list = q('.ulist');
   state.rows.clear();
   hideCard(q('#awaitCard'));
-  hideCard(q('.card.dark'));
+  q('#team-summary').hidden = true;
   setBadge('#teamCount', '—');
   if (list) list.innerHTML = stateRowHtml('Popis članova nije učitan', 'Provjerite vezu i pokušajte ponovno.') + '<a class="btn btn-sm" href="users.html">Pokušaj ponovno</a>';
 }
 
 function render(users, pending) {
-  showCard(q('.card.dark'));
   const meId = state.me && state.me.id;
   const withOwner = (users || []).map((u) => ({ ...u, is_owner: isOwnerRow(u) }));
   const approvals = withOwner.filter((u) => u.role === 'readonly' && !u.is_owner);
@@ -208,16 +210,18 @@ function render(users, pending) {
 async function refresh() {
   const admin = !!(state.me && isAdminRole(state.me.role));
   if (!admin) { renderAdminOnly(); return; }
-  showCard(q('#inviteCard'));
   let users, pending;
   try {
     [users, pending] = await Promise.all([listUsers(), listPendingUsers()]);
   } catch (e) {
     console.warn('[live] users load failed — keeping calm state:', e);
-    renderError();
+    if (!sessionEnded) renderError();
     return;
   }
-  render(users, pending);
+  if (!sessionEnded) {
+    render(users, pending);
+    q('#team-summary').hidden = false;
+  }
 }
 
 // ---- Actions (delegated — rows are re-rendered on every refresh) -------------
@@ -317,6 +321,7 @@ function wireEvents() {
   const form = q('#addForm');
   if (form) form.addEventListener('submit', async (e) => {
     e.preventDefault();
+    if (!isAdminRole(state.me?.role)) return;
     const nameEl = q('#uName'), mailEl = q('#uEmail');
     const name = nameEl ? nameEl.value.trim() : '';
     const email = mailEl ? mailEl.value.trim() : '';
@@ -351,12 +356,41 @@ function wireEvents() {
 let liveFirstDone;
 window.ascLiveFirst = new Promise((r) => { liveFirstDone = r; });
 
+function clearPeople() {
+  sessionEnded = true;
+  state.me = null;
+  renderAdminOnly();
+  q('#addForm').reset();
+  q('.appr').replaceChildren();
+}
+document.addEventListener('asc:sign-out', clearPeople);
+window.addEventListener('pagehide', (event) => {
+  if (event.persisted) clearPeople();
+});
+window.addEventListener('pageshow', (event) => {
+  if (event.persisted) location.reload();
+});
+
+q('.vhead h1').textContent = t('users.title');
+q('.vhead p').textContent = t('users.sub');
+document.title = 'ASC — ' + t('users.title');
 (async () => {
   const session = await getSession().catch(() => null);
   if (!session) { liveFirstDone(); return; }   // the gate handles the redirect
-  state.me = await loadMyProfile().catch(() => null);
-  if (!state.me) { renderError(); liveFirstDone(); return; }
-  wireEvents();
+  let profile;
+  try {
+    profile = await loadMyProfile({ verifyAccess: true });
+  } catch {
+    if (!sessionEnded) renderError();
+    liveFirstDone();
+    return;
+  }
+  if (sessionEnded) { liveFirstDone(); return; }
+  state.me = profile?.id === session.user.id ? profile : null;
+  if (isAdminRole(state.me?.role)) {
+    q('#invite-card').hidden = false;
+    wireEvents();
+  }
   await refresh();
   liveFirstDone();
 })();

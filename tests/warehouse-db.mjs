@@ -75,3 +75,11 @@ test('staff access verification distinguishes an unreadable role and never backf
  const offline=await client([{error:{message:'Failed to fetch'}}],session);
  await assert.rejects(offline.db.loadMyProfile({verifyAccess:true}));
 });
+
+
+test('pending team invitations distinguish an empty list from a failed read', async () => {
+  const empty = await client([{data: []}]);
+  assert.deepEqual(plain(await empty.db.listPendingUsers()), []);
+  const offline = await client([{error: {message: 'Failed to fetch'}}]);
+  await assert.rejects(offline.db.listPendingUsers(), /load pending invitations/);
+});

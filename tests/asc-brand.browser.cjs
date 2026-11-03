@@ -42,8 +42,8 @@ async function themes(browser) {
     const h = await contextFor(browser, { ...options, warm: true });
     try {
       await h.page.goto('http://asc.test/app/dashboard.html');
-      const initial = options.theme !== 'light';
-      assert.equal(await h.page.evaluate(() => document.documentElement.classList.contains('dark')), initial, 'Dark is the default, including a light OS; an explicit light choice wins');
+      const initial = options.theme === 'dark';
+      assert.equal(await h.page.evaluate(() => document.documentElement.classList.contains('dark')), initial, 'Daylight opens by default and saved dark mode wins');
       await h.page.evaluate(() => ASCTheme.toggle());
       assert.equal(await h.page.evaluate(() => document.documentElement.classList.contains('dark')), !initial, 'Theme toggle remains usable when storage is denied');
       await h.page.evaluate(() => ASCTheme.toggle());
@@ -51,7 +51,7 @@ async function themes(browser) {
       assert.deepEqual(h.errors, []);
     } finally { await h.context.close(); }
   }
-  console.log('PASS dark default, explicit saved choices, blocked-storage theme toggle');
+  console.log('PASS daylight default, explicit saved choices, blocked-storage theme toggle');
 }
 
 async function entry(browser) {
@@ -69,20 +69,13 @@ async function entry(browser) {
     assert.equal(await h.page.locator('.asc-entry-skip').evaluate(el=>el===document.activeElement),true,'Cold entry routes keyboard users to its visible skip control');
     await h.page.keyboard.press('Shift+Tab');
     assert.equal(await h.page.locator('.asc-entry-skip').evaluate(el=>el===document.activeElement),true,'Keyboard focus cannot reach covered business controls during the intro');
-    await h.page.evaluate(() => ASCSplash.done());
-    await h.page.clock.runFor(1500);
-    assert.equal(await h.page.locator('#splash').isVisible(), true, 'The full final second of the slow approach is retained on a fast auth response');
-    const frame = await h.page.locator('.sp-core').evaluate(el => {
-      const c = getComputedStyle(el);
-      return { duration: c.animationDuration, easing: c.animationTimingFunction, transform: c.transform };
-    });
-    assert.match(frame.duration, /1s/);
-    assert.match(frame.easing, /cubic-bezier\(0\.08, 0\.8, 0\.16, 1\)/);
     const output = path.join(repo, 'out/brand-tests');
     fs.mkdirSync(output, { recursive: true });
     await h.page.screenshot({ path: path.join(output, 'asc-entry-desktop.png') });
-    await h.page.clock.runFor(1000);
-    await h.page.waitForFunction(() => document.querySelector('#splash').hidden);
+    await h.page.evaluate(() => ASCSplash.done());
+    assert.equal(await h.page.evaluate(() => document.documentElement.classList.contains('splashing')), false, 'Completed auth immediately releases the page');
+    await h.page.clock.runFor(200);
+    assert.equal(await h.page.locator('#splash').isVisible(), false);
     assert.equal(await h.page.evaluate(() => sessionStorage.getItem('asc.splash.warm')), '1');
     assert.equal(await h.page.locator('img.logo').count(), 1, 'The original clickable logo element is retained');
     assert.equal(await h.page.locator('img.logo').getAttribute('src'), '/app/assets/logo.png', 'The actual ASC silhouette remains the source');
@@ -127,7 +120,7 @@ async function accessibility(browser) {
         assert.equal(await h.page.locator('.asc-brand-frame--entry').evaluate(el => getComputedStyle(el, '::before').animationName), 'none');
         await h.page.evaluate(() => ASCSplash.done());
       } else {
-        await h.page.waitForTimeout(1400);
+        await h.page.waitForTimeout(220);
         await h.page.screenshot({ path: path.join(repo, 'out/brand-tests/asc-entry-phone.png') });
         await skip.click();
         assert.equal(await h.page.locator('#splash').isVisible(), false, 'Touch/click skip dismisses immediately');
@@ -158,8 +151,45 @@ async function actualEntryPages(browser) {
   console.log('PASS actual login and dashboard integration with synthetic authentication');
 }
 
+async function tenantFooter(browser) {
+  for (const [origin, prefix, hosted] of [
+    ['https://app.nerosummit.com', '/ASC', true],
+    ['https://app.nerosummit.com', '/another', false],
+    ['https://standalone.example.invalid', '/ASC', false],
+  ]) {
+    const context = await browser.newContext({ serviceWorkers: 'block' });
+    try {
+      await context.route('**/*', route => {
+        const url = new URL(route.request().url());
+        if (url.origin !== origin) return route.abort();
+        if (url.pathname === '/') return route.fulfill({contentType: 'text/html', body: '<title>Tenant directory fixture</title>'});
+        if (!url.pathname.startsWith(prefix + '/')) return route.abort();
+        const file = path.join(repo, url.pathname.slice(prefix.length));
+        if (!fs.statSync(file, {throwIfNoEntry: false})?.isFile()) return route.abort();
+        const mime = {'.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png'};
+        return route.fulfill({contentType: mime[path.extname(file)] || 'application/octet-stream', body: fs.readFileSync(file)});
+      });
+      const page = await context.newPage();
+      await page.goto(origin + prefix + '/app/guide.html');
+      const guide = page.locator('.guide-footer [data-summit-return]');
+      assert.equal(await guide.isVisible(), hosted);
+      if (hosted) {
+        await guide.click();
+        await page.waitForURL(origin + '/#Tenants');
+      }
+      for (const [file, selector] of [['login.html', '.nero-mark a'], ['spatial-studio/index.html', 'footer span a']]) {
+        await page.goto(origin + prefix + '/app/' + file);
+        const link = page.locator(selector);
+        await link.waitFor({state: 'attached'});
+        assert.equal(await link.getAttribute('href'), hosted ? '/#Tenants' : 'https://nerosummit.com');
+      }
+    } finally { await context.close(); }
+  }
+  console.log('PASS tenant footer: only canonical Nero /ASC/ returns to #Tenants, login and 3D studio included');
+}
+
 (async () => {
   const browser = await start();
-  try { await themes(browser); await entry(browser); await lifecycle(browser); await accessibility(browser); await actualEntryPages(browser); }
+  try { await themes(browser); await entry(browser); await lifecycle(browser); await accessibility(browser); await actualEntryPages(browser); await tenantFooter(browser); }
   finally { await browser.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });

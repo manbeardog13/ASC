@@ -128,13 +128,13 @@ const reduce = matchMedia('(prefers-reduced-motion:reduce)').matches;
 try {
   if (!window.ASCTheme) {
     const stored = localStorage.getItem('asc.theme');
-    const dark = stored !== 'light';
+    const dark = stored === 'dark';
     root.classList.toggle('dark', dark);
   }
 } catch(e){}
 const paintTheme = () => {
   if (window.ASCTheme) window.ASCTheme.paint();
-  else if (meta) meta.setAttribute('content', root.classList.contains('dark') ? '#0a0c11' : '#edf0f5');
+  else if (meta) meta.setAttribute('content', root.classList.contains('dark') ? '#1b3035' : '#f1eee7');
 };
 paintTheme();
 const modeBtn = document.getElementById('mode');
@@ -277,7 +277,7 @@ function animate(){
   aside.id = 'asc-main-menu';
   aside.setAttribute('aria-label', 'Glavna navigacija');
   aside.innerHTML =
-    '<div class="sb-head"><span class="sb-eyebrow">ASC sustav</span>' +
+    '<div class="sb-head"><span class="sb-eyebrow">Radni prostor</span>' +
       '<button class="sb-dismiss" type="button" aria-label="Zatvori izbornik"><svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="m6 6 12 12M18 6 6 18"/></svg></button>' +
       '<button class="sb-collapse" type="button" aria-label="Suzi izbornik"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 6l-6 6 6 6"/></svg></button></div>' +
     '<form class="sb-search" role="search"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg>' +
@@ -455,7 +455,7 @@ function animate(){
     applyNavAccess(aside, p?.role);
     if (!p) return;
     doc.dispatchEvent(new CustomEvent('asc:account-profile', { detail: {
-      name: p.full_name || '', role: ROLE[p.role] || '', email: p.email || '', avatar: p.avatar_url || '', admin: ['admin','manager'].includes(p.role)
+      name: p.full_name || '', role: ROLE[p.role] || '', email: p.email || '', avatar: p.avatar_url || ''
     } }));
     const name = (p.full_name || '').trim() || 'ASC korisnik';
     doc.getElementById('sbName').textContent = name;
@@ -587,7 +587,7 @@ if (document.readyState !== 'loading') syncDisc(); else addEventListener('DOMCon
     '<div class="md-row"><div class="md-rt"><div class="t">' + mesc(t) + '</div><div class="d">' + mesc(d) + '</div></div>' +
     '<button class="md-sw" type="button" role="switch" data-sw="' + key + '" aria-checked="' + (on ? 'true' : 'false') + '" aria-label="' + mesc(t) + '"></button></div>';
 
-  let profile = { name:'', role:'', email:'', avatar:'', admin:false };
+  let profile = { name:'', role:'', email:'', avatar:'' };
   const SHAPES = [['rounded', 'Zaobljeni'], ['soft', 'Meki'], ['sharp', 'Oštri'], ['notch', 'Zarezani']];
   const shape = getPref('asc.stickerShape', 'rounded');
   const showOwner = getPref('asc.stickerOwner', '1') !== '0';
@@ -611,7 +611,7 @@ if (document.readyState !== 'loading') syncDisc(); else addEventListener('DOMCon
     '<nav class="md-tabs"><button class="md-tab on" type="button" data-tab="menu">Izbornik</button><button class="md-tab" type="button" data-tab="profile">Profil</button><button class="md-tab" type="button" data-tab="options">Postavke</button></nav>' +
     '<div class="md-body">' +
       '<section class="md-panel" data-panel="menu">' +
-        '<nav class="md-links">' + [['customers.html','Kupci'],['workshop.html','Radionica'],['reminders.html','Podsjetnici'],['users.html','Korisnici'],['recycle.html','Koš za smeće']].map(l => '<a class="md-link"'+(l[0]==='users.html'?' data-admin hidden':'')+' href="' + l[0] + '"><span>' + l[1] + '</span><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></a>').join('') + '</nav>' +
+        '<nav class="md-links">' + [['customers.html','Kupci'],['workshop.html','Radionica'],['reminders.html','Podsjetnici'],['recycle.html','Koš za smeće']].map(l => '<a class="md-link" href="' + l[0] + '"><span>' + l[1] + '</span><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></a>').join('') + '</nav>' +
       '</section>' +
       '<section class="md-panel" data-panel="profile" hidden>' +
         '<div class="md-field"><label for="mp-name">Ime</label><input id="mp-name" type="text" disabled value="' + mesc(profile.name) + '" maxlength="150" autocomplete="name"><button class="md-ava-btn" type="button" data-save-name hidden>Spremi ime</button></div>' +
@@ -659,7 +659,6 @@ if (document.readyState !== 'loading') syncDisc(); else addEventListener('DOMCon
       el.textContent = ini;
       if (profile.avatar) { const img = new Image(); img.alt = ''; img.src = profile.avatar; el.replaceChildren(img); }
     });
-    q('[data-admin]').hidden = !profile.admin;
   };
   document.addEventListener('asc:account-profile', ({detail}) => {
     profile = detail;
@@ -833,3 +832,5 @@ if (document.readyState !== 'loading') syncDisc(); else addEventListener('DOMCon
     t = setTimeout(() => { el.style.opacity = '0'; }, 4200);
   });
 })();
+
+if (new URLSearchParams(location.search).has('vodic')) import('./guide.js').catch(() => {});

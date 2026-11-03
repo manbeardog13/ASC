@@ -127,7 +127,8 @@ export function WalkControls({walker, host, destination}: { walker: Walker; host
     window.addEventListener("blur",stop,options);
     document.addEventListener("visibilitychange",stop,options);
     // Arrow keys are scoped to the focused map, never to a search or form.
-    panel.focus({preventScroll:true});
+    const activeElement=document.activeElement;
+    if(activeElement===document.body || activeElement===document.documentElement || activeElement?.matches('.switch button[aria-pressed="true"]')) panel.focus({preventScroll:true});
     return () => { stop();controller.abort(); };
   }, [walker,host]);
   if (!walker.pose) return <span className="asc-map-status" role="status">Nema slobodnog položaja za obilazak. Odaberite tlocrt.</span>;

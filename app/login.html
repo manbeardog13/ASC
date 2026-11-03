@@ -2,12 +2,11 @@
 <html lang="hr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-visual">
 <title>ASC — Prijava</title>
-<meta name="theme-color" content="#eef0f1">
+<meta name="theme-color" content="#f1eee7">
 <script src="theme-boot.js"></script>
 <script src="asc-brand.js"></script>
-<script>try{if(sessionStorage.getItem('asc.splash.warm')==='1'&&document.referrer&&new URL(document.referrer).origin===location.origin){document.documentElement.classList.add('warm-nav');}}catch(e){}</script>
 <link rel="preload" href="assets/logo.png" as="image" fetchpriority="high">
 <link rel="icon" href="assets/favicon-32.png" sizes="32x32">
 <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
@@ -15,155 +14,279 @@
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;650;700;800&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="tokens.css">
-<link rel="stylesheet" href="app.css">
 <link rel="stylesheet" href="asc-brand.css">
 <style>
-/* Login — iPhone-calm: ambient canvas, a floating glass card, Google-first. */
-body{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100dvh;padding:22px}
-body>main{width:min(412px,100%);min-width:0;flex:none}
-.auth-card{position:relative;z-index:1;flex:none;min-width:0;width:min(412px,100%);border-radius:30px;padding:30px 26px 24px;
-  background:var(--shell-solid);border:1px solid var(--rim);border-top-color:var(--rim-top);
-  box-shadow:var(--shadow-card);animation:sheetIn 560ms var(--smooth) both}
-@supports ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
-  .auth-card{background:var(--shell);-webkit-backdrop-filter:blur(34px) saturate(150%) brightness(108%);backdrop-filter:blur(34px) saturate(150%) brightness(108%)}
+* { box-sizing: border-box; }
+html {
+  --paper: #f1eee7;
+  --card: #fcfbf7;
+  --drawing: #e2e4d9;
+  --ink: #1d3439;
+  --muted: #52656a;
+  --rule: #b8c2bd;
+  --petrol: #23545b;
+  --accent: #772b38;
+  --field: #fffefa;
+  --action-text: #fff;
+  color-scheme: light;
+  background: var(--paper);
+  scroll-padding-block: 16px;
 }
-.auth-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
-.auth-logo{height:26px;width:auto;filter:drop-shadow(0 3px 8px rgba(225,6,0,.28))}
-/* iOS sliding theme switch — 60% scale, spring thumb, lava micro-glow on move */
-.auth-lang{margin-left:auto;margin-right:8px;min-width:44px;height:28px;padding:0 10px;border-radius:999px;border:1px solid var(--line,rgba(0,0,0,.09));background:transparent;color:var(--ink-2,#3a3c40);font:600 12px/1 Inter,system-ui,sans-serif;letter-spacing:.04em;cursor:pointer;transition:background 120ms cubic-bezier(.2,.8,.2,1),color 120ms cubic-bezier(.2,.8,.2,1)}
-.auth-lang:hover{background:rgba(2,3,5,.05);color:var(--ink,#0a0c11)}
-html.dark .auth-lang{color:#d6d8dc;border-color:rgba(244,245,247,.14)}
-.auth-lang:focus-visible{outline:2px solid var(--brand,#e10600);outline-offset:2px}
-.auth-theme{position:relative;width:38px;height:22px;border-radius:999px;border:0;cursor:pointer;flex:none;
-  background:var(--line);transition:background 320ms var(--smooth);
-  box-shadow:inset 0 1px 2px rgba(2,3,5,.14)}
-html.dark .auth-theme{background:#2e2f31;box-shadow:inset 0 1px 3px rgba(0,0,0,.5)}
-.auth-theme i{position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#fff;
-  box-shadow:0 1px 3px rgba(2,3,5,.3),0 0 0 0 rgba(225,6,0,0);
-  transition:transform 300ms cubic-bezier(.34,1.56,.64,1),box-shadow 300ms var(--smooth)}
-html.dark .auth-theme i{transform:translateX(16px)}
-.auth-theme:active i{width:21px}
-html.dark .auth-theme:active i{transform:translateX(13px)}
-.auth-theme.kick i{box-shadow:0 1px 3px rgba(2,3,5,.3),0 0 10px 2px rgba(225,6,0,.35)}
-/* optical glass: edge highlight, refraction sheen tracking the pointer, micro-noise */
-.auth-card::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:0;
-  background:radial-gradient(240px 180px at var(--gx,30%) var(--gy,0%),rgba(255,255,255,.16),transparent 70%);
-  transition:opacity .3s}
-html.dark .auth-card::before{background:radial-gradient(240px 180px at var(--gx,30%) var(--gy,0%),rgba(255,255,255,.07),transparent 70%)}
-.auth-card::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:0;opacity:.035;
-  mix-blend-mode:overlay;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E")}
-.auth-card{box-shadow:var(--shadow-card),inset 0 1px 0 rgba(255,255,255,.55),inset 0 -1px 0 rgba(2,3,5,.05)}
-html.dark .auth-card{box-shadow:var(--shadow-card),inset 0 1px 0 rgba(255,255,255,.09),inset 0 -1px 0 rgba(0,0,0,.3)}
-.auth-card>*{position:relative;z-index:1}
-.auth-title{font:600 24px Sora;letter-spacing:-.02em;color:var(--ink)}
-.auth-sub{font:500 13.5px Inter;color:var(--muted);margin:3px 0 20px}
-
-.btn-google{width:100%;min-height:50px;display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;
-  border:1px solid var(--line);border-radius:14px;background:var(--panel-2);color:var(--ink);font:650 14.5px Inter;
-  box-shadow:0 2px 8px -4px rgba(20,18,15,.2);transition:transform 140ms var(--snap),background .2s var(--smooth),border-color .2s}
-.btn-google:active{transform:scale(.985)}
-@media(any-hover:hover){ .btn-google:hover{border-color:var(--lava-ring);background:var(--panel)} }
-.btn-google svg{flex:none}
-
-.auth-div{display:flex;align-items:center;gap:12px;margin:16px 0;color:var(--muted);font:600 11px Inter;letter-spacing:.08em;text-transform:uppercase}
-.auth-div::before,.auth-div::after{content:"";height:1px;flex:1;background:var(--line)}
-
-.fieldx{display:flex;min-width:0;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:0 12px;margin-bottom:11px;transition:border-color .2s var(--smooth)}
-.fieldx:focus-within{border-color:var(--lava-ring)}
-.fieldx .fx-ic{flex:none;color:var(--muted);display:grid;place-items:center}
-.fieldx input{flex:1;min-width:0;border:0;background:none;outline:none;font:500 16px Inter;color:var(--ink);padding:14px 0}
-.fieldx input::placeholder{color:var(--muted);opacity:.85}
-.fx-eye{flex:none;border:0;background:none;cursor:pointer;color:var(--muted);padding:13px;margin-right:-12px;display:grid;place-items:center}
-.auth-names{display:none;gap:11px}
-body.signup .auth-names{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
-body.signup .auth-names .fieldx{min-width:0;margin-bottom:11px}
-.auth-card .fieldx input{background:transparent!important;border:0!important;border-radius:0}
-@media(max-width:380px){body.signup .auth-names{grid-template-columns:minmax(0,1fr);gap:0}}
-
-.auth-forgot-row{display:flex;justify-content:flex-end;margin:-2px 0 12px}
-.auth-forgot{background:none;border:0;cursor:pointer;font:600 12.5px Inter;color:var(--muted);padding:2px}
-@media(any-hover:hover){ .auth-forgot:hover{color:var(--lava-ink)} }
-body.signup .auth-forgot-row,body.recover .auth-forgot-row{display:none}
-
-.btn-amber{width:100%;min-height:50px;display:flex;align-items:center;justify-content:center;gap:8px;border:0;cursor:pointer;border-radius:14px;color:#fff;font:700 15px Inter;
-  background:linear-gradient(160deg,var(--lava-2),var(--lava) 52%,var(--lava-ink));
-  box-shadow:0 12px 26px -10px rgba(225,6,0,.6),inset 0 1px 0 rgba(255,255,255,.28);transition:transform 140ms var(--snap),filter .2s}
-.btn-amber:active{transform:scale(.98)}
-.btn-amber[disabled]{opacity:.6;cursor:progress}
-@media(any-hover:hover){ .btn-amber:hover{filter:brightness(1.04)} }
-
-.auth-switch{text-align:center;margin:16px 0 0;font:500 13px Inter;color:var(--muted)}
-.auth-switch button{background:none;border:0;cursor:pointer;font:700 13px Inter;color:var(--lava-ink);padding:0}
-.auth-msg{min-height:18px;margin:12px 0 0;font:600 12.5px/1.4 Inter;text-align:center}
-.auth-msg.err{color:var(--lava-ink)}
-.auth-msg.ok{color:var(--green-ink)}
-/* signup + recover only ever show what they need */
-body.reset .fieldx.f-pass,body.reset .btn-google,body.reset .auth-div,body.reset .auth-switch{display:none}
-body.recover .fieldx.f-email,body.recover .btn-google,body.recover .auth-div,body.recover .auth-switch{display:none}
+html.dark {
+  --paper: #263a40;
+  --card: #31474c;
+  --drawing: #9faea9;
+  --ink: #f6f3e9;
+  --muted: #d0dcd7;
+  --rule: #81938e;
+  --petrol: #b5dbd3;
+  --accent: #ffb8bb;
+  --field: #293e44;
+  --action-text: #183b3c;
+  color-scheme: dark;
+}
+body {
+  margin: 0;
+  min-height: 100vh;
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: max(28px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right))
+    max(20px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left));
+  font: 400 16px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  color: var(--ink);
+  background: var(--paper);
+}
+/* Keep the page naturally scrollable when the keyboard overlays the layout viewport. */
+body::after { content: ""; flex: 0 0 var(--keyboard-space, 0px); }
+button, input { font: inherit; }
+button { cursor: pointer; }
+button:focus-visible, a:focus-visible { outline: 3px solid var(--petrol); outline-offset: 3px; }
+main {
+  width: min(1032px, 100%);
+  margin-block: auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1.06fr) minmax(0, 1fr);
+  border-radius: 28px;
+  background: var(--card);
+  border: 1px solid color-mix(in srgb, var(--ink) 12%, transparent);
+  box-shadow: 0 18px 64px -44px rgba(32,50,51,.42);
+}
+.auth-visual {
+  position: relative;
+  isolation: isolate;
+  min-width: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  border-radius: 27px 0 0 27px;
+  padding: clamp(28px, 4vw, 52px);
+  color: #293f40;
+  background: linear-gradient(139deg, #f0efe6, var(--drawing) 54%, #a0b7ae);
+}
+.auth-brand { z-index: 1; align-self: flex-start; width: 152px; max-width: 100%; }
+.auth-brand .asc-brand-frame { width: 100%; }
+.auth-logo { display: block; width: 100%; height: auto; }
+.auth-location {
+  display: flex; align-items: center; gap: 10px; margin: 0;
+  font-size: 11px; font-weight: 650; letter-spacing: .18em; text-transform: uppercase;
+}
+.auth-location::before { content: ""; width: 26px; height: 2px; background: #772b38; }
+.auth-visual::before {
+  content: ""; position: absolute; z-index: -1;
+  width: 112%; aspect-ratio: 1; left: 12%; top: 51%; transform: translateY(-50%);
+  border-radius: 50%; border: 1px solid rgba(30,61,58,.22);
+  box-shadow: 0 0 0 18px #ffffff20, 0 0 0 19px #335e5d1a;
+}
+@media (min-width: 751px) {
+  .auth-visual::after {
+    content: ""; position: absolute; inset: 12% -20% 11% 6%; z-index: -1;
+    background: url('assets/tire-1.png') center / contain no-repeat;
+    transform: rotate(-12deg);
+  }
+}
+.auth-card { min-width: 0; width: 100%; padding: clamp(26px, 4vw, 54px); }
+.auth-top { display: flex; justify-content: flex-end; align-items: center; gap: 3px; margin-bottom: 12px; }
+.auth-lang, .auth-theme {
+  display: inline-grid; place-content: center; width: 44px; height: 44px;
+  border: 0; background: transparent; border-radius: 50%; color: var(--muted);
+}
+.auth-lang { font-size: 11px; font-weight: 700; letter-spacing: .08em; }
+.auth-theme i {
+  display: block; height: 16px; width: 16px; border: 1.5px solid currentColor;
+  border-radius: 50%; background: linear-gradient(90deg, currentColor 50%, transparent 50%);
+}
+.auth-title { margin: 0; font-size: clamp(30px, 3vw, 43px); font-weight: 620; line-height: 1.07; letter-spacing: -.055em; }
+.auth-sub { margin: 9px 0 25px; font-size: 14px; color: var(--muted); line-height: 1.45; }
+.auth-names { display: none; }
+body.signup .auth-names { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.fieldx { display: block; min-width: 0; margin: 0 0 12px; }
+.field-label { display: block; margin: 0 0 5px; font-size: 13px; font-weight: 610; }
+.field-shell {
+  display: flex; align-items: center; min-width: 0; background: var(--field);
+  border: 1px solid var(--rule); border-radius: 11px;
+}
+.field-shell:focus-within { border-color: var(--petrol); outline: 2px solid var(--petrol); outline-offset: 1px; }
+.fieldx input {
+  width: 100%; min-width: 0; flex: 1; padding: 11px 13px;
+  min-height: 46px; background: transparent; color: var(--ink);
+  border: 0; border-radius: 11px; outline: 0; font-size: 16px; line-height: 1.4;
+}
+.fieldx input::placeholder { color: var(--muted); opacity: .8; }
+.fx-eye { flex: 0 0 44px; height: 44px; border: 0; background: transparent; display: grid; place-items: center; color: var(--muted); border-radius: 8px; }
+.auth-forgot-row { display: flex; justify-content: flex-end; margin-top: -8px; }
+.auth-forgot, .auth-switch button {
+  min-height: 44px; border: 0; padding: 0 2px; color: var(--petrol); background: transparent;
+  font-size: 13px; font-weight: 630;
+}
+.auth-switch { text-align: center; margin: 10px 0 0; color: var(--muted); font-size: 13px; }
+.btn-amber, .btn-google {
+  width: 100%; min-height: 48px; display: flex; align-items: center; justify-content: center;
+  gap: 9px; border-radius: 12px; font-size: 15px; font-weight: 620;
+}
+.btn-amber { background: var(--petrol); color: var(--action-text); border: 1px solid var(--petrol); }
+.btn-google { background: var(--card); color: var(--ink); border: 1px solid var(--rule); }
+button:disabled { opacity: .6; cursor: progress; }
+@media (hover:hover) {
+  .btn-amber:hover { filter: brightness(1.1); }
+  .btn-google:hover, .auth-theme:hover, .auth-lang:hover { background: color-mix(in srgb, var(--petrol) 8%, var(--card)); }
+  .auth-forgot:hover, .auth-switch button:hover { text-decoration: underline; }
+}
+.auth-div { display: flex; align-items: center; gap: 10px; margin: 16px 0; color: var(--muted); font-size: 12px; }
+.auth-div::before, .auth-div::after { content: ""; height: 1px; flex: 1; background: var(--rule); opacity: .55; }
+.auth-msg { margin: 12px 0 0; font-size: 14px; color: var(--petrol); overflow-wrap: anywhere; }
+.auth-msg:empty { margin: 0; }
+.auth-msg.err { color: var(--accent); }
+body.signup .auth-forgot-row, body.recover .auth-forgot-row,
+body.reset .f-pass, body.reset .btn-google, body.reset .auth-div, body.reset .auth-switch,
+body.recover .f-email, body.recover .btn-google, body.recover .auth-div, body.recover .auth-switch { display: none; }
+.nero-mark { flex: none; margin: 22px 0 0; color: var(--muted); font-size: 11px; text-align: center; letter-spacing: .028em; }
+.nero-mark a { display: inline-block; color: inherit; font-weight: 640; text-underline-offset: .2em; }
+@media (max-width: 750px) {
+  body {
+    padding: max(14px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
+      max(14px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  }
+  main { max-width: 460px; grid-template-columns: minmax(0,1fr); border-radius: 22px; }
+  .auth-visual { flex-direction: row; align-items: center; padding: 21px 23px; border-radius: 21px 21px 0 0; }
+  .auth-visual::before { width: 50%; top: -42%; left: 51%; }
+  .auth-location { font-size: 10px; letter-spacing: .1em; gap: 6px; }
+  .auth-location::before { width: 14px; }
+  .auth-brand { width: 100px; }
+  .auth-card { padding: 12px clamp(16px, 5vw, 30px) 15px; }
+  .auth-top { margin: 0 -6px 5px 0; }
+  .auth-sub { margin-bottom: 20px; }
+}
+@media (orientation: landscape) and (max-height: 520px) {
+  body { padding-top: max(10px, env(safe-area-inset-top)); }
+  main { max-width: 710px; grid-template-columns: minmax(0,.62fr) minmax(280px,1fr); }
+  .auth-visual { flex-direction: column; align-items: flex-start; padding: 22px; border-radius: 21px 0 0 21px; }
+  .auth-brand { width: 120px; }
+  .auth-card { padding: 8px 20px 14px; }
+  .auth-top { margin-bottom: 2px; }
+  .auth-sub { margin: 5px 0 15px; }
+}
+@media (max-width: 360px) {
+  .auth-visual { padding-inline: 16px; }
+  body.signup .auth-names { grid-template-columns: minmax(0,1fr); gap: 0; }
+}
 </style>
 </head>
 <body>
-<div id="splash" aria-hidden="true">
-  <svg class="sp-isl" viewBox="0 0 134 46" aria-hidden="true"><rect x="4" y="4" width="126" height="37" rx="18.5" pathLength="100" fill="none" stroke="#e10600" stroke-width="1.5" stroke-dasharray="100" stroke-dashoffset="100"/></svg><i class="sp-topglow" aria-hidden="true"></i>
+<div id="splash" class="asc-entry" aria-hidden="true" hidden>
   <div class="sp-core">
-    <img class="sp-mark" src="assets/logo.png" alt="" width="488" height="92" decoding="sync" fetchpriority="high">
-    <i class="sp-rule"></i>
+    <img class="sp-mark" src="assets/logo.png" alt="" width="488" height="92" decoding="async">
   </div>
 </div>
-<script>/* island re-probe: env() needs real layout — head-time probes can read 0 */
-(function(){var d=document.documentElement;if(d.classList.contains('island'))return;
-try{var sal=(navigator.standalone===true)||matchMedia('(display-mode: standalone)').matches;if(!sal)return;
-var pr=document.createElement('div');pr.style.cssText='position:fixed;top:0;height:env(safe-area-inset-top,0px);width:1px;visibility:hidden';
-document.body.appendChild(pr);var sat=pr.offsetHeight;pr.remove();
-if(sat>=59){d.classList.add('island');d.style.setProperty('--isl-y',(sat-48)+'px');}}catch(e){}})();
-</script>
-<span class="canvas" aria-hidden="true"></span>
-<span class="grain" aria-hidden="true"></span>
 
-<main>
-  <div class="auth-card">
+<main aria-labelledby="title">
+  <aside class="auth-visual" aria-label="ASC Dubrovnik">
+    <div class="auth-brand"><img class="auth-logo" src="assets/logo.png" width="488" height="92" alt="ASC — Auto Servis Deranja"></div>
+    <p class="auth-location">Dubrovnik</p>
+  </aside>
+  <section class="auth-card">
     <div class="auth-top">
-      <img class="auth-logo" src="assets/logo.png" alt="ASC — Auto servisni centar">
       <button class="auth-lang" id="lang" type="button"></button>
       <button class="auth-theme" id="theme" type="button" aria-label="Tema"><i></i></button>
     </div>
     <h1 class="auth-title" id="title">Dobrodošli natrag</h1>
     <p class="auth-sub" id="sub">Hotel za gume · Dubrovnik</p>
 
-    <button class="btn-google" id="google" type="button">
+    <form id="form" method="post" autocomplete="on">
+      <div class="auth-names">
+        <label class="fieldx"><span class="field-label" id="firstLabel">Ime</span>
+          <span class="field-shell"><input id="first" name="given-name" type="text" autocomplete="given-name" enterkeyhint="next"></span></label>
+        <label class="fieldx"><span class="field-label" id="lastLabel">Prezime</span>
+          <span class="field-shell"><input id="last" name="family-name" type="text" autocomplete="family-name" enterkeyhint="next"></span></label>
+      </div>
+      <label class="fieldx f-email"><span class="field-label" id="emailLabel">E-pošta</span>
+        <span class="field-shell"><input id="email" name="username" type="email" inputmode="email" autocapitalize="none" spellcheck="false" autocomplete="username" enterkeyhint="next" required placeholder="ime@primjer.hr"></span></label>
+      <div class="fieldx f-pass">
+        <label class="field-label" for="password" id="passwordLabel">Lozinka</label>
+        <div class="field-shell">
+          <input id="password" name="password" type="password" autocomplete="current-password" enterkeyhint="go" required>
+          <button class="fx-eye" id="eye" type="button" aria-label="Prikaži lozinku" aria-pressed="false"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-6.5 10-6.5S22 12 22 12s-3.5 6.5-10 6.5S2 12 2 12z"/><circle cx="12" cy="12" r="2.6"/></svg></button>
+        </div>
+      </div>
+      <div class="auth-forgot-row"><button class="auth-forgot" id="forgot" type="button">Zaboravljena lozinka?</button></div>
+      <button class="btn-amber" id="submit" type="submit" disabled>Prijavi se
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+      <p class="auth-msg" id="msg" role="status" aria-live="polite">Povezivanje…</p>
+    </form>
+    <div class="auth-div" id="divider">ili</div>
+    <button class="btn-google" id="google" type="button" disabled>
       <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A11 11 0 0 0 12 23z"/><path fill="#FBBC05" d="M5.84 14.1a6.6 6.6 0 0 1 0-4.2V7.06H2.18a11 11 0 0 0 0 9.88l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84C6.71 7.3 9.14 5.38 12 5.38z"/></svg>
       Nastavi s Google
     </button>
-    <div class="auth-div" id="divider">ili email</div>
-
-    <form id="form" autocomplete="on">
-      <div class="auth-names">
-        <label class="fieldx"><span class="fx-ic"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.6"/><path d="M4.5 20a7.5 7.5 0 0115 0"/></svg></span>
-          <input id="first" type="text" autocomplete="given-name" placeholder="Ime"></label>
-        <label class="fieldx"><span class="fx-ic"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.6"/><path d="M4.5 20a7.5 7.5 0 0115 0"/></svg></span>
-          <input id="last" type="text" autocomplete="family-name" placeholder="Prezime"></label>
-      </div>
-      <label class="fieldx f-email"><span class="fx-ic"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M3.5 7l8.5 6 8.5-6"/></svg></span>
-        <input id="email" type="email" inputmode="email" autocomplete="email" required placeholder="Email"></label>
-      <label class="fieldx f-pass"><span class="fx-ic"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="10.5" width="15" height="10" rx="2.5"/><path d="M8 10.5V8a4 4 0 018 0v2.5"/></svg></span>
-        <input id="password" type="password" autocomplete="current-password" required placeholder="Lozinka">
-        <button class="fx-eye" id="eye" type="button" aria-label="Prikaži lozinku"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-6.5 10-6.5S22 12 22 12s-3.5 6.5-10 6.5S2 12 2 12z"/><circle cx="12" cy="12" r="2.6"/></svg></button></label>
-
-      <div class="auth-forgot-row"><button class="auth-forgot" id="forgot" type="button">Zaboravljena lozinka?</button></div>
-      <button class="btn-amber" id="submit" type="submit">Prijavi se
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
-      <p class="auth-msg" id="msg" role="status" aria-live="polite"></p>
-    </form>
 
     <p class="auth-switch" id="switchRow">Prvi put? <button id="switch" type="button">Napravi račun</button></p>
-  </div>
+  </section>
 </main>
 
-<script type="module">
+<script>
+(function () {
+  if (window.ASCBrand) window.ASCBrand.enhance(document);
+  // Supabase may consume the callback fragment as its module initializes.
+  const callback = new URLSearchParams(location.hash.slice(1));
+  if (['recovery', 'invite'].includes(callback.get('type')) && !callback.has('error')) {
+    document.body.dataset.setPassword = 'true';
+  }
+
+  const viewport = window.visualViewport;
+  const form = document.getElementById('form');
+  // Always keep credentials inside the authenticated SDK, including a slow or failed import.
+  form.addEventListener('submit', event => event.preventDefault());
+  let frame = 0;
+  function fitField() {
+    frame = 0;
+    const input = document.activeElement;
+    const editing = input instanceof HTMLInputElement && form.contains(input);
+    const height = viewport ? viewport.height : window.innerHeight;
+    const top = viewport ? viewport.offsetTop : 0;
+    const zoomed = viewport && viewport.scale > 1.05;
+    // Safari can cover layout pixels without changing innerHeight or CSS vh.
+    const covered = editing && !zoomed ? Math.max(0, document.documentElement.clientHeight - height) : 0;
+    document.body.style.setProperty('--keyboard-space', Math.ceil(covered) + 'px');
+    if (!editing || zoomed) return;
+    const rect = input.closest('.fieldx').getBoundingClientRect();
+    const upper = top + 12;
+    const lower = top + height - 20;
+    const delta = rect.bottom > lower ? rect.bottom - lower : Math.min(0, rect.top - upper);
+    if (Math.abs(delta) > 1) window.scrollBy(0, delta);
+  }
+  function schedule() {
+    if (!frame) frame = requestAnimationFrame(fitField);
+  }
+  form.addEventListener('focusin', schedule);
+  form.addEventListener('focusout', schedule);
+  window.addEventListener('resize', schedule);
+  if (viewport) viewport.addEventListener('resize', schedule);
+})();
+</script>
+<script type="module" id="auth-module">
   import { supabase, isConfigured } from '../js/supabaseClient.js';
   import { getSession, signIn, signUp, sendPasswordReset, updatePassword } from '../js/db.js';
   import { safeLoginReturn } from '../js/firstRun.js';
@@ -181,11 +304,9 @@ if(sat>=59){d.classList.add('island');d.style.setProperty('--isl-y',(sat-48)+'px
     document.documentElement.lang = lang();
     $('google').lastChild.textContent = ' ' + t('au.google') + ' ';
     $('divider').textContent = t('au.or'); $('forgot').textContent = t('au.forgot');
-    for (const [id, key] of [['first', 'au.firstName'], ['last', 'au.lastName'], ['email', 'login.email']]) {
-      $(id).placeholder = t(key);
-      $(id).setAttribute('aria-label', t(key));
+    for (const [id, key] of [['first', 'au.firstName'], ['last', 'au.lastName'], ['email', 'au.email']]) {
+      $(id + 'Label').textContent = t(key);
     }
-    $('eye').setAttribute('aria-label', t($('password').type === 'password' ? 'login.showPw' : 'login.hidePw'));
     $('theme').setAttribute('aria-label', t('au.theme'));
     $('lang').textContent = lang() === 'hr' ? 'EN' : 'HR'; $('lang').setAttribute('aria-label', t('au.langLabel'));
   };
@@ -197,27 +318,20 @@ if(sat>=59){d.classList.add('island');d.style.setProperty('--isl-y',(sat-48)+'px
     if (window.ASCTheme) window.ASCTheme.toggle();
     else {
       const dark = document.documentElement.classList.toggle('dark');
-      document.querySelector('meta[name="theme-color"]').content = dark ? '#0a0c11' : '#eef0f1';
+      document.querySelector('meta[name="theme-color"]').content = dark ? '#0a0c11' : '#f1eee7';
       try { localStorage.setItem('asc.theme', dark ? 'dark' : 'light'); } catch (e) {}
     }
-    const t = $('theme'); t.classList.add('kick'); setTimeout(() => t.classList.remove('kick'), 340);
   });
-  // optical refraction: the sheen follows the pointer across the glass
-  if (matchMedia('(any-hover:hover) and (prefers-reduced-motion: no-preference)').matches) {
-    const card = document.querySelector('.auth-card');
-    card.addEventListener('pointermove', (e) => {
-      const r = card.getBoundingClientRect();
-      card.style.setProperty('--gx', ((e.clientX - r.left) / r.width * 100).toFixed(1) + '%');
-      card.style.setProperty('--gy', ((e.clientY - r.top) / r.height * 100).toFixed(1) + '%');
-    });
-  }
   // Show / hide password
   $('eye').addEventListener('click', () => {
-    const p = $('password'); p.type = p.type === 'password' ? 'text' : 'password';
+    const p = $('password');
+    p.type = p.type === 'password' ? 'text' : 'password';
+    $('eye').setAttribute('aria-pressed', String(p.type === 'text'));
     $('eye').setAttribute('aria-label', t(p.type === 'password' ? 'login.showPw' : 'login.hidePw'));
   });
 
-  if (!isConfigured()) { say(t('au.noConfig'), 'err'); busy(true); }
+  busy(!isConfigured());
+  if (!isConfigured()) say(t('au.noConfig'), 'err');
 
   // Prefill the last email used.
   try { const s = localStorage.getItem(REMEMBER); if (s) $('email').value = s; } catch (e) {}
@@ -227,12 +341,25 @@ if(sat>=59){d.classList.add('island');d.style.setProperty('--isl-y',(sat-48)+'px
   // actually needs it. Recovery / invite links land with type=recovery in the hash.
   const S = window.ASCSplash;
   // Where to land after sign-in: the page that sent us here (same app only), else the board.
+  const entry = new URLSearchParams(location.search);
+  let studioReturn = '';
+  if (entry.get('from') === 'studio') {
+    const preserved = new URLSearchParams();
+    const room = entry.get('room');
+    if (room && /^[a-z][a-z0-9-]{0,62}$/.test(room)) preserved.set('room', room);
+    if (['plan', 'walk', '3d'].includes(entry.get('view'))) preserved.set('view', entry.get('view'));
+    if (['obilazak', 'regal'].includes(entry.get('vodic'))) preserved.set('vodic', entry.get('vodic'));
+    if (/^[1-6]$/.test(entry.get('guide') || '')) preserved.set('guide', entry.get('guide'));
+    if (/^[a-zA-Z0-9_-]{1,80}$/.test(entry.get('find') || '')) preserved.set('find', entry.get('find'));
+    studioReturn = 'spatial-studio/index.html' + (preserved.size ? '?' + preserved : '');
+    try { sessionStorage.setItem('asc.return', studioReturn); } catch (_) {}
+  }
   const dest = () => {
     let r = null; try { r = sessionStorage.getItem('asc.return'); sessionStorage.removeItem('asc.return'); } catch (e) {}
-    return safeLoginReturn(r) || 'dashboard.html';
+    return safeLoginReturn(r) || studioReturn || 'dashboard.html';
   };
   const hash = new URLSearchParams(location.hash.slice(1));
-  if (hash.get('type') === 'recovery') { setMode('recover'); S.done(); }
+  if (document.body.dataset.setPassword === 'true' && !hash.has('error')) { setMode('recover'); S.done(); }
   else if (hash.get('error')) {
     // OAuth bounced back with an error — surface it on the card, clean the hash.
     // (URLSearchParams already percent-decoded the value; decoding again throws
@@ -266,14 +393,19 @@ if(sat>=59){d.classList.add('island');d.style.setProperty('--isl-y',(sat-48)+'px
     }[next];
     title.textContent = map.t; sub.textContent = map.s;
     submit.firstChild.textContent = map.btn + ' ';
-    $('password').placeholder = map.pass;
-    $('password').setAttribute('aria-label', map.pass);
-    $('forgot').textContent = next === 'reset' ? t('au.back') : t('au.forgot');
-    $('password').disabled = next === 'reset';
-    $('email').disabled = next === 'recover';
+    $('passwordLabel').textContent = map.pass;
+    $('password').type = 'password';
+    $('eye').setAttribute('aria-pressed', 'false');
+    $('forgot').textContent = t(next === 'reset' ? 'au.back' : 'au.forgot');
+    $('email').autocomplete = next === 'signin' ? 'username' : 'email';
+    $('email').enterKeyHint = next === 'reset' ? 'go' : 'next';
+    $('eye').setAttribute('aria-label', t('login.showPw'));
     $('password').autocomplete = next === 'signin' ? 'current-password' : 'new-password';
     $('password').required = next !== 'reset';
     $('email').required = next !== 'recover';
+    $('email').disabled = next === 'recover';
+    $('password').disabled = next === 'reset';
+    $('first').disabled = $('last').disabled = next !== 'signup';
     switchBtn.textContent = next === 'signin' ? t('au.newBtn') : t('au.haveAcc');
     $('switchRow').firstChild.textContent = next === 'signin' ? t('au.first') : ' ';
     say('');
@@ -333,6 +465,13 @@ if(sat>=59){d.classList.add('island');d.style.setProperty('--isl-y',(sat-48)+'px
       say(err.message || t('au.oops'), 'err');
     } finally { busy(false); }
   });
+</script>
+<script>
+document.getElementById('auth-module').addEventListener('error', () => {
+  const message = document.getElementById('msg');
+  message.className = 'auth-msg err';
+  message.textContent = 'Prijava se nije učitala. Provjerite vezu i osvježite stranicu.';
+});
 </script>
 <p class="nero-mark">Powered by <a href="https://nerosummit.com">Nero Summit</a></p>
 </body>

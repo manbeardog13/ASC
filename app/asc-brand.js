@@ -35,8 +35,6 @@
   var warm = read('asc.splash.warm') === '1';
   var mode = entry ? (recentHandoff ? 'handoff' : oauth ? 'oauth' : warm ? null : 'cold') : null;
   var active = !!mode;
-  var started = performance.now();
-  var finishTimer = 0;
   var hideTimer = 0;
   var watchdog = 0;
   var navigationTimer = 0;
@@ -85,7 +83,6 @@
   }
 
   function finish(immediate) {
-    clearTimeout(finishTimer);
     clearTimeout(watchdog);
     if (!active) return;
     active = false;
@@ -98,16 +95,15 @@
       if (overlay.contains(document.activeElement)) document.activeElement.blur();
       clearTimeout(hideTimer);
       if (immediate || reduced()) overlay.hidden = true;
-      else hideTimer = setTimeout(function () { if (!active) overlay.hidden = true; }, 240);
+      else hideTimer = setTimeout(function () { if (!active) overlay.hidden = true; }, 180);
     }
     window.dispatchEvent(new Event('asc:reveal'));
   }
 
   function done() {
     if (!active) return;
-    var minimum = reduced() ? 0 : mode === 'cold' ? 2200 : mode === 'oauth' ? 450 : 180;
-    clearTimeout(finishTimer);
-    finishTimer = setTimeout(function () { finish(false); }, Math.max(0, minimum - (performance.now() - started)));
+    // Authentication readiness releases the surface immediately.
+    finish(false);
   }
   function abort() { finish(true); }
   function armWatchdog() {
@@ -118,12 +114,10 @@
   }
   function bloom(callback) {
     var alreadyCovered = active;
-    clearTimeout(finishTimer);
     clearTimeout(hideTimer);
     clearTimeout(navigationTimer);
     mode = 'handoff';
     api.mode = mode;
-    started = performance.now();
     active = true;
     paintState();
     ensureOverlay();
@@ -166,7 +160,6 @@
   if (media && media.addEventListener) media.addEventListener('change', motionChanged);
   window.addEventListener('pagehide', function () {
     clearTimeout(navigationTimer);
-    clearTimeout(finishTimer);
     clearTimeout(hideTimer);
     clearTimeout(watchdog);
   });

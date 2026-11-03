@@ -1,3 +1,4 @@
+import { attachPlanCamera } from './plan-camera.js';
 import { renderAppNavigation, applyNavAccess, syncThemeButton, installLangButton } from '../navigation.js';
 import { saveOperation, LocalSaveError } from './persistence.js';
 import { parseCroatianIntent, searchLocations, customerLabel } from './journey.js';
@@ -55,8 +56,14 @@ void refreshPermissions().then(()=>{if(!disposed&&isActive())void syncShared();}
 syncThemeButton($('sbTheme'));
 $('sbTheme')?.addEventListener('click', ()=>{ window.ASCTheme?.toggle(); syncThemeButton($('sbTheme')); });
 installLangButton($('sbLang'));
-const appWarehouseGroup=$('asc-navigation').querySelector('.sb-group');
-appWarehouseGroup.querySelector('button').onclick=()=>{const open=appWarehouseGroup.classList.toggle('open');appWarehouseGroup.querySelector('button').setAttribute('aria-expanded',String(open));appWarehouseGroup.querySelector('.sb-group-kids').inert=!open;};
+for (const group of $('asc-navigation').querySelectorAll('.sb-group')) {
+  const toggle=group.querySelector('button');
+  toggle.onclick=()=>{
+    const open=group.classList.toggle('open');
+    toggle.setAttribute('aria-expanded',String(open));
+    group.querySelector('.sb-group-kids').inert=!open;
+  };
+}
 for (const [id,name] of Object.entries({'menu-button':'menu','house-icon':'home','search-icon':'search','voice-button':'mic','scan-icon':'scan','zoom-in':'plus','zoom-out':'minus','camera-reset':'focus','place-icon':'plus','list-icon':'list'})) $(id).innerHTML=icon(name);
 
 let storageAvailable=true, storageProblem=false;
@@ -120,6 +127,8 @@ function render(){
   if(placing){placing=null;viewer?.setMode('browse');viewer?.setPlacementPreview(null);viewer?.setActivityBlocked?.(viewMode==='plan'||$('dialog').open);$('placement-card').hidden=true;}
  }
  projectInventory();renderAreas();const current=area();const n=stats(sceneState,areaId==='all'?null:areaId);
+ const studioLink=$('studio-walk');
+ if(studioLink){const room=buildingAreaBindings(state.areas,spaceBindings.bindings)[areaId];studioLink.href='../spatial-studio/index.html'+(room?'?view=walk&room='+encodeURIComponent(room):'');studioLink.textContent=room?'Šetnja prostorom':'Prostorni studio';}
  const locationsLink=$('manage-area-locations');if(locationsLink){locationsLink.href='../locations.html?zone='+encodeURIComponent(areaId==='all'?'':areaId);locationsLink.hidden=!canEdit;}
  $('area-code').textContent=areaId==='all'?'SVA':areaId;$('area-name').textContent=current?.name||'Sva skladišta';
  $('area-subtitle').textContent=current?`${n.stacks} stupaca · ${inventory.projection?n.occupied:'—'} guma`:AREAS.length?`${AREAS.length} prostora`:'Još nema prostora';
@@ -367,7 +376,11 @@ $('confirm-placement').onclick=async()=>{if(!placing?.point||!canEdit||sharedWri
  if(ok){endPlacement();selectStack(newId);}
 };
 
+let planCamera=null, planRoom=null;
 function renderPlan(){
+ const previous=planRoom===areaId?planCamera?.snapshot():null;
+ planCamera?.dispose(); planCamera=null; planRoom=areaId;
+ for(const id of ['zoom-in','zoom-out','camera-reset'])$(id).disabled=areaId==='all';
  const mount=$('plan-view');if(areaId==='all'){mount.innerHTML=`<div class="plan-house-message"><p>Odaberite skladište za prikaz tlocrta.</p>${AREAS.map(a=>`<button class="button quiet" data-plan-area="${esc(a.id)}">${esc(a.id)} · ${esc(a.name)}</button>`).join('')}</div>`;mount.querySelectorAll('[data-plan-area]').forEach(b=>b.onclick=()=>changeArea(b.dataset.planArea));return;}
  let a=area();const space=getSpace(buildingAreaBindings(state.areas,spaceBindings.bindings)[areaId]);
  const polygon=space?.floorPolygon?.map(([x,z])=>[x*a.width/space.width,z*a.depth/space.depth]);
@@ -376,7 +389,9 @@ function renderPlan(){
  const hw=a.width/2+.7,hd=a.depth/2+.7;
  mount.innerHTML=`<svg viewBox="${-hw} ${-hd} ${hw*2} ${hd*2}" role="group" aria-label="${esc(a.name)} — tlocrt"><defs><pattern id="planks" width=".36" height="2" patternUnits="userSpaceOnUse"><rect width=".36" height="2" fill="#e9dccb"/><path d="M0 0v2" stroke="#d5c4ab" stroke-width=".012"/></pattern></defs><rect x="${-a.width/2}" y="${-a.depth/2}" width="${a.width}" height="${a.depth}" fill="none" stroke="#d1d4d6" stroke-width=".025" stroke-dasharray=".12 .14"/>${polygon?`<polygon points="${polygon.map(p=>p.join(',')).join(' ')}" fill="#e3e2dd" stroke="#bcb6ab" stroke-width=".025"/>`:''}${a.voidRects.map(r=>`<rect ${rect(r)} fill="#dce2e6" fill-opacity=".6"/>`).join('')}${a.floorRects.map(r=>`<rect ${rect(r)} fill="${a.timber?'url(#planks)':'#e3e2dd'}" stroke="#bcb6ab" stroke-width=".025"/>`).join('')}${a.deck?`<rect ${rect(a.deck)} fill="url(#planks)" stroke="#91714d" stroke-width=".055"><title>Podignuta drvena platforma</title></rect>`:''}${a.stair?`<g><rect ${rect(a.stair)} fill="#aeb6bc" stroke="#7b8791" stroke-width=".02"/>${Array.from({length:12},(_,i)=>`<path d="M${a.stair.x-a.stair.w/2} ${a.stair.z-a.stair.d/2+i*a.stair.d/12}h${a.stair.w}" stroke="#e2e7eb" stroke-width=".03"/>`).join('')}</g>`:''}${sceneState.stacks.filter(s=>s.areaId===areaId).map(s=>`<g class="plan-stack" role="button" tabindex="0" data-plan-stack="${s.id}" aria-label="${s.id}, ${s.tireIds.length} od ${s.capacity} guma"><circle cx="${s.x}" cy="${s.z}" r="${s.radius+.045}" fill="${s.id===selectedId?'#f0c052':'#252e34'}" stroke="${s.id===selectedId?'#f0c052':'#3e474c'}" stroke-width=".025"/><circle cx="${s.x}" cy="${s.z}" r=".13" fill="#dddcd6"/><text x="${s.x}" y="${s.z+.055}" text-anchor="middle" fill="#303c45" font-family="Inter,sans-serif" font-size=".14">${s.tireIds.length}</text></g>`).join('')}<text x="0" y="${-a.depth/2-.3}" text-anchor="middle" fill="#87919c" font-size="${Math.max(.2,Math.min(a.width,a.depth)/30)}" font-family="Inter,sans-serif">${esc(T('map.north'))}</text></svg>`;
  mount.querySelectorAll('[data-plan-stack]').forEach(el=>{el.onclick=e=>{if(!placing){e.stopPropagation();selectStack(el.dataset.planStack);}};el.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();selectStack(el.dataset.planStack,true);}};});
- mount.querySelector('svg').onclick=e=>{if(!placing)return;const svg=e.currentTarget;const pt=svg.createSVGPoint();pt.x=e.clientX;pt.y=e.clientY;const local=pt.matrixTransform(svg.getScreenCTM().inverse());floorPick({x:local.x,z:local.y});};
+ const drawing=mount.querySelector('svg');drawing.setAttribute('tabindex','0');drawing.style.touchAction='none';
+ planCamera=attachPlanCamera(drawing,previous);
+ drawing.onclick=e=>{if(!placing)return;const svg=e.currentTarget;const pt=svg.createSVGPoint();pt.x=e.clientX;pt.y=e.clientY;const local=pt.matrixTransform(svg.getScreenCTM().inverse());floorPick({x:local.x,z:local.y});};
  renderPlanPreview();
 }
 function renderPlanPreview(){
@@ -386,7 +401,7 @@ function renderPlanPreview(){
  for(const [key,value] of Object.entries({id:'plan-preview',cx:p.x,cy:p.z,r:.29,fill:valid.valid?'#328471':'#ff4e1b','fill-opacity':.28,stroke:valid.valid?'#328471':'#ff4e1b','stroke-width':.07,'pointer-events':'none'}))marker.setAttribute(key,String(value));svg.append(marker);
 }
 function setView(mode){viewMode=mode;viewer?.setActivityBlocked?.(mode==='plan'||Boolean(placing)||$('dialog').open);$('plan-view').hidden=mode!=='plan';$('scene').hidden=mode==='plan';$('view-plan').classList.toggle('active',mode==='plan');$('view-3d').classList.toggle('active',mode==='3d');$('view-plan').setAttribute('aria-pressed',String(mode==='plan'));$('view-3d').setAttribute('aria-pressed',String(mode==='3d'));$('camera-reset').disabled=mode==='plan';$('zoom-in').disabled=mode==='plan';$('zoom-out').disabled=mode==='plan';if(mode==='plan'){renderPlan();$('scene-loading').hidden=true;}else{viewer?.resize();if(!viewReady)$('scene-loading').hidden=false;}}
-$('view-plan').onclick=()=>setView('plan');$('view-3d').onclick=()=>setView('3d');$('zoom-in').onclick=()=>viewer?.zoom(1);$('zoom-out').onclick=()=>viewer?.zoom(-1);$('camera-reset').onclick=()=>viewer?.reset();$('house-button').onclick=()=>changeArea('all');
+$('view-plan').onclick=()=>setView('plan');$('view-3d').onclick=()=>setView('3d');const camera=()=>viewMode==='plan'?planCamera:viewer;$('zoom-in').onclick=()=>camera()?.zoom(1);$('zoom-out').onclick=()=>camera()?.zoom(-1);$('camera-reset').onclick=()=>camera()?.reset();$('house-button').onclick=()=>changeArea('all');
 
 function hideSearch(){ $('search-results').hidden=true; $('search').setAttribute('aria-expanded','false'); }
 function search(query){
@@ -411,7 +426,7 @@ $('search-results').onkeydown=e=>{
  if(e.key==='Escape'){hideSearch();$('search').focus();}
 };
 listen(document,'pointerdown',e=>{if(!e.target.closest('.search-wrap'))hideSearch();if(!e.target.closest('#app-menu')&&!e.target.closest('#menu-button')){$('app-menu').hidden=true;$('menu-button').setAttribute('aria-expanded','false');}});
-listen(document,'keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();$('search').focus();}if(e.key==='Escape'&&!$('dialog').open&&!tour?.active){endPlacement();hideSearch();closeSidebar();closeMenu();}if(placing&&!['INPUT','TEXTAREA'].includes(document.activeElement?.tagName)&&['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)){e.preventDefault();const p=placing.point||{x:0,z:2};floorPick({x:p.x+(e.key==='ArrowRight'?0.1:e.key==='ArrowLeft'?-0.1:0),z:p.z+(e.key==='ArrowDown'?0.1:e.key==='ArrowUp'?-0.1:0)});}});
+listen(document,'keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();$('search').focus();}if(e.key==='Escape'&&!$('dialog').open&&!tour?.active){endPlacement();hideSearch();closeSidebar();closeMenu();}if(placing&&!e.defaultPrevented&&!['INPUT','TEXTAREA'].includes(document.activeElement?.tagName)&&['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)){e.preventDefault();const p=placing.point||{x:0,z:2};floorPick({x:p.x+(e.key==='ArrowRight'?0.1:e.key==='ArrowLeft'?-0.1:0),z:p.z+(e.key==='ArrowDown'?0.1:e.key==='ArrowUp'?-0.1:0)});}});
 
 let dialogReturnFocus=null;
 function canFocus(element){return element?.isConnected&&!element.closest('[hidden],[inert]')&&element.getClientRects().length&&getComputedStyle(element).visibility!=='hidden';}
@@ -607,7 +622,7 @@ function stopVoice(){
 const runtime={
  pause(){stopScanner();const status=$('scan-status');if(status)status.textContent='Skeniranje je zaustavljeno. Otvorite kameru ili odaberite fotografiju.';stopVoice();tour?.pause();viewer?.pause();if($('dialog').open){pausedDialog=true;$('dialog').close();}},
  resume(){if(disposed||!isActive())return;void refreshInventory();tour?.resume();if(pausedDialog){pausedDialog=false;$('dialog').showModal();}if(viewer)viewer.resume();else void ensureScene();},
- dispose(){if(disposed)return;exitFs();disposed=true;inventory={status:'loading',sets:null,locations:null,projection:null};sceneState={...state,tires:[],stacks:[]};pausedDialog=false;if($('dialog').open)$('dialog').close();stopScanner();stopVoice();clearTimeout(toastTimer);tour?.dispose();for(const remove of listeners)remove();listeners.length=0;viewer?.dispose();viewer=null;}
+ dispose(){if(disposed)return;exitFs();disposed=true;planCamera?.dispose();inventory={status:'loading',sets:null,locations:null,projection:null};sceneState={...state,tires:[],stacks:[]};pausedDialog=false;if($('dialog').open)$('dialog').close();stopScanner();stopVoice();clearTimeout(toastTimer);tour?.dispose();for(const remove of listeners)remove();listeners.length=0;viewer?.dispose();viewer=null;}
 };
 registerRuntime(runtime);render();
 /** Jump to a real location (zone[/rack]) on the operator-built map. Never guesses. */

@@ -14,9 +14,6 @@
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;650;700;800&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
 <!--
   ASC pickup reminders — CLEAN-ROOM PREVIEW (isolated). Same v6 "Hanssen"
   design system as dashboard.html: shared tokens, glass shell, header, notched
@@ -61,7 +58,6 @@ html.dark .rem-sec .count-badge.win{background:rgba(244,245,247,.16);color:#f4f5
 .rem-sec .count-badge.mut{background:var(--muted)}
 
 /* Live data: [hidden] toggles must beat the display rules in app.css */
-.rem-empty [hidden],.rem-stage .cta[hidden],.rem-brief[hidden],.rem-sec[hidden]{display:none}
 
 /* Empty state — the only card when nothing is due */
 .rem-empty h3{margin-bottom:6px}
@@ -138,6 +134,7 @@ html.dark .rem-sec .count-badge.win{background:rgba(244,245,247,.16);color:#f4f5
   @keyframes rem-arrive{from{opacity:.55;transform:translateY(4px)}}
 }
 .rem-stage .cta{cursor:pointer;font-family:inherit}
+.rem-empty [hidden],.rem-stage .cta[hidden],.rem-brief[hidden],.rem-sec[hidden]{display:none!important}
 .rem-stage .spill{cursor:default;transform:none}
 
 </style>

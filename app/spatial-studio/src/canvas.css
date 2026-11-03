@@ -90,6 +90,13 @@
   color: #c0cbce;
   background: #151c1d;
 }
+.asc-spatial-canvas{background:radial-gradient(ellipse at 40% 35%,#d6e2dc,#b8cbc6)}
+.asc-spatial-canvas :is(canvas,svg.asc-map-plan){touch-action:none;cursor:grab}
+.asc-spatial-canvas :is(canvas,svg.asc-map-plan):active{cursor:grabbing}
+.asc-spatial-canvas :is(canvas,svg.asc-map-plan):focus-visible{outline:2px solid #345e62;outline-offset:-3px}
+.asc-camera-hint{position:absolute;pointer-events:none;left:12px;bottom:9px;max-width:calc(100% - 24px);padding:5px 9px;background:#f4f5efef;color:#34514f;border:1px solid #294f5120;border-radius:5px;font:500 10px/1.4 system-ui}
+.asc-camera-hint .pointer-coarse{display:none}
+@media(pointer:coarse){.asc-camera-hint .pointer-coarse{display:inline}.asc-camera-hint .pointer-fine{display:none}}
 .asc-spatial-canvas.walking:focus-visible {outline:2px solid #bdd0c9;outline-offset:-3px}
 .asc-spatial-canvas.walking :is(canvas,.asc-map-plan) {touch-action:none;cursor:grab}
 .asc-spatial-canvas.walking :is(canvas,.asc-map-plan):active {cursor:grabbing}
@@ -107,3 +114,5 @@
 .asc-walk-destination small,.asc-walk-destination strong {display:block;line-height:1.25}
 .asc-walk-destination small {font-size:10px;color:#b5cfc3}
 .asc-walk-destination strong {font-size:13px;font-weight:550;overflow-wrap:anywhere}
+
+.asc-walk-hint,.asc-walk-pad,.asc-walk-destination{background:#f7f5eff2;color:#234954;border-color:#9db3ac}.asc-walk-pad button,.asc-walk-destination small{color:#234954}.asc-walk-pad button:active,.asc-walk-pad button:hover{background:#d4e2dc}

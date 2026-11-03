@@ -15,3 +15,5 @@
 .guide-actions :is(a,button),.guide-pagination button{min-height:44px}
 .guide-pagination{border-top:1px solid var(--line);padding-top:8px;justify-content:space-between;margin-top:16px}
 @media(prefers-reduced-motion:no-preference){.guide-page{animation:asc-guide-enter .17s ease-out both}@keyframes asc-guide-enter{from{transform:translateY(3px);opacity:.4}to{transform:none;opacity:1}}}
+
+.guide-steps button[aria-current] span{background:#772b38;color:white}.coordinate-entry{margin:10px 0;border-block:1px solid var(--line);padding:8px 0}.coordinate-entry summary{cursor:pointer}.coordinate-entry summary:focus-visible{outline:2px solid var(--ink)}

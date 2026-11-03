@@ -15,6 +15,7 @@ export const navigationIcons = {
     out: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4H6a2 2 0 00-2 2v12a2 2 0 002 2h3M15 8l4 4-4 4M19 12H9"/></svg>',
     theme: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5 5l1.4 1.4M17.6 17.6L19 19M19 5l-1.4 1.4M6.4 17.6L5 19"/></svg>',
     menu: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>',
+    guide: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6c-3-2-6-2-10-1v14c4-1 7-1 10 1 3-2 6-2 10-1V5c-4-1-7-1-10 1Zm0 0v14"/></svg>',
   };
 
 const APP_ROOT = new URL('./', import.meta.url);
@@ -46,22 +47,21 @@ export function renderAppNavigation({warehouseOpen=false, currentPath=location.p
       item('dashboard', 'dashboard.html', I.home, t('nav.board')) +
       item('checkin', 'checkin.html', I.plus, t('nav.checkin')) +
       group('warehouse', t('nav.warehouse'), I.pin, whOpen,
+          item('studio', 'spatial-studio/index.html', I.map, t('nav.studio'), true) +
           item('warehouse', 'warehouse-preview/index.html', I.map, t('nav.spatial'), true) +
-          item('warehouse', 'spatial-studio/index.html?guide=1', I.map, t('nav.tour'), true) +
           item('locate', 'locate.html', I.pin, t('nav.locate'), true) +
           item('warehouse', 'checkout.html', I.out, t('nav.checkout'), true) +
           item('locations', 'locations.html', I.spark, t('nav.places'), true) +
           item('warehouse', 'recycle.html', I.bin, t('nav.bin'), true)) +
       item('customers', 'customers.html', I.people, t('nav.customers')) +
-      // Offers slot — the offers page inserts its item here. Not a link.
-      '<div class="sb-slot" data-nav-slot="offers" hidden></div>' +
       group('more', t('nav.more'), I.menu, moreOpen,
           item('scan', 'scan.html', I.scan, t('nav.scan'), true) +
           item('reminders', 'reminders.html', I.bell, t('nav.reminders'), true) +
           item('workshop', 'workshop.html', I.wrench, t('nav.workshop'), true) +
-          item('users', 'users.html', I.users, t('nav.users'), true, true)) +
-      '<button class="sb-item sb-theme" type="button" id="sbTheme" aria-pressed="false">' + I.theme + '<span class="t">' + t('nav.themeDark') + '</span></button>'+
-      '<button class="sb-item sb-lang" type="button" id="sbLang" lang="' + (lang() === 'hr' ? 'en' : 'hr') + '" aria-label="' + t('au.langLabel') + '"><span class="sb-lang-k" aria-hidden="true">' + (lang() === 'hr' ? 'EN' : 'HR') + '</span><span class="t">' + t('au.lang') + '</span></button>'
+          item('users', 'users.html', I.users, t('nav.users'), true, true) +
+          item('guide', 'guide.html', I.guide, t('nav.guide'), true) +
+      '<button class="sb-item sb-kid sb-theme" type="button" id="sbTheme" aria-pressed="false">' + I.theme + '<span class="t">' + t('nav.themeDark') + '</span></button>'+
+      '<button class="sb-item sb-kid sb-lang" type="button" id="sbLang" lang="' + (lang() === 'hr' ? 'en' : 'hr') + '" aria-label="' + t('au.langLabel') + '"><span class="sb-lang-k" aria-hidden="true">' + (lang() === 'hr' ? 'EN' : 'HR') + '</span><span class="t">' + t('au.lang') + '</span></button>')
   );
 }
 

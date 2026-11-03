@@ -45,7 +45,7 @@ visible focus and usable 200% zoom. Long Croatian text wraps rather than clips.
 
 Use the supplied ASC silhouette. Its approved treatment is glossy black with
 restrained red underglow; never replace it with typed letters or a new symbol.
-Dark is the default, while retaining the user's saved light preference.
+Daylight is the default. Explicit light and dark choices are preserved. The working surface uses warm stone, pearl, petrol, and restrained burgundy.
 Existing ASC operational tokens in app.css remain authoritative. Inter/system
 sans-serif is used for forms and the composer; no accidental browser serif
 fallbacks. Preserve the existing brand accent outside the specific dark-red

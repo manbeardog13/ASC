@@ -147,14 +147,21 @@ try{
   assert.equal(await page.locator('.flow-actions button[type=submit]').isDisabled(),true);
   assert.ok((await page.locator('#loc-zone').boundingBox()).height >= 44);
   await page.locator('#loc-zone').fill('A');await page.locator('#loc-racks').fill('1');await page.locator('#loc-shelves').fill('1');await page.locator('#loc-slots').fill('1');
-  await page.evaluate(()=>{window.ASCQR=null;document.querySelector('.flow-actions .btn-primary').click();});
+  const create=page.getByRole('button',{name:'Stvori mjesta'});
+  assert.equal(await create.isEnabled(),true);
+  await page.evaluate(()=>{window.__labelEncoder=window.qrcode;window.qrcode=null;});
+  await create.click();
   await page.waitForSelector('[data-open-on-map="B"]');
   assert.deepEqual(await page.locator('[data-open-on-map]').evaluateAll(n=>n.map(a=>a.getAttribute('href'))),['warehouse-preview/index.html?zone=A','warehouse-preview/index.html?zone=B']);
-  const writeCount=await page.evaluate(()=>window.__dbWrites.length);
-  assert.match(await page.locator('#flow-root').innerText(), /Mjesta su spremljena/);
-  await page.locator('#flow-root').getByRole('button',{name:'Ispiši naljepnice mjesta'}).click();
-  assert.equal(await page.evaluate(()=>window.__dbWrites.length),writeCount,'retrying labels cannot write locations');
-  report.cases.push({case:'locations multi-zone links',passed:true});await context.close();}
+  assert.match(await page.locator('#flow-root').innerText(),/Mjesta su spremljena/);
+  await page.evaluate(()=>{window.qrcode=window.__labelEncoder;});
+  await page.getByRole('button',{name:'Ispiši naljepnice mjesta'}).click();
+  const labels=page.getByRole('dialog',{name:'Naljepnice mjesta'});
+  await labels.waitFor();
+  assert.equal(await labels.locator('.sm-label').count(),2);
+  await labels.getByRole('button',{name:'Natrag'}).click();
+  assert.equal(await page.evaluate(()=>window.__dbWrites.length),1,'label retry must not create locations again');
+  report.cases.push({case:'locations multi-zone links and label reprint',passed:true});await context.close();}
  // A logical area can come first, but no unavailable rack can be saved.
  {const {context,page,errors}=await device({sharedOff:true});await context.addInitScript(()=>{window.__seatsFail=true;});await page.open();
   await page.locator('#add-area-empty').click();await page.locator('#area-zone').fill('INVENTED');await page.locator('input[name="unit"][value="grid"]').check();await page.locator('#area-width').fill('4');await page.locator('#area-depth').fill('4');await page.locator('#save-area').click();

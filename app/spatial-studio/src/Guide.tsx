@@ -1,6 +1,6 @@
 import {useEffect, useRef} from 'react';
 import {Icon} from './Icon';
-import {rememberStudio, guideTaskLink, steps} from './guide';
+import {rememberStudio, guideParams, guideTaskLink, steps} from './guide';
 import type {Snapshot} from './data';
 import './guide.css';
 
@@ -18,7 +18,7 @@ export function Guide({step,room,zone,name,status,canAdd,hasRacks,hasLocations,c
   if(step===1) {
     action=<button className="primary" onClick={explore}>{custom?'Otvori tlocrt':'Započni obilazak'} <Icon name="arrow" size={16}/></button>;
   } else if(status==='signed-out') {
-    action=<a className="primary" href="../login.html" onClick={()=>rememberStudio(room,step)}>Prijava djelatnika <Icon name="arrow" size={16}/></a>;
+    action=<a className="primary" href={'../login.html?from=studio&'+guideParams(step,room)} onClick={()=>rememberStudio(room,step)}>Prijava djelatnika <Icon name="arrow" size={16}/></a>;
   } else if(status!=='online') {
     action=<p className="guide-state" role="status">{status==='forbidden'?'Za ovaj postupak potrebne su ovlasti osoblja.':status==='loading'?'Provjeravamo pristup evidenciji…':'Za rad s evidencijom potrebna je veza. Vodič možete nastaviti čitati.'}</p>;
   } else if(step===3 && (canAdd||hasRacks||hasLocations)) {
