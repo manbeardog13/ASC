@@ -2,6 +2,7 @@ import React,{useEffect,useMemo,useRef,useState,Suspense,lazy} from 'react';
 import {createRoot} from 'react-dom/client';
 import {create} from 'zustand';
 import {rooms} from './rooms';
+import {geometryProvenance} from './geometry-provenance';
 import {Icon} from './Icon';
 import {makeIndex,matches,occupancy,normalize,scanValue} from './search';
 import {startStudio,type Snapshot,type InventorySet} from './data';
@@ -138,7 +139,7 @@ function App(){
  }
  async function save(){if(!canAdd||!point||!area||!api.current||working)return;setWorking(true);try{await api.current.addColumn({areaId:area.id,rack,x:point[0],z:point[1],capacity:cap});setNotice('Položaj je predan za sinkronizaciju.');setPlace(false);setPoint(null)}catch(err){setNotice(err instanceof Error?err.message:'Položaj nije spremljen.')}finally{setWorking(false)}}
  const statusText=snap?.syncMode==='conflict'?'Sukob izmjena':snap?.pending?'Izmjene na čekanju':live?'Povezano':snap?.status==='signed-out'?'Bez prijave':snap?.status==='forbidden'?'Ograničen pristup':snap?.status==='offline'?'Izvan mreže':snap?.status==='error'?'Nedostupno':'Povezivanje';
- const summaryLabel=area?.unit==='m'?'Mjereni tlocrt':'Shematski prikaz';
+ const provenance=geometryProvenance(!custom,area?.unit);
  const stamp=String(roomList.indexOf(cfg)+1).padStart(2,'0');
  return <div className="studio">
  <header className="topbar"><a className="brandmark" href="../dashboard.html" aria-label="ASC početna"><span className="asc-brand-frame"><img className="asc-brandmark" src="../assets/logo.png" alt="ASC" width="488" height="92"/></span></a><div className="brandsplit"/><div className="brandtext">Prostorni studio</div><div className="top-actions"><button className="command" aria-label="Pretraži" onClick={commandOpen}><Icon name="search"/><span>Pretraži</span><kbd>{/Mac|iPhone|iPad/.test(navigator.platform)?'⌘':'Ctrl'} K</kbd></button><button className="top-btn" aria-label="Skeniraj" onClick={scanOpen}><Icon name="scan"/><span>Skeniraj</span></button><button className={'health '+(live&&!snap?.pending?'good':'')} onClick={()=>setModal('status')}><i/>{statusText}</button></div></header>
@@ -147,7 +148,7 @@ function App(){
  <div className={'workspace '+(collapsed?'collapsed':'')}>
  <section className="viewport" aria-label="Prikaz odabranog prostora"><div className="view-head"><div className="eyebrow view-code"><i/> PROSTOR {stamp}</div><div className="switch" role="group" aria-label="Vrsta prikaza">{(['3d','walk','plan'] as const).map(m=><button key={m} aria-pressed={viewMode===m} disabled={(custom&&m!=='plan')||(gpuFailed&&m==='3d')} onClick={()=>{if(m!==viewMode){setPlace(false);setPoint(null);update({mode:m})}}}>{m==='3d'?'3D':m==='walk'?'Šetnja':'Tlocrt'}</button>)}</div></div>
  <div className="canvas-wrap"><Suspense fallback={<div className="boot">Učitavanje prostora…</div>}><WarehouseCanvas reset={reset} onWebGLFailure={gpuFailure} onWalkBlocked={leaveWalk} spaceId={area?.spaceId||cfg.id} width={area?.width??cfg.width} depth={area?.depth??cfg.depth} racks={cols.map(c=>({id:c.id,label:c.rack,x:c.x,z:c.z,capacity:c.capacity,occupied:c.occupancy}))} selectedId={sel} matchIds={query?filteredCols.map(c=>c.id):null} placing={place} mode={viewMode} onSelect={id=>{update({sel:id,collapsed:false,tab:'sets'});setPlace(false)}} onPlace={(x,z)=>{if(place){setPoint([x,z]);setNotice('')}}}/></Suspense></div>
- <div className="view-foot"><div><div className="zonecode">ZONA {area?.zone||cfg.zone}</div><h2>{cfg.name}</h2><small>{summaryLabel} · {area?.unit==='m'?'mjere prostora evidentirane':'mjere nisu potvrđene'}</small></div><button className="icon-btn" title="Centriraj prikaz" aria-label="Centriraj prikaz" onClick={()=>{update({sel:null});setReset(r=>r+1)}}><Icon name="target"/></button></div>
+ <div className="view-foot"><div><div className="zonecode">ZONA {area?.zone||cfg.zone}</div><h2>{cfg.name}</h2><small>{provenance.label} · {provenance.detail}</small></div><button className="icon-btn" title="Centriraj prikaz" aria-label="Centriraj prikaz" onClick={()=>{update({sel:null});setReset(r=>r+1)}}><Icon name="target"/></button></div>
  </section>
  <aside className="intelligence"><div className="panel-heading"><div><div className="eyebrow">EVIDENCIJA</div><h2>Inventar prostora</h2></div><button className="icon-btn" aria-expanded={!collapsed} aria-label={collapsed?'Otvori inventar':'Sažmi inventar'} title={collapsed?'Otvori inventar':'Sažmi inventar'} onClick={()=>update({collapsed:!collapsed})}><Icon name="panel"/></button></div>
  {!collapsed&&snap?.status==='signed-out'&&<div className="access-gate"><Icon name="lock"/><h3>Evidencija za djelatnike</h3><p className="access-note">Prijavite se za pregled kompleta i upravljanje mjestima.</p><a className="primary" href={`../login.html?${loginParams}`}>Prijava <Icon name="arrow" size={15}/></a></div>}

@@ -1,0 +1,770 @@
+{
+  "schemaVersion": 1,
+  "source": "app/warehouse-preview/building.js",
+  "units": "schematic drawing units; area in squared drawing units; not metres",
+  "dimensionsUnmeasured": true,
+  "integrationReady": false,
+  "inventorySeeded": false,
+  "axes": {
+    "east": "+x",
+    "south": "+z",
+    "up": "+y"
+  },
+  "upperAssemblyTransform": {
+    "translation": [
+      -5,
+      1,
+      0
+    ],
+    "rotationY": 0,
+    "scale": [
+      1,
+      1,
+      1
+    ]
+  },
+  "spaces": [
+    {
+      "id": "house-ground",
+      "inventory": true,
+      "reviewOnly": false,
+      "origin": [
+        7,
+        0,
+        -5
+      ],
+      "rotationY": 1.5707963267948966,
+      "localEnvelope": [
+        10,
+        14
+      ],
+      "floorPolygons": [
+        [
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            -10
+          ],
+          [
+            14,
+            -10
+          ],
+          [
+            14,
+            0
+          ]
+        ]
+      ],
+      "bounds": {
+        "x": [
+          0,
+          14
+        ],
+        "z": [
+          -10,
+          0
+        ]
+      },
+      "baseElevation": 0
+    },
+    {
+      "id": "house-platform",
+      "inventory": true,
+      "reviewOnly": false,
+      "origin": [
+        7,
+        1.6,
+        -5
+      ],
+      "rotationY": 1.5707963267948966,
+      "localEnvelope": [
+        10,
+        14
+      ],
+      "floorPolygons": [
+        [
+          [
+            7.22,
+            -2.5
+          ],
+          [
+            7.22,
+            -7.5
+          ],
+          [
+            12.64,
+            -7.5
+          ],
+          [
+            12.64,
+            -2.5
+          ]
+        ]
+      ],
+      "bounds": {
+        "x": [
+          7.22,
+          12.64
+        ],
+        "z": [
+          -7.5,
+          -2.5
+        ]
+      },
+      "baseElevation": 1.6
+    },
+    {
+      "id": "house-attic",
+      "inventory": true,
+      "reviewOnly": false,
+      "origin": [
+        7,
+        3.2,
+        -5
+      ],
+      "rotationY": 1.5707963267948966,
+      "localEnvelope": [
+        10,
+        14
+      ],
+      "floorPolygons": [
+        [
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            -10
+          ],
+          [
+            7.3,
+            -10
+          ],
+          [
+            7.3,
+            0
+          ]
+        ],
+        [
+          [
+            7.3,
+            -3.65
+          ],
+          [
+            7.3,
+            -8
+          ],
+          [
+            14,
+            -8
+          ],
+          [
+            14,
+            -3.65
+          ]
+        ]
+      ],
+      "bounds": {
+        "x": [
+          0,
+          14
+        ],
+        "z": [
+          -10,
+          0
+        ]
+      },
+      "baseElevation": 3.2
+    },
+    {
+      "id": "attic-parts",
+      "inventory": true,
+      "reviewOnly": true,
+      "origin": [
+        -11,
+        4.2,
+        2
+      ],
+      "rotationY": 0,
+      "localEnvelope": [
+        12,
+        32
+      ],
+      "floorPolygons": [
+        [
+          [
+            -17,
+            0
+          ],
+          [
+            -5,
+            0
+          ],
+          [
+            -5,
+            18
+          ],
+          [
+            -17,
+            18
+          ]
+        ],
+        [
+          [
+            -17,
+            -14
+          ],
+          [
+            -13,
+            -14
+          ],
+          [
+            -13,
+            0
+          ],
+          [
+            -17,
+            0
+          ]
+        ]
+      ],
+      "bounds": {
+        "x": [
+          -17,
+          -5
+        ],
+        "z": [
+          -14,
+          18
+        ]
+      },
+      "baseElevation": 4.2
+    },
+    {
+      "id": "attic-racks",
+      "inventory": true,
+      "reviewOnly": true,
+      "origin": [
+        0,
+        4.2,
+        2
+      ],
+      "rotationY": 0,
+      "localEnvelope": [
+        10,
+        32
+      ],
+      "floorPolygons": [
+        [
+          [
+            -5,
+            -14
+          ],
+          [
+            5,
+            -14
+          ],
+          [
+            5,
+            18
+          ],
+          [
+            -5,
+            18
+          ]
+        ]
+      ],
+      "bounds": {
+        "x": [
+          -5,
+          5
+        ],
+        "z": [
+          -14,
+          18
+        ]
+      },
+      "baseElevation": 4.2,
+      "platform": {
+        "floorPolygons": [
+          [
+            [
+              -2.8,
+              -7.2444444444
+            ],
+            [
+              4.1,
+              -7.2444444444
+            ],
+            [
+              4.1,
+              4.1333333333
+            ],
+            [
+              -2.8,
+              4.1333333333
+            ]
+          ]
+        ],
+        "rise": 1.2,
+        "topElevation": 5.4
+      }
+    },
+    {
+      "id": "office",
+      "inventory": false,
+      "reviewOnly": true,
+      "origin": [
+        -9,
+        4.2,
+        -7
+      ],
+      "rotationY": 0,
+      "localEnvelope": [
+        8,
+        14
+      ],
+      "floorPolygons": [
+        [
+          [
+            -13,
+            -14
+          ],
+          [
+            -5,
+            -14
+          ],
+          [
+            -5,
+            0
+          ],
+          [
+            -13,
+            0
+          ]
+        ]
+      ],
+      "bounds": {
+        "x": [
+          -13,
+          -5
+        ],
+        "z": [
+          -14,
+          0
+        ]
+      },
+      "baseElevation": 4.2
+    },
+    {
+      "id": "workshop",
+      "inventory": false,
+      "reviewOnly": false,
+      "origin": [
+        -1.5,
+        0,
+        4.5
+      ],
+      "rotationY": 0,
+      "localEnvelope": [
+        31,
+        29
+      ],
+      "floorPolygons": [
+        [
+          [
+            -17,
+            -10
+          ],
+          [
+            0,
+            -10
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            -17,
+            0
+          ]
+        ],
+        [
+          [
+            -17,
+            0
+          ],
+          [
+            14,
+            0
+          ],
+          [
+            14,
+            19
+          ],
+          [
+            -17,
+            19
+          ]
+        ]
+      ],
+      "bounds": {
+        "x": [
+          -17,
+          14
+        ],
+        "z": [
+          -10,
+          19
+        ]
+      },
+      "baseElevation": 0
+    },
+    {
+      "id": "table-room",
+      "inventory": false,
+      "reviewOnly": false,
+      "origin": [
+        -8.5,
+        0,
+        -13.5
+      ],
+      "rotationY": 0,
+      "localEnvelope": [
+        17,
+        7
+      ],
+      "floorPolygons": [
+        [
+          [
+            -17,
+            -17
+          ],
+          [
+            0,
+            -17
+          ],
+          [
+            0,
+            -10
+          ],
+          [
+            -17,
+            -10
+          ]
+        ]
+      ],
+      "bounds": {
+        "x": [
+          -17,
+          0
+        ],
+        "z": [
+          -17,
+          -10
+        ]
+      },
+      "baseElevation": 0
+    },
+    {
+      "id": "reception",
+      "inventory": false,
+      "reviewOnly": false,
+      "origin": [
+        -2,
+        0.015,
+        5.75
+      ],
+      "rotationY": 0,
+      "localEnvelope": [
+        7.4,
+        6.5
+      ],
+      "floorPolygons": [
+        [
+          [
+            -5.7,
+            2.5
+          ],
+          [
+            1.7,
+            2.5
+          ],
+          [
+            1.7,
+            9
+          ],
+          [
+            -5.7,
+            9
+          ]
+        ]
+      ],
+      "bounds": {
+        "x": [
+          -5.7,
+          1.7
+        ],
+        "z": [
+          2.5,
+          9
+        ]
+      },
+      "baseElevation": 0.015
+    },
+    {
+      "id": "triangular-store",
+      "inventory": true,
+      "reviewOnly": false,
+      "origin": [
+        -19.5,
+        0,
+        -13.5
+      ],
+      "rotationY": 0,
+      "localEnvelope": [
+        5,
+        7
+      ],
+      "floorPolygons": [
+        [
+          [
+            -22,
+            -10
+          ],
+          [
+            -17,
+            -17
+          ],
+          [
+            -17,
+            -10
+          ]
+        ]
+      ],
+      "bounds": {
+        "x": [
+          -22,
+          -17
+        ],
+        "z": [
+          -17,
+          -10
+        ]
+      },
+      "baseElevation": 0
+    }
+  ],
+  "confirmedModelJoins": [
+    {
+      "a": "attic-parts",
+      "sideA": "east",
+      "b": "attic-racks",
+      "sideB": "west",
+      "plane": -5,
+      "span": [
+        0,
+        18
+      ],
+      "status": "owner-constrained/model-consistent; dimensions unmeasured",
+      "endpoints": [
+        [
+          -5,
+          0
+        ],
+        [
+          -5,
+          18
+        ]
+      ],
+      "baseElevations": [
+        4.2,
+        4.2
+      ]
+    },
+    {
+      "a": "office",
+      "sideA": "east",
+      "b": "attic-racks",
+      "sideB": "west",
+      "plane": -5,
+      "span": [
+        -14,
+        0
+      ],
+      "status": "owner-constrained/model-consistent; dimensions unmeasured",
+      "endpoints": [
+        [
+          -5,
+          -14
+        ],
+        [
+          -5,
+          0
+        ]
+      ],
+      "baseElevations": [
+        4.2,
+        4.2
+      ]
+    },
+    {
+      "a": "office",
+      "sideA": "west",
+      "b": "attic-parts",
+      "sideB": "inner-east",
+      "plane": -13,
+      "span": [
+        -14,
+        0
+      ],
+      "status": "owner-constrained/model-consistent; dimensions unmeasured",
+      "endpoints": [
+        [
+          -13,
+          -14
+        ],
+        [
+          -13,
+          0
+        ]
+      ],
+      "baseElevations": [
+        4.2,
+        4.2
+      ]
+    },
+    {
+      "a": "office",
+      "sideA": "south",
+      "b": "attic-parts",
+      "sideB": "inner-north",
+      "plane": 0,
+      "span": [
+        -13,
+        -5
+      ],
+      "status": "owner-constrained/model-consistent; dimensions unmeasured",
+      "endpoints": [
+        [
+          -13,
+          0
+        ],
+        [
+          -5,
+          0
+        ]
+      ],
+      "baseElevations": [
+        4.2,
+        4.2
+      ]
+    }
+  ],
+  "unresolvedJoins": [
+    {
+      "a": "attic-racks",
+      "b": "house-attic",
+      "reference": "blue"
+    },
+    {
+      "a": "office",
+      "b": "house-attic",
+      "reference": "yellow"
+    }
+  ],
+  "conflicts": {
+    "rackHouseFloorPlan": {
+      "polygons": [
+        [
+          [
+            5,
+            -10
+          ],
+          [
+            5,
+            0
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            -10
+          ]
+        ]
+      ],
+      "bounds": {
+        "x": [
+          0,
+          5
+        ],
+        "z": [
+          -10,
+          0
+        ]
+      },
+      "area": 50,
+      "interpretation": "Plan overlap only. Base floors differ; this is not proof of coincident slabs or a surveyed collision."
+    },
+    "upperMinusHouseAtticBaseElevation": 1,
+    "baseFloorsCoincident": false,
+    "officeEastToHouseWest": {
+      "officePlane": -5,
+      "housePlane": 0,
+      "gap": 5,
+      "officeSpan": [
+        -14,
+        0
+      ],
+      "houseSpan": [
+        -10,
+        0
+      ],
+      "caveat": "Comparison to the assumed western house envelope; the yellow-reference target wall is not surveyed."
+    },
+    "rackNorthToHouseNorth": {
+      "rackPlane": -14,
+      "housePlane": -10,
+      "offset": 4,
+      "rackSpan": [
+        -5,
+        5
+      ],
+      "houseSpan": [
+        0,
+        14
+      ],
+      "caveat": "Comparison to the assumed northern house envelope, not an identification of the blue-reference side wall."
+    }
+  },
+  "commonUpperEdges": [
+    {
+      "id": "attic-parts",
+      "north": -14,
+      "south": 18
+    },
+    {
+      "id": "attic-racks",
+      "north": -14,
+      "south": 18
+    }
+  ],
+  "floorLevels": {
+    "house-ground": 0,
+    "house-platform": 1.6,
+    "house-attic": 3.2,
+    "attic-parts": 4.2,
+    "attic-racks": 4.2,
+    "office": 4.2,
+    "workshop": 0,
+    "table-room": 0,
+    "reception": 0.015,
+    "triangular-store": 0
+  }
+}
