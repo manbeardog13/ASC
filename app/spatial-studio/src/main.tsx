@@ -105,7 +105,7 @@ function App(){
  },[snap]);
  const wasPrivate=useRef(false);
  useEffect(()=>{if(privateAvailable)wasPrivate.current=true;else if(wasPrivate.current&&snap?.status!=='loading'){wasPrivate.current=false;update({sel:null,query:'',tab:'columns'});setCmd('');setModal(null);setPlace(false);setPoint(null);setRack('');setNotice('')}},[privateAvailable,snap?.status]);
- useEffect(()=>{if(!live)return;const scripts=['../composer.js'];for(const path of scripts){const url=new URL(path,document.baseURI).href;if([...document.scripts].some(s=>s.src===url))continue;const script=document.createElement('script');script.src=url;document.body.append(script)}},[live]);
+ useEffect(()=>{if(live){const scripts=['../composer.js'];for(const path of scripts){const url=new URL(path,document.baseURI).href;if([...document.scripts].some(s=>s.src===url))continue;const script=document.createElement('script');script.src=url;document.body.append(script)}return;}if(snap?.status==='offline'||snap?.status==='error')return;document.dispatchEvent(new CustomEvent('asc:sign-out'));},[live,snap?.status]);
  useEffect(()=>{const handler=(e:KeyboardEvent)=>{if(!modal&&(e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();commandOpen()}else if(e.key==='Escape'&&!modal){if(useStudio.getState().mode==='walk')update({mode:'3d'});setPlace(false);setPoint(null);update({sel:null})}};window.addEventListener('keydown',handler);return()=>window.removeEventListener('keydown',handler)},[modal]);
  function openSet(s:InventorySet){location.assign('../set-detail.html?code='+encodeURIComponent(s.code))}
  function scan(){

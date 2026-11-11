@@ -1054,6 +1054,10 @@
     chatGeneration += 1;
     setHistoryLoading(false);
     chatId = null;
+    log.innerHTML = '';
+    log.hidden = true;
+    root.classList.remove('has-convo');
+    historyBox.hidden = true;
     if (window.ASCAgent && ASCAgent.reset) ASCAgent.reset();
     var q = queueApi();
     relayMode = false;

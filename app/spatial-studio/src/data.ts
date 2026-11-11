@@ -49,15 +49,23 @@ export function convertGeometry(raw:Geometry){
  const ids=new Set(areas.map(a=>a.id));const columns:Column[]=raw.positions.filter(p=>ids.has(p.area_id)).map(p=>({id:p.id,areaId:p.area_id,rack:p.rack,x:Number(p.x),z:Number(p.z),capacity:Number(p.capacity),occupancy:null}));
  return {areas,columns};
 }
-export function convertInventory(project:Runtime['project'],geometry:Geometry,inventory:{sets:RawSet[];locations:RawLocation[]}){
+export function convertInventory(project:Runtime['project'],geometry:Geometry,inventory:{sets:RawSet[];locations:RawLocation[]},map?:GeometryMap){
  const {areas,columns}=convertGeometry(geometry);
  const projection=project({layout:{areas,stacks:columns.map(c=>({...c,radius:.27,tireIds:[]})),tires:[]},sets:inventory.sets,locations:inventory.locations});
  const counts=new Map(projection.state.stacks.map(s=>[s.id,s.occupiedQuantity]));
+ const visible=(stackId:string|undefined)=>{
+  if(!stackId)return null;
+  const column=columns.find(c=>c.id===stackId),area=column&&areas.find(a=>a.id===column.areaId);
+  if(!column||!area)return null;
+  // A bound room only counts as mapped when the rack sits on that room's floor.
+  if(area.spaceId&&(!map||!map(area.spaceId,area,column.x,column.z,.27)))return null;
+  return stackId;
+ };
  const sets:InventorySet[]=projection.setPlacements.map(p=>{
   const s=p.source,t=s.tires||[],l=p.location;
   const join=(vs:(string|undefined)[])=>[...new Set(vs.filter(Boolean))].join(' · ');
   const size=join(t.map(v=>v.size)),loadIndex=join(t.map(v=>v.load_index||v.size?.match(/\b(\d{2,3}(?:\/\d{2,3})?)[A-Z]\b/i)?.[1]));
-  return {id:p.setId,code:s.public_code||'',owner:s.vehicle?.customer?.name||'',plate:s.vehicle?.plate||'',size,sku:join(t.map(v=>v.sku)),loadIndex,quantity:Number.isSafeInteger(s.quantity)&&Number(s.quantity)>0?Number(s.quantity):null,areaId:p.areaId||null,columnId:p.status==='mapped'?p.stackId||null:null,rack:l?.rack||'',zone:l?.zone||'',location:[l?.zone,l?.rack,l?.shelf,l?.slot].filter(Boolean).join(' / '),checkInDate:s.check_in_date||''};
+  return {id:p.setId,code:s.public_code||'',owner:s.vehicle?.customer?.name||'',plate:s.vehicle?.plate||'',size,sku:join(t.map(v=>v.sku)),loadIndex,quantity:Number.isSafeInteger(s.quantity)&&Number(s.quantity)>0?Number(s.quantity):null,areaId:p.areaId||null,columnId:p.status==='mapped'?visible(p.stackId):null,rack:l?.rack||'',zone:l?.zone||'',location:[l?.zone,l?.rack,l?.shelf,l?.slot].filter(Boolean).join(' / '),checkInDate:s.check_in_date||''};
  });
  return {areas,columns:columns.map(c=>({...c,occupancy:counts.get(c.id)??null})),sets,locations:inventory.locations.filter(l=>l.warehouse==='main').map(l=>({id:l.id,warehouse:l.warehouse,zone:l.zone,rack:l.rack,shelf:l.shelf??'',slot:l.slot??'',qr:l.qr_code||''}))};
 }
@@ -105,7 +113,7 @@ export function startStudio(onChange:(s:Snapshot)=>void,load:()=>Promise<Runtime
    if(!valid(e))return;
    const check=await r.db.getSession();if(!valid(e))return;if(check?.user?.id!==user){clear(check?.user?.id||null);schedule();return;}
    const g={areas:layout.areas,positions:layout.positions,bindings:binding.bindings};
-   const data=convertInventory(r.project,g,inventory),available=layout.available&&binding.available;
+   const data=convertInventory(r.project,g,inventory,r.map),available=layout.available&&binding.available;
    emit({...data,status:'online',message:!available?'Evidencija je dostupna; zajednički raspored nije postavljen.':sync?'Podaci su osvježeni.':'Podaci su osvježeni; uređivanje nije dostupno u ovom pregledniku.',updatedAt:Date.parse(inventory.readCompletedAt)||Date.now(),layoutAvailable:available,canEdit:available&&!!sync});
    if(available&&sync)await sync.cacheLayout(g).catch(()=>{});
   }catch{

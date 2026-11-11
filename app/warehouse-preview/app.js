@@ -40,18 +40,30 @@ $('asc-navigation').innerHTML=renderAppNavigation({warehouseOpen:true});
 applyNavAccess($('asc-navigation'), null);
 let canEdit=false,permissionRead=null;
 const mayEdit=()=>!disposed&&isActive()&&canEdit;
+function clearCustomerInventory(){
+ inventory={status:'error',sets:null,locations:null,projection:null};
+ liveSeats=null;selectedSetId=null;fsSetId=null;
+ if(\search-results&&\search)hideSearch();
+ const box=\search-results;if(box)box.innerHTML='';
+ const field=\search;if(field)field.value='';
+ if(\dialog?.open&&\dialog-title?.textContent==='Kompleti i regali')closeDialog();
+ projectInventory();
+}
 function refreshPermissions(){
  if(permissionRead)return permissionRead;
  if(disposed||!isActive())return Promise.resolve(false);
  permissionRead=(async()=>{
   let profile=null;try{profile=await loadMyProfile();}catch{}
   if(disposed||!isActive())return false;
-  const revoked=canEdit&&!canEditWarehouse(profile?.role);
-  canEdit=canEditWarehouse(profile?.role);applyNavAccess($('asc-navigation'),profile?.role);
-  if(revoked){endPlacement();if($('dialog').open)closeDialog();toast('Uređivanje više nije dostupno. Pregled podataka ostaje otvoren.');}
+  const allowed=canEditWarehouse(profile?.role);
+  const revoked=canEdit&&!allowed;
+  canEdit=allowed;applyNavAccess(sc-navigation,profile?.role);
+  if(!allowed)clearCustomerInventory();
+  if(revoked){endPlacement();if(\dialog.open)closeDialog();toast('Pristup evidenciji vise nije dostupan.');}
   render();return canEdit;
  })().finally(()=>{permissionRead=null;});return permissionRead;
 }
+
 void refreshPermissions().then(()=>{if(!disposed&&isActive())void syncShared();});
 syncThemeButton($('sbTheme'));
 $('sbTheme')?.addEventListener('click', ()=>{ window.ASCTheme?.toggle(); syncThemeButton($('sbTheme')); });
@@ -76,7 +88,7 @@ let areaId=AREAS.some(a=>a.id===storedView.areaId)||storedView.areaId==='all'?st
 let selectedId=null, viewer=null, viewMode='3d', placing=null, toastTimer, scannerStream=null, scannerFrame=null, recognition=null;
 let tour=null, scannerStarting=false, scannerGeneration=0;
 let viewReady=false, liveSlots=null, liveSeats=null;
-let selectedSetId=null, inventory={status:'loading',sets:null,locations:null,projection:null}, inventoryLoading=false;
+let selectedSetId=null, fsSetId=null, inventory={status:'loading',sets:null,locations:null,projection:null}, inventoryLoading=false;
 let spaceBindings={available:false,bindings:[],status:'loading'}, bindingWriting=false;
 let appliedViewer=null,appliedBindings=null,appliedFocus=null;
 let sceneState={...state,tires:[],stacks:state.stacks.map(stack=>({...stack,tireIds:[]}))};
@@ -215,14 +227,15 @@ async function refreshInventory(){
   ]);
   if(disposed||!isActive())return;
   const [source,bindings]=results;
-  if(source.status==='fulfilled'&&Array.isArray(source.value?.sets)&&Array.isArray(source.value?.locations)){
+  if(!canEdit){clearCustomerInventory();}
+  else if(source.status==='fulfilled'&&Array.isArray(source.value?.sets)&&Array.isArray(source.value?.locations)){
    inventory={status:'ready',sets:source.value.sets,locations:source.value.locations,readCompletedAt:source.value.readCompletedAt||new Date().toISOString(),projection:inventory.projection};
    liveSeats=source.value.locations.filter(row=>row.warehouse==='main');liveSlots=liveSeats.length;
-  }else{inventory.status=inventory.projection?'stale':'error';liveSeats=null;}
+  }else{clearCustomerInventory();}
   if(bindings.status==='fulfilled'&&Array.isArray(bindings.value?.bindings))spaceBindings={...bindings.value,status:bindings.value.available?'ready':'unavailable'};
   else spaceBindings={...spaceBindings,status:'stale'};
-  render();if(!$('search-results').hidden)search($('search').value);
- }catch{if(!disposed&&isActive()){inventory.status=inventory.projection?'stale':'error';render();}}
+  render();if(inventory.sets&&!$('search-results').hidden)search($('search').value);
+ }catch{if(!disposed&&isActive()){clearCustomerInventory();render();}}
  finally{inventoryLoading=false;if(!disposed&&isActive())$('refresh-inventory').disabled=false;}
 }
 function recordActions(row){
@@ -449,7 +462,6 @@ function renderInspector(){renderInspectorBase();renderFsPanel();}
 // Entering 3D takes the whole screen (Fullscreen API, fixed full-viewport
 // fallback). Phones try a landscape lock; where that is refused (iOS) a
 // portrait-only "rotate" hint is shown instead.
-let fsSetId=null;
 const isFs=()=>document.documentElement.classList.contains('stage-fs');
 function enterFs(){
  if(isFs())return;const stage=$('stage');

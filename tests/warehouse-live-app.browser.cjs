@@ -68,7 +68,7 @@ const scene=`export function createScene(_container,callbacks){window.__sceneErr
   await page.locator('#search').fill('ASC-SYN-1');await page.locator('[data-set-result="set-1"]').click();assert.equal(await page.locator('#plan-view').isVisible(),true);assert.match(await page.locator('#toast').innerText(),/3D položaj nije potvrđen/);
   await page.evaluate(()=>{window.__physicalIssue=false;window.__focusFail=true;window.dispatchEvent(new Event('focus'));});await page.locator('#view-3d').click();await page.locator('#search').fill('ASC-SYN-2');await page.locator('[data-set-result="set-2"]').click();assert.equal(await page.locator('#plan-view').isVisible(),true,'focusSet false must route to plan');await page.evaluate(()=>window.__focusFail=false);
   failBinding=true;await page.locator('#menu-button').click();await page.locator('#building-bindings-button').click();await page.locator('#bind-attic-parts').selectOption('');await page.locator('[data-space-form="attic-parts"] button').click();await page.waitForSelector('.binding-message:not([hidden])');assert.equal(await page.evaluate(()=>window.__scene.bindings.SYN),'attic-parts');assert.equal(writes,1);await page.locator('#close-dialog').click();
-  await page.evaluate(()=>{window.__inventoryFail=true;window.dispatchEvent(new Event('focus'));});await page.waitForFunction(()=>document.getElementById('inventory-health').dataset.state==='stale');assert.equal(await page.evaluate(()=>window.__scene.data.tires.length),10);
+  await page.evaluate(()=>{window.__inventoryFail=true;window.dispatchEvent(new Event('focus'));});await page.waitForFunction(()=>document.getElementById('inventory-health').dataset.state==='error');assert.equal(await page.evaluate(()=>window.__scene.data.tires.length),0,'failed inventory refresh must clear records');assert.equal(await page.evaluate(()=>document.getElementById('search-results').hidden),true);
   const failed=await device({fail:true});await failed.page.waitForFunction(()=>document.getElementById('inventory-health').dataset.state==='error');assert.equal(await failed.page.locator('#stat-tyres').innerText(),'—');assert.match(await failed.page.locator('#inventory-status').innerText(),/nije dostupna/);
   await page.evaluate(()=>window.__authChange('SIGNED_OUT',null));await page.waitForSelector('html[data-preview-state="locked"]');assert.equal(await page.locator('#preview-root').getAttribute('inert'),'');assert.equal(await page.evaluate(()=>window.__scene.disposed),true);
   const review=await device({integrationReady:false});await review.page.waitForFunction(()=>window.__scene?.data?.tires?.length===10);assert.equal(await review.page.evaluate(()=>window.__scene.buildingEnabled),false,'unreviewed architecture must not replace operational areas');
@@ -81,7 +81,7 @@ const scene=`export function createScene(_container,callbacks){window.__sceneErr
   const legacySeed=structuredClone(seed);delete legacySeed.stacks[0].rack;const legacy=await device({seedValue:legacySeed,query:'?slot=MAIN-QR'});await legacy.page.waitForFunction(()=>/regal još nije/.test(document.getElementById('toast').textContent));assert.equal(await legacy.page.locator('#inspector').isVisible(),false,'legacy stack ID must not substitute for explicit rack binding');
   // A role can change without changing the account or renewing the session.
   // Revalidate an already-open form before writing and cancel pending editing
-  // when a later permission read fails, while retaining read-only inventory.
+  // when a later permission read fails. readonly is no access, so inventory is cleared.
   const permissions=await device();await permissions.page.waitForFunction(()=>window.__scene?.data?.tires?.length===10);
   await permissions.page.locator('#menu-button').click();await permissions.page.locator('#building-bindings-button').click();
   await permissions.page.locator('#bind-attic-parts').selectOption('');
@@ -89,7 +89,7 @@ const scene=`export function createScene(_container,callbacks){window.__sceneErr
   await permissions.page.locator('[data-space-form="attic-parts"] button').click();
   await permissions.page.waitForFunction(()=>!document.getElementById('dialog').open&&document.getElementById('place-button').hidden);
   assert.equal(writes,beforeRevocation,'same-session role revocation must prevent an already-open form from writing');
-  assert.equal(await permissions.page.evaluate(()=>window.__scene.data.tires.length),10,'permission changes must not mutate inventory');
+  assert.equal(await permissions.page.evaluate(()=>window.__scene.data.tires.length),0,'revoking staff access must clear customer inventory');assert.equal(await permissions.page.evaluate(()=>document.getElementById('search-results').hidden),true);
   await permissions.page.evaluate(()=>{window.__role='employee';window.dispatchEvent(new Event('focus'));});
   await permissions.page.waitForFunction(()=>!document.getElementById('place-button').hidden);
   await permissions.page.locator('#area-tabs [data-area="SYN"]').click();await permissions.page.locator('#place-button').click();
