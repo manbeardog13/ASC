@@ -26,6 +26,7 @@ import { bootOnboarding } from './onboarding.js';
 // db.js uses) hydrates the in-memory list so saving doesn't clobber history.
 import { loadRecentLocations } from '../js/store.js';
 import { installPlanMark } from './plan-mark.js';
+import { nextTireSizes, photoFollowUp } from './intake-size.js';
 import { mergeNotes, decodePlan, isoDate } from '../js/seasonPlan.js';
 
 const $ = (id) => document.getElementById(id);
@@ -293,11 +294,72 @@ function showWizard(step) {
   markStep(step);
 }
 
+function installQuickSize() {
+  const box = $('tires');
+  if (!box || box.dataset.quickBound) return;
+  box.dataset.quickBound = '1';
+  box.addEventListener('input', (event) => {
+    const el = event.target.closest?.('[data-t="size"]');
+    if (!el || !box.contains(el)) return;
+    el.dataset.explicit = '1';
+    delete el.dataset.quick;
+  });
+}
+
 function applyQuickSize() {
-  const size = $('s_quick_size');
-  const value = size ? size.value.trim() : '';
-  if (!value) return;
-  qa('#tires [data-t="size"]').forEach((el) => { if (!el.value.trim()) el.value = value; });
+  const inputs = qa('#tires [data-t="size"]');
+  const next = nextTireSizes(inputs.map((el) => ({
+    size: el.value.trim(),
+    explicit: el.dataset.explicit === '1',
+    fromQuick: el.dataset.quick === '1',
+  })), $('s_quick_size')?.value || '');
+  inputs.forEach((el, index) => {
+    const row = next[index];
+    el.value = row.size || '';
+    if (row.explicit) el.dataset.explicit = '1';
+    else delete el.dataset.explicit;
+    if (row.fromQuick) el.dataset.quick = '1';
+    else delete el.dataset.quick;
+  });
+}
+
+function selectedPhoto() {
+  return $('s_photo')?.files?.[0] || null;
+}
+
+function showPhotoFailure(retryUpload) {
+  let note = document.getElementById('photoFail');
+  if (!note) {
+    note = document.createElement('div');
+    note.id = 'photoFail';
+    note.className = 'flow-note';
+    note.setAttribute('role', 'status');
+    document.querySelector('main.shell')?.append(note);
+  }
+  note.replaceChildren();
+  const msg = document.createElement('p');
+  msg.textContent = t('flow.photoLater');
+  const retry = document.createElement('button');
+  retry.type = 'button';
+  retry.className = 'btn';
+  retry.textContent = t('flow.photoRetry');
+  retry.addEventListener('click', async () => {
+    retry.disabled = true;
+    try {
+      await retryUpload();
+      if ($('s_photo')) $('s_photo').value = '';
+      note.remove();
+    } catch (error) {
+      retry.disabled = false;
+    }
+  });
+  note.append(msg, retry);
+}
+
+async function storePhoto(setId, file) {
+  await addPhoto(setId, file);
+  if ($('s_photo')) $('s_photo').value = '';
+  document.getElementById('photoFail')?.remove();
 }
 
 function installOperator() {
@@ -514,11 +576,13 @@ function installWizard() {
   }
   form.before(steps);
   installOperator();
+  installQuickSize();
   installWhoSearch();
   $('v_plate')?.addEventListener('input', intakeVehicleId);
   showWizard(1);
 }
 installWizard();
+installQuickSize();
 installPlanMark();
 bootOnboarding();
 
@@ -607,21 +671,32 @@ if (form) form.addEventListener('submit', async (e) => {
         return { ...t, model: o.model, studded: o.studded, condition_notes: o.condition_notes };
       });
       await replaceTires(ctx.setId, carried);
+      const editPhoto = selectedPhoto();
+      let editUploaded = true;
+      if (editPhoto) {
+        try { await storePhoto(ctx.setId, editPhoto); }
+        catch (error) {
+          editUploaded = false;
+          showPhotoFailure(() => storePhoto(ctx.setId, editPhoto));
+        }
+      }
       showToast('Ažurirano ' + editCode);
+      if (photoFollowUp({ hasFile: Boolean(editPhoto), uploaded: editUploaded }).stay) return;
       goToSet(editCode);
     } else {
       if (wizard) {
         f.set.zone = ''; f.set.rack = ''; f.set.shelf = ''; f.set.slot = '';
       }
       const code = await createStorageSet(f);
-      const photo = $('s_photo') && $('s_photo').files && $('s_photo').files[0];
-      if (photo) {
-        try {
+      const createdPhoto = selectedPhoto();
+      if (createdPhoto) {
+        const send = async () => {
           const saved = await loadStorageSet(code);
-          if (saved && saved.id) await addPhoto(saved.id, photo);
-        } catch (error) {
-          showToast(t('flow.photoLater'));
-        }
+          if (!saved || !saved.id) throw new Error('photo');
+          await storePhoto(saved.id, createdPhoto);
+        };
+        try { await send(); }
+        catch (error) { showPhotoFailure(send); }
       }
       renderRecentChips(); // createStorageSet just persisted this location
       showToast(wizard ? t('flow.saved', { code }) : ('Spremljeno ' + code));
