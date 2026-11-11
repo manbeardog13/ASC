@@ -34,6 +34,18 @@ if(mobile){await page.evaluate(()=>{document.activeElement.blur();document.getEl
 await page.keyboard.press('Escape');assert.equal(await page.evaluate(()=>document.activeElement.id),'open-sidebar');
 await page.locator(opener).click();}
 await page.locator('#asc-navigation a[href$="customers.html"]').click();await page.waitForURL('**/customers.html');await page.waitForSelector('.side .sb-nav');
+const people=page.locator('.side a[data-m="people"]');
+assert.equal(await people.count(),1);
+assert.equal(await people.isHidden(),true,'People hidden without a Nero session on a standard page at width '+width);
+assert.equal(await people.evaluate(el=>getComputedStyle(el).display),'none','sidebar flex must not reveal hidden People');
+await page.evaluate(async()=>{const mod=await import('./navigation.js');window.__applyTenantAccess=mod.applyTenantAccess;mod.applyTenantAccess(document.querySelector('.side'),'staff');});
+assert.equal(await people.isHidden(),true,'staff must not see People on a standard page');
+assert.equal(await people.evaluate(el=>getComputedStyle(el).display),'none');
+await page.evaluate(()=>window.__applyTenantAccess(document.querySelector('.side'),'tenant_admin'));
+assert.equal(await people.isHidden(),false,'tenant_admin may see People on a standard page');
+assert.notEqual(await people.evaluate(el=>getComputedStyle(el).display),'none');
+await page.evaluate(()=>window.__applyTenantAccess(document.querySelector('.side'),null));
+assert.equal(await people.isHidden(),true);
 await page.evaluate(()=>history.replaceState({unrelated:'preserved'},''));
 if(width<=1020)await page.locator('.top .sb-burger').click();await page.locator('.side .sb-group[data-group="warehouse"] > button').click();await page.locator('.side a[href$="warehouse-preview/index.html"]').click();await page.waitForURL('**/warehouse-preview/index.html');await page.waitForSelector('html[data-preview-state="ready"]');
 await page.goBack();await page.waitForURL('**/customers.html');await page.waitForSelector('html.side-open');assert.equal(await page.locator('.top .sb-burger').getAttribute('aria-expanded'),'true');assert.equal(await page.evaluate(()=>Boolean(history.state?.ascWarehouseMenuReturn)),false);assert.equal(await page.evaluate(()=>history.state.unrelated),'preserved');assert.equal(await page.locator('.side .sb-group[data-group="warehouse"] > button').getAttribute('aria-expanded'),'true');assert.equal(await page.locator('.side .sb-group[data-group="warehouse"] .sb-group-kids').evaluate(n=>n.inert),false);assert.equal(await page.locator('.side a[href$="warehouse.html"]').count(),0);

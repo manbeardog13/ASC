@@ -44,12 +44,24 @@ export async function loadTenantRole({ storage = globalThis.sessionStorage, fetc
       headers: { apikey: NERO_PUBLISHABLE_KEY, Authorization: "Bearer " + session.access_token, "Content-Type": "application/json" },
       body: "{}",
     });
-    const role = r.ok ? roleFor(await r.json().catch(() => null)) : null;
+    if (!r.ok) return null;
+    const list = await r.json().catch(() => null);
+    if (!Array.isArray(list)) return null;
+    const role = roleFor(list);
     cached = { token: session.access_token, role };
     return role;
   } catch { return null; }
 }
 export function _resetTenantRoleCache() { cached = undefined; }
+
+export function clearNeroSession(storage = globalThis.sessionStorage) {
+  cached = undefined;
+  try { storage?.removeItem?.(SESSION_KEY); } catch {}
+}
+
+if (typeof document !== "undefined" && document.addEventListener) {
+  document.addEventListener("asc:sign-out", () => clearNeroSession());
+}
 
 // Show/hide every [data-tenant-admin] element. Default (null) hides.
 export function applyTenantAccess(root, role) {

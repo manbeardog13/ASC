@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readNeroSession, roleFor, canManagePeople, loadTenantRole, applyTenantAccess, _resetTenantRoleCache, SESSION_KEY, PEOPLE_URL } from "../js/tenantRole.js";
+import { readNeroSession, roleFor, canManagePeople, loadTenantRole, applyTenantAccess, clearNeroSession, _resetTenantRoleCache, SESSION_KEY, PEOPLE_URL } from "../js/tenantRole.js";
 
 const store = (v) => ({ getItem: (k) => (k === SESSION_KEY ? (v == null ? null : JSON.stringify(v)) : null) });
 const good = { v: 1, access_token: "tok-abc", expires: Date.now() + 60_000 };
@@ -35,10 +35,29 @@ test("loadTenantRole calls tenant_my_tenants and fails closed", async () => {
   assert.equal(await loadTenantRole({ storage: store(good), fetchImpl: ok }), "tenant_admin");
   assert.equal(calls, 1);
   _resetTenantRoleCache();
-  assert.equal(await loadTenantRole({ storage: store(good), fetchImpl: async () => ({ ok: false, json: async () => ({}) }) }), null);
+  let failed = 0;
+  const failThenOk = async (url, init) => {
+    failed++;
+    if (failed === 1) return { ok: false, json: async () => ({}) };
+    return ok(url, init);
+  };
+  assert.equal(await loadTenantRole({ storage: store(good), fetchImpl: failThenOk }), null);
+  assert.equal(await loadTenantRole({ storage: store(good), fetchImpl: failThenOk }), "tenant_admin");
+  assert.equal(failed, 2);
   _resetTenantRoleCache();
   assert.equal(await loadTenantRole({ storage: store(good), fetchImpl: async () => { throw Error("net"); } }), null);
   assert.equal(await loadTenantRole({ storage: store(null), fetchImpl: ok }), null);
+});
+
+test("clearNeroSession drops the token and the cached role", async () => {
+  const items = { [SESSION_KEY]: JSON.stringify(good) };
+  const storage = { getItem: (k) => items[k] ?? null, removeItem: (k) => { delete items[k]; } };
+  _resetTenantRoleCache();
+  const ok = async () => ({ ok: true, json: async () => [{ tenant: "asc", role: "tenant_admin" }] });
+  assert.equal(await loadTenantRole({ storage, fetchImpl: ok }), "tenant_admin");
+  clearNeroSession(storage);
+  assert.equal(storage.getItem(SESSION_KEY), null);
+  assert.equal(await loadTenantRole({ storage, fetchImpl: ok }), null);
 });
 
 test("applyTenantAccess hides by default and shows for tenant_admin", () => {

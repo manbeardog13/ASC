@@ -30,7 +30,7 @@ import('./detail-overlay.js').catch(() => {});
   const leaveSession = () => {
     sessionEnding = true; authEpoch++;
     document.documentElement.style.visibility = 'hidden';
-    document.dispatchEvent(new CustomEvent('asc:sign-out'));
+    document.dispatchEvent(new CustomEvent('asc:sign-out'));try{sessionStorage.removeItem('nero.tenant.session.v1');}catch{}
     S.bloom(() => S.handoff('login.html'));
   };
   dbReady.then((m) => {
@@ -41,7 +41,7 @@ import('./detail-overlay.js').catch(() => {});
       if (event === 'SIGNED_IN' && activeUserId && nextId && nextId !== activeUserId) {
         sessionEnding = true; authEpoch++;
         document.documentElement.style.visibility = 'hidden';
-        document.dispatchEvent(new CustomEvent('asc:sign-out'));
+        document.dispatchEvent(new CustomEvent('asc:sign-out'));try{sessionStorage.removeItem('nero.tenant.session.v1');}catch{}
         location.reload();
       }
     });
@@ -55,7 +55,7 @@ import('./detail-overlay.js').catch(() => {});
       const resolvedId = session?.user?.id || null;
       if (observedUserId !== undefined && observedUserId !== resolvedId) {
         sessionEnding = true; authEpoch++;
-        document.dispatchEvent(new CustomEvent('asc:sign-out'));
+        document.dispatchEvent(new CustomEvent('asc:sign-out'));try{sessionStorage.removeItem('nero.tenant.session.v1');}catch{}
         location.reload();
         return;
       }
@@ -88,7 +88,7 @@ import('./detail-overlay.js').catch(() => {});
     e.preventDefault(); e.stopPropagation();
     sessionEnding = true; authEpoch++;
     document.documentElement.style.visibility = 'hidden';
-    document.dispatchEvent(new CustomEvent('asc:sign-out'));
+    document.dispatchEvent(new CustomEvent('asc:sign-out'));try{sessionStorage.removeItem('nero.tenant.session.v1');}catch{}
     dbReady.then((m) => m.signOut()).catch(() => {}).finally(() => S.bloom(() => S.handoff('login.html')));
   }, true);
 })();
