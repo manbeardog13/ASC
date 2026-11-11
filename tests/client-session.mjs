@@ -13,15 +13,22 @@ async function gate({ pathname = '/ASC/app/dashboard.html', session = {user:{id:
   const handlers = new Map(), auth = [], targets = [], events = [];
   let reads = 0, signouts = 0, reloads = 0, reveals = 0;
   const style = {};
+  const removed = [];
+  const storage = {
+    items: {'nero.tenant.session.v1': JSON.stringify({v:1,access_token:'tok-admin',expires:Date.now()+60000})},
+    setItem(k,v){this.items[k]=v;},
+    getItem(k){return this.items[k]??null;},
+    removeItem(k){delete this.items[k];removed.push(k);}
+  };
   const db = { getSession: async () => { reads++; if (fail) throw Error('offline'); return pendingSession ? pendingSession.promise : session; },
     signOut: async () => { signouts++; if (pendingSignOut) await pendingSignOut.promise; }, onAuthChange: fn => auth.push(fn) };
   const sandbox = { document:{documentElement:{style},addEventListener:(type,fn)=>handlers.set(type,fn),dispatchEvent:event=>events.push(event.type)},
     window:{ascLiveFirst:pendingPaint?.promise,ASCSplash:{done(){reveals++;},bloom:cb=>cb?.(),handoff:url=>targets.push(url)}},
-    sessionStorage:{setItem(){}}, location:{pathname,reload:()=>reloads++},
+    sessionStorage:storage, location:{pathname,reload:()=>reloads++},
     db,Promise,CustomEvent:class{constructor(type){this.type=type;}},setTimeout:()=>0 };
   vm.runInNewContext(code.replace("import('../js/db.js')", 'Promise.resolve(db)'),sandbox);
   await tick(); await tick();
-  return { style, auth, targets, events, reads:()=>reads, signouts:()=>signouts, reloads:()=>reloads, reveals:()=>reveals,
+  return { style, auth, targets, events, storage, removed:()=>removed, reads:()=>reads, signouts:()=>signouts, reloads:()=>reloads, reveals:()=>reveals,
     clickLogout:()=>handlers.get('click')?.({target:{closest:()=>true},preventDefault(){},stopPropagation(){}}) };
 }
 
@@ -32,6 +39,8 @@ test('dashboard authenticates and logout reaches the real auth service', async (
   assert.equal(app.signouts(),1);
   assert.deepEqual(app.targets,['login.html']);
   assert.ok(app.events.includes('asc:sign-out'));
+  assert.ok(app.removed().includes('nero.tenant.session.v1'));
+  assert.equal(app.storage.getItem('nero.tenant.session.v1'), null);
 });
 test('failed or absent dashboard session cannot reveal the protected screen', async () => {
   for (const opts of [{fail:true},{session:null}]) {

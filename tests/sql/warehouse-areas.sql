@@ -96,7 +96,7 @@ do $$ begin
  begin update public.warehouse_areas set zone='B2';
   raise exception 'area relabel accepted'; exception when check_violation then null; end;
  begin delete from public.warehouse_areas;
-  raise exception 'area with racks deleted'; exception when foreign_key_violation then null; end;
+  raise exception 'area with racks deleted'; exception when foreign_key_violation or restrict_violation then null; end;
 end $$;
 reset role;
 

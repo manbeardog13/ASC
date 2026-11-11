@@ -15,7 +15,8 @@ const errors=[];
 await context.route('**/*',async route=>{const u=new URL(route.request().url());if(u.origin!==origin)return route.abort();if(u.pathname==='/ASC/js/db.js')return route.fulfill({contentType:'text/javascript',body:db});if(u.pathname==='/ASC/js/supabaseClient.js')return route.fulfill({contentType:'text/javascript',body:auth});if(u.pathname.endsWith('/agent-config.js'))return route.fulfill({contentType:'text/javascript',body:'window.ASC_AGENT_URL="";'});return route.continue();});
 await context.addInitScript(()=>{if(!sessionStorage.getItem('seeded')){sessionStorage.setItem('seeded','1');localStorage.setItem('asc.warehouse.preview.v1','{"demo":true}');localStorage.setItem('asc.warehouse.preview.view.v1','{}');localStorage.setItem('asc.warehouse.preview.checks.v1','{}');}});const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));
 await page.goto(origin+'/ASC/app/warehouse-preview/index.html');await page.waitForSelector('html[data-preview-state="ready"] #asc-navigation a');
-assert.equal(await page.locator('#asc-navigation a').count(),12); // 11 destinations + Preuzmi now in the Skladište group
+assert.equal(await page.locator('#asc-navigation a').count(),13); // 11 destinations + Preuzmi + hidden People (tenant_admin only)
+assert.equal(await page.locator('#asc-navigation a[data-tenant-admin]').isHidden(),true); // no Nero session -> People hidden
 assert.equal(await page.locator('a[href$="warehouse.html"]').count(),0);
 const initialHistory=await page.evaluate(()=>history.length);
 assert.ok(await page.locator('#empty-state').isVisible(),'empty state hidden');assert.equal(await page.locator('#area-code').textContent(),'SVA');assert.equal(await page.locator('#area-tabs').isVisible(),false);assert.equal(await page.locator('#place-button').isDisabled(),true);assert.equal(await page.locator('#list-button').isDisabled(),true);assert.equal(await page.locator('#inspector').isVisible(),false);assert.equal(await page.locator('#empty-state a[href$="locations.html"]').count(),1);
@@ -33,6 +34,18 @@ if(mobile){await page.evaluate(()=>{document.activeElement.blur();document.getEl
 await page.keyboard.press('Escape');assert.equal(await page.evaluate(()=>document.activeElement.id),'open-sidebar');
 await page.locator(opener).click();}
 await page.locator('#asc-navigation a[href$="customers.html"]').click();await page.waitForURL('**/customers.html');await page.waitForSelector('.side .sb-nav');
+const people=page.locator('.side a[data-m="people"]');
+assert.equal(await people.count(),1);
+assert.equal(await people.isHidden(),true,'People hidden without a Nero session on a standard page at width '+width);
+assert.equal(await people.evaluate(el=>getComputedStyle(el).display),'none','sidebar flex must not reveal hidden People');
+await page.evaluate(async()=>{const mod=await import('./navigation.js');window.__applyTenantAccess=mod.applyTenantAccess;mod.applyTenantAccess(document.querySelector('.side'),'staff');});
+assert.equal(await people.isHidden(),true,'staff must not see People on a standard page');
+assert.equal(await people.evaluate(el=>getComputedStyle(el).display),'none');
+await page.evaluate(()=>window.__applyTenantAccess(document.querySelector('.side'),'tenant_admin'));
+assert.equal(await people.isHidden(),false,'tenant_admin may see People on a standard page');
+assert.notEqual(await people.evaluate(el=>getComputedStyle(el).display),'none');
+await page.evaluate(()=>window.__applyTenantAccess(document.querySelector('.side'),null));
+assert.equal(await people.isHidden(),true);
 await page.evaluate(()=>history.replaceState({unrelated:'preserved'},''));
 if(width<=1020)await page.locator('.top .sb-burger').click();await page.locator('.side .sb-group[data-group="warehouse"] > button').click();await page.locator('.side a[href$="warehouse-preview/index.html"]').click();await page.waitForURL('**/warehouse-preview/index.html');await page.waitForSelector('html[data-preview-state="ready"]');
 await page.goBack();await page.waitForURL('**/customers.html');await page.waitForSelector('html.side-open');assert.equal(await page.locator('.top .sb-burger').getAttribute('aria-expanded'),'true');assert.equal(await page.evaluate(()=>Boolean(history.state?.ascWarehouseMenuReturn)),false);assert.equal(await page.evaluate(()=>history.state.unrelated),'preserved');assert.equal(await page.locator('.side .sb-group[data-group="warehouse"] > button').getAttribute('aria-expanded'),'true');assert.equal(await page.locator('.side .sb-group[data-group="warehouse"] .sb-group-kids').evaluate(n=>n.inert),false);assert.equal(await page.locator('.side a[href$="warehouse.html"]').count(),0);

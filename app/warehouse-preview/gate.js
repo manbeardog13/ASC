@@ -1,4 +1,4 @@
-export function createGate({getAuth, loadApp, present, isVisible, now=Date.now, setTimer=setTimeout, clearTimer=clearTimeout}) {
+export function createGate({getAuth, loadApp, present, isVisible, onSessionEnd, now=Date.now, setTimer=setTimeout, clearTimer=clearTimeout}) {
   let generation=0, closed=false, authorized=false, suspended=false, authPromise, appPromise, auth, runtime, unsubscribe, expiry, userId;
   const timers=new Set();
   const later=(fn,ms)=>{const id=setTimer(()=>{timers.delete(id);fn();},ms);timers.add(id);return id;};
@@ -13,9 +13,13 @@ export function createGate({getAuth, loadApp, present, isVisible, now=Date.now, 
     if(terminal){closed=true;for(const id of timers)clearTimer(id);timers.clear();try{runtime?.dispose();}catch{};unsubscribe?.();unsubscribe=null;}
     present(false,message);
   }
+  function endSession(message){
+    try{onSessionEnd?.(); }catch{}
+    lock(message,true);
+  }
   function changed(event,session){
     if(closed)return;
-    if(!session){lock('Prijava je završena. Ponovno se prijavite.',true);return;}
+    if(!session){endSession('Prijava je završena. Ponovno se prijavite.');return;}
     if(event==='SIGNED_IN'||event==='TOKEN_REFRESHED'||event==='USER_UPDATED'){
       later(()=>{void check();},0);
     }
@@ -32,11 +36,11 @@ export function createGate({getAuth, loadApp, present, isVisible, now=Date.now, 
       const session=await bounded(auth.getSession());
       if(ticket!==generation||closed)return;
       if(!session?.user?.id||!Number.isFinite(session.expires_at)||session.expires_at*1000<=now()){
-        lock('Za prostorni prikaz potrebna je važeća ASC prijava.',true);return;
+        endSession('Za prostorni prikaz potrebna je važeća ASC prijava.');return;
       }
-      if(userId&&userId!==session.user.id){lock('Račun je promijenjen. Ponovno otvorite prikaz.',true);return;}
+      if(userId&&userId!==session.user.id){endSession('Račun je promijenjen. Ponovno otvorite prikaz.');return;}
       userId=session.user.id;authorized=true;
-      expiry=later(()=>lock('Prijava je istekla. Ponovno se prijavite.',true),
+      expiry=later(()=>endSession('Prijava je istekla. Ponovno se prijavite.'),
         Math.min(2147483647,session.expires_at*1000-now()));
       const start=await bounded(appPromise||(appPromise=loadApp()));
       if(ticket!==generation||closed||!isVisible())return;

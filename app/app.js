@@ -30,7 +30,7 @@ import('./detail-overlay.js').catch(() => {});
   const leaveSession = () => {
     sessionEnding = true; authEpoch++;
     document.documentElement.style.visibility = 'hidden';
-    document.dispatchEvent(new CustomEvent('asc:sign-out'));
+    document.dispatchEvent(new CustomEvent('asc:sign-out'));try{sessionStorage.removeItem('nero.tenant.session.v1');}catch{}
     S.bloom(() => S.handoff('login.html'));
   };
   dbReady.then((m) => {
@@ -41,7 +41,7 @@ import('./detail-overlay.js').catch(() => {});
       if (event === 'SIGNED_IN' && activeUserId && nextId && nextId !== activeUserId) {
         sessionEnding = true; authEpoch++;
         document.documentElement.style.visibility = 'hidden';
-        document.dispatchEvent(new CustomEvent('asc:sign-out'));
+        document.dispatchEvent(new CustomEvent('asc:sign-out'));try{sessionStorage.removeItem('nero.tenant.session.v1');}catch{}
         location.reload();
       }
     });
@@ -55,7 +55,7 @@ import('./detail-overlay.js').catch(() => {});
       const resolvedId = session?.user?.id || null;
       if (observedUserId !== undefined && observedUserId !== resolvedId) {
         sessionEnding = true; authEpoch++;
-        document.dispatchEvent(new CustomEvent('asc:sign-out'));
+        document.dispatchEvent(new CustomEvent('asc:sign-out'));try{sessionStorage.removeItem('nero.tenant.session.v1');}catch{}
         location.reload();
         return;
       }
@@ -88,7 +88,7 @@ import('./detail-overlay.js').catch(() => {});
     e.preventDefault(); e.stopPropagation();
     sessionEnding = true; authEpoch++;
     document.documentElement.style.visibility = 'hidden';
-    document.dispatchEvent(new CustomEvent('asc:sign-out'));
+    document.dispatchEvent(new CustomEvent('asc:sign-out'));try{sessionStorage.removeItem('nero.tenant.session.v1');}catch{}
     dbReady.then((m) => m.signOut()).catch(() => {}).finally(() => S.bloom(() => S.handoff('login.html')));
   }, true);
 })();
@@ -246,7 +246,7 @@ function animate(){
 (async () => {
   if (/\/login\.html$/.test(location.pathname)) return;
   const doc = document, root = doc.documentElement;
-  const {navigationIcons:I,renderAppNavigation,applyNavAccess,syncThemeButton,installWarehouseMenuReturn,navLabel,searchKey,searchText,installLangButton}=await import('./navigation.js');
+  const {navigationIcons:I,renderAppNavigation,applyNavAccess,applyTenantAccess,loadTenantRole,syncThemeButton,installWarehouseMenuReturn,navLabel,searchKey,searchText,installLangButton}=await import('./navigation.js');
   const here = location.pathname.split('/').pop() || 'dashboard.html';
   const whPages = ['recycle.html', 'locate.html', 'locations.html', 'place.html', 'checkout.html'];
   const whOpen = whPages.includes(here) ||
@@ -390,6 +390,8 @@ function animate(){
   doc.addEventListener('asc:theme', syncTheme);
   installLangButton(aside.querySelector('#sbLang'));
   applyNavAccess(aside, null);
+  applyTenantAccess(aside, null);
+  loadTenantRole().then((r) => applyTenantAccess(aside, r)).catch(() => {});
   // Global search: Cmd/Ctrl+K or "/" from anywhere opens the sidebar search.
   doc.addEventListener('keydown', (e) => {
     const typing = e.target && (e.target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName));
