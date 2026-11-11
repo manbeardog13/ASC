@@ -22,6 +22,14 @@ if (embedded) {
     if (event.defaultPrevented || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
     const anchor = event.target.closest('a[href]');
     if (!anchor || anchor.target || anchor.hasAttribute('download')) return;
+    // The warehouse canvas needs the full workspace when reached from a record
+    // sheet, including a return to the guide. Keep modified clicks native.
+    const destination = new URL(anchor.href);
+    const studio = new URL('spatial-studio/index.html', appRoot);
+    if (destination.origin === studio.origin && destination.pathname === studio.pathname) {
+      anchor.target = '_parent';
+      return;
+    }
     const url = eligible(anchor.href);
     if (url) { event.preventDefault(); window.parent.postMessage({ type: 'asc:open-detail', href: url.href }, location.origin); }
   });

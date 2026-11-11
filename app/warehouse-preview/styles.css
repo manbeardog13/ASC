@@ -1,35 +1,3 @@
-@font-face {
-  font-family: 'Inter';
-  font-style: normal;
-  font-weight: 100 900;
-  font-display: swap;
-  src: url('vendor/inter-latin-ext.woff2') format('woff2');
-  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
-}
-@font-face {
-  font-family: 'Inter';
-  font-style: normal;
-  font-weight: 100 900;
-  font-display: swap;
-  src: url('vendor/inter-latin.woff2') format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-}
-@font-face {
-  font-family: 'Sora';
-  font-style: normal;
-  font-weight: 100 800;
-  font-display: swap;
-  src: url('vendor/sora-latin-ext.woff2') format('woff2');
-  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
-}
-@font-face {
-  font-family: 'Sora';
-  font-style: normal;
-  font-weight: 100 800;
-  font-display: swap;
-  src: url('vendor/sora-latin.woff2') format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-}
 /* Spatial layout only. Type, color, cards, pills and sidebar items come from app.css. */
 .spatial-app{min-width:320px;font-synthesis:none}
 .spatial-app [hidden]{display:none!important}
@@ -114,7 +82,7 @@
 .spatial-app .stage-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 0 8px;flex-wrap:wrap}
 .spatial-app .inventory-summary{display:flex;gap:14px;font:var(--type-sub);color:var(--muted);flex-wrap:wrap}
 .spatial-app .inventory-summary b{font-family:Sora,Inter,system-ui,sans-serif;font-size:14px;font-weight:600;color:var(--ink);margin-right:3px}
-.spatial-app .stage-actions{display:flex;gap:8px}
+.spatial-app .stage-actions{display:flex;flex-wrap:wrap;max-width:100%;gap:8px}
 .spatial-app .context-line{display:flex;justify-content:space-between;align-items:center;gap:12px;font:var(--type-sub);color:var(--muted)}
 .spatial-app .context-line button{min-height:44px;text-decoration:underline;text-underline-offset:3px}
 .spatial-app .spatial-footer{display:flex;justify-content:space-between;gap:12px;padding:20px 3px 0;font:var(--type-sub);color:var(--muted)}
@@ -168,7 +136,7 @@
 .spatial-app .tour-target{outline:3px solid var(--sel)!important;outline-offset:4px;scroll-margin:100px 0}
 .spatial-app .listening{background:var(--sel-tint)!important;color:var(--sel-ink)!important;box-shadow:0 0 0 3px var(--sel-ring)}
 @media(max-width:1020px){.spatial-app .mobile-only{display:inline-flex}.spatial-app .sb-burger{width:48px;height:48px}.spatial-app .area-tabs{display:flex;flex-wrap:nowrap;gap:8px;overflow-x:auto;margin-bottom:12px;scrollbar-width:none}.spatial-app .tour-card{left:20px;bottom:20px}}
-@media(max-width:640px){.spatial-app .spatial-heading>div{gap:9px}.spatial-app .search-wrap{gap:7px;padding-left:10px}.spatial-app .search-wrap input{font:var(--type-nav)}.spatial-app .search-wrap kbd{display:none}.spatial-app .scan-button{padding:0 12px}.spatial-app .scan-button>span:last-child{display:none}.spatial-app .spatial-stage{height:57dvh;min-height:410px}.spatial-app .stage-header{top:18px;left:16px;right:12px}.spatial-app #area-subtitle{max-width:160px}.spatial-app .view-toggle button{padding:0 9px}.spatial-app .scene-notes{left:14px;bottom:70px;max-width:85%;font:var(--type-sub)}.spatial-app #gesture-note{display:none}.spatial-app .found-location{left:14px;top:106px}.spatial-app .stage-toolbar{align-items:flex-start}.spatial-app .inventory-summary{font:var(--type-sub);gap:8px;width:100%;padding:0 2px}.spatial-app .stage-actions{width:100%}.spatial-app .stage-actions .button{flex:1}.spatial-app .welcome{gap:6px}.spatial-app .welcome .button{padding:0 11px}.spatial-app .welcome .icon-button{width:44px}.spatial-app .plan-view{inset:110px 18px 95px}.spatial-app .tour-card{left:14px;right:14px;bottom:calc(12px + env(safe-area-inset-bottom));width:auto;padding:16px}.spatial-app.tour-active #toast{bottom:calc(var(--tour-height,250px) + 25px)}.spatial-app .dialog-inner{padding:20px}.spatial-app .dialog-top h3{font:var(--type-page)}.spatial-app .spatial-footer{font:var(--type-sub);flex-wrap:wrap}.spatial-app .search-results{max-height:48dvh}.spatial-app .result{padding:10px 8px;gap:6px}.spatial-app .result-location{font:var(--type-sub)}}
+@media(max-width:640px){.spatial-app .spatial-heading>div{gap:9px}.spatial-app .search-wrap{gap:7px;padding-left:10px}.spatial-app .search-wrap input{font:var(--type-nav)}.spatial-app .search-wrap kbd{display:none}.spatial-app .scan-button{padding:0 12px}.spatial-app .scan-button>span:last-child{display:none}.spatial-app .spatial-stage{height:57dvh;min-height:410px}.spatial-app .stage-header{top:18px;left:16px;right:12px}.spatial-app #area-subtitle{max-width:160px}.spatial-app .view-toggle button{padding:0 9px}.spatial-app .scene-notes{left:14px;bottom:70px;max-width:85%;font:var(--type-sub)}.spatial-app #gesture-note{display:none}.spatial-app .found-location{left:14px;top:106px}.spatial-app .stage-toolbar{align-items:flex-start}.spatial-app .inventory-summary{font:var(--type-sub);gap:8px;width:100%;padding:0 2px}.spatial-app .stage-actions{width:100%}.spatial-app .stage-actions .button{flex:1 1 8.5rem;min-width:0;white-space:normal;text-align:center}.spatial-app .welcome{gap:6px}.spatial-app .welcome .button{padding:0 11px}.spatial-app .welcome .icon-button{width:44px}.spatial-app .plan-view{inset:110px 18px 95px}.spatial-app .tour-card{left:14px;right:14px;bottom:calc(12px + env(safe-area-inset-bottom));width:auto;padding:16px}.spatial-app.tour-active #toast{bottom:calc(var(--tour-height,250px) + 25px)}.spatial-app .dialog-inner{padding:20px}.spatial-app .dialog-top h3{font:var(--type-page)}.spatial-app .spatial-footer{font:var(--type-sub);flex-wrap:wrap}.spatial-app .search-results{max-height:48dvh}.spatial-app .result{padding:10px 8px;gap:6px}.spatial-app .result-location{font:var(--type-sub)}}
 @media(prefers-reduced-motion:reduce){.spatial-app *,.spatial-app *::before,.spatial-app *::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 @media(prefers-reduced-transparency:reduce){.spatial-app dialog::backdrop{backdrop-filter:none}}
 

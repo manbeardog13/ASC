@@ -43,16 +43,15 @@ export async function signIn(email, password) {
 export async function signOut() {
   await supabase.auth.signOut();
 }
-// Email a password-reset link. The link returns to the app with type=recovery,
-// which app.js routes to the "set your password" screen.
+// The mounted login page handles the implicit-flow fragment before routing.
 export async function sendPasswordReset(email) {
-  const { error } = await supabase.auth.resetPasswordForEmail((email || "").trim(), { redirectTo: config.APP_BASE_URL });
+  const { error } = await supabase.auth.resetPasswordForEmail((email || "").trim(), { redirectTo: config.AUTH_RETURN_URL });
   if (error) throw new Error(error.message);
 }
 // Google OAuth. Requires the Google provider enabled in Supabase (Auth →
 // Providers) and the app URL listed under Auth → URL Configuration.
 export async function signInWithGoogle() {
-  const { error } = await supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo: config.APP_BASE_URL } });
+  const { error } = await supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo: config.AUTH_RETURN_URL } });
   if (error) {
     throw new Error(/not enabled|unsupported provider|provider/i.test(error.message)
       ? "Google sign-in isn't enabled yet — turn on the Google provider in Supabase."
@@ -70,7 +69,7 @@ export async function signUp(email, password, fullName) {
     password,
     // Lands in auth metadata; handle_new_user() copies it into the profile so
     // the app knows who this is from the very first session.
-    options: { data: { full_name: (fullName || "").trim() || undefined } },
+    options: { emailRedirectTo: config.AUTH_RETURN_URL, data: { full_name: (fullName || "").trim() || undefined } },
   });
   if (error) {
     throw new Error(/already registered|already exists/i.test(error.message)
@@ -80,7 +79,7 @@ export async function signUp(email, password, fullName) {
   // With email confirmation on, no session is returned until the user confirms.
   return { needsConfirm: !data.session };
 }
-export async function loadMyProfile() {
+export async function loadMyProfile({ verifyAccess = false } = {}) {
   const session = await getSession();
   if (!session) return null;
   const base = "id, email, full_name, role, avatar_url";
@@ -90,6 +89,13 @@ export async function loadMyProfile() {
   if (error && /onboarded_at/i.test(error.message || "")) {
     const retry = await supabase.from("profiles").select(base).eq("id", session.user.id).maybeSingle();
     data = retry.data ? { ...retry.data, onboarding_unavailable: true } : null;
+    error = retry.error;
+  }
+  // Permission checks must distinguish a failed read from a pending account
+  // and never update profile metadata as a side effect.
+  if (verifyAccess) {
+    if (error) throw fail(error, "verify staff access");
+    return data ?? { id: session.user.id, role: "readonly" };
   }
   // Google sign-ins carry the person's name in auth metadata while the profiles
   // row starts empty — adopt it so greetings and the agent know who this is,
@@ -185,11 +191,10 @@ export async function updateUserName(row, fullName) {
   if (error) throw fail(error, "rename the user");
 }
 
-// Invited-but-not-yet-signed-up users (admin-only table). Returns [] when the
-// table is missing or the caller isn't an admin.
+// Invitations are part of the team total. An unavailable list has no known count.
 export async function listPendingUsers() {
   const { data, error } = await supabase.from("allowed_emails").select("email, full_name, role, created_at");
-  if (error) return [];
+  if (error) throw fail(error, "load pending invitations");
   return (data ?? [])
     .filter((r) => !isOwnerEmail(r.email))
     .map((r) => ({
@@ -227,7 +232,7 @@ export async function inviteUser({ full_name, email, role }) {
   const clean = (email || "").trim().toLowerCase();
   if (!clean) throw new Error("Email is required.");
   if (isOwnerEmail(clean)) throw new Error("That is the owner account — it already has full access.");
-  const res = await callAdminFn({ action: "invite", email: clean, full_name, role, appUrl: config.APP_BASE_URL });
+  const res = await callAdminFn({ action: "invite", email: clean, full_name, role, appUrl: config.AUTH_RETURN_URL });
   if (res.notDeployed) { await addAllowedUser({ full_name, email: clean, role }); return { mode: "allowlist" }; }
   return { mode: res.data?.status === "exists" ? "exists" : "invited" };
 }
@@ -302,6 +307,52 @@ export async function listStorageSets() {
     .order("updated_at", { ascending: false }));
   if (error) throw fail(error, "load the storage list");
   return data ?? [];
+}
+
+// The warehouse needs the whole authorized inventory, not PostgREST's first
+// default-limited page. Keep the older list APIs stable for their consumers.
+async function allWarehouseRows(readPage, doing, { key = "id", missingIsUnavailable = false } = {}) {
+  const rows = [];
+  let cursor = null;
+  for (;;) {
+    const { data, error } = await readPage(cursor);
+    if (missingIsUnavailable && relationMissing(error)) return null;
+    if (error) throw fail(error, doing);
+    if (!Array.isArray(data)) throw new Error(`Couldn't ${doing}: the server returned an incomplete inventory page.`);
+    if (!data.length) return rows;
+    // Continue after short pages too: a project may configure a limit below
+    // our requested 1000 rows. An empty page is the only completion signal.
+    for (const row of data) {
+      if (!row || typeof row[key] !== "string" || !row[key] || (cursor !== null && row[key] <= cursor)) {
+        throw new Error(`Couldn't ${doing}: inventory IDs were missing, repeated or out of order. Refresh and try again.`);
+      }
+      cursor = row[key];
+      rows.push(row);
+    }
+  }
+}
+
+export async function listWarehouseInventory() {
+  const readStartedAt = new Date().toISOString();
+  const [sets, locations] = await Promise.all([
+    allWarehouseRows(cursor => querySetList(cols => {
+      // Real per-tire IDs improve identity; listStorageSets intentionally keeps
+      // its existing shape. quantity remains the authoritative number of tires.
+      let query = supabase.from("storage_sets").select(cols.replace("tires ( size", "tires ( id, size"))
+        .is("deleted_at", null).order("id", { ascending: true }).limit(1000);
+      if (cursor !== null) query = query.gt("id", cursor);
+      return query;
+    }), "load the complete warehouse inventory"),
+    allWarehouseRows(cursor => {
+      let query = supabase.from("locations").select("id, warehouse, zone, rack, shelf, slot, status, qr_code")
+        .order("id", { ascending: true }).limit(1000);
+      if (cursor !== null) query = query.gt("id", cursor);
+      return query;
+    }, "load all warehouse locations"),
+  ]);
+  // A multi-request refresh is not a transaction snapshot. These bounds let
+  // the UI describe when it synchronized without claiming continuous realtime.
+  return { sets, locations, readStartedAt, readCompletedAt: new Date().toISOString() };
 }
 
 export async function loadStorageSet(publicCode) {
@@ -721,7 +772,7 @@ export async function recentMovements(limit = 6) {
 // Seats the first-run tour reads so it can name a zone that still has room.
 export async function listLocationSeats() {
   const { data, error } = await supabase.from("locations")
-    .select("warehouse, zone, rack, shelf, slot, status");
+    .select("id, warehouse, zone, rack, shelf, slot, status");
   if (relationMissing(error)) return [];
   if (error) throw fail(error, "list slots");
   return data ?? [];
@@ -765,15 +816,31 @@ export async function createLocations(rows) {
     throw new Error("Locations are not switched on yet. Apply the locations migration, then try again.");
   }
   if (inserted.error) throw fail(inserted.error, "create the slots");
-  const warehouse = payload[0].warehouse;
-  const zone = payload[0].zone;
-  const listed = await supabase.from("locations")
-    .select("id, warehouse, zone, rack, shelf, slot, qr_code, status")
-    .eq("warehouse", warehouse)
-    .eq("zone", zone);
-  if (listed.error) return inserted.data ?? [];
-  const want = new Set(payload.map((row) => [row.rack, row.shelf, row.slot].join("\0")));
-  return (listed.data ?? []).filter((row) => want.has([row.rack, row.shelf, row.slot].join("\0")));
+  // Existing rows are omitted from an ignoreDuplicates response. A complete
+  // batch must include their real QR codes too, even past PostgREST's page cap.
+  const rowKey = row => JSON.stringify([row.warehouse, row.zone, row.rack, row.shelf, row.slot]);
+  const requested = new Map(payload.map(row => [rowKey(row), row]));
+  const verified = new Map((inserted.data || []).map(row => [rowKey(row), row]));
+  const zones = new Map();
+  for (const [key, row] of requested) {
+    if (!verified.has(key)) zones.set(JSON.stringify([row.warehouse, row.zone]), row);
+  }
+  for (const { warehouse, zone } of zones.values()) {
+    const listed = await allWarehouseRows(cursor => {
+      let query = supabase.from("locations")
+        .select("id, warehouse, zone, rack, shelf, slot, qr_code, status")
+        .eq("warehouse", warehouse).eq("zone", zone).order("id").limit(1000);
+      if (cursor !== null) query = query.gt("id", cursor);
+      return query;
+    }, "verify the slot labels");
+    for (const row of listed) {
+      const key = rowKey(row);
+      if (requested.has(key)) verified.set(key, row);
+    }
+  }
+  const labels = Array.from(requested.keys(), key => verified.get(key));
+  if (labels.some(row => !row?.qr_code)) throw new Error("Nisu potvrđene sve QR naljepnice.");
+  return labels;
 }
 
 export function locationLabel(loc) {
@@ -964,14 +1031,32 @@ export const WAREHOUSE_EDIT_ROLES = ["admin", "manager", "employee", "reception"
 export function canEditWarehouse(role) { return WAREHOUSE_EDIT_ROLES.includes(role); }
 
 export async function listWarehouseLayout() {
-  const areas = await supabase.from("warehouse_areas").select("id, warehouse, zone, name, width, depth, unit, updated_at").eq("warehouse", "main");
-  if (relationMissing(areas.error)) return { available: false, areas: [], positions: [] };
-  if (areas.error) throw fail(areas.error, "load warehouse areas");
-  if (!areas.data?.length) return { available: true, areas: [], positions: [] };
-  const positions = await supabase.from("warehouse_rack_positions").select("id, area_id, rack, x, z, capacity, updated_at").in("area_id", areas.data.map(area => area.id));
-  if (relationMissing(positions.error)) return { available: false, areas: [], positions: [] };
-  if (positions.error) throw fail(positions.error, "load rack positions");
-  return { available: true, areas: areas.data ?? [], positions: positions.data ?? [] };
+  const unavailable = { available: false, areas: [], positions: [] };
+  const areas = await allWarehouseRows(cursor => {
+    let query = supabase.from("warehouse_areas").select("id, warehouse, zone, name, width, depth, unit, updated_at")
+      .eq("warehouse", "main").order("id", { ascending: true }).limit(1000);
+    if (cursor !== null) query = query.gt("id", cursor);
+    return query;
+  }, "load warehouse areas", { missingIsUnavailable: true });
+  if (areas === null) return unavailable;
+  if (areas.some(area => area.warehouse !== "main")) throw new Error("The shared layout included an area from another warehouse. Refresh and try again.");
+  const positions = [], seen = new Set();
+  // Bound the IN-filter URL independently of the server's row-page limit.
+  for (let offset = 0; offset < areas.length; offset += 100) {
+    const ids = areas.slice(offset, offset + 100).map(area => area.id), allowed = new Set(ids);
+    const batch = await allWarehouseRows(cursor => {
+      let query = supabase.from("warehouse_rack_positions").select("id, area_id, rack, x, z, capacity, updated_at")
+        .in("area_id", ids).order("id", { ascending: true }).limit(1000);
+      if (cursor !== null) query = query.gt("id", cursor);
+      return query;
+    }, "load rack positions", { missingIsUnavailable: true });
+    if (batch === null) return unavailable;
+    for (const position of batch) {
+      if (!allowed.has(position.area_id) || seen.has(position.id)) throw new Error("The shared rack layout changed while loading. Refresh and try again.");
+      seen.add(position.id); positions.push(position);
+    }
+  }
+  return { available: true, areas, positions };
 }
 
 export async function createWarehouseArea({ zone, name, width, depth, unit, warehouse = "main" }) {
@@ -997,5 +1082,61 @@ export async function moveRackPosition({ from_area_id, to_area_id, rack, x, z })
   const { data, error } = await supabase.from("warehouse_rack_positions")
     .update({ area_id: to_area_id, x, z }).eq("area_id", from_area_id).eq("rack", rack).select("id").single();
   if (error) throw fail(error, "move rack position");
+  return data;
+}
+
+// Physical rooms bind to shared operator areas; this never edits operational
+// locations, customer records, storage sets, tires or rack positions.
+const WAREHOUSE_SPACE_IDS = new Set([
+  "house-ground", "house-platform", "house-attic", "attic-parts", "attic-racks", "triangular-store",
+]);
+const SPACE_BINDING_COLUMNS = "warehouse, space_id, area_id, created_by, created_at, updated_at";
+
+function checkSpaceBindingKey(warehouse, space_id) {
+  if (typeof warehouse !== "string" || !warehouse.trim()) throw new Error("Choose a warehouse.");
+  if (space_id !== undefined && !WAREHOUSE_SPACE_IDS.has(space_id)) throw new Error("Choose a supported storage space.");
+}
+
+function spaceBindingError(error, doing) {
+  if (relationMissing(error)) {
+    const unavailable = new Error("Shared building bindings are not available. The new migration requires approval before use.");
+    unavailable.code = "warehouse_space_bindings_unavailable";
+    return unavailable;
+  }
+  return fail(error, doing);
+}
+
+export async function listWarehouseSpaceBindings(warehouse = "main") {
+  checkSpaceBindingKey(warehouse);
+  const bindings = await allWarehouseRows(cursor => {
+    let query = supabase.from("warehouse_space_bindings").select(SPACE_BINDING_COLUMNS)
+      .eq("warehouse", warehouse).order("space_id", { ascending: true }).limit(1000);
+    if (cursor !== null) query = query.gt("space_id", cursor);
+    return query;
+  }, "load shared building bindings", { key: "space_id", missingIsUnavailable: true });
+  if (bindings === null) return { available: false, bindings: [] };
+  if (bindings.some(binding => binding.warehouse !== warehouse)) throw new Error("The building bindings included another warehouse. Refresh and try again.");
+  return { available: true, bindings };
+}
+
+export async function saveWarehouseSpaceBinding({ warehouse = "main", space_id, area_id }) {
+  checkSpaceBindingKey(warehouse, space_id);
+  if (!WAREHOUSE_SPACE_IDS.has(space_id)) throw new Error("Choose a supported storage space.");
+  if (typeof area_id !== "string" || !area_id.trim()) throw new Error("Choose a shared warehouse area.");
+  const { data, error } = await supabase.from("warehouse_space_bindings")
+    .upsert({ warehouse, space_id, area_id }, { onConflict: "warehouse,space_id" })
+    .select(SPACE_BINDING_COLUMNS).single();
+  if (error) throw spaceBindingError(error, "save shared building binding");
+  if (!data) throw new Error("The building binding was not saved. Refresh the shared layout and try again.");
+  return data;
+}
+
+export async function deleteWarehouseSpaceBinding({ warehouse = "main", space_id }) {
+  checkSpaceBindingKey(warehouse, space_id);
+  if (!WAREHOUSE_SPACE_IDS.has(space_id)) throw new Error("Choose a supported storage space.");
+  const { data, error } = await supabase.from("warehouse_space_bindings")
+    .delete().eq("warehouse", warehouse).eq("space_id", space_id).select(SPACE_BINDING_COLUMNS).single();
+  if (error) throw spaceBindingError(error, "remove shared building binding");
+  if (!data) throw new Error("The building binding was not removed. Refresh the shared layout and try again.");
   return data;
 }

@@ -31,7 +31,7 @@ export const countLocations=async()=>3;
 export const locationLabel=loc=>loc?.qr_code||'';
 export const loadStorageSet=async code=>{
   if(window.__failLoad){throw new Error('Synthetic lookup failure')}
-  const row={id:code,public_code:code,status:'in_storage',zone:'A',rack:'1',shelf:'2',slot:'3',qr_code:'LOC-A-1-2-3',
+  const row={id:code,public_code:code,status:code==='ASC-COLLECTED'?'checked_out':'in_storage',zone:'A',rack:'1',shelf:'2',slot:'3',qr_code:'LOC-A-1-2-3',
     vehicle:{plate:'ZD-1234',customer:{id:'cust-1',name:'Ana Horvat'}}};
   if(window.__deferLoad)return new Promise(resolve=>{window.__finishLoad=()=>resolve(row)});
   return row;
@@ -87,7 +87,7 @@ async function slideThumb(page){
       if(u.origin!==origin)return route.abort();
       if(u.pathname.endsWith('/js/db.js'))return route.fulfill({contentType:'text/javascript',body:db});
       if(u.pathname.endsWith('/app/qr.js'))return route.fulfill({contentType:'text/javascript',body:qr});
-      if(['/app/app.js','/app/composer.js','/app/theme-boot.js'].some(v=>u.pathname.endsWith(v)))return route.fulfill({contentType:'text/javascript',body:''});
+      if(u.pathname.endsWith('/app/app.js'))return route.fulfill({contentType:'text/javascript',body:'window.ascStaffWorkflowReady=Promise.resolve(true)'});if(['/app/composer.js','/app/theme-boot.js'].some(v=>u.pathname.endsWith(v)))return route.fulfill({contentType:'text/javascript',body:''});
       return route.continue();
     });
     const page=await context.newPage();
@@ -119,6 +119,17 @@ async function slideThumb(page){
       });
     }
 
+    await page.goto(origin+'/ASC/app/checkout.html?set=ASC-COLLECTED');
+    await page.getByRole('button',{name:'Skeniraj drugi komplet'}).waitFor();
+    await test('collected set is read-only and staff can scan a different set using Enter',async()=>{
+      assert.equal(await page.locator('#release-control').count(),0);
+      await page.getByRole('button',{name:'Skeniraj drugi komplet'}).click();
+      await page.locator('#typed-code').fill('ASC-SECOND');
+      await page.locator('#typed-code').press('Enter');
+      await page.waitForSelector('#release-control');
+      assert.match(await page.locator('.release-context').innerText(),/ASC-SECOND/);
+      assert.deepEqual(await page.evaluate(()=>window.__writes),[]);
+    });
     // --- 1) Skeleton reserves height before data arrives --------------------
     // The `_defer=1` URL marker (consumed by the stubbed loadStorageSet) parks
     // the lookup so the skeleton stays visible long enough to be measured.

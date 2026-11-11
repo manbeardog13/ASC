@@ -1,27 +1,29 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
+import {safeLoginReturn} from '../js/firstRun.js';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 const read = file => readFile(path.join(process.cwd(), file), 'utf8');
 const tick = () => new Promise(resolve => setImmediate(resolve));
 const deferred = () => { let resolve; const promise = new Promise(r => { resolve = r; }); return { promise, resolve }; };
 
-async function gate({ pathname = '/ASC/app/dashboard.html', session = {user:{id:'user-A'}}, fail = false, pendingSession = null, pendingPaint = null, pendingSignOut = null } = {}) {
+async function gate({ pathname = '/ASC/app/dashboard.html', search = '', hash = '', session = {user:{id:'user-A'}}, fail = false, pendingSession = null, pendingPaint = null, pendingSignOut = null } = {}) {
   const source = await read('app/app.js');
-  const code = source.slice(source.indexOf('(() => {'), source.indexOf('\nconst root = document.documentElement;'));
+  const code = source.slice(source.indexOf('(() => {', source.indexOf('// ---- Live staging gate')), source.indexOf('\nconst root = document.documentElement;'));
   const handlers = new Map(), auth = [], targets = [], events = [];
   let reads = 0, signouts = 0, reloads = 0, reveals = 0;
   const style = {};
+  const storage = new Map();
   const db = { getSession: async () => { reads++; if (fail) throw Error('offline'); return pendingSession ? pendingSession.promise : session; },
     signOut: async () => { signouts++; if (pendingSignOut) await pendingSignOut.promise; }, onAuthChange: fn => auth.push(fn) };
   const sandbox = { document:{documentElement:{style},addEventListener:(type,fn)=>handlers.set(type,fn),dispatchEvent:event=>events.push(event.type)},
     window:{ascLiveFirst:pendingPaint?.promise,ASCSplash:{done(){reveals++;},bloom:cb=>cb?.(),handoff:url=>targets.push(url)}},
-    sessionStorage:{setItem(){}}, location:{pathname,reload:()=>reloads++},
+    sessionStorage:{setItem:(k,v)=>storage.set(k,v)}, location:{pathname,search,hash,reload:()=>reloads++}, firstRun:{safeLoginReturn},
     db,Promise,CustomEvent:class{constructor(type){this.type=type;}},setTimeout:()=>0 };
-  vm.runInNewContext(code.replace("import('../js/db.js')", 'Promise.resolve(db)'),sandbox);
+  vm.runInNewContext(code.replace("import('../js/db.js')", 'Promise.resolve(db)').replace("import('../js/firstRun.js')", 'Promise.resolve(firstRun)'),sandbox);
   await tick(); await tick();
-  return { style, auth, targets, events, reads:()=>reads, signouts:()=>signouts, reloads:()=>reloads, reveals:()=>reveals,
+  return { style, auth, targets, events, storage, reads:()=>reads, signouts:()=>signouts, reloads:()=>reloads, reveals:()=>reveals,
     clickLogout:()=>handlers.get('click')?.({target:{closest:()=>true},preventDefault(){},stopPropagation(){}}) };
 }
 
@@ -39,6 +41,11 @@ test('failed or absent dashboard session cannot reveal the protected screen', as
     assert.equal(app.style.visibility,'hidden');
     assert.deepEqual(app.targets,['login.html']);
   }
+});
+test('signed-out placement keeps the scanned slot through the login handoff',async()=>{
+  const app=await gate({pathname:'/ASC/app/place.html',hash:'#/slot/LOC-ABCDEF123456',session:null});
+  assert.equal(app.storage.get('asc.return'),'place.html#/slot/LOC-ABCDEF123456');
+  assert.deepEqual(app.targets,['login.html']);
 });
 test('signout in another tab clears the view; switching accounts reloads private DOM', async () => {
   const app=await gate();

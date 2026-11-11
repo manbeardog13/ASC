@@ -3,7 +3,7 @@
    same-origin files (so deploys show up right away), cache fallback when
    offline. Live data always comes from Supabase online. */
 const CACHE_PREFIX = "asc-tirehotel-";
-const CACHE = CACHE_PREFIX + "v116-checkout-detail-overlays";
+const CACHE = CACHE_PREFIX + "v120-staff-studio";
 // Cross-origin dependencies the app cannot boot (or scan) without. Same-origin
 // files are precached below; these are runtime-cached network-first so an
 // offline cold boot doesn't die on the supabase-js ESM import.
@@ -34,8 +34,13 @@ const SHELL = [
   "./app/tokens.css",
   "./app/app.css",
   "./app/theme-boot.js",
+  "./app/asc-brand.js",
+  "./app/asc-brand.css",
   "./app/app.js",
+  "./app/staff-workflow-gate.js",
   "./app/navigation.js",
+  "./app/studio-guide-return.js",
+  "./app/warehouse-preview/vendor/qrcode.js",
   "./app/qr.js",
   "./app/layout-edit.js",
   "./app/concierge.js",
@@ -62,8 +67,12 @@ const SHELL = [
   "./app/locate.html",
   "./app/locations.html",
   "./app/flow.css",
+  "./app/locate.css",
   "./app/flow-ui.js",
   "./app/onboarding.js",
+  "./app/guide.html",
+  "./app/guide.js",
+  "./app/guide.css",
   "./app/slot-block.js",
   "./js/firstRun.js",
   "./app/live-place.js",
@@ -117,12 +126,13 @@ self.addEventListener("activate", (e) => {
 // Only ever cache clean, complete, same-origin 200s — never opaque, redirected,
 // or error responses (any of those, served back later, can wedge the app).
 function cacheable(res) {
-  return res && res.ok && res.type === "basic" && !res.redirected;
+  return res && res.status === 200 && res.type === "basic" && !res.redirected &&
+    !/\b(?:private|no-store)\b/i.test(res.headers.get("cache-control") || "");
 }
 
 self.addEventListener("fetch", (e) => {
   const req = e.request;
-  if (req.method !== "GET") return;
+  if (req.method !== "GET" || req.cache === "no-store" || req.headers.has("authorization") || req.headers.has("apikey")) return;
   const url = new URL(req.url);
 
   // Boot-critical CDN modules (supabase-js ESM graph, QR libs, fonts):
@@ -136,10 +146,19 @@ self.addEventListener("fetch", (e) => {
           if (res && res.ok && !res.redirected) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {}); }
           return res;
         })
-        .catch(() => caches.match(req))
+        .catch(() => caches.match(req, { cacheName: CACHE }))
     );
     return;
   }
+
+  // A client under /ASC/ can fetch other same-origin resources. Restrict offline
+  // handling to the actual static app so tenant APIs and the parent portal stay
+  // network-only, including when a browser requests an API URL as a document.
+  const scope = new URL(self.registration.scope);
+  if (!url.pathname.startsWith(scope.pathname)) return;
+  const path = url.pathname.slice(scope.pathname.length);
+  const staticRoot = path === "" || path === "index.html" || path === "manifest.webmanifest";
+  if (!staticRoot && !/^(?:app|assets|css|js)\//.test(path)) return;
 
   // Full page loads (incl. pull-to-refresh): network-first; on failure fall back
   // to the cached app shell. The shell is the ONLY thing we ever answer a
@@ -148,7 +167,6 @@ self.addEventListener("fetch", (e) => {
     // Only a navigation to the app shell itself may overwrite the cached shell —
     // a 200 for any other same-origin URL (a stray asset opened in the address
     // bar) must never replace index.html for offline users.
-    const scope = new URL(self.registration.scope);
     const isShell = url.pathname === scope.pathname || url.pathname === new URL("index.html",scope).pathname;
     const preview = new URL("app/warehouse-preview/",scope);
     const isPreview = url.pathname === preview.pathname || url.pathname === preview.pathname + "index.html";
@@ -167,12 +185,12 @@ self.addEventListener("fetch", (e) => {
         // to the dashboard. Answering every navigation with index.html re-ran its
         // relative redirect against /app/ URLs and looped forever (…/app/app/…).
         .catch(async () => {
-          const exact=await caches.match(req,{ignoreSearch:true});if(exact)return exact;
+          const exact=await caches.match(req,{cacheName:CACHE,ignoreSearch:true});if(exact)return exact;
           if(isPreview){
-            const saved=await caches.match(new URL("index.html",preview).href);if(saved)return saved;
+            const saved=await caches.match(new URL("index.html",preview).href,{cacheName:CACHE});if(saved)return saved;
             return new Response('<!doctype html><html lang="hr"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>ASC · Probni prikaz</title><h1>Probni prikaz nije dostupan bez veze</h1><p>Povežite se i pokušajte ponovno.</p><a href="'+new URL("app/customers.html",scope).pathname+'">Kupci i kompleti</a><p><a href="'+new URL("app/dashboard.html",scope).pathname+'">Početna ploča</a></p></html>',{status:503,headers:{"Content-Type":"text/html; charset=utf-8","Cache-Control":"no-store"}});
           }
-          return (await caches.match("./app/dashboard.html"))||(await caches.match("./index.html"))||(await caches.match("./"));
+          return (await caches.match("./app/dashboard.html",{cacheName:CACHE}))||(await caches.match("./index.html",{cacheName:CACHE}))||(await caches.match("./",{cacheName:CACHE}));
         })
     );
     return;
@@ -188,6 +206,6 @@ self.addEventListener("fetch", (e) => {
         if (cacheable(res)) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {}); }
         return res;
       })
-      .catch(() => caches.match(req))
+      .catch(() => caches.match(req, { cacheName: CACHE }))
   );
 });

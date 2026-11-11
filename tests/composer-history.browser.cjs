@@ -34,4 +34,21 @@ async function selectHistory(p){await p.locator('.nero-input').focus();await p.l
   assert.equal(await p.locator('.nero-input').inputValue(),'Retained draft');assert.match(await p.locator('.nero-log').innerText(),/nije učitan/);
  }finally{await h.close()}
  console.log('PASS history isolates sends, restores clickable attachment refs, suppresses old loads, and recovers after errors');
+ const chats=`function chain(table){let op='select';const api=new Proxy({}, {get(_,key){if(key==='then')return (resolve,reject)=>{if(table==='nero_chats'&&op==='select')return new Promise(r=>(window.__chatLists=window.__chatLists||[]).push(r)).then(resolve,reject);return Promise.resolve({data:[],error:null}).then(resolve,reject)};return (...args)=>{if(key==='insert'||key==='update'||key==='select')op=key;return api}}});return api}export const supabase={from:chain,storage:{from:()=>({createSignedUrl:async()=>({data:null})})}};`;
+ h=await createHarness({db,supabase:chats,config,composerSource:source,role:'staff'});p=h.page;
+ try{
+  await p.locator('.nero-input').focus();
+  await p.locator('[data-act=history]').click();
+  await p.waitForFunction(()=>(window.__chatLists||[]).length===1);
+  await p.evaluate(()=>document.dispatchEvent(new CustomEvent('asc:sign-out')));
+  await p.locator('[data-act=history]').click();
+  await p.waitForFunction(()=>(window.__chatLists||[]).length===2);
+  await p.evaluate(()=>window.__chatLists[1]({data:[{id:'account-b',title:'Account B chat'}],error:null}));
+  await p.waitForFunction(()=>[...document.querySelectorAll('.nero-history button')].map(b=>b.textContent).join()==='Account B chat');
+  await p.evaluate(()=>window.__chatLists[0]({data:[{id:'account-a',title:'Account A secret'}],error:null}));
+  await p.waitForTimeout(50);
+  assert.deepEqual(await p.evaluate(()=>[...document.querySelectorAll('.nero-history button')].map(b=>b.textContent)),['Account B chat']);
+  assert.equal(await p.evaluate(()=>document.querySelector('.nero-history').textContent.includes('Account A secret')),false);
+ }finally{await h.close()}
+ console.log('PASS late loadHistory after sign-out cannot overwrite the next account');
 })().catch(e=>{console.error(e);process.exitCode=1});

@@ -27,12 +27,17 @@ test('ASC activation retires only its own obsolete caches', async () => {
   await Promise.all(w.pending);
   assert.deepEqual(w.deleted, ['asc-tirehotel-v1', 'asc-tirehotel-v106-composer-controls', 'asc-tirehotel-v107-platform-review', 'asc-tirehotel-v108-receipt-disposal-clause']);
 });
-test('service worker never caches Supabase API or write requests', () => {
+test('service worker leaves private APIs, sibling tenants and credentialed requests to the network', () => {
   const w = worker();
   let intercepted = false;
   for (const request of [
     new Request('https://example.supabase.co/rest/v1/storage_sets'),
-    new Request('https://example.test/ASC/', { method: 'POST' })
+    new Request('https://example.test/ASC/', { method: 'POST' }),
+    new Request('https://example.test/ASC/api/rest/v1/storage_sets'),
+    new Request('https://example.test/api/session'),
+    new Request('https://example.test/ASC-other/js/config.js'),
+    new Request('https://example.test/ASC/js/config.js', { headers: { Authorization: 'Bearer synthetic' } }),
+    new Request('https://example.test/ASC/app/assets/agent-hooks.json', { cache: 'no-store' })
   ]) w.listeners.fetch({ request, respondWith: () => { intercepted = true; } });
   assert.equal(intercepted, false);
 });

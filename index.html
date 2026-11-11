@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>ASC — Ploča</title>
-<meta name="theme-color" content="#020305">
+<meta name="theme-color" content="#f1eee7">
 <link rel="icon" href="app/assets/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="app/assets/apple-touch-icon.png">
 <!-- DELIVERY BUILD (2026-07-09): the root opens the real app under app/ — the
@@ -19,13 +19,23 @@
 // redirecting (a precache hole bouncing us), we give up and show the manual
 // button below instead of spinning forever.
 (function(){
+  var p = location.pathname;
+  var base = p.indexOf('/app/') >= 0 ? p.slice(0, p.indexOf('/app/') + 1) : p.replace(/[^\/]*$/, '');
+  // Already-issued ASC emails may still point at this root. Keep their auth
+  // fragment on this origin and pass it to the mounted handler before the hop guard.
+  var auth = new URLSearchParams(location.hash.slice(1));
+  if (auth.has('access_token') || auth.has('error')) {
+    var callback = new URL(location.href);
+    callback.pathname = base + 'app/login.html';
+    callback.search = '';
+    location.replace(callback.href);
+    return;
+  }
   var now = Date.now(), KEY = 'asc.redir.ts';
   try {
     if (now - (+sessionStorage.getItem(KEY) || 0) < 3000) return;
     sessionStorage.setItem(KEY, String(now));
   } catch(e){}
-  var p = location.pathname;
-  var base = p.indexOf('/app/') >= 0 ? p.slice(0, p.indexOf('/app/') + 1) : p.replace(/[^\/]*$/, '');
   // Old printed labels encode #/set/CODE on the root URL; keep them working.
   var m = /^#\/set\/([^?&#\/]+)/.exec(location.hash || '');
   location.replace(base + (m ? 'app/set-detail.html?code=' + encodeURIComponent(decodeURIComponent(m[1])) : 'app/dashboard.html'));
@@ -33,16 +43,16 @@
 </script>
 <style>
   html,body{height:100%;margin:0}
-  body{background:#020305;color:#f4f5f7;font-family:"Inter",system-ui,-apple-system,sans-serif;
+  body{background:#f1eee7;color:#1d3439;font-family:"Inter",system-ui,-apple-system,sans-serif;
     display:flex;align-items:center;justify-content:center;text-align:center}
   .b{max-width:340px;padding:24px}
-  .m{font-weight:800;font-size:26px;letter-spacing:2px;color:#ff4e1b;margin-bottom:14px}
-  p{color:#9aa0ac;font-size:14px;line-height:1.5;margin:0 0 20px}
+  .m{font-weight:800;font-size:26px;letter-spacing:2px;color:#772b38;margin-bottom:14px}
+  p{color:#506268;font-size:14px;line-height:1.5;margin:0 0 20px}
   a{display:inline-block;min-height:46px;line-height:46px;padding:0 22px;border-radius:999px;
-    background:#ff4e1b;color:#fff;font-weight:700;font-size:15px;text-decoration:none}
+    background:#772b38;color:#fff;font-weight:700;font-size:15px;text-decoration:none}
   .nero-mark{position:static;left:auto;right:auto;bottom:auto;margin:16px 0 0;padding:0 16px 12px;text-align:center;
     font:600 10px/1 Inter,system-ui,sans-serif;letter-spacing:.22em;text-transform:lowercase;
-    color:rgba(244,245,247,.34);text-shadow:0 -1px 0 #000,0 1px 0 rgba(255,255,255,.08);pointer-events:none}
+    color:#556568;pointer-events:none}
   .nero-mark a{display:inline;min-height:0;line-height:1;padding:0;border-radius:0;background:none;
     color:inherit;font:inherit;letter-spacing:inherit;font-weight:600;text-decoration:none;pointer-events:auto}
 </style>

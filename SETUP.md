@@ -183,7 +183,9 @@ above still works.
 2. **Allow the app as a redirect target** so invite links come back to the app:
    Authentication → **URL Configuration** → set **Site URL** to
    `https://manbeardog13.github.io/ASC/` and add `https://manbeardog13.github.io/ASC/**`
-   under **Redirect URLs**.
+   under **Redirect URLs**. For the Nero Summit tenant, also allow the exact callback
+   `https://app.nerosummit.com/ASC/app/login.html`. Confirm recovery and Google login
+   on this origin before releasing them to staff.
 3. **Set up email delivery (SMTP)** so invites actually send: Authentication → **SMTP
    settings** → add your provider (e.g. Resend, SendGrid, Postmark). Supabase's
    built-in email is heavily rate-limited and meant only for testing.

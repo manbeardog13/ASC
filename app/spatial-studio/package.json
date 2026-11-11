@@ -1,0 +1,29 @@
+{
+  "name": "asc-spatial-studio",
+  "version": "1.0.0",
+  "description": "ASC Prostorni studio",
+  "scripts": {
+    "test": "node --test tests/*.test.mjs src/*.test.mjs sync-idb.test.mjs",
+    "build": "tsc --noEmit && vite build"
+  },
+  "type": "module",
+  "private": true,
+  "dependencies": {
+    "@react-three/drei": "10.7.9",
+    "@react-three/fiber": "9.8.2",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "three": "0.180.0",
+    "zustand": "5.0.16"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "4.3.4",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@types/three": "0.180.0",
+    "fake-indexeddb": "6.2.7",
+    "tailwindcss": "4.3.4",
+    "typescript": "5.9.3",
+    "vite": "7.3.7"
+  }
+}
