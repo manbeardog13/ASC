@@ -40,13 +40,29 @@ $('asc-navigation').innerHTML=renderAppNavigation({warehouseOpen:true});
 applyNavAccess($('asc-navigation'), null);
 let canEdit=false,permissionRead=null;
 const mayEdit=()=>!disposed&&isActive()&&canEdit;
+function showsCustomerRecords(dialog){
+ if(!dialog?.open)return false;
+ if(dialog.hasAttribute('data-customer-records'))return true;
+ const title=$('dialog-title')?.textContent;
+ if(title==='Kompleti i regali')return true;
+ return Boolean($('dialog-content')?.querySelector('[data-list-set], .dialog-actions a'));
+}
+function closeCustomerRecordDialogs(){
+ const dialog=$('dialog');
+ const content=$('dialog-content');
+ const marked=showsCustomerRecords(dialog)||dialog?.hasAttribute('data-customer-records')||$('dialog-title')?.textContent==='Kompleti i regali'||Boolean(content?.querySelector('[data-list-set], .dialog-actions a'));
+ if(!marked)return;
+ if(dialog?.open)closeDialog();
+ if(content)content.innerHTML='';
+ dialog?.removeAttribute('data-customer-records');
+}
 function clearCustomerInventory(){
  inventory={status:'error',sets:null,locations:null,projection:null};
  liveSeats=null;selectedSetId=null;fsSetId=null;
  if($('search-results')&&$('search'))hideSearch();
  const box=$('search-results');if(box)box.innerHTML='';
  const field=$('search');if(field)field.value='';
- if($('dialog')?.open&&$('dialog-title')?.textContent==='Kompleti i regali')closeDialog();
+ closeCustomerRecordDialogs();
  projectInventory();
 }
 function refreshPermissions(){
@@ -246,7 +262,7 @@ function selectLiveSet(id,focus=true){
  const row=recordFor(id);if(!row)return false;
  const placement=placementFor(id);
  if(placement?.status!=='mapped'){
-  openDialog(esc(row.public_code||'Komplet'),`<p class="dialog-intro">${esc(row.vehicle?.customer?.name||'Kupac')} · ${esc(row.vehicle?.plate||'—')}</p><p>${esc(placement?placementReason(placement.reason):'Komplet nije aktivan u skladištu.')}</p><div class="dialog-actions">${recordActions(row)}</div>`);return false;
+  openDialog(esc(row.public_code||'Komplet'),`<p class="dialog-intro">${esc(row.vehicle?.customer?.name||'Kupac')} · ${esc(row.vehicle?.plate||'—')}</p><p>${esc(placement?placementReason(placement.reason):'Komplet nije aktivan u skladištu.')}</p><div class="dialog-actions">${recordActions(row)}</div>`,{customerRecords:true});return false;
  }
  if(placing)endPlacement();areaId=placement.areaId;selectedId=placement.stackId;selectedSetId=String(id);fsSetId=String(id);storeView();hideSearch();render();
  const focused=focus?focusLiveSet(id):true;if(!isFs())$('inspector').focus({preventScroll:true});tour?.notify('found');return focused;
@@ -443,10 +459,13 @@ listen(document,'keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='
 
 let dialogReturnFocus=null;
 function canFocus(element){return element?.isConnected&&!element.closest('[hidden],[inert]')&&element.getClientRects().length&&getComputedStyle(element).visibility!=='hidden';}
-function openDialog(title,body){
+function openDialog(title,body,{customerRecords=false}={}){
  if(!$('dialog').open)dialogReturnFocus=document.activeElement;
  closeMenu();stopScanner();viewer?.setActivityBlocked?.(true);$('dialog-content').innerHTML=`<div class="dialog-inner"><div class="dialog-top"><h3 id="dialog-title" tabindex="-1">${title}</h3><button id="close-dialog" class="icon-button" aria-label="Zatvori prozor">×</button></div>${body}</div>`;
- $('close-dialog').onclick=closeDialog;if(!$('dialog').open)$('dialog').showModal();$('dialog-title').focus({preventScroll:true});
+ const dialog=$('dialog');
+ if(customerRecords)dialog.setAttribute('data-customer-records','');
+ else dialog.removeAttribute('data-customer-records');
+ $('close-dialog').onclick=closeDialog;if(!dialog.open)dialog.showModal();$('dialog-title').focus({preventScroll:true});
 }
 function closeDialog(){stopScanner();$('dialog').close();viewer?.setActivityBlocked?.(viewMode==='plan'||Boolean(placing));}
 $('dialog').addEventListener('close',()=>{
@@ -520,7 +539,7 @@ function showTyre(id,toggle=false){
 }
 function showList(){
  const rows=inventory.sets||[],stacks=sceneState.stacks.filter(s=>areaId==='all'||s.areaId===areaId);
- openDialog('Kompleti i regali',`<p class="dialog-intro">Kompleti dolaze iz ASC evidencije. Nepovezane zapise možete otvoriti bez 3D položaja.</p>${inventory.status==='stale'?'<p class="inventory-warning">Prikazani su posljednji učitani podaci. Osvježavanje nije uspjelo.</p>':''}<div class="stack-list">${rows.map(row=>{const p=placementFor(row.id);return `<button class="result" data-list-set="${esc(row.id)}"><span><b>${esc(row.public_code||'Komplet')}</b><small>${esc([row.vehicle?.customer?.name,row.vehicle?.plate].filter(Boolean).join(' · '))}</small></span><span class="result-location">${p?.status==='mapped'?esc(p.stackId):p?'Bez položaja':'Otvori zapis'}</span></button>`;}).join('')}${!rows.length?`<p>${inventory.projection?'Nema kompleta u ASC evidenciji.':'Evidencija nije dostupna.'}</p>`:''}</div><details class="compact-details"><summary>Regali na karti (${stacks.length})</summary><div class="stack-list">${stacks.map(st=>`<button class="result" data-list-stack="${esc(st.id)}"><span><b>${esc(st.id)}</b><small>${inventory.projection?st.tireIds.length:'—'} / ${st.capacity} mjesta u prikazu</small></span><span>Otvori ↗</span></button>`).join('')}</div></details>`);
+ openDialog('Kompleti i regali',`<p class="dialog-intro">Kompleti dolaze iz ASC evidencije. Nepovezane zapise možete otvoriti bez 3D položaja.</p>${inventory.status==='stale'?'<p class="inventory-warning">Prikazani su posljednji učitani podaci. Osvježavanje nije uspjelo.</p>':''}<div class="stack-list">${rows.map(row=>{const p=placementFor(row.id);return `<button class="result" data-list-set="${esc(row.id)}"><span><b>${esc(row.public_code||'Komplet')}</b><small>${esc([row.vehicle?.customer?.name,row.vehicle?.plate].filter(Boolean).join(' · '))}</small></span><span class="result-location">${p?.status==='mapped'?esc(p.stackId):p?'Bez položaja':'Otvori zapis'}</span></button>`;}).join('')}${!rows.length?`<p>${inventory.projection?'Nema kompleta u ASC evidenciji.':'Evidencija nije dostupna.'}</p>`:''}</div><details class="compact-details"><summary>Regali na karti (${stacks.length})</summary><div class="stack-list">${stacks.map(st=>`<button class="result" data-list-stack="${esc(st.id)}"><span><b>${esc(st.id)}</b><small>${inventory.projection?st.tireIds.length:'—'} / ${st.capacity} mjesta u prikazu</small></span><span>Otvori ↗</span></button>`).join('')}</div></details>`);$('dialog').setAttribute('data-customer-records','');
  $('dialog-content').querySelectorAll('[data-list-set]').forEach(b=>b.onclick=()=>{const id=b.dataset.listSet;closeDialog();selectLiveSet(id);});
  $('dialog-content').querySelectorAll('[data-list-stack]').forEach(b=>b.onclick=()=>{closeDialog();selectStack(b.dataset.listStack,true);});
 }

@@ -742,10 +742,13 @@
   });
 
   function loadHistory() {
+    var conversation = chatGeneration;
     historyBox.innerHTML = '<p class="nero-empty">Učitavam…</p>';
     libs().then(function (lib) {
+      if (conversation !== chatGeneration) return null;
       return lib.supabase.from('nero_chats').select('id, title, updated_at').order('updated_at', { ascending: false }).limit(30);
     }).then(function (res) {
+      if (conversation !== chatGeneration || res == null) return;
       historyBox.innerHTML = '';
       if (!res || res.error || !res.data) {
         historyBox.innerHTML = '<p class="nero-empty">Povijest još nije spremna.</p>';
@@ -760,6 +763,7 @@
         historyBox.appendChild(btn);
       });
     }).catch(function () {
+      if (conversation !== chatGeneration) return;
       historyBox.innerHTML = '<p class="nero-empty">Povijest još nije spremna.</p>';
     });
   }
@@ -1058,6 +1062,7 @@
     log.hidden = true;
     root.classList.remove('has-convo');
     historyBox.hidden = true;
+    historyBox.innerHTML = '';
     if (window.ASCAgent && ASCAgent.reset) ASCAgent.reset();
     var q = queueApi();
     relayMode = false;
