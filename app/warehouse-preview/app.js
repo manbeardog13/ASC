@@ -43,10 +43,10 @@ const mayEdit=()=>!disposed&&isActive()&&canEdit;
 function clearCustomerInventory(){
  inventory={status:'error',sets:null,locations:null,projection:null};
  liveSeats=null;selectedSetId=null;fsSetId=null;
- if(\search-results&&\search)hideSearch();
- const box=\search-results;if(box)box.innerHTML='';
- const field=\search;if(field)field.value='';
- if(\dialog?.open&&\dialog-title?.textContent==='Kompleti i regali')closeDialog();
+ if($('search-results')&&$('search'))hideSearch();
+ const box=$('search-results');if(box)box.innerHTML='';
+ const field=$('search');if(field)field.value='';
+ if($('dialog')?.open&&$('dialog-title')?.textContent==='Kompleti i regali')closeDialog();
  projectInventory();
 }
 function refreshPermissions(){
@@ -57,9 +57,9 @@ function refreshPermissions(){
   if(disposed||!isActive())return false;
   const allowed=canEditWarehouse(profile?.role);
   const revoked=canEdit&&!allowed;
-  canEdit=allowed;applyNavAccess(sc-navigation,profile?.role);
+  canEdit=allowed;applyNavAccess($('asc-navigation'),profile?.role);
   if(!allowed)clearCustomerInventory();
-  if(revoked){endPlacement();if(\dialog.open)closeDialog();toast('Pristup evidenciji vise nije dostupan.');}
+  if(revoked){endPlacement();if($('dialog').open)closeDialog();toast('Pristup evidenciji vise nije dostupan.');}
   render();return canEdit;
  })().finally(()=>{permissionRead=null;});return permissionRead;
 }
