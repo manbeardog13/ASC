@@ -19,4 +19,6 @@
 .scope-hit{display:flex;flex-direction:column;gap:4px;min-height:56px;justify-content:center;text-decoration:none;color:inherit;padding:12px 14px;border-radius:16px;border:1px solid var(--line);background:var(--panel-2)}
 .scope-hit b{font:650 16px/1.3 Inter}
 .scope-hit small{color:var(--muted);font:500 14px/1.3 Inter}
+.scope-unavailable{display:flex;flex-direction:column;align-items:flex-start;gap:10px}
+.scope-unavailable .btn{min-height:56px;padding:0 18px}
 html,body{overflow-x:clip}

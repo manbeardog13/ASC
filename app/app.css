@@ -1120,6 +1120,7 @@ html.has-composer [data-nero-move]{display:none!important}
 /* Menu: tighter, one weight, one icon size. */
 .sb-nav{gap:1px}
 .sb-item{min-height:38px;font-weight:600}
+.sb-item[hidden],html[data-side="rail"] .sb-item[hidden]{display:none}
 .sb-item svg{width:19px;height:19px;stroke-width:1.8}
 .sb-kid{min-height:34px}
 .sb-div{margin:8px 10px}
