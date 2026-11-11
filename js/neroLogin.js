@@ -35,3 +35,15 @@ export function consumeReturnPath(storage) {
     return "";
   }
 }
+
+// sessionStorage itself can throw (blocked storage) before any method runs.
+export function openLoginStorage(read) {
+  try { return read(); }
+  catch { return null; }
+}
+
+// A storage failure must not turn a live session into a signed-out redirect.
+export function continueAfterSession(session, storage) {
+  const returnPath = session ? consumeReturnPath(storage) : "";
+  return loginDestination({ session, returnPath });
+}

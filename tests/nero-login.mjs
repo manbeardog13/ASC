@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import { readFileSync } from 'node:fs';
-import { loginDestination, neroLoginUrl, safeLoginReturn, NERO_APP_URL } from '../js/neroLogin.js';
+import { loginDestination, neroLoginUrl, safeLoginReturn, continueAfterSession, openLoginStorage, NERO_APP_URL } from '../js/neroLogin.js';
 
 const read = (file) => readFileSync(new URL('../' + file, import.meta.url), 'utf8');
 const tick = () => new Promise((resolve) => setImmediate(resolve));
@@ -29,10 +29,31 @@ test('a session follows only a same-app return path', () => {
   assert.equal(safeLoginReturn('dashboard.html#fragment'), '');
 });
 
+test('blocked sessionStorage keeps a valid session in the app', () => {
+  assert.equal(openLoginStorage(() => { throw new Error('SecurityError'); }), null);
+  assert.equal(continueAfterSession({ user: { id: 'user-A' } }, null), 'dashboard.html');
+  const throwing = {
+    getItem() { throw new Error('blocked'); },
+    removeItem() { throw new Error('blocked'); },
+  };
+  assert.equal(continueAfterSession({ user: { id: 'user-A' } }, throwing), 'dashboard.html');
+  const items = { 'asc.return': 'customers.html' };
+  const storage = {
+    getItem: (key) => items[key] ?? null,
+    removeItem: (key) => { delete items[key]; },
+  };
+  assert.equal(continueAfterSession(null, storage), NERO_APP_URL);
+  assert.equal(items['asc.return'], 'customers.html');
+  assert.equal(continueAfterSession({ user: { id: 'user-A' } }, storage), 'customers.html');
+  assert.equal(items['asc.return'], undefined);
+});
+
 test('the login page has no credential form and sends visitors to Nero', () => {
   const html = read('app/login.html');
   assert.doesNotMatch(html, /type="password"|signInWithPassword|signInWithOAuth|signIn\(|id="google"|id="form"/);
-  assert.match(html, /loginDestination/);
+  assert.match(html, /openLoginStorage\(\(\)\s*=>\s*sessionStorage\)/);
+  assert.doesNotMatch(html, /consumeReturnPath\(sessionStorage\)/);
+  assert.match(html, /continueAfterSession/);
   assert.match(html, /https:\/\/app\.nerosummit\.com/);
   assert.match(html, /Powered by <a href="https:\/\/nerosummit\.com">Nero Summit<\/a>/);
 });

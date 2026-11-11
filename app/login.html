@@ -31,14 +31,14 @@
   </div>
 <script type="module">
   import { getSession } from '../js/db.js';
-  import { consumeReturnPath, loginDestination } from '../js/neroLogin.js';
+  import { continueAfterSession, loginDestination, openLoginStorage } from '../js/neroLogin.js';
   // An existing ASC session still enters the app (and a safe asc.return path).
   // No session: Nero Summit. The credential form is gone.
+  // Read storage before the session promise so a blocked sessionStorage cannot
+  // fall into the rejection path and send a signed-in user to Nero.
+  const storage = openLoginStorage(() => sessionStorage);
   getSession()
-    .then((session) => {
-      const returnPath = session ? consumeReturnPath(sessionStorage) : '';
-      location.replace(loginDestination({ session, returnPath }));
-    })
+    .then((session) => location.replace(continueAfterSession(session, storage)))
     .catch(() => location.replace(loginDestination({ session: null })));
 </script>
 <p class="nero-mark">Powered by <a href="https://nerosummit.com">Nero Summit</a></p>
