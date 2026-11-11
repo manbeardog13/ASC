@@ -1,0 +1,96 @@
+/* Studio composer (flag studioComposer, default off). Loaded only by
+   studio/composer/mount.mjs. Adds composer-scoped tokens; the global Nero
+   tokens are read, never redefined. Colours come from the composer template's
+   look and are set as custom properties on .sc-root. */
+.sc-root{
+  --composer-base:#151820;--composer-base-raised:#1C2130;--composer-edge:rgba(255,255,255,.14);
+  --composer-text:#F2F4F8;--composer-text-muted:#B4BAC8;
+  --composer-ring-a:#FF7A45;--composer-ring-b:#B45CFF;--composer-ring-c:#3FA9FF;--composer-bubble:#2A1E46;
+  --composer-ring-period:9s;--composer-ring-width:1.5px;--composer-pad:var(--nero-space-sm,12px);
+  --composer-radius:var(--nero-radius-xl,30px);
+  position:relative;isolation:isolate;display:block;border-radius:var(--composer-radius);
+  padding:var(--composer-ring-width);color:var(--composer-text);
+  box-shadow:0 0 0 1px rgba(0,0,0,.6),0 18px 48px -22px rgba(180,92,255,.45),0 8px 30px -18px rgba(255,122,69,.5);
+  transition:box-shadow var(--nero-duration-base,260ms) var(--nero-ease-standard,ease);
+}
+.sc-root[data-plan="docked-panel"]{--composer-radius:var(--nero-radius-lg,22px)}
+/* Live motion layer: a conic colour field rotated with transform only (compositor-friendly). */
+.sc-ring{position:absolute;inset:0;border-radius:inherit;overflow:hidden;z-index:-1;pointer-events:none}
+.sc-ring::before{content:"";position:absolute;left:50%;top:50%;width:160%;aspect-ratio:1;
+  background:conic-gradient(from 0deg,var(--composer-ring-a),var(--composer-ring-b),var(--composer-ring-c),var(--composer-ring-b),var(--composer-ring-a));
+  transform:translate(-50%,-50%) rotate(0deg);will-change:transform;
+  animation:sc-ring-spin var(--composer-ring-period) linear infinite}
+.sc-root:hover .sc-ring::before,.sc-root:focus-within .sc-ring::before{animation-duration:calc(var(--composer-ring-period) / 2)}
+@keyframes sc-ring-spin{to{transform:translate(-50%,-50%) rotate(360deg)}}
+.sc-body{position:relative;display:flex;flex-direction:column;gap:var(--nero-space-xs,8px);
+  border-radius:calc(var(--composer-radius) - var(--composer-ring-width));padding:var(--composer-pad);
+  background:linear-gradient(180deg,var(--composer-base-raised),var(--composer-base) 62%);
+  box-shadow:inset 0 1px 0 var(--composer-edge)}
+.sc-body[data-direction="row"]{flex-direction:row;flex-wrap:wrap;align-items:center}
+.sc-body[data-mode="grid"]{display:grid;grid-template-columns:1fr}
+.sc-group{display:flex;flex-wrap:wrap;align-items:center;gap:var(--nero-space-xs,8px);min-width:0}
+.sc-group[data-group="Composer toolbar"]{justify-content:space-between}
+.sc-group[data-group="Trailing tools"],.sc-group[data-group="Action dock"]{margin-inline-start:auto}
+.sc-group[data-group="Action dock"]{justify-content:flex-end}
+.sc-slot{display:contents}
+.sc-slot[hidden]{display:none}
+.sc-slot[data-kind="composer-input"]{display:block;flex:0 0 auto;min-width:0}
+.sc-body[data-direction="row"]>.sc-slot[data-kind="composer-input"]{flex:1 1 220px}
+.nero-shell .sc-root textarea,.sc-root textarea{display:block;width:100%;box-sizing:border-box;min-height:44px;height:auto;max-height:240px;resize:none;field-sizing:content;
+  background:transparent;border:0;color:var(--composer-text);font:inherit;font-size:16px;line-height:1.5;padding:10px var(--nero-space-xs,8px)}
+.sc-root textarea::placeholder{color:var(--composer-text-muted);opacity:1}
+.sc-root button{min-height:44px;min-width:44px;box-sizing:border-box;padding:0 14px;border-radius:var(--nero-radius-pill,999px);
+  border:1px solid var(--composer-edge);background:rgba(255,255,255,.04);color:var(--composer-text);font:inherit;cursor:pointer;
+  transition:background-color var(--nero-duration-fast,170ms) var(--nero-ease-standard,ease),transform var(--nero-duration-fast,170ms) var(--nero-ease-spring,ease),opacity var(--nero-duration-base,260ms) var(--nero-ease-standard,ease)}
+.sc-root button:hover:not(:disabled){background:rgba(255,255,255,.10)}
+.sc-root button:disabled{color:var(--composer-text-muted);cursor:not-allowed}
+.sc-root button{white-space:nowrap}
+.sc-root .sc-slot[data-kind="composer-add"] button,.sc-root .sc-slot[data-kind="composer-command"] button,
+.sc-root .sc-slot[data-kind="composer-voice"] button:has(svg){padding:0;width:44px}
+.sc-root .sc-slot[data-kind="composer-voice"] svg{width:20px;height:20px}
+.sc-root .sc-slot[data-kind="composer-send"] button{background:var(--nero-accent,#FF7A45);border-color:var(--nero-accent,#FF7A45);color:var(--nero-text-on-accent,#0D0D0D);font-weight:700}
+.sc-root .sc-slot[data-kind="composer-send"] button:disabled{background:#3A2A24;border-color:#5A3E33;color:#E6D6CF}
+/* Accepted at rest and folded with no focus outline and no white send circle. */
+.sc-root :focus,.sc-root :focus-visible{outline:none}
+/* Collapsed bubble: only the draft shows until hover, focus or tap. */
+.nero-shell .sc-root[data-plan="collapsed-bubble"] textarea,.nero-shell .sc-root[data-plan="compact-mobile"] textarea{max-height:120px}
+.sc-root[data-plan="inline-bar"] textarea{min-height:56px}
+.sc-root[data-plan="collapsed-bubble"]{max-width:min(100%,560px);margin-inline:auto;transition:max-width var(--nero-duration-slow,420ms) var(--nero-ease-entrance,ease),box-shadow var(--nero-duration-base,260ms) var(--nero-ease-standard,ease)}
+.sc-root[data-plan="collapsed-bubble"]:hover,.sc-root[data-plan="collapsed-bubble"]:focus-within,.sc-root[data-plan="collapsed-bubble"][data-expanded="true"]{max-width:100%}
+.sc-root[data-plan="collapsed-bubble"] .sc-body{background:linear-gradient(180deg,#33255A,var(--composer-bubble));flex-wrap:wrap}
+.sc-root[data-plan="collapsed-bubble"] .sc-group[data-reveal]{flex:1 1 auto;flex-wrap:nowrap;order:2}
+.sc-root[data-plan="collapsed-bubble"]:is(:hover,:focus-within,[data-expanded="true"]) .sc-group[data-reveal]{flex-wrap:wrap}
+.sc-root[data-plan="collapsed-bubble"] .sc-slot[data-kind="composer-send"]>*{order:3;margin-inline-start:auto}
+.sc-root[data-plan="collapsed-bubble"]:is(:hover,:focus-within,[data-expanded="true"]) .sc-body>.sc-slot[data-kind="composer-input"]{flex-basis:100%}
+.sc-group[data-reveal]{overflow:hidden;max-width:960px;max-height:120px;opacity:1;transform:none;
+  transition:max-width var(--nero-duration-slow,420ms) var(--nero-ease-entrance,ease),max-height var(--nero-duration-slow,420ms) var(--nero-ease-entrance,ease),opacity var(--nero-duration-base,260ms) var(--nero-ease-standard,ease),transform var(--nero-duration-base,260ms) var(--nero-ease-spring,ease)}
+.sc-root[data-plan="collapsed-bubble"][data-expanded="false"]:not(:hover):not(:focus-within) .sc-group[data-reveal]{max-width:0;opacity:0;transform:scale(.92)}
+.sc-root[data-plan="compact-mobile"] .sc-group[data-reveal]{flex-basis:100%}
+.sc-root[data-plan="compact-mobile"][data-expanded="false"]:not(:focus-within) .sc-group[data-reveal]{max-height:0;opacity:0;transform:translateY(-4px)}
+/* The host keeps its box; the template owns the look. */
+.nero-shell .nw-composer.sc-host,.nl-form.sc-host{background:transparent;padding:0;box-shadow:none;border:0;backdrop-filter:none}
+@media(prefers-reduced-motion:reduce){
+  .sc-ring::before{animation:none!important;transform:translate(-50%,-50%) rotate(35deg)}
+  .sc-root,.sc-root *{transition:none!important}
+}
+/* Design Studio dock: a normal-flow block after the mode body. It reserves its
+   own space and is never layered over the canvas or any studio control. (A
+   sticky dock was tried and rejected: it floated over the editor toolbar.) */
+.sc-studio-dock{position:relative;display:grid;gap:var(--nero-space-xs,8px);margin-top:var(--nero-space-md,16px);padding:var(--nero-space-xs,8px) 0 max(var(--nero-space-xs,8px),env(safe-area-inset-bottom,0px))}
+.sc-studio-dock .sc-root[hidden]{display:none}
+.sc-studio-launcher{justify-self:end;min-height:44px;min-width:44px;padding:0 16px;border-radius:999px;border:1px solid rgba(180,92,255,.6);background:#2A1E46;color:#F2F4F8;font:inherit;cursor:pointer}
+.sc-studio-launcher[hidden]{display:none}
+.sc-studio-settings{display:grid;gap:6px;max-width:560px;justify-self:center;width:100%;box-sizing:border-box;padding:12px 14px;border-radius:var(--nero-radius-md,14px);background:#151820;border:1px solid rgba(255,255,255,.14);color:#F2F4F8}
+.sc-studio-settings[hidden]{display:none}
+.sc-studio-settings select{min-height:44px;border-radius:10px;background:#1C2130;color:#F2F4F8;border:1px solid rgba(255,255,255,.2);font:inherit;padding:0 10px}
+.sc-studio-note{margin:0;color:#B4BAC8;font-size:.875rem;line-height:1.45}
+.sc-studio-status{margin:0;min-height:1.2em;text-align:center;color:#B4BAC8;font-size:.875rem}
+.sc-studio-dock[data-voice="listening"] .sc-slot[data-kind="composer-voice"] button{background:#FF7A45;color:#0D0D0D;border-color:#FF7A45}
+/* ASC hosts the same controls. The old glass sheet must not frame them, and the send control stays the accent pill, not a white circle. */
+.nero-composer .nero-sheet:has(.sc-root){background:transparent!important;border:0!important;box-shadow:none!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;padding:0;min-height:0}
+.nero-composer.is-compact .sc-root .nero-plus{display:grid}
+.sc-root .nero-send{width:auto;height:auto;min-width:44px;min-height:44px;border-radius:999px;padding:0 16px;background:#FF7A45;border-color:#FF7A45;color:#0D0D0D}
+.sc-root .nero-send .nero-go{display:none}
+.sc-root .nero-send::after{content:"Send";font-weight:700}
+.nero-composer.is-busy .sc-root .nero-send::after{content:none}
+.nero-composer.is-busy .sc-root .nero-send .nero-stop{display:block}
