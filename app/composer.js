@@ -1,8 +1,6 @@
-/* Nero on every page, the dashboard included. A plain ASC field while browsing,
-   expanded only while someone is typing. The purple circle starts a voice
-   conversation when one exists; otherwise it shows that voice is not connected.
-   Push-to-talk dictation, history, attachments, and the admin tailnet relay
-   stay on the text field. */
+/* Nero on every page, the dashboard included. Compact glass pill while browsing,
+   expanded only while someone is typing. Push-to-talk, history, attachments,
+   and the admin tailnet relay live here. */
 (function () {
   'use strict';
   // One composer per page. The dashboard shows it too (Toni, 2026-10-17); the
@@ -64,11 +62,7 @@
       '<button class="nero-pill" type="button" data-act="history">Povijest</button>' +
       '<button class="nero-pill" type="button" data-act="relay" hidden aria-pressed="false" aria-label="Send to Toni &amp; Nero">Toni &amp; Nero</button>' +
     '</div>' +
-    '<div class="nero-history" hidden></div>' +
-    '<p class="nero-voice-soon" hidden role="status"></p>' +
-    '<button class="nero-voice" id="neroVoice" type="button" aria-pressed="false" aria-label="Glasovni razgovor s Nerom">' +
-      '<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M6 11a6 6 0 0012 0M12 17v3"/></svg>' +
-    '</button>';
+    '<div class="nero-history" hidden></div>';
   // Docked inside the page column, after the content — never floating over it.
   // One layer above everything; the page reserves its height at the end so
   // nothing is ever hidden beneath it.
@@ -956,79 +950,6 @@
       recLabel.hidden = true;
     });
   }
-  var voiceTalk = root.querySelector('.nero-voice');
-  var voiceSoon = root.querySelector('.nero-voice-soon');
-  root.insertBefore(voiceSoon, root.querySelector('.nero-sheet'));
-  function voiceLang() {
-    var code = 'hr';
-    try {
-      var saved = localStorage.getItem('asc.lang');
-      if (saved === 'en' || saved === 'hr') code = saved;
-    } catch (e) {}
-    return code;
-  }
-  function paintVoice() {
-    var en = voiceLang() === 'en';
-    voiceTalk.setAttribute('aria-label', en ? 'Voice conversation with Nero' : 'Glasovni razgovor s Nerom');
-  }
-  // Inside Nero the button asks NERO for a tenant voice session. The xAI key
-  // stays on that server. Anywhere else, or if the route is not ready, the
-  // button says so. Cost and usage are never drawn.
-  function neroVoiceUrl() {
-    var origin = '';
-    try {
-      if (window.ASC_NERO_ORIGIN) {
-        var given = new URL(String(window.ASC_NERO_ORIGIN), location.href);
-        if (given.protocol === 'https:' || given.hostname === 'localhost' || given.hostname === '127.0.0.1') origin = given.origin;
-      }
-    } catch (e) {}
-    if (!origin && /(^|\.)nerosummit\.com$/i.test(location.hostname)) origin = location.origin;
-    return origin ? origin + '/v1/tenant/voice/session' : '';
-  }
-  function showVoiceState() {
-    paintVoice();
-    voiceSoon.textContent = voiceLang() === 'en' ? 'Voice is not configured.' : 'Glas nije podešen.';
-    voiceSoon.hidden = false;
-    voiceTalk.setAttribute('aria-pressed', 'true');
-  }
-  function sessionForPlayer(data) {
-    var clean = {};
-    if (!data || typeof data !== 'object') return clean;
-    ['ok', 'url', 'token', 'session_id', 'expires_at', 'provider'].forEach(function (key) {
-      if (data[key] != null) clean[key] = data[key];
-    });
-    return clean;
-  }
-  function openVoiceConversation() {
-    var url = neroVoiceUrl();
-    if (!url) { showVoiceState(); return; }
-    voiceTalk.setAttribute('aria-busy', 'true');
-    fetch(url, {
-      method: 'POST',
-      credentials: 'include',
-      headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
-      body: JSON.stringify({ surface: 'asc', lang: voiceLang() })
-    }).then(function (res) {
-      if (!res.ok) throw new Error('status');
-      return res.json();
-    }).then(function (data) {
-      var player = window.ASCVoiceConversation;
-      if (data && data.ok !== false && data.configured !== false && player && player.available === true && typeof player.start === 'function') {
-        player.start(sessionForPlayer(data));
-        voiceSoon.hidden = true;
-        voiceTalk.setAttribute('aria-pressed', 'true');
-        return;
-      }
-      showVoiceState();
-    }).catch(function () {
-      showVoiceState();
-    }).then(function () {
-      voiceTalk.removeAttribute('aria-busy');
-    });
-  }
-  paintVoice();
-  voiceTalk.addEventListener('click', function () { openVoiceConversation(); });
-
   var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (SR || (navigator.mediaDevices && window.MediaRecorder)) {
     mic.hidden = false;
