@@ -205,6 +205,7 @@ async function boot() {
   }
   if (initial) await loadSet(initial);
   else render();
+  if (setRow && !slotQr && !noSlots && !unknown) suggest();
 }
 
 const initial = queryParam("set");
