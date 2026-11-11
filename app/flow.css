@@ -6,9 +6,24 @@
 .flow-card h2{font-family:Sora;font-weight:600;font-size:18px;margin:0 0 8px}
 .flow-card p.lead{color:var(--muted);font-size:13.5px;line-height:1.45;margin:0 0 14px}
 .flow-steps{display:flex;gap:8px;margin:0 0 14px}
-.flow-steps span{font:600 11px Inter;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);padding:6px 10px;border-radius:999px;border:1px solid var(--line)}
-.flow-steps span.on{color:var(--ink);border-color:transparent;background:rgba(225,6,0,.14)}
+.flow-steps span{min-height:44px;display:inline-flex;align-items:center;font:600 14px Inter;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);padding:8px 14px;border-radius:999px;border:1px solid var(--line)}
+.flow-steps span.on{color:#fff;border-color:transparent;background:#e10600}
+.is-operator .ci-stats,.is-operator .ci-hero .lead{display:none}
+.is-operator [data-op="rare"]{display:none}
+.is-operator.show-rare [data-op="rare"].field,
+.is-operator.show-rare [data-op="rare"].switch{display:flex}
+.is-operator.show-rare section[data-op="rare"]{display:flex}
+.is-operator.show-rare .grid-2[data-op="rare"]{display:grid}
+.is-operator #c_name,.is-operator #v_plate,.is-operator #s_quick_size,
+.is-operator #s_qty,.is-operator #s_photo{min-height:56px;font-size:18px}
+.is-operator .segmented button{min-height:56px;font-size:16px}
+.is-operator .action-bar{flex-direction:column}
+.is-operator .action-bar .btn{min-height:44px;width:100%}
+.is-operator .action-bar .btn-primary,.is-operator .btn-primary,#place-confirm{min-height:56px;font-size:18px}
+.is-operator #locField,form#ci[hidden]{display:none !important}
+.is-operator #opMore{min-height:44px;width:100%}
 .flow-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+.flow-actions[hidden]{display:none}
 .flow-actions .btn{flex:1}
 .flow-list{display:flex;flex-direction:column;gap:8px;margin-top:12px}
 .flow-hit{display:flex;flex-direction:column;gap:2px;text-align:left;text-decoration:none;color:inherit;padding:12px 14px;border-radius:16px;border:1px solid var(--line);background:var(--panel-2)}
