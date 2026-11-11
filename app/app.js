@@ -15,10 +15,13 @@ import('./detail-overlay.js').catch(() => {});
 
 // ---- Live staging gate: every app/ page requires a real Supabase session -----
 // (The mock preview/ demo has no gate.) Hide the page until the check resolves so
-// no mock data flashes before we know who's here; on no session → the login page.
+// no mock data flashes before we know who's here; on no session → Nero Summit.
 (() => {
   if (/\/(login|warehouse)\.html$/.test(location.pathname)) return;
   document.documentElement.style.visibility = 'hidden';
+  // Same URL as js/neroLogin.js. Kept inline so this gate stays one script;
+  // tests lock the two copies together.
+  const NERO_LOGIN = 'https://app.nerosummit.com';
   // Prag splash interplay: pages that carry the boot script expose window.ASCSplash;
   // on all other gated pages this stub keeps today's behavior byte-for-byte.
   const S = window.ASCSplash || { mode: null, done(){}, bloom(cb){ cb && cb(); }, handoff(u){ location.replace(u); } };
@@ -31,7 +34,7 @@ import('./detail-overlay.js').catch(() => {});
     sessionEnding = true; authEpoch++;
     document.documentElement.style.visibility = 'hidden';
     document.dispatchEvent(new CustomEvent('asc:sign-out'));
-    S.bloom(() => S.handoff('login.html'));
+    S.bloom(() => S.handoff(NERO_LOGIN));
   };
   dbReady.then((m) => {
     m.onAuthChange((event, session) => {
@@ -77,11 +80,11 @@ import('./detail-overlay.js').catch(() => {});
           const rel = location.pathname.split('/app/').pop() + location.search;
           if (/^[a-z-]+(\/index)?\.html(\?[^#]*)?$|^warehouse-preview\/(index\.html)?(\?[^#]*)?$/.test(rel) && !/^login\.html/.test(rel)) sessionStorage.setItem('asc.return', rel);
         } catch (e) {}
-        S.bloom(() => S.handoff('login.html'));
+        S.bloom(() => S.handoff(NERO_LOGIN));
       }   // re-cover first: even a watchdog-spent splash bounces under the surface
     })
     .catch(leaveSession);  // A failed session check must never reveal a previous user's page.
-  // Sign-out: the menu drawer's "Odjava" ends the REAL Supabase session, then → login
+  // Sign-out: the menu drawer's "Odjava" ends the REAL Supabase session, then → Nero
   // through the same covered doorway (the MPA white-flash exists in both directions).
   document.addEventListener('click', (e) => {
     if (!e.target.closest('[data-logout],[data-signout]')) return;
@@ -89,7 +92,7 @@ import('./detail-overlay.js').catch(() => {});
     sessionEnding = true; authEpoch++;
     document.documentElement.style.visibility = 'hidden';
     document.dispatchEvent(new CustomEvent('asc:sign-out'));
-    dbReady.then((m) => m.signOut()).catch(() => {}).finally(() => S.bloom(() => S.handoff('login.html')));
+    dbReady.then((m) => m.signOut()).catch(() => {}).finally(() => S.bloom(() => S.handoff(NERO_LOGIN)));
   }, true);
 })();
 

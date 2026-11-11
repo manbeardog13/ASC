@@ -4,6 +4,7 @@ import vm from 'node:vm';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 const read = file => readFile(path.join(process.cwd(), file), 'utf8');
+const NERO = 'https://app.nerosummit.com';
 const tick = () => new Promise(resolve => setImmediate(resolve));
 const deferred = () => { let resolve; const promise = new Promise(r => { resolve = r; }); return { promise, resolve }; };
 
@@ -25,19 +26,26 @@ async function gate({ pathname = '/ASC/app/dashboard.html', session = {user:{id:
     clickLogout:()=>handlers.get('click')?.({target:{closest:()=>true},preventDefault(){},stopPropagation(){}}) };
 }
 
+test('an authenticated session reaches the app', async () => {
+  const app = await gate();
+  assert.equal(app.reads(),1);
+  assert.equal(app.style.visibility,'');
+  assert.equal(app.reveals(),1);
+  assert.deepEqual(app.targets,[]);
+});
 test('dashboard authenticates and logout reaches the real auth service', async () => {
   const app = await gate();
   assert.equal(app.reads(),1);
   app.clickLogout(); await tick();
   assert.equal(app.signouts(),1);
-  assert.deepEqual(app.targets,['login.html']);
+  assert.deepEqual(app.targets,[NERO]);
   assert.ok(app.events.includes('asc:sign-out'));
 });
 test('failed or absent dashboard session cannot reveal the protected screen', async () => {
   for (const opts of [{fail:true},{session:null}]) {
     const app = await gate(opts);
     assert.equal(app.style.visibility,'hidden');
-    assert.deepEqual(app.targets,['login.html']);
+    assert.deepEqual(app.targets,[NERO]);
   }
 });
 test('signout in another tab clears the view; switching accounts reloads private DOM', async () => {
@@ -46,14 +54,14 @@ test('signout in another tab clears the view; switching accounts reloads private
   assert.equal(app.reloads(),1);
   assert.equal(app.style.visibility,'hidden');
   app.auth[0]('SIGNED_OUT',null);
-  assert.deepEqual(app.targets,['login.html']);
+  assert.deepEqual(app.targets,[NERO]);
 });
 
 test('a session resolved after signout cannot reveal the old account',async()=>{
   const pendingSession=deferred();const app=await gate({pendingSession});
   app.auth[0]('SIGNED_OUT',null);
   pendingSession.resolve({user:{id:'user-A'}});await tick();await tick();
-  assert.equal(app.style.visibility,'hidden');assert.equal(app.reveals(),0);assert.deepEqual(app.targets,['login.html']);
+  assert.equal(app.style.visibility,'hidden');assert.equal(app.reveals(),0);assert.deepEqual(app.targets,[NERO]);
 });
 test('account switch while the initial session is pending reloads instead of revealing old DOM',async()=>{
   const pendingSession=deferred();const app=await gate({pendingSession});
@@ -74,7 +82,7 @@ test('logout click suppresses late session reveal while signOut is still pending
   app.clickLogout();await tick();
   pendingSession.resolve({user:{id:'user-A'}});await tick();await tick();
   assert.equal(app.style.visibility,'hidden');assert.equal(app.reveals(),0);assert.equal(app.signouts(),1);
-  pendingSignOut.resolve();await tick();assert.deepEqual(app.targets,['login.html']);
+  pendingSignOut.resolve();await tick();assert.deepEqual(app.targets,[NERO]);
 });
 
 async function queue(initial = []) {
