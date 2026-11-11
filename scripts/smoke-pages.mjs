@@ -54,7 +54,7 @@ const db = `const session=${session};\n` + [...exportNames(path.join(root, 'js/d
 )).join('\n') + '\n';
 
 const pages = [
-  ['/app/login.html', ['Dobrodošli natrag', 'Ploča']],
+  ['/app/login.html', ['Prijava je na Nero Summitu', 'Ploča'], '() => location.pathname.endsWith("/dashboard.html") && !document.querySelector(\'input[type="password"], #form, #google\')'],
   ['/app/dashboard.html', 'Ploča', '() => !document.getElementById("asc-onboard") && Boolean(document.querySelector("main.shell"))'],
   ['/app/dashboard.html?tour=zone', 'Ploča', '() => !document.getElementById("asc-onboard")'],
   ['/app/dashboard.html?tour=next', 'Ploča', '() => !document.getElementById("asc-onboard")'],

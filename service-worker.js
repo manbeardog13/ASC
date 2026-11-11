@@ -88,6 +88,7 @@ const SHELL = [
   "./js/images.js",
   "./js/ui.js",
   "./js/db.js",
+  "./js/neroLogin.js",
   "./js/qr.js",
   "./js/qrlabel.js",
   "./js/scanner.js",

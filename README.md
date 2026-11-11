@@ -64,6 +64,18 @@ assets/icon.svg         App icon
 SETUP.md                Step-by-step setup for the shop owner
 ```
 
+## Sign-in
+
+ASC does not show a password, magic-link, or Google form. `/app/login.html`,
+logout, and any page opened without a session send the browser to
+[https://app.nerosummit.com](https://app.nerosummit.com). This repo has no Nero
+tenant login route and the Nero hand-off does not take a return URL, so the
+redirect is the app root and nothing user-supplied is added to it.
+
+A session that is already in the browser, including one the Nero hand-off
+established, still opens the app. A same-app `asc.return` path (a scanned
+label, for example) is kept and followed only after that session exists.
+
 ## Setup
 
 See **[SETUP.md](SETUP.md)** for the full walk-through. Short version:
@@ -71,7 +83,8 @@ See **[SETUP.md](SETUP.md)** for the full walk-through. Short version:
 1. Create a free Supabase project → run `supabase/schema.sql` in its SQL editor.
 2. Add one login user in Supabase → Authentication → Users.
 3. Put your Supabase URL + anon key + app URL into `js/config.js`.
-4. Turn on GitHub Pages for this repo. Open the page, sign in, start checking tires in.
+4. Turn on GitHub Pages for this repo. Open the page. Sign-in is Nero Summit
+   (`https://app.nerosummit.com`); an existing session opens the board.
 
 ## Also included
 

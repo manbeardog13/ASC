@@ -78,7 +78,8 @@ You'll do three things: **(A)** set up the database, **(B)** connect the app,
 
 1. Open the app address on your phone. In the browser menu choose **Add to Home Screen**
    so it launches like an app. Do the same on the shop computer.
-2. Sign in with the email/password you made in step A3. Everyone who logs in shares
+2. Sign in at [https://app.nerosummit.com](https://app.nerosummit.com). The ASC
+   login page only redirects there. Everyone who logs in shares
    the same data, and **changes show up on every device within a second** — the green
    **● Live** dot in the top bar means sync is on.
 3. **Check-in:** tap **Check-in**, fill in the customer, vehicle, location and tire
@@ -149,9 +150,9 @@ get full control from day one.
 
 **Adding staff — all in the app, no dashboard needed.** Open the **Users** tab
 (top-right menu → *Users*). Tap **Add user**, enter their full name + email and
-pick **Admin** or **User**. Then the new person opens the app, taps **"First time?
-Create account"** on the login screen, and signs up with *that same email* and a
-password they choose. They land in the role you assigned. **Remove** anyone from the
+pick **Admin** or **User**. Then the new person signs in through Nero Summit
+(`https://app.nerosummit.com`); ASC no longer has a password or "create account"
+form. They land in the role you assigned. **Remove** anyone from the
 same Users tab — they lose access immediately.
 
 **One Supabase switch to flip:** Authentication → Providers → **Email** → make sure
@@ -188,8 +189,9 @@ above still works.
    settings** → add your provider (e.g. Resend, SendGrid, Postmark). Supabase's
    built-in email is heavily rate-limited and meant only for testing.
 
-With that done: adding a user emails them an invite; they click it and land on a
-**"Set your password"** screen, then they're in with the role you gave them.
+With that done: adding a user emails them an invite. ASC no longer shows a
+"set your password" screen; they sign in through Nero Summit and land in the
+role you gave them.
 Removing a user deletes their login for good. The owner is refused by the function
 too, so a delete can never take out `cryptonii13@gmail.com`.
 
@@ -202,7 +204,8 @@ too, so a delete can never take out `cryptonii13@gmail.com`.
 - **Camera won't open** — the site must be on **https** (GitHub Pages is), and the
   browser will ask for camera permission the first time — tap **Allow**. You can
   always type a code into the box on the Scan screen instead.
-- **"Invalid login credentials"** — the email/password must match a user you created
-  in Supabase (step A3).
+- **Sent back to Nero Summit** — ASC no longer accepts a password on its own
+  page. Sign in at `https://app.nerosummit.com`. An existing session should
+  open the board instead of redirecting.
 - **Nothing saves / permission error** — make sure you ran the whole `schema.sql`
   and that you're signed in.

@@ -44,36 +44,56 @@ async function navigation(browser){
   console.log('PASS navigation: mobile focus containment/restoration, profile handoff, 1020/1021 breakpoint, desktop reachability');
 }
 async function authentication(browser){
-  for(const width of [320,390,768,1440]){
-    const h=await pageFor(browser,{width,signedOut:true});
-    try{
-      const p=h.page;
-      await p.goto('http://asc.test/app/login.html');
-      await p.locator('#switch').click();
-      const boxes=await p.evaluate(()=>[...document.querySelectorAll('.auth-card,.auth-names .fieldx,#submit,#google')].map(e=>({name:e.className,x:e.getBoundingClientRect().x,right:e.getBoundingClientRect().right})));
-      for(const box of boxes)assert.ok(box.x>=0&&box.right<=width,`${box.name} clipped at ${width}`);
-      await p.locator('#first').fill('UI');await p.locator('#last').fill('Audit');
-      await p.locator('#email').fill('ui@example.invalid');await p.locator('#password').fill('synthetic-test-password');
-      await p.locator('#submit').click();
-      await p.waitForFunction(()=>document.querySelector('#msg').textContent.includes('provjeri email'));
-      assert.equal(await p.locator('#title').innerText(),'Dobrodošli natrag');
-      assert.deepEqual(h.errors,[]);
-    }finally{await h.context.close();}
-  }
-  for(const type of ['reset','recover']){
-    const h=await pageFor(browser,{width:390,signedOut:true});
-    try{
-      const p=h.page;
-      await p.goto('http://asc.test/app/login.html'+(type==='recover'?'#type=recovery':''));
-      if(type==='reset'){await p.locator('#forgot').click();await p.locator('#email').fill('ui@example.invalid');}
-      else await p.locator('#password').fill('new-synthetic-password');
-      assert.equal(await p.locator('#form').evaluate(e=>e.checkValidity()),true,`Hidden fields must not block ${type}`);
-      await p.locator('#submit').click();
-      await p.waitForFunction(type=>document.querySelector('#msg').textContent.includes(type==='reset'?'Link za reset poslan':'Lozinka spremljena'),type);
-      assert.deepEqual(h.errors,[]);
-    }finally{await h.context.close();}
-  }
-  console.log('PASS authentication: bounded signup fields, visible confirmation, fresh reset and recovery without hidden-field validation');
+  const signedOut=await pageFor(browser,{width:390,signedOut:true});
+  try{
+    const p=signedOut.page;
+    await p.goto('http://asc.test/app/login.html');
+    await p.waitForURL((url)=>url.hostname==='app.nerosummit.com');
+    assert.equal(new URL(p.url()).pathname,'/');
+    assert.equal(new URL(p.url()).search,'');
+    assert.equal(await p.locator('input[type=password], #form, #google').count(),0);
+  }finally{await signedOut.context.close();}
+  const deep=await pageFor(browser,{width:390,signedOut:true});
+  try{
+    const p=deep.page;
+    await p.goto('http://asc.test/app/set-detail.html?code=ASC-2026-0003');
+    await p.waitForURL((url)=>url.hostname==='app.nerosummit.com');
+    assert.equal(new URL(p.url()).search,'');
+  }finally{await deep.context.close();}
+  const authed=await pageFor(browser,{width:390});
+  try{
+    const p=authed.page;
+    await p.goto('http://asc.test/app/dashboard.html');
+    await p.waitForSelector('main.shell');
+    assert.equal(new URL(p.url()).pathname,'/app/dashboard.html');
+    assert.deepEqual(authed.errors,[]);
+    await p.waitForFunction(()=>document.documentElement.style.visibility==='');
+    await p.evaluate(()=>{
+      document.body.insertAdjacentHTML('beforeend','<button type="button" data-logout id="asc-test-logout">Odjava</button>');
+      document.getElementById('asc-test-logout').click();
+    });
+    await p.waitForURL((url)=>url.hostname==='app.nerosummit.com');
+    assert.equal(new URL(p.url()).search,'');
+  }finally{await authed.context.close();}
+  const back=await pageFor(browser,{width:390});
+  try{
+    const p=back.page;
+    await p.addInitScript(()=>sessionStorage.setItem('asc.return','customers.html'));
+    await p.goto('http://asc.test/app/login.html');
+    await p.waitForURL('**/customers.html');
+    assert.equal(new URL(p.url()).hostname,'asc.test');
+    assert.deepEqual(back.errors,[]);
+  }finally{await back.context.close();}
+  const blocked=await pageFor(browser,{width:390});
+  try{
+    const p=blocked.page;
+    await p.addInitScript(()=>sessionStorage.setItem('asc.return','https://evil.invalid/phish'));
+    await p.goto('http://asc.test/app/login.html');
+    await p.waitForURL('**/dashboard.html');
+    assert.equal(new URL(p.url()).hostname,'asc.test');
+    assert.deepEqual(blocked.errors,[]);
+  }finally{await blocked.context.close();}
+  console.log('PASS authentication: login and signed-out deep links go to Nero; a session stays in the app; logout returns to Nero');
 }
 async function intakeAndIntroduction(browser){
   const intake=await pageFor(browser,{width:320});
