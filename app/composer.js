@@ -112,6 +112,9 @@
   var filesBox = root.querySelector('.nero-files');
   var fileInput = root.querySelector('.nero-file');
   var send = root.querySelector('.nero-send');
+  import(new URL('studio-composer/mount-asc.js', base).href).then(function (mod) {
+    mod.mountAscComposer(root, document, window, new URL('studio-composer/composer.css', base).href);
+  }).catch(function () {});
   var mic = root.querySelector('.nero-mic');
   var recLabel = root.querySelector('.nero-rec');
   var historyBox = root.querySelector('.nero-history');

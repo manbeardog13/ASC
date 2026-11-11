@@ -79,5 +79,11 @@ test('chat history is owner-scoped and the composer queues without tokens', () =
   assert.match(composer, /new SR\(\)/);
   assert.match(read('app/composer.css'), /backdrop-filter:blur\(22px\) saturate\(180%\)/);
   assert.match(read('app/composer.css'), /prefers-reduced-motion:reduce/);
+  assert.match(composer, /studio-composer\/mount-asc\.js/);
+  const studio = read('app/studio-composer/composer.css');
+  assert.match(studio, /\.sc-root :focus-visible\{outline:none\}/);
+  assert.doesNotMatch(studio, /outline:2px solid var\(--nero-focus-ring/);
+  assert.match(studio, /background:#FF7A45/);
+  assert.doesNotMatch(studio, /composer-send[\s\S]{0,220}background:\s*(#fff|#ffffff|white)\b/i);
   assert.match(read('app/agent-config.js'), /BUILDER_RELAY_URL = ""/);
 });

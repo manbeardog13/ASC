@@ -3,7 +3,7 @@
    same-origin files (so deploys show up right away), cache fallback when
    offline. Live data always comes from Supabase online. */
 const CACHE_PREFIX = "asc-tirehotel-";
-const CACHE = CACHE_PREFIX + "v117-palette-shell";
+const CACHE = CACHE_PREFIX + "v120-studio-composer";
 // Cross-origin dependencies the app cannot boot (or scan) without. Same-origin
 // files are precached below; these are runtime-cached network-first so an
 // offline cold boot doesn't die on the supabase-js ESM import.
@@ -41,6 +41,10 @@ const SHELL = [
   "./app/concierge.js",
   "./app/composer.js",
   "./app/composer.css",
+  "./app/studio-composer/composer.css",
+  "./app/studio-composer/mount-asc.js",
+  "./app/studio-composer/render.js",
+  "./app/studio-composer/family.js",
   "./app/builder-queue.js",
   "./app/agent-config.js",
   "./app/agent-gemini.js",
