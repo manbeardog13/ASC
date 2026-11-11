@@ -55,9 +55,9 @@ const db = `const session=${session};\n` + [...exportNames(path.join(root, 'js/d
 
 const pages = [
   ['/app/login.html', ['Dobrodošli natrag', 'Ploča']],
-  ['/app/dashboard.html', 'Ploča', '() => { const root=document.getElementById("asc-onboard"); return Boolean(root && root.querySelector("[data-next]") && !root.querySelector("[data-skip]") && root.innerText.includes("Najprije stvori mjesto")); }'],
-  ['/app/dashboard.html?tour=zone', 'Ploča', '() => { const root=document.getElementById("asc-onboard"); const text=root?root.innerText:""; return Boolean(root && text.includes("Zona 2.1") && !text.includes("Najprije stvori mjesto")); }'],
-  ['/app/dashboard.html?tour=next', 'Ploča', '() => { const root=document.getElementById("asc-onboard"); const text=root?root.innerText:""; return Boolean(root && text.includes("Zona 2.2") && !text.includes("Zona 1") && !text.includes("Najprije stvori mjesto")); }'],
+  ['/app/dashboard.html', 'Ploča', '() => !document.getElementById("asc-onboard") && Boolean(document.querySelector("main.shell"))'],
+  ['/app/dashboard.html?tour=zone', 'Ploča', '() => !document.getElementById("asc-onboard")'],
+  ['/app/dashboard.html?tour=next', 'Ploča', '() => !document.getElementById("asc-onboard")'],
   ['/app/checkin.html', 'Spremi gume', `async () => {
     const loc=document.getElementById("locField");
     const steps=document.getElementById("flowSteps");
