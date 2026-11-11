@@ -970,29 +970,61 @@
   function paintVoice() {
     var en = voiceLang() === 'en';
     voiceTalk.setAttribute('aria-label', en ? 'Voice conversation with Nero' : 'Glasovni razgovor s Nerom');
-    voiceSoon.textContent = en
-      ? 'Voice conversation is coming. No call is connected.'
-      : 'Glasovni razgovor stiže. Poziv još nije uključen.';
   }
-  function revealVoiceSoon() {
+  // Inside Nero the button asks NERO for a tenant voice session. The xAI key
+  // stays on that server. Anywhere else, or if the route is not ready, the
+  // button says so. Cost and usage are never drawn.
+  function neroVoiceUrl() {
+    var origin = '';
+    try {
+      if (window.ASC_NERO_ORIGIN) {
+        var given = new URL(String(window.ASC_NERO_ORIGIN), location.href);
+        if (given.protocol === 'https:' || given.hostname === 'localhost' || given.hostname === '127.0.0.1') origin = given.origin;
+      }
+    } catch (e) {}
+    if (!origin && /(^|\.)nerosummit\.com$/i.test(location.hostname)) origin = location.origin;
+    return origin ? origin + '/v1/tenant/voice/session' : '';
+  }
+  function showVoiceState() {
     paintVoice();
+    voiceSoon.textContent = voiceLang() === 'en' ? 'Voice is not configured.' : 'Glas nije podešen.';
     voiceSoon.hidden = false;
     voiceTalk.setAttribute('aria-pressed', 'true');
   }
-  // Voice conversation is a separate control from dictation. ASC has no live
-  // call entry point, so the button must not pretend a call started.
+  function sessionForPlayer(data) {
+    var clean = {};
+    if (!data || typeof data !== 'object') return clean;
+    ['ok', 'url', 'token', 'session_id', 'expires_at', 'provider'].forEach(function (key) {
+      if (data[key] != null) clean[key] = data[key];
+    });
+    return clean;
+  }
   function openVoiceConversation() {
-    var hook = window.ASCVoiceConversation;
-    if (hook && hook.available === true && typeof hook.start === 'function') {
-      try { hook.start(); }
-      catch (err) { revealVoiceSoon(); }
-      return;
-    }
-    if (voiceSoon.hidden) revealVoiceSoon();
-    else {
-      voiceSoon.hidden = true;
-      voiceTalk.setAttribute('aria-pressed', 'false');
-    }
+    var url = neroVoiceUrl();
+    if (!url) { showVoiceState(); return; }
+    voiceTalk.setAttribute('aria-busy', 'true');
+    fetch(url, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ surface: 'asc', lang: voiceLang() })
+    }).then(function (res) {
+      if (!res.ok) throw new Error('status');
+      return res.json();
+    }).then(function (data) {
+      var player = window.ASCVoiceConversation;
+      if (data && data.ok !== false && data.configured !== false && player && player.available === true && typeof player.start === 'function') {
+        player.start(sessionForPlayer(data));
+        voiceSoon.hidden = true;
+        voiceTalk.setAttribute('aria-pressed', 'true');
+        return;
+      }
+      showVoiceState();
+    }).catch(function () {
+      showVoiceState();
+    }).then(function () {
+      voiceTalk.removeAttribute('aria-busy');
+    });
   }
   paintVoice();
   voiceTalk.addEventListener('click', function () { openVoiceConversation(); });

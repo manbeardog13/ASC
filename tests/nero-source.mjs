@@ -84,6 +84,9 @@ test('chat history is owner-scoped and the composer queues without tokens', () =
   assert.match(composer, /function openVoiceConversation/);
   assert.match(composer, /Glasovni razgovor s Nerom/);
   assert.match(composer, /Voice conversation with Nero/);
+  assert.match(composer, /\/v1\/tenant\/voice\/session/);
+  assert.match(composer, /Glas nije podešen\./);
+  assert.match(composer, /Voice is not configured\./);
   assert.match(composer, /ASCVoiceConversation/);
   const voiceStart = composer.indexOf('function openVoiceConversation');
   const voiceFn = composer.slice(voiceStart, composer.indexOf('paintVoice();', voiceStart));
