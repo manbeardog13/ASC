@@ -67,3 +67,33 @@ test("applyTenantAccess hides by default and shows for tenant_admin", () => {
   applyTenantAccess(root, "staff"); assert.equal(el.hidden, true);
   applyTenantAccess(root, "tenant_admin"); assert.equal(el.hidden, false);
 });
+
+test("a stale tenant-role RPC is dropped after the session is cleared", async () => {
+  const items = { [SESSION_KEY]: JSON.stringify(good) };
+  const storage = { getItem: (k) => items[k] ?? null, removeItem: (k) => { delete items[k]; } };
+  _resetTenantRoleCache();
+  let release;
+  const pending = new Promise((resolve) => { release = resolve; });
+  const slow = async () => {
+    await pending;
+    return { ok: true, json: async () => [{ tenant: "asc", role: "tenant_admin" }] };
+  };
+  const inflight = loadTenantRole({ storage, fetchImpl: slow });
+  clearNeroSession(storage);
+  release();
+  assert.equal(await inflight, null, "sign-out must drop a late tenant_admin response");
+  assert.equal(await loadTenantRole({ storage, fetchImpl: async () => { throw new Error("must not fetch without a session"); } }), null);
+  items[SESSION_KEY] = JSON.stringify(good);
+  let calls = 0;
+  const next = async () => {
+    calls += 1;
+    return { ok: true, json: async () => [{ tenant: "asc", role: "staff" }] };
+  };
+  assert.equal(await loadTenantRole({ storage, fetchImpl: next }), "staff");
+  assert.equal(calls, 1, "the stale tenant_admin result must not be cached");
+});
+
+test("navigationIcons includes the people SVG used by the People link", async () => {
+  const { navigationIcons } = await import("../app/navigation.js");
+  assert.match(navigationIcons.people, /<svg\b/);
+});

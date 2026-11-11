@@ -1,4 +1,10 @@
 import { createGate } from './gate.js';
+import { applyTenantAccess, clearNeroSession } from '../../js/tenantRole.js';
+function endWarehouseSession(){
+  clearNeroSession();
+  applyTenantAccess(document.getElementById('asc-navigation'), null);
+  document.dispatchEvent(new CustomEvent('asc:sign-out'));
+}
 const root=document.getElementById('preview-root');
 const gatePanel=document.getElementById('preview-gate');
 const message=document.getElementById('preview-message');
@@ -21,6 +27,7 @@ const gate=createGate({
   },
   async loadApp(){const module=await import('./app.js');return module.startPreview;},
   isVisible:()=>!document.hidden,
+  onSessionEnd:endWarehouseSession,
   present(ready,text){
     if(!ready&&root.contains(document.activeElement))lastFocus=document.activeElement;
     root.hidden=!ready;root.inert=!ready;

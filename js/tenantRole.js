@@ -34,28 +34,38 @@ export function roleFor(list, tenant = TENANT) {
 export const canManagePeople = (role) => role === "tenant_admin" || role === "operator";
 
 let cached;
+let loadGeneration = 0;
+function sessionStillCurrent(storage, token, now) {
+  const current = readNeroSession(storage, now);
+  return Boolean(current && current.access_token === token);
+}
 export async function loadTenantRole({ storage = globalThis.sessionStorage, fetchImpl = globalThis.fetch, now = Date.now() } = {}) {
   const session = readNeroSession(storage, now);
   if (!session || typeof fetchImpl !== "function") return null;
   if (cached && cached.token === session.access_token) return cached.role;
+  const ticket = loadGeneration;
   try {
     const r = await fetchImpl(NERO_PROJECT + "/rest/v1/rpc/tenant_my_tenants", {
       method: "POST", cache: "no-store", redirect: "error",
       headers: { apikey: NERO_PUBLISHABLE_KEY, Authorization: "Bearer " + session.access_token, "Content-Type": "application/json" },
       body: "{}",
     });
+    if (ticket !== loadGeneration || !sessionStillCurrent(storage, session.access_token, now)) return null;
     if (!r.ok) return null;
     const list = await r.json().catch(() => null);
+    if (ticket !== loadGeneration || !sessionStillCurrent(storage, session.access_token, now)) return null;
     if (!Array.isArray(list)) return null;
     const role = roleFor(list);
+    if (ticket !== loadGeneration || !sessionStillCurrent(storage, session.access_token, now)) return null;
     cached = { token: session.access_token, role };
     return role;
   } catch { return null; }
 }
-export function _resetTenantRoleCache() { cached = undefined; }
+export function _resetTenantRoleCache() { cached = undefined; loadGeneration += 1; }
 
 export function clearNeroSession(storage = globalThis.sessionStorage) {
   cached = undefined;
+  loadGeneration += 1;
   try { storage?.removeItem?.(SESSION_KEY); } catch {}
 }
 
