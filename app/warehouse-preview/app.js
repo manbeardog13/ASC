@@ -33,7 +33,7 @@ const icon = (name,size=19) => `<svg width="${size}" height="${size}" viewBox="0
 $('asc-navigation').innerHTML=renderAppNavigation({warehouseOpen:true});
 applyNavAccess($('asc-navigation'), null);
 let canEdit=false;
-loadMyProfile().then((profile)=>{applyNavAccess($('asc-navigation'), profile?.role);canEdit=canEditWarehouse(profile?.role);if(!disposed){render();void syncShared();}}).catch(()=>{});
+loadMyProfile().then((profile)=>{applyNavAccess($('asc-navigation'), profile?.role, profile?.email);canEdit=canEditWarehouse(profile?.role);if(!disposed){render();void syncShared();}}).catch(()=>{});
 syncThemeButton($('sbTheme'));
 $('sbTheme')?.addEventListener('click', ()=>{ window.ASCTheme?.toggle(); syncThemeButton($('sbTheme')); });
 installLangButton($('sbLang'));
