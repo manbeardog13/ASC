@@ -1,6 +1,8 @@
-/* Nero on every page, the dashboard included. Compact glass pill while browsing,
-   expanded only while someone is typing. Push-to-talk, history, attachments,
-   and the admin tailnet relay live here. */
+/* Nero on every page, the dashboard included. A plain ASC field while browsing,
+   expanded only while someone is typing. The purple circle starts a voice
+   conversation when one exists; otherwise it shows that voice is not connected.
+   Push-to-talk dictation, history, attachments, and the admin tailnet relay
+   stay on the text field. */
 (function () {
   'use strict';
   // One composer per page. The dashboard shows it too (Toni, 2026-10-17); the
@@ -62,7 +64,11 @@
       '<button class="nero-pill" type="button" data-act="history">Povijest</button>' +
       '<button class="nero-pill" type="button" data-act="relay" hidden aria-pressed="false" aria-label="Send to Toni &amp; Nero">Toni &amp; Nero</button>' +
     '</div>' +
-    '<div class="nero-history" hidden></div>';
+    '<div class="nero-history" hidden></div>' +
+    '<p class="nero-voice-soon" hidden role="status"></p>' +
+    '<button class="nero-voice" id="neroVoice" type="button" aria-pressed="false" aria-label="Glasovni razgovor s Nerom">' +
+      '<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M6 11a6 6 0 0012 0M12 17v3"/></svg>' +
+    '</button>';
   // Docked inside the page column, after the content — never floating over it.
   // One layer above everything; the page reserves its height at the end so
   // nothing is ever hidden beneath it.
@@ -950,6 +956,47 @@
       recLabel.hidden = true;
     });
   }
+  var voiceTalk = root.querySelector('.nero-voice');
+  var voiceSoon = root.querySelector('.nero-voice-soon');
+  root.insertBefore(voiceSoon, root.querySelector('.nero-sheet'));
+  function voiceLang() {
+    var code = 'hr';
+    try {
+      var saved = localStorage.getItem('asc.lang');
+      if (saved === 'en' || saved === 'hr') code = saved;
+    } catch (e) {}
+    return code;
+  }
+  function paintVoice() {
+    var en = voiceLang() === 'en';
+    voiceTalk.setAttribute('aria-label', en ? 'Voice conversation with Nero' : 'Glasovni razgovor s Nerom');
+    voiceSoon.textContent = en
+      ? 'Voice conversation is coming. No call is connected.'
+      : 'Glasovni razgovor stiže. Poziv još nije uključen.';
+  }
+  function revealVoiceSoon() {
+    paintVoice();
+    voiceSoon.hidden = false;
+    voiceTalk.setAttribute('aria-pressed', 'true');
+  }
+  // Voice conversation is a separate control from dictation. ASC has no live
+  // call entry point, so the button must not pretend a call started.
+  function openVoiceConversation() {
+    var hook = window.ASCVoiceConversation;
+    if (hook && hook.available === true && typeof hook.start === 'function') {
+      try { hook.start(); }
+      catch (err) { revealVoiceSoon(); }
+      return;
+    }
+    if (voiceSoon.hidden) revealVoiceSoon();
+    else {
+      voiceSoon.hidden = true;
+      voiceTalk.setAttribute('aria-pressed', 'false');
+    }
+  }
+  paintVoice();
+  voiceTalk.addEventListener('click', function () { openVoiceConversation(); });
+
   var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (SR || (navigator.mediaDevices && window.MediaRecorder)) {
     mic.hidden = false;

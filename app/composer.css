@@ -1,7 +1,7 @@
 /* Nero composer — dark violet glass, ASC colors (#8b5cf6 / #e040d0).
    Compact while browsing. Expanded only while typing. */
 .nero-composer{position:fixed;z-index:90;left:50%;
-  bottom:calc(8px + var(--kb, 0px) + env(safe-area-inset-bottom, 0px));
+  bottom:calc(12px + var(--kb, 0px) + env(safe-area-inset-bottom, 0px));
   top:auto;max-height:calc(var(--nero-viewport, 100dvh) - 24px - env(safe-area-inset-bottom, 0px));
   width:min(680px, calc(100vw - 16px));
   display:flex;flex-direction:column;gap:8px;
@@ -247,6 +247,76 @@ html.has-composer body{padding-bottom:calc(var(--nero-stack, 84px) + env(safe-ar
   .nero-bubble.is-linked,.nero-suggest.on .nero-bubble::before,.card.nero-next::before,.nero-flow{animation:none}
   .nero-composer .nero-log{transition:none}
 }
+
+/* Original ASC field. No charcoal glass pill. The purple circle is the
+   voice-conversation control and stays clear of the home indicator because
+   the composer itself is lifted by --kb and the safe-area inset. */
+.nero-composer{min-height:64px;color:#0a0c11}
+html.dark .nero-composer{color:#f4f5f7}
+.nero-composer .nero-sheet,
+.nero-composer.is-compact .nero-sheet{
+  background:#fdfdfc !important;
+  color:#0a0c11 !important;
+  border:1px solid rgba(14,14,16,.12) !important;
+  border-radius:16px !important;
+  box-shadow:0 10px 28px -18px rgba(20,18,15,.45) !important;
+  -webkit-backdrop-filter:none !important;
+  backdrop-filter:none !important;
+  margin-right:76px}
+html.dark .nero-composer .nero-sheet,
+html.dark .nero-composer.is-compact .nero-sheet{
+  background:#22242a !important;
+  color:#f4f5f7 !important;
+  border-color:rgba(244,245,247,.14) !important}
+.nero-field .nero-input,
+.nero-composer .nero-input{color:#0a0c11 !important;caret-color:#e10600}
+html.dark .nero-field .nero-input,
+html.dark .nero-composer .nero-input{color:#f4f5f7 !important;caret-color:#ff3b30}
+.nero-input::placeholder{color:#63676f}
+.nero-lamp{display:none}
+.nero-composer .nero-plus,
+.nero-composer .nero-mic{background:#f4f4f3;color:#0a0c11;box-shadow:none}
+html.dark .nero-composer .nero-plus,
+html.dark .nero-composer .nero-mic{background:#2b2d33;color:#f4f5f7}
+.nero-composer .nero-send{
+  background:#e10600;
+  color:#fff;
+  border-radius:12px;
+  box-shadow:0 8px 18px -10px rgba(225,6,0,.7)}
+.nero-voice{
+  position:absolute;right:0;bottom:0;z-index:4;
+  width:64px;height:64px;min-width:56px;min-height:56px;
+  border:0;border-radius:50%;display:grid;place-items:center;cursor:pointer;
+  color:#fff;background:#6d28d9;
+  box-shadow:0 12px 28px -10px rgba(109,40,217,.75);
+  touch-action:manipulation}
+.nero-voice[aria-pressed="true"]{background:#5b21b6}
+.nero-voice:focus-visible{outline:3px solid #0a0c11;outline-offset:3px}
+html.dark .nero-voice:focus-visible{outline-color:#f4f5f7}
+.nero-voice-soon{
+  margin:0 76px 8px 0;padding:12px 14px;border-radius:14px;
+  background:#fdfdfc;color:#0a0c11;border:1px solid rgba(14,14,16,.12);
+  font:600 16px/1.4 Inter,system-ui,sans-serif}
+html.dark .nero-voice-soon{background:#22242a;color:#f4f5f7;border-color:rgba(244,245,247,.14)}
+.nero-composer .nero-log,
+.nero-composer .nero-card,
+.nero-composer .nero-history,
+.nero-composer .nero-pill,
+.nero-composer .nero-q{
+  background:#f4f4f3 !important;
+  color:#0a0c11 !important;
+  border-color:rgba(14,14,16,.12) !important;
+  -webkit-backdrop-filter:none !important;
+  backdrop-filter:none !important}
+.nero-composer .nero-card-user{background:rgba(225,6,0,.08) !important}
+html.dark .nero-composer .nero-log,
+html.dark .nero-composer .nero-card,
+html.dark .nero-composer .nero-history,
+html.dark .nero-composer .nero-pill,
+html.dark .nero-composer .nero-q{
+  background:#1a1b1f !important;color:#f4f5f7 !important}
+.nero-composer .nero-pill{min-height:44px}
+.nero-composer button:focus-visible{outline:2px solid #e10600;outline-offset:2px}
 
 /* Bottom-docked: grows upward with the text, never mid-screen. */
 .nero-composer{justify-content:flex-end}

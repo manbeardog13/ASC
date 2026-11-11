@@ -86,4 +86,37 @@ async function layout(){
  fs.writeFileSync(path.join(output,'results.json'),JSON.stringify({scope:'Synthetic browser only; no live model or database requests, no physical phone verification',layout:report},null,2)+'\n');
  console.log('PASS layout: 7 widths, light/dark, long drafts, history above composer, synthetic keyboard');
 }
-(async()=>{await interactions();await layout();})().catch(e=>{console.error(e);process.exitCode=1});
+async function voiceComing(){
+ const h=await createHarness({width:402,height:874});
+ try{
+  const p=h.page;
+  await p.evaluate(()=>{
+    window.__micStarts=0;
+    const Orig=window.SpeechRecognition;
+    window.SpeechRecognition=class extends Orig{start(){window.__micStarts++;}};
+    window.webkitSpeechRecognition=window.SpeechRecognition;
+    const deny=()=>{window.__micStarts++;return Promise.reject(new Error('no-call'));};
+    if(!navigator.mediaDevices) navigator.mediaDevices={getUserMedia:deny};
+    else navigator.mediaDevices.getUserMedia=deny;
+  });
+  const btn=p.locator('#neroVoice');
+  const box=await btn.boundingBox();
+  assert.ok(box.width>=56&&box.height>=56,'voice control must be at least 56px');
+  assert.equal(await btn.getAttribute('aria-label'),'Glasovni razgovor s Nerom');
+  const before=await p.evaluate(()=>window.__micStarts||0);
+  await btn.click();
+  await p.waitForSelector('.nero-voice-soon:not([hidden])');
+  assert.match(await p.locator('.nero-voice-soon').innerText(),/nije uključen/);
+  assert.equal(await p.evaluate(()=>window.__micStarts||0),before,'voice button must not start a call or the dictation mic');
+  assert.equal(await p.locator('#neroVoice').getAttribute('aria-pressed'),'true');
+  await p.evaluate(()=>localStorage.setItem('asc.lang','en'));
+  await p.reload();
+  await p.locator('#neroVoice').waitFor();
+  assert.equal(await p.locator('#neroVoice').getAttribute('aria-label'),'Voice conversation with Nero');
+  const overflow=await p.evaluate(()=>document.documentElement.scrollWidth<=402);
+  assert.equal(overflow,true);
+  assert.deepEqual(h.errors,[]);
+  console.log('PASS voice circle: 56px, HR/EN label, coming state, no fake call');
+ }finally{await h.close();}
+}
+(async()=>{await interactions();await layout();await voiceComing();})().catch(e=>{console.error(e);process.exitCode=1});
