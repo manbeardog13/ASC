@@ -269,6 +269,7 @@ if(sat>=59){d.classList.add('island');d.style.setProperty('--isl-y',(sat-48)+'px
 <script type="module">
   import { supabase, isConfigured } from '../js/supabaseClient.js';
   import { getSession, signIn, signUp, sendPasswordReset, updatePassword } from '../js/db.js';
+  import { establishHandoff } from '../js/neroSessionHandoff.js';
   import { t, lang, setLang } from '../js/i18n.js';
 
   const $ = (id) => document.getElementById(id);
@@ -349,7 +350,14 @@ if(sat>=59){d.classList.add('island');d.style.setProperty('--isl-y',(sat-48)+'px
       new Promise((res) => setTimeout(res, 4000, null)),
     ]).then((s) => { if (s) S.handoff(dest()); else S.done(); });
   } else {
-    getSession().then((s) => { s ? S.handoff(dest()) : S.done(); }).catch(() => S.done());
+    getSession().then(async (s) => {
+      if (s) { S.handoff(dest()); return; }
+      try {
+        const bridged = await establishHandoff();
+        if (bridged?.session) { S.handoff(dest()); return; }
+      } catch {}
+      S.done();
+    }).catch(() => S.done());
   }
 
   function setMode(next) {

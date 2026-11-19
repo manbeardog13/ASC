@@ -64,6 +64,18 @@ assets/icon.svg         App icon
 SETUP.md                Step-by-step setup for the shop owner
 ```
 
+
+## Nero session handoff
+
+On load, ASC checks for a Nero session that Summit already handed over in this tab
+(`nero.company.session.v1` or `nero.tenant.session.v1`) or a short-lived, single-use
+handoff token in `sessionStorage` (`nero.asc.handoff.v1`, audience `asc`). The token
+is verified against Nero public JWKS. Invalid, expired, wrong-audience, tampered,
+replayed, or unreachable Nero means no session; the existing login page stays as the
+fallback. Tokens are never read from URLs or written to logs. Logout clears the
+bridged session and the Nero tokens in this tab. This is the prerequisite for ASC
+PR 53; 53 stays locked until this handoff exists and has been reviewed.
+
 ## Setup
 
 See **[SETUP.md](SETUP.md)** for the full walk-through. Short version:
