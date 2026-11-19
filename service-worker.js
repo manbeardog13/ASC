@@ -3,7 +3,7 @@
    same-origin files (so deploys show up right away), cache fallback when
    offline. Live data always comes from Supabase online. */
 const CACHE_PREFIX = "asc-tirehotel-";
-const CACHE = CACHE_PREFIX + "v117-palette-shell";
+const CACHE = CACHE_PREFIX + "v118-nero-session-handoff";
 // Cross-origin dependencies the app cannot boot (or scan) without. Same-origin
 // files are precached below; these are runtime-cached network-first so an
 // offline cold boot doesn't die on the supabase-js ESM import.
@@ -88,6 +88,7 @@ const SHELL = [
   "./js/images.js",
   "./js/ui.js",
   "./js/db.js",
+  "./js/neroSessionHandoff.js",
   "./js/qr.js",
   "./js/qrlabel.js",
   "./js/scanner.js",

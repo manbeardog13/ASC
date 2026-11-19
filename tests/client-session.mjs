@@ -19,7 +19,7 @@ async function gate({ pathname = '/ASC/app/dashboard.html', session = {user:{id:
     window:{ascLiveFirst:pendingPaint?.promise,ASCSplash:{done(){reveals++;},bloom:cb=>cb?.(),handoff:url=>targets.push(url)}},
     sessionStorage:{setItem(){}}, location:{pathname,reload:()=>reloads++},
     db,Promise,CustomEvent:class{constructor(type){this.type=type;}},setTimeout:()=>0 };
-  vm.runInNewContext(code.replace("import('../js/db.js')", 'Promise.resolve(db)'),sandbox);
+  vm.runInNewContext(code.replace("import('../js/db.js')", 'Promise.resolve(db)').replace("import('../js/neroSessionHandoff.js')", 'Promise.resolve(null)'),sandbox);
   await tick(); await tick();
   return { style, auth, targets, events, reads:()=>reads, signouts:()=>signouts, reloads:()=>reloads, reveals:()=>reveals,
     clickLogout:()=>handlers.get('click')?.({target:{closest:()=>true},preventDefault(){},stopPropagation(){}}) };

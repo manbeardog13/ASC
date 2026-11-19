@@ -23,6 +23,7 @@ import('./detail-overlay.js').catch(() => {});
   // on all other gated pages this stub keeps today's behavior byte-for-byte.
   const S = window.ASCSplash || { mode: null, done(){}, bloom(cb){ cb && cb(); }, handoff(u){ location.replace(u); } };
   const dbReady = import('../js/db.js');
+  const handoffReady = import('../js/neroSessionHandoff.js').catch(() => null);
   let activeUserId = null;
   let observedUserId;
   let authEpoch = 0;
@@ -31,6 +32,7 @@ import('./detail-overlay.js').catch(() => {});
     sessionEnding = true; authEpoch++;
     document.documentElement.style.visibility = 'hidden';
     document.dispatchEvent(new CustomEvent('asc:sign-out'));
+    handoffReady.then((m) => { try { m?.clearHandoff?.(); } catch {} });
     S.bloom(() => S.handoff('login.html'));
   };
   dbReady.then((m) => {
@@ -42,20 +44,33 @@ import('./detail-overlay.js').catch(() => {});
         sessionEnding = true; authEpoch++;
         document.documentElement.style.visibility = 'hidden';
         document.dispatchEvent(new CustomEvent('asc:sign-out'));
+        handoffReady.then((m) => { try { m?.clearHandoff?.(); } catch {} });
         location.reload();
       }
     });
   }).catch(() => {});
   dbReady
     .then((m) => m.getSession())
-    .then((session) => {
+    .then(async (session) => {
       // An auth event can arrive while getSession() is pending. Never let its
       // stale result reveal the previous account after signout or a switch.
+      if (sessionEnding) return;
+      if (!session) {
+        try {
+          const handoff = await handoffReady;
+          const bridged = handoff ? await handoff.establishHandoff() : null;
+          if (sessionEnding) return;
+          if (bridged?.session?.sub) {
+            session = { user: { id: bridged.session.sub }, expires_at: bridged.session.exp, bridged: true };
+          }
+        } catch {}
+      }
       if (sessionEnding) return;
       const resolvedId = session?.user?.id || null;
       if (observedUserId !== undefined && observedUserId !== resolvedId) {
         sessionEnding = true; authEpoch++;
         document.dispatchEvent(new CustomEvent('asc:sign-out'));
+        handoffReady.then((m) => { try { m?.clearHandoff?.(); } catch {} });
         location.reload();
         return;
       }
@@ -89,6 +104,7 @@ import('./detail-overlay.js').catch(() => {});
     sessionEnding = true; authEpoch++;
     document.documentElement.style.visibility = 'hidden';
     document.dispatchEvent(new CustomEvent('asc:sign-out'));
+    handoffReady.then((m) => { try { m?.clearHandoff?.(); } catch {} });
     dbReady.then((m) => m.signOut()).catch(() => {}).finally(() => S.bloom(() => S.handoff('login.html')));
   }, true);
 })();
