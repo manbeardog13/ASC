@@ -19,7 +19,7 @@
     var dark = darkNow();
     document.documentElement.classList.toggle('dark', dark);
     var meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute('content', dark ? '#0a0c11' : '#edf0f5');
+    if (meta) meta.setAttribute('content', dark ? '#0a0c11' : '#eef0f1');
     return dark;
   }
   paint();

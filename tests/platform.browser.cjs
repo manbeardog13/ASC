@@ -84,28 +84,14 @@ async function intakeAndIntroduction(browser){
     assert.ok(box.x>=0&&box.x+box.width<=320,'Guided-intake control must be reachable');
     assert.deepEqual(intake.errors,[]);
   }finally{await intake.context.close();}
-  for(const [width,height] of [[390,844],[844,390]]){
+  for(const [width,height] of [[390,844],[402,874],[844,390]]){
     const h=await pageFor(browser,{width,height,onboarding:true});
     try{
       const p=h.page;
       await p.goto('http://asc.test/app/dashboard.html');
-      await p.waitForSelector('.asc-onboard');
-      for(let i=0;i<10;i++){
-        await p.keyboard.press('Tab');
-        assert.equal(await p.evaluate(()=>!!document.activeElement.closest('.asc-onboard')),true);
-      }
-      await p.keyboard.press('Shift+Tab');
-      assert.equal(await p.evaluate(()=>!!document.activeElement.closest('.asc-onboard')),true);
-      assert.equal(await p.locator('main').evaluate(e=>e.inert),true);
-      await p.locator('[data-create-slot]').click();
-      await p.waitForURL('**/locations.html?intro=slot');
-      await p.waitForSelector('#loc-zone');
-      assert.equal(await p.locator('.asc-onboard').count(),0);
-      await p.waitForFunction(()=>document.activeElement.id==='loc-zone');
-      await p.goto('http://asc.test/app/dashboard.html');
-      await p.waitForSelector('.asc-onboard');
-      await p.keyboard.press('Escape');
-      assert.equal(await p.locator('.asc-onboard').count(),0);
+      await p.waitForSelector('main.shell');
+      await p.waitForTimeout(300);
+      assert.equal(await p.locator('.asc-onboard').count(),0,'How-to walkthroughs stay off the operator path');
       assert.equal(await p.locator('main').evaluate(e=>e.inert),false);
       assert.deepEqual(h.errors,[]);
     }finally{await h.context.close();}
@@ -114,34 +100,16 @@ async function intakeAndIntroduction(browser){
     const h = await pageFor(browser, { width: 390, onboarding: true });
     try {
       const p = h.page;
-      await p.goto('http://asc.test/app/' + origin);
-      await p.waitForSelector('.asc-onboard');
-      await p.locator('[data-create-slot]').click();
-      await p.waitForURL(url => url.pathname.endsWith('/locations.html') && url.searchParams.get('intro') === 'slot');
-      assert.equal(new URL(p.url()).searchParams.get('return'), origin, 'Slot setup must retain intake or placement return context');
+      await p.goto('http://asc.test/app/locations.html?intro=slot&return=' + encodeURIComponent(origin));
+      await p.waitForSelector('#loc-zone');
       await p.waitForSelector('#back-to-intake');
+      assert.equal(await p.locator('.asc-onboard').count(), 0);
       assert.equal(await p.locator('#back-to-intake').getAttribute('href'), origin);
       await p.waitForFunction(() => document.activeElement.id === 'loc-zone');
       assert.deepEqual(h.errors, []);
     } finally { await h.context.close(); }
   }
-  for (const [from, to] of [[390, 1440], [1440, 390]]) {
-    const h = await pageFor(browser, { width: from, onboarding: true });
-    try {
-      const p = h.page;
-      await p.goto('http://asc.test/app/dashboard.html');
-      await p.waitForSelector('.asc-onboard');
-      await p.waitForSelector('.side', { state: 'attached' });
-      await p.setViewportSize({ width: to, height: 844 });
-      await p.waitForTimeout(50);
-      assert.equal(await p.locator('.side').evaluate(e => e.inert), true, 'Introduction must keep navigation inert across breakpoints');
-      await p.keyboard.press('Escape');
-      assert.equal(await p.locator('.side').evaluate(e => e.inert), to <= 1020, 'Dismissal must reconcile current navigation breakpoint');
-      assert.equal(await p.locator('main').evaluate(e => e.inert), false);
-      assert.deepEqual(h.errors, []);
-    } finally { await h.context.close(); }
-  }
-  console.log('PASS intake and introduction: reachable action, focus containment, real Locations route, Escape restores page');
+  console.log('PASS intake and introduction: reachable action, no walkthrough overlay, slot return link');
 }
 (async()=>{
   const browser=await start();
