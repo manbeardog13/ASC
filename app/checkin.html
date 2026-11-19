@@ -198,18 +198,18 @@ html.dark .btn-primary{background:linear-gradient(180deg,var(--lava-2),var(--lav
       <fieldset>
         <legend>Kupac</legend>
         <label class="field"><span class="label">Ime</span><input id="c_name" autocomplete="off" placeholder="Ime i prezime" required></label>
-        <div class="grid-2">
+        <div class="grid-2" data-op="rare">
           <label class="field"><span class="label">Telefon</span><input id="c_phone" type="tel" inputmode="tel" autocomplete="off" placeholder="+385 91 234 5678"></label>
           <label class="field"><span class="label">E-pošta</span><input id="c_email" type="email" autocomplete="off" placeholder="ime@email.hr"></label>
         </div>
-        <label class="field"><span class="label">Adresa</span><input id="c_address" autocomplete="off" placeholder="Ulica i broj, grad"></label>
+        <label class="field" data-op="rare"><span class="label">Adresa</span><input id="c_address" autocomplete="off" placeholder="Ulica i broj, grad"></label>
       </fieldset>
       <fieldset>
         <legend>Vozilo</legend>
         <div class="grid-4">
-          <label class="field"><span class="label">Marka</span><input id="v_make" autocomplete="off" placeholder="Volkswagen"></label>
-          <label class="field"><span class="label">Model</span><input id="v_model" autocomplete="off" placeholder="Passat"></label>
-          <label class="field"><span class="label">Godina</span><input id="v_year" type="number" inputmode="numeric" min="1950" max="2100" placeholder="2019"></label>
+          <label class="field" data-op="rare"><span class="label">Marka</span><input id="v_make" autocomplete="off" placeholder="Volkswagen"></label>
+          <label class="field" data-op="rare"><span class="label">Model</span><input id="v_model" autocomplete="off" placeholder="Passat"></label>
+          <label class="field" data-op="rare"><span class="label">Godina</span><input id="v_year" type="number" inputmode="numeric" min="1950" max="2100" placeholder="2019"></label>
           <label class="field"><span class="label">Registracija</span><input id="v_plate" autocomplete="off" placeholder="ZG-1234-AB" style="text-transform:uppercase"></label>
         </div>
       </fieldset>
@@ -225,6 +225,8 @@ html.dark .btn-primary{background:linear-gradient(180deg,var(--lava-2),var(--lav
           <button type="button" data-season="summer" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2.6M12 19.4V22M2 12h2.6M19.4 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M19.1 4.9l-1.8 1.8M6.7 17.3l-1.8 1.8"/></svg>Ljetne</button>
           <button type="button" data-season="all_season" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.4"/><path d="M12 3.6v16.8"/></svg>Cjelogodišnje</button>
         </div>
+        <label class="field" id="quickSizeField"><span class="label" id="quickSizeLabel">Dimenzija</span><input id="s_quick_size" list="commonSizes" placeholder="225/45R17" autocomplete="off"></label>
+        <label class="field" id="photoField"><span class="label" id="photoLabel">Fotografija</span><input id="s_photo" type="file" accept="image/*" capture="environment"></label>
       </fieldset>
       <fieldset id="locField">
         <legend>Lokacija u skladištu</legend>
@@ -240,14 +242,14 @@ html.dark .btn-primary{background:linear-gradient(180deg,var(--lava-2),var(--lav
         <legend>Detalji</legend>
         <div class="grid-2">
           <label class="field"><span class="label">Broj guma</span><input id="s_qty" type="number" inputmode="numeric" min="1" max="8" value="4"></label>
-          <label class="field"><span class="label">Očekivano preuzimanje</span><input id="s_out" type="date"></label>
+          <label class="field" data-op="rare"><span class="label">Očekivano preuzimanje</span><input id="s_out" type="date"></label>
         </div>
-        <label class="switch"><input id="s_onrims" type="checkbox"> Na naplacima / felgama</label>
-        <div class="grid-2" id="rimWrap" hidden>
+        <label class="switch" data-op="rare"><input id="s_onrims" type="checkbox"> Na naplacima / felgama</label>
+        <div class="grid-2" id="rimWrap" data-op="rare" hidden>
           <label class="field"><span class="label">Vrsta naplatka</span>
             <select id="s_rimtype"><option value="">—</option><option value="steel">Čelični</option><option value="alloy">Aluminijski</option></select></label>
         </div>
-        <div class="grid-2">
+        <div class="grid-2" data-op="rare">
           <div class="field"><span class="label">Vijci kotača</span>
             <div class="segmented seg-opt" data-for="s_bolts" role="group" aria-label="Vijci kotača">
               <button type="button" data-v="in_trunk">U prtljažniku kupca</button>
@@ -260,16 +262,16 @@ html.dark .btn-primary{background:linear-gradient(180deg,var(--lava-2),var(--lav
               <button type="button" data-v="none">Ne postoje</button>
             </div><input type="hidden" id="s_hubcaps"></div>
         </div>
-        <div class="grid-2">
+        <div class="grid-2" data-op="rare">
           <label class="field"><span class="label">Cijena čuvanja</span><input id="s_fee" type="number" inputmode="decimal" step="0.01" min="0" placeholder="40.00"></label>
           <label class="switch" style="align-self:end;padding-bottom:8px"><input id="s_paid" type="checkbox"> Plaćeno</label>
         </div>
-        <label class="field"><span class="label">Napomene</span><textarea id="s_notes" rows="2" placeholder="Npr. sezonska zamjena, poziv prije preuzimanja…"></textarea></label>
+        <label class="field" data-op="rare"><span class="label">Napomene</span><textarea id="s_notes" rows="2" placeholder="Npr. sezonska zamjena, poziv prije preuzimanja…"></textarea></label>
       </fieldset>
     </section>
 
     <!-- 03 · Tires -->
-    <section class="card stack">
+    <section class="card stack" data-op="rare">
       <span class="tab-tl">03 · gume</span>
       <fieldset>
         <legend>Gume</legend>

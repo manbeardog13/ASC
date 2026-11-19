@@ -14,6 +14,7 @@
 import {
   getSession, healthStats, createStorageSet, loadStorageSet, listCustomers, countLocations,
   suggestFreeSlot, locationLabel, updateCustomer, updateVehicle, updateStorageSet, replaceTires,
+  addPhoto,
 } from '../js/db.js';
 import { t } from '../js/i18n.js';
 import { intakeReturn, placementNeedsSlots, suggestionNote } from '../js/firstRun.js';
@@ -25,6 +26,7 @@ import { bootOnboarding } from './onboarding.js';
 // db.js uses) hydrates the in-memory list so saving doesn't clobber history.
 import { loadRecentLocations } from '../js/store.js';
 import { installPlanMark } from './plan-mark.js';
+import { nextTireSizes, photoFollowUp } from './intake-size.js';
 import { mergeNotes, decodePlan, isoDate } from '../js/seasonPlan.js';
 
 const $ = (id) => document.getElementById(id);
@@ -263,26 +265,125 @@ function hiddenId(id) {
   return node;
 }
 
+function markStep(step) {
+  const steps = $('flowSteps');
+  if (!steps) return;
+  [...steps.children].forEach((child, index) => child.classList.toggle('on', index + 1 === Math.min(step, 3)));
+}
+
 function showWizard(step) {
   wizardStep = step;
-  const sections = qa('#ci > section');
-  sections.forEach((section, index) => { section.hidden = step === 1 ? index !== 0 : false; });
+  if (form) form.hidden = step > 1;
   const loc = $('locField');
-  if (loc) loc.hidden = true;
+  if (loc && wizard) loc.hidden = true;
   const bar = q('#ci .action-bar');
-  if (bar) bar.hidden = step === 3;
+  if (bar) bar.hidden = step > 1;
   const btn = q('#ci .btn-primary');
-  if (btn) {
-    const label = step === 1 ? t('flow.next') : t('flow.savePrint');
-    const text = [...btn.childNodes].find((node) => node.nodeType === 3);
-    if (text) text.textContent = ' ' + label;
+  if (btn && step === 1) {
+    let label = btn.querySelector('.op-label');
+    if (!label) {
+      label = document.createElement('span');
+      label.className = 'op-label';
+      btn.appendChild(label);
+    }
+    [...btn.childNodes].forEach((node) => { if (node.nodeType === 3) node.textContent = ''; });
+    label.textContent = t('flow.savePrint');
   }
   const panel = $('placeStep');
-  if (panel) panel.hidden = step !== 3;
-  const steps = $('flowSteps');
-  if (steps) {
-    [...steps.children].forEach((child, index) => child.classList.toggle('on', index + 1 === Math.min(step, 3)));
+  if (panel) panel.hidden = step < 2;
+  markStep(step);
+}
+
+function installQuickSize() {
+  const box = $('tires');
+  if (!box || box.dataset.quickBound) return;
+  box.dataset.quickBound = '1';
+  box.addEventListener('input', (event) => {
+    const el = event.target.closest?.('[data-t="size"]');
+    if (!el || !box.contains(el)) return;
+    el.dataset.explicit = '1';
+    delete el.dataset.quick;
+  });
+}
+
+function applyQuickSize() {
+  const inputs = qa('#tires [data-t="size"]');
+  const next = nextTireSizes(inputs.map((el) => ({
+    size: el.value.trim(),
+    explicit: el.dataset.explicit === '1',
+    fromQuick: el.dataset.quick === '1',
+  })), $('s_quick_size')?.value || '');
+  inputs.forEach((el, index) => {
+    const row = next[index];
+    el.value = row.size || '';
+    if (row.explicit) el.dataset.explicit = '1';
+    else delete el.dataset.explicit;
+    if (row.fromQuick) el.dataset.quick = '1';
+    else delete el.dataset.quick;
+  });
+}
+
+function selectedPhoto() {
+  return $('s_photo')?.files?.[0] || null;
+}
+
+function showPhotoFailure(retryUpload) {
+  let note = document.getElementById('photoFail');
+  if (!note) {
+    note = document.createElement('div');
+    note.id = 'photoFail';
+    note.className = 'flow-note';
+    note.setAttribute('role', 'status');
+    document.querySelector('main.shell')?.append(note);
   }
+  note.replaceChildren();
+  const msg = document.createElement('p');
+  msg.textContent = t('flow.photoLater');
+  const retry = document.createElement('button');
+  retry.type = 'button';
+  retry.className = 'btn';
+  retry.textContent = t('flow.photoRetry');
+  retry.addEventListener('click', async () => {
+    retry.disabled = true;
+    try {
+      await retryUpload();
+      if ($('s_photo')) $('s_photo').value = '';
+      note.remove();
+    } catch (error) {
+      retry.disabled = false;
+    }
+  });
+  note.append(msg, retry);
+}
+
+async function storePhoto(setId, file) {
+  await addPhoto(setId, file);
+  if ($('s_photo')) $('s_photo').value = '';
+  document.getElementById('photoFail')?.remove();
+}
+
+function installOperator() {
+  if (!wizard) return;
+  document.documentElement.classList.add('is-operator');
+  const stats = document.querySelector('.ci-stats');
+  if (stats) stats.hidden = true;
+  const lead = document.querySelector('.ci-hero .lead');
+  if (lead) lead.hidden = true;
+  const sizeLabel = $('quickSizeLabel');
+  if (sizeLabel) sizeLabel.textContent = t('flow.quickSize');
+  const photoLabel = $('photoLabel');
+  if (photoLabel) photoLabel.textContent = t('flow.photo');
+  if ($('opMore')) return;
+  const more = document.createElement('button');
+  more.type = 'button';
+  more.className = 'btn';
+  more.id = 'opMore';
+  more.textContent = t('flow.more');
+  more.addEventListener('click', () => {
+    const open = document.documentElement.classList.toggle('show-rare');
+    more.textContent = t(open ? 'flow.less' : 'flow.more');
+  });
+  $('photoField')?.parentElement?.append(more);
 }
 
 function canonicalVehiclePlate(value) {
@@ -374,7 +475,7 @@ function installWhoSearch() {
 }
 
 async function showPlaceStep(code, formData) {
-  showWizard(3);
+  showWizard(2);
   qa('#ci > section').forEach((section) => { section.hidden = true; });
   let panel = $('placeStep');
   if (!panel) {
@@ -399,12 +500,20 @@ async function showPlaceStep(code, formData) {
   const gate = (el) => { el.setAttribute('aria-disabled', 'true'); el.classList.add('is-gated'); el.title = t('print.gate'); gated.push(el); };
   const blockGated = (e) => { if (e.currentTarget.getAttribute('aria-disabled') === 'true') e.preventDefault(); };
   const label = { who: formData.customer.name, plate: formData.vehicle.plate, season: formData.set.season };
-  const startPrint = () => mountLabelPrint(printHost, { code, label, onComplete: () => gated.forEach((el) => { el.removeAttribute('aria-disabled'); el.classList.remove('is-gated'); el.removeAttribute('title'); }) });
+  const startPrint = () => mountLabelPrint(printHost, { code, label, onComplete: () => {
+    gated.forEach((el) => { el.removeAttribute('aria-disabled'); el.classList.remove('is-gated'); el.removeAttribute('title'); });
+    actions.hidden = false;
+    const extra = panel.querySelector('[data-place-extra]');
+    const noted = panel.querySelector('.flow-note');
+    if (extra) extra.hidden = false;
+    if (noted) noted.hidden = false;
+    markStep(3);
+  } });
   let slotCount = null;
   try { slotCount = await countLocations(); }
   catch (error) { showToast(error.message || t('flow.migration')); }
   if (placementNeedsSlots(slotCount)) {
-    panel.append(title, lead, printHost, actions, slotBlock('empty', intakeReturn(code)));
+    panel.append(title, lead, printHost, slotBlock('empty', intakeReturn(code)));
     startPrint();
     return;
   }
@@ -439,8 +548,15 @@ async function showPlaceStep(code, formData) {
   record.href = 'set-detail.html?code=' + encodeURIComponent(code);
   record.textContent = t('flow.openRecord');
   [place, record].forEach((el) => { gate(el); el.addEventListener('click', blockGated); });
-  actions.append(suggest, place, record);
-  panel.append(title, lead, printHost, note, actions);
+  actions.hidden = true;
+  actions.append(place);
+  const quiet = document.createElement('div');
+  quiet.className = 'flow-actions';
+  quiet.hidden = true;
+  quiet.dataset.placeExtra = '1';
+  quiet.append(suggest, record);
+  panel.append(title, lead, printHost, note, actions, quiet);
+  note.hidden = true;
   // Plate-first intake: propose the best free slot straight away (no extra tap);
   // the button stays to ask for another suggestion.
   note.textContent = t('flow.suggesting');
@@ -453,17 +569,20 @@ function installWizard() {
   const steps = document.createElement('div');
   steps.id = 'flowSteps';
   steps.className = 'flow-steps';
-  for (const key of ['flow.stepWho', 'flow.stepTires', 'flow.stepPlace']) {
+  for (const key of ['flow.stepReceive', 'flow.stepPrint', 'flow.stepPlace']) {
     const chip = document.createElement('span');
     chip.textContent = t(key);
     steps.append(chip);
   }
   form.before(steps);
+  installOperator();
+  installQuickSize();
   installWhoSearch();
   $('v_plate')?.addEventListener('input', intakeVehicleId);
   showWizard(1);
 }
 installWizard();
+installQuickSize();
 installPlanMark();
 bootOnboarding();
 
@@ -491,17 +610,15 @@ if (form) form.addEventListener('submit', async (e) => {
       fillFromSet(data);
       editHydrated = true;
     }
+    applyQuickSize();
     const f = readForm();
-    if (wizard && wizardStep === 1) {
-      if (!f.customer.name && !f.vehicle.plate) {
-        if ($('c_name')) $('c_name').focus();
-        showToast(t('flow.needWho'));
-        unlock();
-        return;
-      }
-      if (!f.customer.name) f.customer.name = f.vehicle.plate;
-      if ($('c_name') && !$('c_name').value.trim()) $('c_name').value = f.customer.name;
-      showWizard(2);
+    if (wizard && !f.customer.name && f.vehicle.plate) {
+      f.customer.name = f.vehicle.plate;
+      if ($('c_name')) $('c_name').value = f.customer.name;
+    }
+    if (wizard && !f.customer.name && !f.vehicle.plate) {
+      if ($('c_name')) $('c_name').focus();
+      showToast(t('flow.needWho'));
       unlock();
       return;
     }
@@ -554,13 +671,33 @@ if (form) form.addEventListener('submit', async (e) => {
         return { ...t, model: o.model, studded: o.studded, condition_notes: o.condition_notes };
       });
       await replaceTires(ctx.setId, carried);
+      const editPhoto = selectedPhoto();
+      let editUploaded = true;
+      if (editPhoto) {
+        try { await storePhoto(ctx.setId, editPhoto); }
+        catch (error) {
+          editUploaded = false;
+          showPhotoFailure(() => storePhoto(ctx.setId, editPhoto));
+        }
+      }
       showToast('Ažurirano ' + editCode);
+      if (photoFollowUp({ hasFile: Boolean(editPhoto), uploaded: editUploaded }).stay) return;
       goToSet(editCode);
     } else {
       if (wizard) {
         f.set.zone = ''; f.set.rack = ''; f.set.shelf = ''; f.set.slot = '';
       }
       const code = await createStorageSet(f);
+      const createdPhoto = selectedPhoto();
+      if (createdPhoto) {
+        const send = async () => {
+          const saved = await loadStorageSet(code);
+          if (!saved || !saved.id) throw new Error('photo');
+          await storePhoto(saved.id, createdPhoto);
+        };
+        try { await send(); }
+        catch (error) { showPhotoFailure(send); }
+      }
       renderRecentChips(); // createStorageSet just persisted this location
       showToast(wizard ? t('flow.saved', { code }) : ('Spremljeno ' + code));
       if (wizard) showPlaceStep(code, f);
