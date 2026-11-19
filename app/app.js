@@ -114,7 +114,7 @@ try {
 } catch(e){}
 const paintTheme = () => {
   if (window.ASCTheme) window.ASCTheme.paint();
-  else if (meta) meta.setAttribute('content', root.classList.contains('dark') ? '#0a0c11' : '#edf0f5');
+  else if (meta) meta.setAttribute('content', root.classList.contains('dark') ? '#0a0c11' : '#eef0f1');
 };
 paintTheme();
 const modeBtn = document.getElementById('mode');
