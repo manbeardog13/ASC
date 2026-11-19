@@ -46,6 +46,7 @@ if (embedded) {
     dialog.close(); dialog.remove(); dialog = null; frame = null;
     document.documentElement.classList.remove('detail-overlay-open');
     if (origin?.isConnected) origin.focus({ preventScroll: true });
+    document.dispatchEvent(new CustomEvent('asc:detail-closed'));
   };
   const close = () => { if (history.state?.[key]) history.back(); else destroy(); };
   const show = url => {

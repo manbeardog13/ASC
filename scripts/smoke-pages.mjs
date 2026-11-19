@@ -103,7 +103,8 @@ const pages = [
   ['/app/locate.html', 'Pronađi komplet', '() => Boolean(document.querySelector("#flow-root input"))'],
   ['/app/locations.html', 'Naljepnice mjesta', '() => Boolean(document.getElementById("loc-zone"))'],
   ['/app/locations.html?return=' + encodeURIComponent('checkin.html?place=ASC-2026-0099'), 'Natrag na zaprimanje', '() => { const a=document.getElementById("back-to-intake"); return Boolean(a && a.getAttribute("href")==="checkin.html?place=ASC-2026-0099"); }'],
-  ['/app/warehouse-preview/index.html', 'Prostorni pregled', '() => document.querySelectorAll("#asc-navigation a").length===12'],
+  ['/app/scope.html', 'Pregled', '() => { const text=document.body.innerText; return text.includes("vlasnika") || Boolean(document.getElementById("scope-search")); }'],
+  ['/app/warehouse-preview/index.html', 'Prostorni pregled', '() => document.querySelectorAll("#asc-navigation a").length===13'],
 ];
 
 function which(name) {

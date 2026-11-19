@@ -29,10 +29,10 @@ function pageFile(pathname) {
 
 export function renderAppNavigation({warehouseOpen=false, currentPath=location.pathname}={}) {
   const I=navigationIcons, whOpen=warehouseOpen;
-  const item=(m,href,icon,label,kid,admin)=>{
+  const item=(m,href,icon,label,kid,admin,owner)=>{
     const path=new URL(href,APP_ROOT).pathname;
     const active=currentPath===path || (href==='warehouse-preview/index.html' && currentPath===new URL('warehouse-preview/',APP_ROOT).pathname);
-    return '<a class="sb-item'+(kid?' sb-kid':'')+(active?' on':'')+'" data-m="'+m+'"'+(admin?' data-admin="1"':'')+' href="'+path+'"'+(active?' aria-current="page"':'')+' title="'+label+'">'+icon+'<span class="t">'+label+'</span></a>';
+    return '<a class="sb-item'+(kid?' sb-kid':'')+(active?' on':'')+'" data-m="'+m+'"'+(admin?' data-admin="1"':'')+(owner?' data-owner="1"':'')+' href="'+path+'"'+(active?' aria-current="page"':'')+' title="'+label+'">'+icon+'<span class="t">'+label+'</span></a>';
   };
   const group=(key,label,icon,open,kids)=>
     '<div class="sb-group' + (open ? ' open' : '') + '" data-group="' + key + '">' +
@@ -43,6 +43,7 @@ export function renderAppNavigation({warehouseOpen=false, currentPath=location.p
   // Five top-level destinations: Board, Check in, Warehouse, Customers, More.
   return (
       item('dashboard', 'dashboard.html', I.home, t('nav.board')) +
+      item('scope', 'scope.html', I.spark, t('nav.scope'), false, false, true) +
       item('checkin', 'checkin.html', I.plus, t('nav.checkin')) +
       group('warehouse', t('nav.warehouse'), I.pin, whOpen,
           item('warehouse', 'warehouse-preview/index.html', I.map, t('nav.spatial'), true) +
@@ -70,10 +71,14 @@ const MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator
 export const searchKey = () => (MAC ? '⌘K' : 'Ctrl K');
 export const searchText = () => ({ ph: t('search.ph'), label: t('search.label'), hint: t('search.hint', { key: searchKey() }) });
 
-export function applyNavAccess(root, role) {
+// Same address as js/db.js OWNER_EMAIL. Kept here so the menu does not import the database client.
+const OWNER_EMAIL = 'cryptonii13@gmail.com';
+export function applyNavAccess(root, role, email) {
   if (!root) return;
   const admin = role === 'admin' || role === 'manager';
+  const owner = admin || String(email || '').trim().toLowerCase() === OWNER_EMAIL;
   root.querySelectorAll('[data-admin]').forEach((el) => { el.hidden = !admin; });
+  root.querySelectorAll('[data-owner]').forEach((el) => { el.hidden = !owner; });
 }
 
 export function syncThemeButton(button) {

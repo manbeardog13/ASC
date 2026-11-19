@@ -412,7 +412,7 @@ function animate(){
   // user card: real profile (name, role, avatar) — degrades to initials
   const ROLE = { admin: 'Administrator', manager: 'Voditelj', employee: 'Djelatnik', reception: 'Recepcija', readonly: 'Pregled' };
   import('../js/db.js').then((m) => m.loadMyProfile()).then((p) => {
-    applyNavAccess(aside, p?.role);
+    applyNavAccess(aside, p?.role, p?.email);
     if (!p) return;
     const name = (p.full_name || '').trim() || 'ASC korisnik';
     doc.getElementById('sbName').textContent = name;
